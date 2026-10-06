@@ -69,9 +69,9 @@
   }
 }
 
-/* Container & Layer Utility Classes (Warm luxury 4-color mix gradient) */
+/* Container & Layer Utility Classes (Holst Luxury Palette) */
 .manager-review-bg-container {
-  background: linear-gradient(135deg, #FFFFFF 0%, #F0FDFA 35%, #CCFBF1 70%, #5EEAD4 100%);
+  background: linear-gradient(135deg, #FFFFFF 0%, #F7EEF2 35%, #EBCED6 70%, #D7B6C7 100%);
   position: relative;
   overflow: hidden;
 }
@@ -88,9 +88,9 @@
 .manager-review-dot-grid {
   position: absolute;
   inset: 0;
-  opacity: 0.4;
+  opacity: 0.35;
   pointer-events: none;
-  background-image: radial-gradient(rgba(15, 118, 110, 0.28) 1.2px, transparent 1.2px);
+  background-image: radial-gradient(rgba(74, 53, 94, 0.24) 1.2px, transparent 1.2px);
   background-size: 28px 28px;
   mask-image: radial-gradient(ellipse at 50% 30%, black 40%, transparent 80%);
   -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 40%, transparent 80%);
@@ -103,9 +103,9 @@
   width: 600px;
   height: 550px;
   filter: blur(100px);
-  opacity: 0.35;
+  opacity: 0.38;
   pointer-events: none;
-  background: linear-gradient(135deg, rgba(94, 234, 212, 0.5) 0%, rgba(94, 234, 212, 0.25) 50%, rgba(242, 239, 233, 0) 80%);
+  background: linear-gradient(135deg, rgba(141, 115, 168, 0.48) 0%, rgba(215, 182, 199, 0.28) 50%, rgba(247, 238, 242, 0) 80%);
   animation: auroraMorph1 14s ease-in-out infinite;
 }
 
@@ -116,9 +116,9 @@
   width: 480px;
   height: 480px;
   filter: blur(90px);
-  opacity: 0.25;
+  opacity: 0.28;
   pointer-events: none;
-  background: radial-gradient(circle, rgba(153, 246, 228, 0.4) 0%, rgba(20, 184, 166, 0.15) 50%, transparent 75%);
+  background: radial-gradient(circle, rgba(179, 156, 203, 0.42) 0%, rgba(109, 82, 132, 0.18) 50%, transparent 75%);
   animation: auroraMorph2 16s ease-in-out infinite;
 }
 
@@ -129,9 +129,9 @@
   width: 520px;
   height: 520px;
   filter: blur(110px);
-  opacity: 0.20;
+  opacity: 0.25;
   pointer-events: none;
-  background: radial-gradient(circle, rgba(251, 191, 36, 0.35) 0%, rgba(249, 115, 22, 0.15) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(235, 206, 214, 0.45) 0%, rgba(141, 115, 168, 0.2) 50%, transparent 70%);
 }
 
 .manager-review-aurora-bl {
@@ -141,13 +141,13 @@
   width: 560px;
   height: 520px;
   filter: blur(100px);
-  opacity: 0.30;
+  opacity: 0.32;
   pointer-events: none;
-  background: linear-gradient(315deg, rgba(94, 234, 212, 0.45) 0%, rgba(153, 246, 228, 0.2) 50%, transparent 80%);
+  background: linear-gradient(315deg, rgba(109, 82, 132, 0.38) 0%, rgba(215, 182, 199, 0.24) 50%, transparent 80%);
   animation: auroraMorph1 16s ease-in-out 2s infinite;
 }
 
-/* TOP WAVES (Rendered with self-contained animated SVG via pure CSS Data URI) */
+/* TOP WAVES (Rendered with Holst Plum & Rose gradient animated SVG via pure CSS Data URI) */
 .manager-review-wave-top {
   position: absolute;
   top: 0;
@@ -157,14 +157,14 @@
   height: 340px;
   pointer-events: none;
   opacity: 0.85;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 320' width='100%25' height='100%25' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='100%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%235EEAD4' stop-opacity='0.65'/%3E%3Cstop offset='45%25' stop-color='%235EEAD4' stop-opacity='0.4'/%3E%3Cstop offset='80%25' stop-color='%2314B8A6' stop-opacity='0.15'/%3E%3Cstop offset='100%25' stop-color='%235EEAD4' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='g2' x1='100%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2314B8A6' stop-opacity='0.55'/%3E%3Cstop offset='50%25' stop-color='%235EEAD4' stop-opacity='0.3'/%3E%3Cstop offset='90%25' stop-color='%2399F6E4' stop-opacity='0.08'/%3E%3Cstop offset='100%25' stop-color='%2314B8A6' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='gc' x1='100%25' y1='0%25' x2='0%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF' stop-opacity='0.8'/%3E%3Cstop offset='40%25' stop-color='%23FFFFFF' stop-opacity='0.45'/%3E%3Cstop offset='80%25' stop-color='%23FFFFFF' stop-opacity='0.1'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cfilter id='f' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='4' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg%3E%3Cpath d='M 1200 45 C 960 45, 800 115, 580 90 C 380 65, 200 145, 0 115' stroke='url(%23g1)' stroke-width='4' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3Cpath d='M 1200 45 C 960 45, 800 115, 580 90 C 380 65, 200 145, 0 115' stroke='url(%23gc)' stroke-width='1.6' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 1200 90 C 940 90, 770 160, 540 135 C 320 110, 160 190, 0 160' stroke='url(%23g2)' stroke-width='3.5' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3Cpath d='M 1200 90 C 940 90, 770 160, 540 135 C 320 110, 160 190, 0 160' stroke='url(%23gc)' stroke-width='1.4' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 1200 140 C 910 140, 730 210, 490 185 C 270 160, 110 235, 0 210' stroke='url(%23g1)' stroke-width='2.8' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3Cpath d='M 1200 140 C 910 140, 730 210, 490 185 C 270 160, 110 235, 0 210' stroke='url(%23gc)' stroke-width='1.2' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 320' width='100%25' height='100%25' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='100%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23B39CCB' stop-opacity='0.65'/%3E%3Cstop offset='45%25' stop-color='%23B39CCB' stop-opacity='0.4'/%3E%3Cstop offset='80%25' stop-color='%236D5284' stop-opacity='0.18'/%3E%3Cstop offset='100%25' stop-color='%23B39CCB' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='g2' x1='100%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%236D5284' stop-opacity='0.55'/%3E%3Cstop offset='50%25' stop-color='%238D73A8' stop-opacity='0.3'/%3E%3Cstop offset='90%25' stop-color='%23D7B6C7' stop-opacity='0.1'/%3E%3Cstop offset='100%25' stop-color='%236D5284' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='gc' x1='100%25' y1='0%25' x2='0%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF' stop-opacity='0.8'/%3E%3Cstop offset='40%25' stop-color='%23FFFFFF' stop-opacity='0.45'/%3E%3Cstop offset='80%25' stop-color='%23FFFFFF' stop-opacity='0.1'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cfilter id='f' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='4' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg%3E%3Cpath d='M 1200 45 C 960 45, 800 115, 580 90 C 380 65, 200 145, 0 115' stroke='url(%23g1)' stroke-width='4' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3Cpath d='M 1200 45 C 960 45, 800 115, 580 90 C 380 65, 200 145, 0 115' stroke='url(%23gc)' stroke-width='1.6' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 1200 90 C 940 90, 770 160, 540 135 C 320 110, 160 190, 0 160' stroke='url(%23g2)' stroke-width='3.5' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3Cpath d='M 1200 90 C 940 90, 770 160, 540 135 C 320 110, 160 190, 0 160' stroke='url(%23gc)' stroke-width='1.4' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 1200 140 C 910 140, 730 210, 490 185 C 270 160, 110 235, 0 210' stroke='url(%23g1)' stroke-width='2.8' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3Cpath d='M 1200 140 C 910 140, 730 210, 490 185 C 270 160, 110 235, 0 210' stroke='url(%23gc)' stroke-width='1.2' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
   background-size: 100% 100%;
   background-position: right top;
   background-repeat: no-repeat;
   animation: silkWaveFlow 10s ease-in-out infinite;
 }
 
-/* BOTTOM WAVES (Rendered with self-contained animated SVG via pure CSS Data URI) */
+/* BOTTOM WAVES (Rendered with Holst Plum & Rose gradient animated SVG via pure CSS Data URI) */
 .manager-review-wave-bottom {
   position: absolute;
   bottom: 0;
@@ -174,14 +174,14 @@
   height: 340px;
   pointer-events: none;
   opacity: 0.85;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 320' width='100%25' height='100%25' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='bg1' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%235EEAD4' stop-opacity='0.65'/%3E%3Cstop offset='45%25' stop-color='%235EEAD4' stop-opacity='0.4'/%3E%3Cstop offset='80%25' stop-color='%2314B8A6' stop-opacity='0.15'/%3E%3Cstop offset='100%25' stop-color='%235EEAD4' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='bg2' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%2314B8A6' stop-opacity='0.55'/%3E%3Cstop offset='50%25' stop-color='%235EEAD4' stop-opacity='0.3'/%3E%3Cstop offset='90%25' stop-color='%2399F6E4' stop-opacity='0.08'/%3E%3Cstop offset='100%25' stop-color='%2314B8A6' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='bgc' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF' stop-opacity='0.8'/%3E%3Cstop offset='40%25' stop-color='%23FFFFFF' stop-opacity='0.45'/%3E%3Cstop offset='80%25' stop-color='%23FFFFFF' stop-opacity='0.1'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cfilter id='bf' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='4' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg%3E%3Cpath d='M 0 275 C 240 275, 400 205, 620 230 C 820 255, 1000 175, 1200 205' stroke='url(%23bg1)' stroke-width='4' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3Cpath d='M 0 275 C 240 275, 400 205, 620 230 C 820 255, 1000 175, 1200 205' stroke='url(%23bgc)' stroke-width='1.6' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 0 230 C 260 230, 430 160, 660 185 C 880 210, 1040 130, 1200 160' stroke='url(%23bg2)' stroke-width='3.5' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3Cpath d='M 0 230 C 260 230, 430 160, 660 185 C 880 210, 1040 130, 1200 160' stroke='url(%23bgc)' stroke-width='1.4' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 0 180 C 290 180, 470 110, 710 135 C 930 160, 1090 85, 1200 110' stroke='url(%23bg1)' stroke-width='2.8' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3Cpath d='M 0 180 C 290 180, 470 110, 710 135 C 930 160, 1090 85, 1200 110' stroke='url(%23bgc)' stroke-width='1.2' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 320' width='100%25' height='100%25' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='bg1' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23B39CCB' stop-opacity='0.65'/%3E%3Cstop offset='45%25' stop-color='%23B39CCB' stop-opacity='0.4'/%3E%3Cstop offset='80%25' stop-color='%236D5284' stop-opacity='0.18'/%3E%3Cstop offset='100%25' stop-color='%23B39CCB' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='bg2' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%236D5284' stop-opacity='0.55'/%3E%3Cstop offset='50%25' stop-color='%238D73A8' stop-opacity='0.3'/%3E%3Cstop offset='90%25' stop-color='%23D7B6C7' stop-opacity='0.1'/%3E%3Cstop offset='100%25' stop-color='%236D5284' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='bgc' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF' stop-opacity='0.8'/%3E%3Cstop offset='40%25' stop-color='%23FFFFFF' stop-opacity='0.45'/%3E%3Cstop offset='80%25' stop-color='%23FFFFFF' stop-opacity='0.1'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cfilter id='bf' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='4' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg%3E%3Cpath d='M 0 275 C 240 275, 400 205, 620 230 C 820 255, 1000 175, 1200 205' stroke='url(%23bg1)' stroke-width='4' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3Cpath d='M 0 275 C 240 275, 400 205, 620 230 C 820 255, 1000 175, 1200 205' stroke='url(%23bgc)' stroke-width='1.6' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 0 230 C 260 230, 430 160, 660 185 C 880 210, 1040 130, 1200 160' stroke='url(%23bg2)' stroke-width='3.5' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3Cpath d='M 0 230 C 260 230, 430 160, 660 185 C 880 210, 1040 130, 1200 160' stroke='url(%23bgc)' stroke-width='1.4' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 0 180 C 290 180, 470 110, 710 135 C 930 160, 1090 85, 1200 110' stroke='url(%23bg1)' stroke-width='2.8' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3Cpath d='M 0 180 C 290 180, 470 110, 710 135 C 930 160, 1090 85, 1200 110' stroke='url(%23bgc)' stroke-width='1.2' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
   background-size: 100% 100%;
   background-position: left bottom;
   background-repeat: no-repeat;
   animation: silkWaveFlowBottom 11s ease-in-out infinite;
 }
 
-/* Twinkling Starlight Sparks */
+/* Twinkling Starlight Sparks (Holst Rose & Lavender) */
 .manager-review-star-1,
 .manager-review-star-2,
 .manager-review-star-3,
@@ -189,7 +189,7 @@
 .manager-review-star-5 {
   position: absolute;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%235EEAD4'%3E%3Cpath d='M12 0L14.5 9.5L24 12L14.5 14.5L12 24L9.5 14.5L0 12L9.5 9.5L12 0Z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23D7B6C7'%3E%3Cpath d='M12 0L14.5 9.5L24 12L14.5 14.5L12 24L9.5 14.5L0 12L9.5 9.5L12 0Z'/%3E%3C/svg%3E");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -208,7 +208,7 @@
   right: 12%;
   width: 14px;
   height: 14px;
-  filter: hue-rotate(40deg);
+  filter: hue-rotate(25deg);
   animation: starGlimmer 5s ease-in-out 1.5s infinite;
 }
 
@@ -233,28 +233,28 @@
   left: 14%;
   width: 12px;
   height: 12px;
-  filter: hue-rotate(40deg);
+  filter: hue-rotate(25deg);
   animation: starGlimmer 5.5s ease-in-out 2.2s infinite;
 }
 
-/* Glassmorphic luxury card with Cream & Rose-Ivory Watercolor gradient and SVG texture */
+/* Glassmorphic luxury card with Holst Porcelain & Mauve-Blush Watercolor gradient and SVG texture */
 .manager-review-glass-card {
   background: 
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 600' width='100%25' height='100%25' preserveAspectRatio='none'%3E%3Cpath d='M-50 80 C 200 40, 420 120, 680 70 C 850 40, 950 110, 1050 75 L 1050 220 C 850 260, 650 190, 400 240 C 200 270, 80 200, -50 230 Z' fill='%2399F6E4' opacity='0.22'/%3E%3Cpath d='M-50 190 C 220 240, 480 180, 720 230 C 890 260, 980 210, 1050 240 L 1050 390 C 840 430, 600 370, 360 410 C 180 435, 70 380, -50 400 Z' fill='%23CCFBF1' opacity='0.35'/%3E%3Cpath d='M-50 360 C 200 420, 460 360, 700 410 C 870 440, 960 390, 1050 420 L 1050 620 L -50 620 Z' fill='%23CCFBF1' opacity='0.28'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 600' width='100%25' height='100%25' preserveAspectRatio='none'%3E%3Cpath d='M-50 80 C 200 40, 420 120, 680 70 C 850 40, 950 110, 1050 75 L 1050 220 C 850 260, 650 190, 400 240 C 200 270, 80 200, -50 230 Z' fill='%23D7B6C7' opacity='0.20'/%3E%3Cpath d='M-50 190 C 220 240, 480 180, 720 230 C 890 260, 980 210, 1050 240 L 1050 390 C 840 430, 600 370, 360 410 C 180 435, 70 380, -50 400 Z' fill='%23EBCED6' opacity='0.30'/%3E%3Cpath d='M-50 360 C 200 420, 460 360, 700 410 C 870 440, 960 390, 1050 420 L 1050 620 L -50 620 Z' fill='%23F7EEF2' opacity='0.35'/%3E%3C/svg%3E"),
     linear-gradient(
       135deg,
       #FFFFFF 0%,
-      #F7FEFD 20%,
-      #F0FDFA 45%,
-      #E6FBF7 75%,
-      #CCFBF1 100%
+      #FAF6F8 20%,
+      #F7EEF2 45%,
+      #F0E5EC 75%,
+      #EBCED6 100%
     ) !important;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1.5px solid rgba(153, 246, 228, 0.65) !important;
+  border: 1.5px solid rgba(179, 156, 203, 0.45) !important;
   box-shadow:
-    0 24px 60px rgba(15, 23, 42, 0.14),
-    0 4px 18px rgba(94, 234, 212, 0.16),
+    0 24px 60px rgba(74, 53, 94, 0.12),
+    0 4px 18px rgba(109, 82, 132, 0.14),
     inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
   border-radius: 1.5rem;
   animation: cardFadeIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.25s backwards;
@@ -272,7 +272,7 @@
   }
 }
 
-/* Card Header Title: Kinetic Letter-Tracking Settle & Liquid Gold-Indigo Sheen */
+/* /* Card Header Title: Kinetic Letter-Tracking Settle & Holst Plum Sheen */
 .manager-review-card-title {
   letter-spacing: -0.015em;
   position: relative;
@@ -281,10 +281,10 @@
   padding-bottom: 6px;
   background: linear-gradient(110deg,
       #0F172A 0%,
-      #0F172A 30%,
-      #14B8A6 46%,
-      #5EEAD4 54%,
-      #0F172A 68%,
+      #4A355E 30%,
+      #6D5284 46%,
+      #B39CCB 54%,
+      #4A355E 68%,
       #0F172A 100%);
   background-size: 240% 100%;
   -webkit-background-clip: text;
@@ -337,8 +337,8 @@
   height: 3px;
   width: 0;
   border-radius: 9999px;
-  background: linear-gradient(90deg, #14B8A6 0%, #5EEAD4 65%, rgba(242, 233, 215, 0.6) 100%);
-  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.22);
+  background: linear-gradient(90deg, #6D5284 0%, #B39CCB 65%, rgba(235, 206, 214, 0.6) 100%);
+  box-shadow: 0 2px 8px rgba(109, 82, 132, 0.22);
   animation: cardTitleBarExpand 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
   transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
 }
@@ -357,27 +357,83 @@
 
 .manager-review-card-title:hover::after {
   width: 100%;
-  box-shadow: 0 3px 12px rgba(20, 184, 166, 0.35), 0 1px 4px rgba(229, 201, 143, 0.4);
+  box-shadow: 0 3px 12px rgba(109, 82, 132, 0.35), 0 1px 4px rgba(215, 182, 199, 0.4);
 }
 
-/* Create Button: Entrance Animation & Micro-interactions */
+/* Create Button: Entrance Animation, Luxury Shimmer Sweep, Glow Pulse & Micro-interactions */
 .manager-review-create-btn {
-  background: linear-gradient(135deg, #14B8A6 0%, #0F766E 100%) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  background: linear-gradient(135deg, #6D5284 0%, #4A355E 55%, #372348 100%) !important;
   color: #FFFFFF !important;
-  border: none !important;
-  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.35) !important;
-  animation: createBtnSlideIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.4s backwards;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  box-shadow: 0 4px 16px rgba(109, 82, 132, 0.35), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  animation: 
+    createBtnSlideIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.35s backwards,
+    createBtnPulseGlow 3.5s ease-in-out infinite !important;
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.25s ease !important;
+  border-radius: 0.875rem !important;
+  padding: 0.65rem 1.4rem !important;
+}
+
+/* Diagonal luxury shimmer sweep */
+.manager-review-create-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  transform: skewX(-25deg);
+  animation: createBtnShimmer 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+@keyframes createBtnShimmer {
+  0%, 25% {
+    left: -120%;
+  }
+  55%, 100% {
+    left: 220%;
+  }
+}
+
+@keyframes createBtnPulseGlow {
+  0%, 100% {
+    box-shadow: 0 4px 16px rgba(109, 82, 132, 0.35), 0 0 0 0 rgba(179, 156, 203, 0.4);
+  }
+  50% {
+    box-shadow: 0 6px 22px rgba(109, 82, 132, 0.55), 0 0 0 4px rgba(179, 156, 203, 0.2);
+  }
 }
 
 .manager-review-create-btn:hover {
-  background: linear-gradient(135deg, #0F766E 0%, #0d5e58 100%) !important;
-  box-shadow: 0 6px 20px rgba(20, 184, 166, 0.5) !important;
-  transform: translateY(-2px) scale(1.02);
+  background: linear-gradient(135deg, #593e6f 0%, #4A355E 50%, #2f1d3e 100%) !important;
+  box-shadow: 0 8px 24px rgba(109, 82, 132, 0.6), 0 0 16px rgba(179, 156, 203, 0.35) !important;
+  transform: translateY(-2px) scale(1.03);
+}
+
+.manager-review-create-btn:hover::before {
+  animation: createBtnShimmerHover 1s infinite linear;
+}
+
+@keyframes createBtnShimmerHover {
+  0% {
+    left: -120%;
+  }
+  100% {
+    left: 220%;
+  }
 }
 
 .manager-review-create-btn:active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.97);
 }
 
 @keyframes createBtnSlideIn {
@@ -392,6 +448,46 @@
     transform: translateX(0);
     filter: blur(0);
   }
+}
+
+/* SVG Icon & Rotation Micro-Animation */
+.manager-create-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.manager-review-create-btn:hover .manager-create-icon-wrap {
+  transform: rotate(90deg) scale(1.15);
+}
+
+.manager-create-svg-circle {
+  animation: createSvgOrbit 12s linear infinite;
+  transform-origin: 12px 12px;
+}
+
+.manager-review-create-btn:hover .manager-create-svg-circle {
+  animation-duration: 4s;
+  opacity: 1;
+}
+
+@keyframes createSvgOrbit {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.manager-create-svg-plus {
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.manager-review-create-btn:hover .manager-create-svg-plus {
+  stroke: #FFFFFF;
+  stroke-width: 2.7;
 }
 
 /* ==========================================================================
@@ -437,19 +533,19 @@
 .manager-review-search-box {
   background: rgba(255, 255, 255, 0.94) !important;
   border: 1.5px solid rgba(224, 229, 242, 0.95) !important;
-  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(74, 53, 94, 0.08) !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
 .manager-review-search-box:hover {
-  border-color: rgba(20, 184, 166, 0.45) !important;
+  border-color: rgba(109, 82, 132, 0.45) !important;
   transform: translateY(-1.5px);
-  box-shadow: 0 8px 20px rgba(20, 184, 166, 0.1), 0 2px 6px rgba(229, 201, 143, 0.15) !important;
+  box-shadow: 0 8px 20px rgba(109, 82, 132, 0.1), 0 2px 6px rgba(215, 182, 199, 0.15) !important;
 }
 
 .manager-review-search-box:focus-within {
-  border-color: #14B8A6 !important;
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12), 0 8px 22px rgba(20, 184, 166, 0.14) !important;
+  border-color: #6D5284 !important;
+  box-shadow: 0 0 0 3px rgba(109, 82, 132, 0.15), 0 8px 22px rgba(109, 82, 132, 0.14) !important;
   transform: translateY(-1.5px);
 }
 
@@ -463,36 +559,36 @@
 
 /* 2. Common Filter Dropdown Buttons & Bar */
 .manager-review-filters-bar {
-  padding-top: 8px !important;
-  padding-bottom: 8px !important;
-  margin-top: -6px !important;
-  margin-bottom: 24px !important;
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 .manager-review-filter-btn {
   background: rgba(255, 255, 255, 0.94) !important;
   border: 1.5px solid rgba(224, 229, 242, 0.95) !important;
-  color: #0F766E !important;
-  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.08) !important;
+  color: #4A355E !important;
+  box-shadow: 0 2px 8px rgba(74, 53, 94, 0.08) !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   cursor: pointer;
 }
 
 .manager-review-filter-btn:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 0 8px 20px rgba(15, 118, 110, 0.16), 0 2px 6px rgba(229, 201, 143, 0.15) !important;
+  box-shadow: 0 8px 20px rgba(74, 53, 94, 0.15), 0 2px 6px rgba(215, 182, 199, 0.15) !important;
 }
 
 /* Distinct Filter Colors & Micro-animations */
-/* Financial Year (Royal Indigo) */
+/* Financial Year (Holst Plum) */
 .filter-icon-fy {
-  color: #14B8A6;
+  color: #6D5284;
   transition: transform 0.25s ease;
 }
 
 .filter-btn-fy:hover {
-  border-color: rgba(20, 184, 166, 0.5) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(238, 242, 255, 0.75)) !important;
+  border-color: rgba(109, 82, 132, 0.5) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(247, 238, 242, 0.85)) !important;
 }
 
 .filter-btn-fy:hover .filter-icon-fy {
@@ -514,15 +610,15 @@
   transform: scale(1.18) rotate(25deg);
 }
 
-/* All Members (Emerald Jade) */
+/* All Members (Holst Lavender) */
 .filter-icon-members {
-  color: #059669;
+  color: #8D73A8;
   transition: transform 0.25s ease;
 }
 
 .filter-btn-members:hover {
-  border-color: rgba(5, 150, 105, 0.5) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(236, 253, 245, 0.75)) !important;
+  border-color: rgba(141, 115, 168, 0.5) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(247, 238, 242, 0.75)) !important;
 }
 
 .filter-btn-members:hover .filter-icon-members {
@@ -551,8 +647,8 @@
 }
 
 .manager-review-clear-btn:hover {
-  color: #14B8A6 !important;
-  background: rgba(20, 184, 166, 0.08) !important;
+  color: #6D5284 !important;
+  background: rgba(109, 82, 132, 0.08) !important;
   transform: translateY(-1px);
 }
 
@@ -562,16 +658,14 @@
 
 .manager-review-clear-btn:hover .filter-clear-icon {
   transform: rotate(-180deg);
-  color: #14B8A6;
+  color: #6D5284;
 }
-
-
 
 /* Empty State Illustration & Glow (Rendered 100% via CSS) */
 .manager-review-empty-glow {
   position: absolute;
   inset: -1.5rem;
-  background: radial-gradient(circle, rgba(229, 201, 143, 0.35) 0%, rgba(242, 233, 215, 0.45) 45%, rgba(238, 228, 208, 0) 70%);
+  background: radial-gradient(circle, rgba(215, 182, 199, 0.35) 0%, rgba(247, 238, 242, 0.45) 45%, rgba(247, 238, 242, 0) 70%);
   border-radius: 9999px;
   filter: blur(24px);
   animation: pulseGlow 3.5s ease-in-out infinite;
@@ -583,12 +677,12 @@
   z-index: 10;
   width: 9.5rem;
   height: 9.5rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='fbg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='60%25' stop-color='%23CCFBF1'/%3E%3Cstop offset='100%25' stop-color='%235EEAD4'/%3E%3C/linearGradient%3E%3ClinearGradient id='dg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF'/%3E%3C/linearGradient%3E%3ClinearGradient id='hg' x1='0%25' y1='0%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%2314B8A6'/%3E%3Cstop offset='50%25' stop-color='%235EEAD4'/%3E%3Cstop offset='100%25' stop-color='%235EEAD4'/%3E%3C/linearGradient%3E%3ClinearGradient id='gbg' x1='0%25' y1='0%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%235EEAD4'/%3E%3Cstop offset='100%25' stop-color='%23D97706'/%3E%3C/linearGradient%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%2310B981'/%3E%3Cstop offset='100%25' stop-color='%23059669'/%3E%3C/linearGradient%3E%3Cfilter id='ds' x='-10%25' y='-10%25' width='130%25' height='130%25'%3E%3CfeDropShadow dx='0' dy='8' stdDeviation='8' flood-color='%23854D0E' flood-opacity='0.1'/%3E%3C/filter%3E%3C/defs%3E%3Cg transform='rotate(-6 80 80)'%3E%3Crect x='35' y='36' width='86' height='98' rx='14' fill='url(%23fbg)' stroke='%235EEAD4' stroke-width='1.5'/%3E%3Crect x='48' y='52' width='38' height='4' rx='2' fill='%235EEAD4' opacity='0.6'/%3E%3Crect x='48' y='62' width='56' height='4' rx='2' fill='%235EEAD4' opacity='0.4'/%3E%3C/g%3E%3Cg filter='url(%23ds)'%3E%3Crect x='42' y='26' width='84' height='104' rx='14' fill='url(%23dg)' stroke='%235EEAD4' stroke-width='1.2'/%3E%3Cpath d='M42 40 C42 32.268 48.268 26 56 26 H112 C119.732 26 126 32.268 126 40 V48 H42 V40 Z' fill='url(%23hg)'/%3E%3Ccircle cx='56' cy='37' r='3' fill='%23FFFFFF' opacity='0.9'/%3E%3Ccircle cx='66' cy='37' r='2' fill='%23FFFFFF' opacity='0.6'/%3E%3Ccircle cx='74' cy='37' r='2' fill='%23FFFFFF' opacity='0.4'/%3E%3Ccircle cx='54' cy='62' r='4' fill='%235EEAD4'/%3E%3Crect x='64' y='60' width='46' height='4.5' rx='2.25' fill='%23E2E8F0'/%3E%3Ccircle cx='54' cy='76' r='4' fill='%235EEAD4'/%3E%3Crect x='64' y='74' width='38' height='4.5' rx='2.25' fill='%23CCFBF1'/%3E%3Ccircle cx='54' cy='90' r='4' fill='%235EEAD4'/%3E%3Crect x='64' y='88' width='50' height='4.5' rx='2.25' fill='%23E2E8F0'/%3E%3Crect x='52' y='104' width='62' height='6' rx='3' fill='%23FFFFFF'/%3E%3Crect x='52' y='104' width='44' height='6' rx='3' fill='url(%23gbg)'/%3E%3C/g%3E%3Cg transform='translate(102, 94)'%3E%3Ccircle cx='16' cy='16' r='16' fill='url(%23bg)'/%3E%3Ccircle cx='16' cy='16' r='18' stroke='url(%23bg)' stroke-width='2' opacity='0.3'/%3E%3Cpath d='M10 16.5 L14 20.5 L22 12' stroke='%23FFFFFF' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3Cg fill='%235EEAD4'%3E%3Cpath d='M138 20 L140 26 L146 28 L140 30 L138 36 L136 30 L130 28 L136 26 Z' opacity='0.9'/%3E%3C/g%3E%3Cg fill='%235EEAD4'%3E%3Cpath d='M26 100 L27.5 104.5 L32 106 L27.5 107.5 L26 112 L24.5 107.5 L20 106 L24.5 104.5 Z' opacity='0.8'/%3E%3C/g%3E%3Ccircle cx='28' cy='44' r='3' fill='%235EEAD4' opacity='0.7'/%3E%3Ccircle cx='140' cy='80' r='2.5' fill='%2310B981' opacity='0.8'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='fbg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='60%25' stop-color='%23EBCED6'/%3E%3Cstop offset='100%25' stop-color='%23B39CCB'/%3E%3C/linearGradient%3E%3ClinearGradient id='dg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF'/%3E%3C/linearGradient%3E%3ClinearGradient id='hg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%236D5284'/%3E%3Cstop offset='50%25' stop-color='%238D73A8'/%3E%3Cstop offset='100%25' stop-color='%23B39CCB'/%3E%3C/linearGradient%3E%3ClinearGradient id='gbg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23B39CCB'/%3E%3Cstop offset='100%25' stop-color='%23D7B6C7'/%3E%3C/linearGradient%3E%3ClinearGradient id='bg' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%238D73A8'/%3E%3Cstop offset='100%25' stop-color='%234A355E'/%3E%3C/linearGradient%3E%3Cfilter id='ds' x='-10%25' y='-10%25' width='130%25' height='130%25'%3E%3CfeDropShadow dx='0' dy='8' stdDeviation='8' flood-color='%234A355E' flood-opacity='0.12'/%3E%3C/filter%3E%3C/defs%3E%3Cg transform='rotate(-6 80 80)'%3E%3Crect x='35' y='36' width='86' height='98' rx='14' fill='url(%23fbg)' stroke='%23B39CCB' stroke-width='1.5'/%3E%3Crect x='48' y='52' width='38' height='4' rx='2' fill='%23B39CCB' opacity='0.6'/%3E%3Crect x='48' y='62' width='56' height='4' rx='2' fill='%23B39CCB' opacity='0.4'/%3E%3C/g%3E%3Cg filter='url(%23ds)'%3E%3Crect x='42' y='26' width='84' height='104' rx='14' fill='url(%23dg)' stroke='%23B39CCB' stroke-width='1.2'/%3E%3Cpath d='M42 40 C42 32.268 48.268 26 56 26 H112 C119.732 26 126 32.268 126 40 V48 H42 V40 Z' fill='url(%23hg)'/%3E%3Ccircle cx='56' cy='37' r='3' fill='%23FFFFFF' opacity='0.9'/%3E%3Ccircle cx='66' cy='37' r='2' fill='%23FFFFFF' opacity='0.6'/%3E%3Ccircle cx='74' cy='37' r='2' fill='%23FFFFFF' opacity='0.4'/%3E%3Ccircle cx='54' cy='62' r='4' fill='%23B39CCB'/%3E%3Crect x='64' y='60' width='46' height='4.5' rx='2.25' fill='%23E2E8F0'/%3E%3Ccircle cx='54' cy='76' r='4' fill='%23B39CCB'/%3E%3Crect x='64' y='74' width='38' height='4.5' rx='2.25' fill='%23EBCED6'/%3E%3Ccircle cx='54' cy='90' r='4' fill='%23B39CCB'/%3E%3Crect x='64' y='88' width='50' height='4.5' rx='2.25' fill='%23E2E8F0'/%3E%3Crect x='52' y='104' width='62' height='6' rx='3' fill='%23FFFFFF'/%3E%3Crect x='52' y='104' width='44' height='6' rx='3' fill='url(%23gbg)'/%3E%3C/g%3E%3Cg transform='translate(102, 94)'%3E%3Ccircle cx='16' cy='16' r='16' fill='url(%23bg)'/%3E%3Ccircle cx='16' cy='16' r='18' stroke='url(%23bg)' stroke-width='2' opacity='0.3'/%3E%3Cpath d='M10 16.5 L14 20.5 L22 12' stroke='%23FFFFFF' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3Cg fill='%23B39CCB'%3E%3Cpath d='M138 20 L140 26 L146 28 L140 30 L138 36 L136 30 L130 28 L136 26 Z' opacity='0.9'/%3E%3C/g%3E%3Cg fill='%23B39CCB'%3E%3Cpath d='M26 100 L27.5 104.5 L32 106 L27.5 107.5 L26 112 L24.5 107.5 L20 106 L24.5 104.5 Z' opacity='0.8'/%3E%3C/g%3E%3Ccircle cx='28' cy='44' r='3' fill='%23B39CCB' opacity='0.7'/%3E%3Ccircle cx='140' cy='80' r='2.5' fill='%236D5284' opacity='0.8'/%3E%3C/svg%3E");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
   animation: floatIllustration 4s ease-in-out infinite;
-  filter: drop-shadow(0 14px 28px rgba(180, 150, 95, 0.18));
+  filter: drop-shadow(0 14px 28px rgba(74, 53, 94, 0.15));
 }
 
 @keyframes floatIllustration {
@@ -617,7 +711,6 @@
   }
 }
 
-
 /* ==========================================================================
    Page Header - Distinct Kinetic & Optical Reveal Animations
    ========================================================================== */
@@ -628,9 +721,9 @@
   display: inline-block;
   background: linear-gradient(90deg,
       #0F172A 0%,
-      #0F172A 35%,
-      #14B8A6 55%,
-      #5EEAD4 70%,
+      #4A355E 35%,
+      #6D5284 55%,
+      #8D73A8 70%,
       #0F172A 85%,
       #0F172A 100%);
   background-size: 250% 100%;

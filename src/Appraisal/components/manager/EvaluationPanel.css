@@ -47,6 +47,109 @@
   }
 }
 
+/* ==========================================================================
+   Smooth Scroll-Based Reveal Animation System (IntersectionObserver Powered)
+   ========================================================================== */
+
+/* Initial state: card positioned 40px below, subtle 0.98 scale, transparent */
+.eval-reveal-card {
+  opacity: 0 !important;
+  transform: translateY(40px) scale(0.98) !important;
+  transition: opacity 650ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 650ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  will-change: opacity, transform;
+  animation: none !important;
+}
+
+/* Final state: card smoothly ascends to normal position, full opacity & scale 1 */
+.eval-reveal-card.is-revealed {
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+/* Maintain hover interactions after reveal */
+.eval-step-card.eval-reveal-card.is-revealed:hover {
+  transform: translateY(-3px) !important;
+}
+
+.eval-glass-card.eval-reveal-card.is-revealed:hover {
+  transform: translateY(-2px) !important;
+}
+
+.eval-meta-banner.eval-reveal-card.is-revealed:hover {
+  transform: translateY(-2px) !important;
+}
+
+.eval-matrix-cta-card.eval-reveal-card.is-revealed:hover {
+  transform: translateY(-3px) !important;
+}
+
+.eval-param-row.eval-reveal-card.is-revealed:hover {
+  transform: translateY(-2px) scale(1) !important;
+  box-shadow: 0 4px 14px rgba(109, 82, 132, 0.12);
+  border-color: rgba(109, 82, 132, 0.35);
+}
+
+.eval-kpi-card.eval-reveal-card.is-revealed:hover {
+  transform: translateY(-2px) !important;
+}
+
+.eval-param-row.eval-reveal-card.is-revealed.eval-stagger-1 {
+  transition-delay: 60ms;
+}
+.eval-param-row.eval-reveal-card.is-revealed.eval-stagger-2 {
+  transition-delay: 120ms;
+}
+.eval-param-row.eval-reveal-card.is-revealed.eval-stagger-3 {
+  transition-delay: 180ms;
+}
+.eval-param-row.eval-reveal-card.is-revealed.eval-stagger-4 {
+  transition-delay: 240ms;
+}
+
+/* ==========================================================================
+   Internal Content Stagger System (80–120ms delays)
+   ========================================================================== */
+.eval-reveal-card .eval-stagger-item {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 550ms ease-out,
+              transform 550ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-1 {
+  transition-delay: 90ms;
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-2 {
+  transition-delay: 180ms;
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-3 {
+  transition-delay: 270ms;
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-4 {
+  transition-delay: 360ms;
+}
+
+/* Accessibility: prefers-reduced-motion fallback */
+@media (prefers-reduced-motion: reduce) {
+  .eval-reveal-card,
+  .eval-reveal-card .eval-stagger-item {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
 /* Glassmorphism Cards */
 .eval-glass-card {
   background: rgba(255, 255, 255, 0.94);
@@ -60,15 +163,15 @@
 }
 
 .eval-glass-card:hover {
-  box-shadow: 0 12px 36px -4px rgba(20, 184, 166, 0.10), 0 2px 8px rgba(0, 0, 0, 0.03);
-  border-color: rgba(20, 184, 166, 0.25);
+  box-shadow: 0 12px 36px -4px rgba(109, 82, 132, 0.10), 0 2px 8px rgba(0, 0, 0, 0.03);
+  border-color: rgba(109, 82, 132, 0.25);
   transform: translateY(-2px);
 }
 
 /* Step Cards in Employee Submission */
 .eval-step-card {
   background: #FFFFFF;
-  border: 1px solid rgba(153, 246, 228, 0.45);
+  border: 1px solid rgba(179, 156, 203, 0.45);
   border-radius: 1.15rem;
   padding: 1.35rem 1.45rem;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
@@ -91,7 +194,7 @@
   left: 0;
   width: 4px;
   height: 0;
-  background: linear-gradient(180deg, #14B8A6 0%, #05CD99 100%);
+  background: linear-gradient(180deg, #6D5284 0%, #8D73A8 100%);
   transition: height 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -102,14 +205,14 @@
   left: -100%;
   width: 100%;
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(20, 184, 166, 0.6), rgba(5, 205, 153, 0.6), transparent);
+  background: linear-gradient(90deg, transparent, rgba(109, 82, 132, 0.6), rgba(141, 115, 168, 0.6), transparent);
   transition: left 0.65s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
 }
 
 .eval-step-card:hover {
-  border-color: rgba(20, 184, 166, 0.32);
-  box-shadow: 0 12px 28px -4px rgba(20, 184, 166, 0.09), 0 3px 8px rgba(0, 0, 0, 0.02);
+  border-color: rgba(109, 82, 132, 0.32);
+  box-shadow: 0 12px 28px -4px rgba(109, 82, 132, 0.09), 0 3px 8px rgba(0, 0, 0, 0.02);
   transform: translateY(-3px);
 }
 
@@ -129,21 +232,21 @@
   padding: 0.5rem 1.05rem;
   font-size: 0.8rem;
   font-weight: 700;
-  color: #14B8A6;
+  color: #6D5284;
   background: #FFFFFF;
-  border: 1.5px solid #CCFBF1;
+  border: 1.5px solid #D7B6C7;
   border-radius: 0.75rem;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(20, 184, 166, 0.06);
+  box-shadow: 0 2px 6px rgba(109, 82, 132, 0.06);
   transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .eval-back-btn:hover {
-  background: #14B8A6;
+  background: #6D5284;
   color: #FFFFFF;
-  border-color: #14B8A6;
+  border-color: #6D5284;
   transform: translateX(-3px);
-  box-shadow: 0 6px 18px rgba(20, 184, 166, 0.25);
+  box-shadow: 0 6px 18px rgba(109, 82, 132, 0.25);
 }
 
 .eval-back-btn:active {
@@ -152,7 +255,7 @@
 
 /* Metadata Banner */
 .eval-meta-banner {
-  background: linear-gradient(135deg, #FFFFFF 0%, #FAFFFE 100%);
+  background: linear-gradient(135deg, #FFFFFF 0%, #FAF6F8 100%);
   border: 1px solid rgba(226, 232, 240, 0.9);
   border-radius: 1.25rem;
   padding: 1.15rem 1.5rem;
@@ -170,14 +273,14 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #14B8A6 0%, #5EEAD4 50%, #05CD99 100%);
+  background: linear-gradient(90deg, #6D5284 0%, #B39CCB 50%, #8D73A8 100%);
   opacity: 0.9;
 }
 
 .eval-meta-banner:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(20, 184, 166, 0.08);
-  border-color: rgba(20, 184, 166, 0.25);
+  box-shadow: 0 10px 28px rgba(109, 82, 132, 0.08);
+  border-color: rgba(109, 82, 132, 0.25);
 }
 
 .eval-meta-segment {
@@ -217,9 +320,9 @@
 
 .eval-teamwork-item:hover {
   background: #F1F5F9;
-  border-color: rgba(20, 184, 166, 0.3);
+  border-color: rgba(109, 82, 132, 0.3);
   transform: translateY(-2px);
-  box-shadow: 0 4px 14px rgba(20, 184, 166, 0.08);
+  box-shadow: 0 4px 14px rgba(109, 82, 132, 0.08);
 }
 
 /* Employee Submission Inputs: Blocked Cursor */
@@ -389,20 +492,20 @@
 
 /* Average Score & KPI Banner */
 .eval-kpi-card {
-  background: linear-gradient(135deg, #F7FEFD 0%, #F0FDFA 50%, #F7FEFD 100%);
-  border: 1.5px solid #99F6E4;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F7EEF2 50%, #FFFFFF 100%);
+  border: 1.5px solid #D7B6C7;
   border-radius: 1.15rem;
   padding: 1.15rem 1.35rem;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(20, 184, 166, 0.05);
+  box-shadow: 0 2px 8px rgba(109, 82, 132, 0.05);
   transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .eval-kpi-card:hover {
   transform: translateY(-2px);
-  border-color: #5EEAD4;
-  box-shadow: 0 8px 24px -4px rgba(20, 184, 166, 0.12);
+  border-color: #B39CCB;
+  box-shadow: 0 8px 24px -4px rgba(109, 82, 132, 0.12);
 }
 
 .eval-kpi-card::after {
@@ -412,7 +515,7 @@
   right: 0;
   width: 90px;
   height: 90px;
-  background: radial-gradient(circle, rgba(20, 184, 166, 0.08) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(109, 82, 132, 0.08) 0%, transparent 70%);
   pointer-events: none;
 }
 
@@ -423,9 +526,9 @@
   border: 1px solid #A7F3D0;
 }
 .eval-tier-badge-4 {
-  background: #F0FDFA;
-  color: #14B8A6;
-  border: 1px solid #99F6E4;
+  background: #F7EEF2;
+  color: #6D5284;
+  border: 1px solid #D7B6C7;
 }
 .eval-tier-badge-3 {
   background: #FEF3C7;
@@ -448,20 +551,20 @@
   font-weight: 700;
   padding: 0.25rem 0.55rem;
   border-radius: 9999px;
-  background: #F7FEFD;
-  color: #14B8A6;
-  border: 1px solid #99F6E4;
+  background: #FAF6F8;
+  color: #6D5284;
+  border: 1px solid #D7B6C7;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   user-select: none;
 }
 
 .eval-tag-chip:hover {
-  background: #14B8A6;
+  background: #6D5284;
   color: #FFFFFF;
-  border-color: #14B8A6;
+  border-color: #6D5284;
   transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgba(20, 184, 166, 0.22);
+  box-shadow: 0 3px 8px rgba(109, 82, 132, 0.22);
 }
 
 .eval-tag-chip:active {
@@ -488,61 +591,209 @@
 
 .eval-textarea-field:focus {
   outline: none;
-  border-color: #14B8A6;
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
-  background: #FAFFFE;
+  border-color: #6D5284;
+  box-shadow: 0 0 0 3px rgba(109, 82, 132, 0.12);
+  background: #FAF6F8;
 }
 
 .eval-textarea-field::placeholder {
   color: #A0AEC0;
 }
 
-/* Submit Evaluation Button with Gradient Glow & Ripple */
-.eval-submit-btn-glow {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  padding: 0.925rem 1.5rem;
-  font-size: 0.9rem;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: #FFFFFF;
-  background: linear-gradient(135deg, #05CD99 0%, #00B074 100%);
-  border: none;
-  border-radius: 0.95rem;
-  cursor: pointer;
-  box-shadow: 0 4px 16px rgba(5, 205, 153, 0.35);
-  transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
-  position: relative;
-  overflow: hidden;
+.eval-textarea-field.eval-input-error {
+  border-color: #EF4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14) !important;
+  background-color: #FEF2F2 !important;
 }
 
-.eval-submit-btn-glow::after {
+.eval-field-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #DC2626;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.35rem;
+  animation: evalErrorSlideDown 0.22s ease-out;
+}
+
+@keyframes evalErrorSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   Submit Evaluation Button (Adapted from Assign Review Button Micro-Interactions)
+   ========================================================================== */
+.eval-submit-assign-btn,
+.eval-submit-btn-glow {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.55rem !important;
+  padding: 0.75rem 1.85rem !important;
+  border-radius: 0.75rem !important;
+  font-weight: 700 !important;
+  font-size: 0.875rem !important;
+  min-height: 48px !important;
+  background: linear-gradient(135deg, #6D5284 0%, #4A355E 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  cursor: pointer !important;
+  min-width: 175px !important;
+  transition:
+    background 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 0.3s ease !important;
+  box-shadow:
+    0 8px 24px rgba(109, 82, 132, 0.38),
+    0 2px 6px rgba(215, 182, 199, 0.25) !important;
+}
+
+.eval-submit-assign-btn:hover:not(:disabled),
+.eval-submit-btn-glow:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow:
+    0 12px 30px rgba(109, 82, 132, 0.45),
+    0 4px 10px rgba(215, 182, 199, 0.3) !important;
+}
+
+.eval-submit-assign-btn:active:not(:disabled),
+.eval-submit-btn-glow:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97) !important;
+  box-shadow: 0 4px 14px rgba(109, 82, 132, 0.32) !important;
+}
+
+/* Shimmer Sweep Animation */
+.eval-submit-assign-btn::before,
+.eval-submit-btn-glow::before {
   content: "";
   position: absolute;
   top: 0;
-  left: -100%;
-  width: 60%;
+  left: -130%;
+  width: 90%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
-  transform: skewX(-20deg);
-  transition: left 0.65s ease;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.38) 50%,
+    transparent 100%
+  );
+  transform: skewX(-25deg);
+  pointer-events: none;
+  animation: assignBtnShimmerSweep 3.2s ease-in-out infinite;
 }
 
-.eval-submit-btn-glow:hover {
-  background: linear-gradient(135deg, #04B384 0%, #009964 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 22px rgba(5, 205, 153, 0.45);
+@keyframes assignBtnShimmerSweep {
+  0%, 55% {
+    left: -130%;
+  }
+  100% {
+    left: 200%;
+  }
 }
 
-.eval-submit-btn-glow:hover::after {
-  left: 140%;
+/* Icon Container */
+.assign-btn-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  position: relative;
+  flex-shrink: 0;
 }
 
-.eval-submit-btn-glow:active {
-  transform: scale(0.98);
+/* Launching animation for Send icon */
+.assign-icon-launching {
+  animation: assignIconLaunch 0.3s cubic-bezier(0.2, 0.9, 0.3, 1) forwards !important;
+}
+
+@keyframes assignIconLaunch {
+  0% {
+    transform: translate(0, 0) rotate(-12deg) scale(1);
+    opacity: 1;
+  }
+  30% {
+    transform: translate(-3px, 3px) rotate(-26deg) scale(0.92);
+    opacity: 0.95;
+  }
+  100% {
+    transform: translate(24px, -24px) rotate(15deg) scale(0.35);
+    opacity: 0;
+  }
+}
+
+/* Morph to Checkmark */
+.assign-icon-check {
+  animation: assignCheckPop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+}
+
+@keyframes assignCheckPop {
+  0% {
+    transform: scale(0) rotate(-45deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.35) rotate(6deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Button Animating State (compress slightly on launch) */
+.eval-submit-assign-btn.assign-btn-animating,
+.eval-submit-btn-glow.assign-btn-animating {
+  transform: scale(0.96) !important;
+  box-shadow: 0 4px 14px rgba(109, 82, 132, 0.3) !important;
+  cursor: default !important;
+}
+
+/* Button Assigned / Submitted State (smooth emerald success morph) */
+.eval-submit-assign-btn.assign-btn-assigned,
+.eval-submit-btn-glow.assign-btn-assigned {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  box-shadow:
+    0 8px 28px rgba(16, 185, 129, 0.48),
+    0 2px 8px rgba(5, 150, 105, 0.32) !important;
+  transform: scale(1.02) !important;
+  cursor: default !important;
+}
+
+/* Button Text Transitions */
+.assign-btn-text {
+  display: inline-block;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.assign-btn-assigned .assign-btn-text {
+  animation: assignTextSlideUp 0.34s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes assignTextSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ==========================================================================
@@ -571,8 +822,8 @@
     90deg,
     #0F172A 0%,
     #0F172A 32%,
-    #14B8A6 55%,
-    #5EEAD4 72%,
+    #6D5284 55%,
+    #B39CCB 72%,
     #0F172A 88%,
     #0F172A 100%
   );
@@ -616,10 +867,10 @@
   width: 2.75rem;
   height: 3px;
   border-radius: 9999px;
-  background: linear-gradient(90deg, #14B8A6 0%, #5EEAD4 50%, #F59E0B 100%);
+  background: linear-gradient(90deg, #6D5284 0%, #B39CCB 50%, #F59E0B 100%);
   margin-top: 4px;
   animation: evalLineFastExpand 0.4s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
-  box-shadow: 0 1px 6px rgba(20, 184, 166, 0.35);
+  box-shadow: 0 1px 6px rgba(109, 82, 132, 0.35);
   will-change: width, opacity;
 }
 
@@ -677,7 +928,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #14B8A6 0%, #5EEAD4 35%, #05CD99 70%, #5EEAD4 100%);
+  background: linear-gradient(90deg, #6D5284 0%, #B39CCB 35%, #8D73A8 70%, #B39CCB 100%);
   background-size: 200% 100%;
   animation: bannerBeamFlow 3s ease-in-out infinite alternate;
   z-index: 5;
@@ -691,7 +942,7 @@
   left: -120%;
   width: 50%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(20, 184, 166, 0.04), transparent);
+  background: linear-gradient(90deg, transparent, rgba(109, 82, 132, 0.04), transparent);
   transform: skewX(-20deg);
   transition: left 0.75s ease;
   pointer-events: none;
@@ -700,8 +951,8 @@
 
 .eval-meta-banner:hover {
   transform: translateY(-2px);
-  border-color: rgba(20, 184, 166, 0.25);
-  box-shadow: 0 12px 30px -4px rgba(20, 184, 166, 0.1), 0 4px 12px rgba(0, 0, 0, 0.04);
+  border-color: rgba(109, 82, 132, 0.25);
+  box-shadow: 0 12px 30px -4px rgba(109, 82, 132, 0.1), 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .eval-meta-banner:hover::after {
@@ -845,8 +1096,8 @@
    HIDDEN SCORE EVALUATION PARAMETERS (Locked / Click to verify email)
    ========================================================================== */
 .eval-rating-hidden-card {
-  background: linear-gradient(135deg, #F8FAFC 0%, #F0FDFA 100%);
-  border: 1.5px dashed #99F6E4;
+  background: linear-gradient(135deg, #F8FAFC 0%, #F7EEF2 100%);
+  border: 1.5px dashed #D7B6C7;
   border-radius: 1.15rem;
   padding: 1.25rem;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
@@ -854,10 +1105,10 @@
 }
 
 .eval-rating-hidden-card:hover {
-  background: linear-gradient(135deg, #F1F5F9 0%, #CCFBF1 100%);
-  border-color: #14B8A6;
+  background: linear-gradient(135deg, #F1F5F9 0%, #EBCED6 100%);
+  border-color: #6D5284;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px -4px rgba(20, 184, 166, 0.12);
+  box-shadow: 0 8px 24px -4px rgba(109, 82, 132, 0.12);
 }
 
 /* ==========================================================================
@@ -913,7 +1164,7 @@
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.18), 
-              0 0 35px rgba(20, 184, 166, 0.06);
+              0 0 35px rgba(109, 82, 132, 0.06);
   border-radius: 28px;
   position: relative;
   overflow: hidden;
@@ -928,14 +1179,14 @@
   transform: translateX(-50%);
   width: 260px;
   height: 180px;
-  background: radial-gradient(circle, rgba(5, 205, 153, 0.12) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(141, 115, 168, 0.12) 0%, transparent 70%);
   pointer-events: none;
   z-index: 0;
   transition: all 0.5s ease;
 }
 
 .eval-modal-ambient-glow.glowing {
-  background: radial-gradient(circle, rgba(5, 205, 153, 0.28) 0%, rgba(20, 184, 166, 0.1) 50%, transparent 75%);
+  background: radial-gradient(circle, rgba(141, 115, 168, 0.28) 0%, rgba(109, 82, 132, 0.1) 50%, transparent 75%);
   width: 340px;
   height: 240px;
   filter: blur(10px);
@@ -966,23 +1217,23 @@
 
 /* Active focus on empty OTP Box */
 .eval-theme-otp-box:focus-within {
-  border-color: #14B8A6;
+  border-color: #6D5284;
   background: #FFFFFF;
-  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.14), 0 4px 14px rgba(20, 184, 166, 0.08);
+  box-shadow: 0 0 0 3px rgba(109, 82, 132, 0.14), 0 4px 14px rgba(109, 82, 132, 0.08);
   transform: translateY(-2px);
 }
 
 /* FOR EACH TYPED NUMBER: VIBRANT GREEN SHADOW */
 .eval-theme-otp-box.has-number {
-  border-color: #05CD99 !important;
+  border-color: #8D73A8 !important;
   background: #F0FDF9 !important;
-  box-shadow: 0 0 0 3px rgba(5, 205, 153, 0.22), 
-              0 8px 22px -3px rgba(5, 205, 153, 0.42) !important;
+  box-shadow: 0 0 0 3px rgba(141, 115, 168, 0.22), 
+              0 8px 22px -3px rgba(141, 115, 168, 0.42) !important;
   transform: translateY(-2px);
 }
 
 .eval-theme-otp-box.has-number input {
-  color: #05CD99 !important;
+  color: #8D73A8 !important;
 }
 
 /* Box illumination feedback when number is entered */
@@ -992,14 +1243,14 @@
 
 @keyframes greenIlluminatePulse {
   0% {
-    background: rgba(5, 205, 153, 0.25);
-    border-color: #05CD99;
-    box-shadow: 0 0 24px rgba(5, 205, 153, 0.6);
+    background: rgba(141, 115, 168, 0.25);
+    border-color: #8D73A8;
+    box-shadow: 0 0 24px rgba(141, 115, 168, 0.6);
   }
   100% {
     background: #F0FDF9;
-    border-color: #05CD99;
-    box-shadow: 0 0 0 3px rgba(5, 205, 153, 0.22), 0 8px 22px -3px rgba(5, 205, 153, 0.42);
+    border-color: #8D73A8;
+    box-shadow: 0 0 0 3px rgba(141, 115, 168, 0.22), 0 8px 22px -3px rgba(141, 115, 168, 0.42);
   }
 }
 
@@ -1015,27 +1266,27 @@
   outline: none;
   width: 100%;
   height: 100%;
-  caret-color: #05CD99;
+  caret-color: #8D73A8;
   transition: color 0.15s ease;
 }
 
 /* When all 4 boxes are completed */
 .eval-otp-boxes-wrap.energy-glow .eval-theme-otp-box {
-  border-color: #05CD99 !important;
+  border-color: #8D73A8 !important;
   background: #F0FDF9 !important;
-  box-shadow: 0 0 24px rgba(5, 205, 153, 0.65), 
-              0 0 45px rgba(5, 205, 153, 0.3), 
-              inset 0 0 12px rgba(5, 205, 153, 0.15) !important;
+  box-shadow: 0 0 24px rgba(141, 115, 168, 0.65), 
+              0 0 45px rgba(141, 115, 168, 0.3), 
+              inset 0 0 12px rgba(141, 115, 168, 0.15) !important;
   transform: scale(1.03);
   animation: greenEnergyPulse 0.5s ease-in-out infinite alternate;
 }
 
 @keyframes greenEnergyPulse {
   0% {
-    box-shadow: 0 0 20px rgba(5, 205, 153, 0.5), 0 0 35px rgba(5, 205, 153, 0.2);
+    box-shadow: 0 0 20px rgba(141, 115, 168, 0.5), 0 0 35px rgba(141, 115, 168, 0.2);
   }
   100% {
-    box-shadow: 0 0 30px rgba(5, 205, 153, 0.8), 0 0 55px rgba(5, 205, 153, 0.35);
+    box-shadow: 0 0 30px rgba(141, 115, 168, 0.8), 0 0 55px rgba(141, 115, 168, 0.35);
   }
 }
 
@@ -1047,7 +1298,7 @@
   width: 100%;
   height: 60px;
   transform: translateY(-50%);
-  background: linear-gradient(90deg, transparent, rgba(5, 205, 153, 0.35), transparent);
+  background: linear-gradient(90deg, transparent, rgba(141, 115, 168, 0.35), transparent);
   filter: blur(12px);
   pointer-events: none;
   animation: energySweepGreen 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
@@ -1103,14 +1354,14 @@
 .eval-success-square {
   width: 76px;
   height: 76px;
-  background: linear-gradient(135deg, #05CD99 0%, #10B981 100%);
+  background: linear-gradient(135deg, #8D73A8 0%, #10B981 100%);
   border: 2px solid rgba(255, 255, 255, 0.6);
   border-radius: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 35px rgba(5, 205, 153, 0.55), 
-              0 12px 30px rgba(5, 205, 153, 0.35),
+  box-shadow: 0 0 35px rgba(141, 115, 168, 0.55), 
+              0 12px 30px rgba(141, 115, 168, 0.35),
               inset 0 1px 1px rgba(255, 255, 255, 0.6);
   animation: squarePopSpring 0.48s cubic-bezier(0.175, 0.885, 0.32, 1.25) forwards;
   z-index: 2;
@@ -1136,7 +1387,7 @@
   position: absolute;
   inset: -12px;
   border-radius: 30px;
-  background: radial-gradient(circle, rgba(5, 205, 153, 0.45) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(141, 115, 168, 0.45) 0%, transparent 70%);
   filter: blur(8px);
   animation: greenGlowExpand 0.75s 0.1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   pointer-events: none;
@@ -1182,3 +1433,85 @@
     stroke-dashoffset: 0;
   }
 }
+
+/* ==========================================================================
+   Matrix Navigation CTA Card & Animated SVG Button
+   ========================================================================== */
+.eval-matrix-cta-card {
+  position: relative;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: cardSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.eval-matrix-cta-card:hover {
+  transform: translateY(-2px);
+}
+
+.eval-matrix-btn-icon-glow {
+  animation: matrixIconGlow 3s ease-in-out infinite;
+}
+
+@keyframes matrixIconGlow {
+  0%, 100% {
+    box-shadow: 0 4px 14px rgba(109, 82, 132, 0.28);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 8px 24px rgba(109, 82, 132, 0.5);
+    transform: scale(1.04);
+  }
+}
+
+.eval-cta-bg-svg {
+  animation: ctaBgRotate 50s linear infinite;
+}
+
+@keyframes ctaBgRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.eval-open-matrix-btn {
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.eval-open-matrix-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.32),
+    transparent
+  );
+  transform: skewX(-20deg);
+  transition: all 0.75s ease;
+}
+
+.eval-open-matrix-btn:hover::before {
+  left: 140%;
+}
+
+.eval-matrix-svg-lines {
+  animation: svgDashShift 4s ease-in-out infinite alternate;
+}
+
+@keyframes svgDashShift {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: 16;
+  }
+}
+

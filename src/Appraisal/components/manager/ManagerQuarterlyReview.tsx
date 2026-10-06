@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Plus,
   Calendar,
@@ -39,6 +39,67 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const [evaluatingRecord, setEvaluatingRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
   const [evaluationMode, setEvaluationMode] = useState<"edit" | "view">("edit");
 
+  const scrollToTop = () => {
+    // 1. Scroll main elements (the scrollable container in SidebarLayout)
+    const mainElements = document.querySelectorAll("main");
+    mainElements.forEach((m) => {
+      m.scrollTop = 0;
+      if (typeof m.scrollTo === "function") {
+        m.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      }
+    });
+
+    // 2. Scroll any large container with overflow-y-auto
+    const overflowElements = document.querySelectorAll("[class*='overflow-y-auto']");
+    overflowElements.forEach((el) => {
+      if (el.scrollHeight > 600) {
+        el.scrollTop = 0;
+        if (typeof el.scrollTo === "function") {
+          el.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        }
+      }
+    });
+
+    // 3. Scroll window and documentElement
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+
+  const triggerScrollToTop = () => {
+    scrollToTop();
+    requestAnimationFrame(scrollToTop);
+    setTimeout(scrollToTop, 20);
+    setTimeout(scrollToTop, 60);
+    setTimeout(scrollToTop, 150);
+  };
+
+  useEffect(() => {
+    if (!evaluatingRecord) {
+      triggerScrollToTop();
+    }
+  }, [evaluatingRecord]);
+
+  const handleBackToDashboard = () => {
+    triggerScrollToTop();
+    setEvaluatingRecord(null);
+    triggerScrollToTop();
+  };
+
+  const handleEditRecord = (item: ManagerQuarterlyReviewRecord) => {
+    triggerScrollToTop();
+    setEvaluationMode("edit");
+    setEvaluatingRecord(item);
+    triggerScrollToTop();
+  };
+
+  const handleViewRecord = (item: ManagerQuarterlyReviewRecord) => {
+    triggerScrollToTop();
+    setEvaluationMode("view");
+    setEvaluatingRecord(item);
+    triggerScrollToTop();
+  };
+
   const handleEvaluationSubmit = (recordId: string, evaluation: EvaluationData) => {
     setAssignments((prev) =>
       prev.map((rec) => {
@@ -57,7 +118,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
     setTimeout(() => {
       setHighlightedRowId(null);
     }, 2500);
+    scrollToTop();
     setEvaluatingRecord(null);
+    setTimeout(scrollToTop, 40);
   };
 
   // Briefly highlighted row ID after an assignment completes
@@ -186,7 +249,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   // Dynamic member filter options based on assignments
   const memberOptions = useMemo(() => {
     const seen = new Set<string>();
-    const opts = [{ value: "all", label: "All Members" }];
+    const opts = [{ value: "all", label: "Members" }];
     assignments.forEach((a) => {
       if (!seen.has(a.id)) {
         seen.add(a.id);
@@ -213,7 +276,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
           <EvaluationPanel
             record={evaluatingRecord}
             mode={evaluationMode}
-            onBack={() => setEvaluatingRecord(null)}
+            onBack={handleBackToDashboard}
             onSubmitEvaluation={handleEvaluationSubmit}
           />
         </div>
@@ -253,38 +316,68 @@ export const ManagerQuarterlyReview: React.FC = () => {
               </span>
             </p>
           </div>
+
+          {/* Create Button at top of card with animated SVG icon */}
+          <Button
+            variant="primary"
+            size="lg"
+            leftIcon={
+              <span className="manager-create-icon-wrap" aria-hidden="true">
+                <svg
+                  className="manager-create-icon-svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9.5"
+                    className="manager-create-svg-circle"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeDasharray="4 3"
+                    opacity="0.8"
+                  />
+                  <path
+                    d="M12 7V17M7 12H17"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="manager-create-svg-plus"
+                  />
+                </svg>
+              </span>
+            }
+            onClick={handleOpenCreateModal}
+            className="w-full sm:w-auto font-bold manager-review-create-btn shrink-0"
+          >
+            Create
+          </Button>
         </div>
 
         {/* Main Section Card */}
         <Card className="w-full p-5 sm:p-7 manager-review-glass-card">
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title">
+          <CardHeader className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
+            <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title whitespace-nowrap shrink-0">
               Quarterly Reviews
             </CardTitle>
 
-            <Button
-              variant="primary"
-              size="lg"
-              leftIcon={<Plus className="w-4 h-4 stroke-[2.5]" />}
-              onClick={handleOpenCreateModal}
-              className="w-full sm:w-auto font-bold manager-review-create-btn"
-            >
-              Create
-            </Button>
-          </CardHeader>
-
-          <CardContent className="p-0">
-            <div className="flex items-center gap-2.5 lg:gap-3 mb-6 overflow-x-auto no-scrollbar flex-nowrap py-1.5 manager-review-filters-bar">
-              <div className="w-52 lg:w-64 shrink-0 filter-item-stagger-1">
+            {/* Filters beside title */}
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar flex-nowrap py-1 manager-review-filters-bar flex-1 justify-start xl:justify-end">
+              <div className="w-32 sm:w-36 md:w-40 xl:w-44 shrink-0 filter-item-stagger-1">
                 <SearchBox
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onClear={() => setSearchTerm("")}
-                  placeholder="Search employee name or..."
+                  placeholder="Search..."
                   variant="outlined"
-                  inputSize="lg"
-                  containerClassName="w-full rounded-2xl manager-review-search-box"
-                  className="text-sm manager-review-search-input"
+                  inputSize="md"
+                  containerClassName="w-full rounded-xl manager-review-search-box"
+                  className="text-xs manager-review-search-input"
                   allowClear
                 />
               </div>
@@ -294,7 +387,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 placeholder="Financial Year"
                 allowClear={true}
                 defaultValue=""
-                prefixIcon={<Calendar size={16} className="filter-icon-fy" />}
+                prefixIcon={<Calendar size={14} className="filter-icon-fy" />}
                 options={[
                   { value: "all", label: "All FY" },
                   { value: "FY 2026-27", label: "FY 2026-27" },
@@ -303,8 +396,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 ]}
                 value={financialYear}
                 onChange={setFinancialYear}
-                maxLabelWidth="max-w-[110px]"
-                buttonClassName="manager-review-filter-btn filter-btn-fy rounded-2xl px-3 py-2.5 text-sm font-medium min-w-[145px]"
+                maxLabelWidth="max-w-[70px]"
+                buttonClassName="manager-review-filter-btn filter-btn-fy rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[108px]"
               />
 
               <Dropdown
@@ -312,9 +405,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 placeholder="Quarters"
                 allowClear={true}
                 defaultValue=""
-                prefixIcon={<Clock size={16} className="filter-icon-quarters" />}
+                prefixIcon={<Clock size={14} className="filter-icon-quarters" />}
                 options={[
-                  { value: "all", label: "All Quarters" },
+                  { value: "all", label: "Quarters" },
                   { value: "Q1", label: "Quarter 1" },
                   { value: "Q2", label: "Quarter 2" },
                   { value: "Q3", label: "Quarter 3" },
@@ -322,31 +415,31 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 ]}
                 value={quarter}
                 onChange={setQuarter}
-                maxLabelWidth="max-w-[95px]"
-                buttonClassName="manager-review-filter-btn filter-btn-quarters rounded-2xl px-3 py-2.5 text-sm font-medium min-w-[125px]"
+                maxLabelWidth="max-w-[55px]"
+                buttonClassName="manager-review-filter-btn filter-btn-quarters rounded-xl px-2 py-1.5 text-xs font-medium min-w-[84px]"
               />
 
               <Dropdown
                 className="shrink-0 filter-item-stagger-4"
-                placeholder="All Members"
+                placeholder="Members"
                 allowClear={true}
                 defaultValue=""
-                prefixIcon={<Users size={16} className="filter-icon-members" />}
+                prefixIcon={<Users size={14} className="filter-icon-members" />}
                 options={memberOptions}
                 value={memberFilter}
                 onChange={setMemberFilter}
-                maxLabelWidth="max-w-[105px]"
-                buttonClassName="manager-review-filter-btn filter-btn-members rounded-2xl px-3 py-2.5 text-sm font-medium min-w-[135px]"
+                maxLabelWidth="max-w-[62px]"
+                buttonClassName="manager-review-filter-btn filter-btn-members rounded-xl px-2 py-1.5 text-xs font-medium min-w-[88px]"
               />
 
               <Dropdown
                 className="shrink-0 filter-item-stagger-5"
-                placeholder="All Status"
+                placeholder="Status"
                 allowClear={true}
                 defaultValue=""
-                prefixIcon={<ClipboardList size={16} className="filter-icon-status" />}
+                prefixIcon={<ClipboardList size={14} className="filter-icon-status" />}
                 options={[
-                  { value: "all", label: "All Status" },
+                  { value: "all", label: "Status" },
                   { value: "NOT_STARTED", label: "Not Started" },
                   { value: "IN_PROGRESS", label: "In Progress" },
                   { value: "SUBMITTED", label: "Submitted" },
@@ -355,36 +448,34 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 ]}
                 value={statusFilter}
                 onChange={setStatusFilter}
-                maxLabelWidth="max-w-[95px]"
-                buttonClassName="manager-review-filter-btn filter-btn-status rounded-2xl px-3 py-2.5 text-sm font-medium min-w-[125px]"
+                maxLabelWidth="max-w-[52px]"
+                buttonClassName="manager-review-filter-btn filter-btn-status rounded-xl px-2 py-1.5 text-xs font-medium min-w-[78px]"
               />
 
               {hasActiveFilters && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  leftIcon={<RotateCcw size={14} className="filter-clear-icon" />}
                   onClick={handleClearFilters}
-                  className="manager-review-clear-btn shrink-0 whitespace-nowrap font-medium"
+                  className="manager-review-clear-btn shrink-0 p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-xs font-medium flex items-center gap-1 border border-[#B39CCB]/60 bg-white/90 text-[#4A355E] hover:text-[#4A355E] hover:bg-[#F7EEF2]/80 shadow-xs"
+                  title="Clear all filters"
                 >
-                  Clear
+                  <RotateCcw size={13} className="filter-clear-icon shrink-0" />
+                  <span className="hidden 2xl:inline text-xs">Clear</span>
                 </Button>
               )}
             </div>
+          </CardHeader>
+
+          <CardContent className="p-0">
 
             {/* Table populated state vs Empty state */}
             {filteredAssignments.length > 0 ? (
               <QuarterlyReviewTable
                 data={filteredAssignments}
                 highlightedId={highlightedRowId}
-                onEdit={(item) => {
-                  setEvaluationMode("edit");
-                  setEvaluatingRecord(item);
-                }}
-                onView={(item) => {
-                  setEvaluationMode("view");
-                  setEvaluatingRecord(item);
-                }}
+                onEdit={handleEditRecord}
+                onView={handleViewRecord}
               />
             ) : (
               /* Empty State UI with Rich Colors and Animated SVG */

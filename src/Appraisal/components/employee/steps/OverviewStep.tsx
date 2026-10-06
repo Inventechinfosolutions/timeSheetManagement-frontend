@@ -1,40 +1,66 @@
 import React from "react";
 import { StepProps } from "../../../types/appraisal.types";
+import { AlertCircle } from "lucide-react";
 
-
-export const OverviewStep: React.FC<StepProps> = ({ formData, onChange }) => {
+export const OverviewStep: React.FC<StepProps> = ({
+  formData,
+  onChange,
+  errors,
+  clearError,
+}) => {
   const overviewVal = formData.overview ?? formData.roleSummary ?? "";
+  const errorMessage = errors?.overview || errors?.roleSummary;
 
   const handleChange = (val: string) => {
     onChange("overview" as any, val);
     onChange("roleSummary", val);
+    if (clearError) {
+      clearError("overview");
+      clearError("roleSummary");
+    }
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-200">
-      <div className="border-b border-gray-100 pb-4">
-        <h3 className="text-lg font-bold text-[#0F172A]">Step 1: Role & Quarter Overview</h3>
-        <p className="text-xs text-[#64748B] mt-0.5">
+    <div className="space-y-6">
+      <div className="border-b border-[#D7B6C7]/40 pb-4">
+        <h3 className="text-lg font-bold text-[#0F172A]">
+          <span className="eval-title-anim">Step 1: Role & Quarter Overview</span>
+          <span className="eval-title-accent-line" />
+        </h3>
+        <p className="text-xs text-[#64748B] mt-1 eval-subtitle-anim">
           Summarize your current role, primary responsibilities, and key highlights for this quarter.
         </p>
       </div>
 
       <div className="space-y-4">
-        {/* Single Comprehensive Overview Input */}
-        <div>
-          <label className="block text-xs font-bold uppercase tracking-wider text-[#0F172A] mb-2">
-            Overview <span className="text-red-500">*</span>
+        {/* Comprehensive Overview Input Card with Animated Interactive Styling */}
+        <div
+          id="field-overview"
+          className={`eval-step-card space-y-2.5 transition-all duration-200 ${
+            errorMessage ? "eval-field-has-error" : ""
+          }`}
+        >
+          <label className="block text-xs font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center justify-between">
+            <span>
+              Overview Summary <span className="text-red-500">*</span>
+            </span>
           </label>
           <textarea
+            id="input-overview"
             rows={7}
             value={overviewVal}
             onChange={(e) => handleChange(e.target.value)}
             placeholder="Summarize your role, core responsibilities, deliverables, and major quarter highlights..."
-            className="w-full px-4 py-3 bg-white border border-[#CCFBF1] hover:border-gray-300 focus:border-[#14B8A6] focus:ring-2 focus:ring-[#14B8A6]/10 rounded-2xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all shadow-xs leading-relaxed"
+            className={`eval-textarea-field leading-relaxed text-sm ${
+              errorMessage ? "eval-input-error" : ""
+            }`}
           />
-          <p className="text-xs text-[#94A3B8] mt-1.5">
-            Provide a clear summary covering your day-to-day role responsibilities, key milestones reached, and major projects delivered this quarter.
-          </p>
+          {errorMessage && (
+            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{errorMessage}</span>
+            </p>
+          )}
         </div>
       </div>
     </div>

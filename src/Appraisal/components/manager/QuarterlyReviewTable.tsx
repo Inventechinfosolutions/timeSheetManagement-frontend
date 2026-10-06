@@ -17,7 +17,7 @@ interface QuarterlyReviewTableProps {
 
 // Harmonious colorful avatar palettes for varied visual appeal
 const AVATAR_PALETTES = [
-  { bg: "linear-gradient(135deg, #F0FDFA 0%, #CCFBF1 100%)", text: "#14B8A6", border: "#99F6E4" }, // Indigo
+  { bg: "linear-gradient(135deg, #F7EEF2 0%, #EBCED6 100%)", text: "#6D5284", border: "#B39CCB" }, // Holst Plum
   { bg: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)", text: "#059669", border: "#A7F3D0" }, // Emerald
   { bg: "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)", text: "#2563EB", border: "#BFDBFE" }, // Blue
   { bg: "linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)", text: "#D97706", border: "#FDE68A" }, // Amber
@@ -152,12 +152,39 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
     );
   };
 
+  const scrollToTop = () => {
+    const mainElements = document.querySelectorAll("main");
+    mainElements.forEach((m) => {
+      m.scrollTop = 0;
+      if (typeof m.scrollTo === "function") {
+        m.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      }
+    });
+
+    const overflowElements = document.querySelectorAll("[class*='overflow-y-auto']");
+    overflowElements.forEach((el) => {
+      if (el.scrollHeight > 600) {
+        el.scrollTop = 0;
+        if (typeof el.scrollTo === "function") {
+          el.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        }
+      }
+    });
+
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+
   const renderAction = (record: ManagerQuarterlyReviewRecord) => {
     return (
       <div className="qr-actions-container">
         <button
           type="button"
-          onClick={() => onView?.(record)}
+          onClick={() => {
+            scrollToTop();
+            onView?.(record);
+          }}
           className="qr-action-icon-btn qr-action-btn-view"
           title={`View appraisal for ${record.name}`}
           aria-label={`View appraisal for ${record.name}`}
@@ -166,7 +193,10 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
         </button>
         <button
           type="button"
-          onClick={() => onEdit?.(record)}
+          onClick={() => {
+            scrollToTop();
+            onEdit?.(record);
+          }}
           className="qr-action-icon-btn qr-action-btn-edit"
           title={`Edit evaluation for ${record.name}`}
           aria-label={`Edit evaluation for ${record.name}`}
@@ -315,7 +345,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               pageSize={pageSize}
               onPageChange={setCurrentPage}
               showTotal={false}
-              activeClassName="!bg-[#14B8A6] !text-white shadow-xs font-black shadow-teal-500/25"
+              activeClassName="!bg-[#6D5284] !text-white shadow-xs font-black shadow-[#6D5284]/25"
             />
           </div>
         </div>

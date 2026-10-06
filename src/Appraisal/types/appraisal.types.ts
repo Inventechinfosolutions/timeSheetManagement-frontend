@@ -69,8 +69,13 @@ export interface ReviewFormData {
   mentorshipAssistance: string;
   peerSupport: string;
   teamRatings?: {
-    crossCollaboration?: number;
     communication?: number;
+    ownership?: number;
+    collaboration?: number;
+    problemSolving?: number;
+    leadership?: number;
+    adaptability?: number;
+    crossCollaboration?: number;
     mentorship?: number;
     peerSupport?: number;
     reliability?: number;
@@ -96,4 +101,6 @@ export interface ReviewFormData {
 export interface StepProps {
   formData: ReviewFormData;
   onChange: (field: keyof ReviewFormData, value: any) => void;
+  errors?: Record<string, string>;
+  clearError?: (field: string) => void;
 }

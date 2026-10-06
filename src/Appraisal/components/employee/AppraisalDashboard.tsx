@@ -11,6 +11,7 @@ import {
   UserCheck,
   RotateCcw,
   CalendarClock,
+  ChevronRight,
 } from "lucide-react";
 import {
   QuarterlyReviewAssignment,
@@ -85,6 +86,68 @@ export const AppraisalDashboard: React.FC = () => {
 
   // Viewing assignment in EvaluationPanel
   const [viewingAssignment, setViewingAssignment] = useState<QuarterlyReviewAssignment | null>(null);
+
+  // Comprehensive scroll to top helper that handles window, body, documentElement,
+  // and inner layout containers like <main> or overflow-y-auto elements in SidebarLayout
+  const scrollToPageTop = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    if (document.documentElement) {
+      document.documentElement.scrollTop = 0;
+      if (typeof document.documentElement.scrollTo === "function") {
+        document.documentElement.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+      }
+    }
+    if (document.body) {
+      document.body.scrollTop = 0;
+      if (typeof document.body.scrollTo === "function") {
+        document.body.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+      }
+    }
+
+    const mainElements = document.querySelectorAll("main");
+    mainElements.forEach((m) => {
+      m.scrollTop = 0;
+      if (typeof m.scrollTo === "function") {
+        m.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+      }
+    });
+
+    const overflowElements = document.querySelectorAll("[class*='overflow-y-auto']");
+    overflowElements.forEach((el) => {
+      if (el.scrollHeight > 400) {
+        el.scrollTop = 0;
+        if (typeof el.scrollTo === "function") {
+          el.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+        }
+      }
+    });
+  };
+
+  // Scroll to top helper handlers for View and Edit
+  const handleOpenEdit = (assignment: QuarterlyReviewAssignment) => {
+    scrollToPageTop();
+    openAssignment(assignment);
+    setTimeout(scrollToPageTop, 50);
+  };
+
+  const handleOpenView = (assignment: QuarterlyReviewAssignment) => {
+    scrollToPageTop();
+    setViewingAssignment(assignment);
+    setTimeout(scrollToPageTop, 50);
+  };
+
+  // Ensure scroll to top whenever entering view or edit screen
+  useEffect(() => {
+    if (activeAssignment || viewingAssignment) {
+      scrollToPageTop();
+      const raf = requestAnimationFrame(scrollToPageTop);
+      const t = setTimeout(scrollToPageTop, 60);
+      return () => {
+        cancelAnimationFrame(raf);
+        clearTimeout(t);
+      };
+    }
+  }, [activeAssignment, viewingAssignment]);
 
   // Pagination state (10 items per page, right-aligned)
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -181,8 +244,9 @@ export const AppraisalDashboard: React.FC = () => {
             mode="view"
             hideScoreParameters={true}
             onBack={() => {
-              window.scrollTo({ top: 0, behavior: "smooth" });
+              scrollToPageTop();
               setViewingAssignment(null);
+              setTimeout(scrollToPageTop, 50);
             }}
           />
         </div>
@@ -214,8 +278,9 @@ export const AppraisalDashboard: React.FC = () => {
           <QuarterlyReviewStepper
             assignment={activeAssignment}
             onBack={() => {
-              window.scrollTo({ top: 0, behavior: "smooth" });
+              scrollToPageTop();
               closeAssignment();
+              setTimeout(scrollToPageTop, 50);
             }}
             onSubmitSuccess={() => submitReview(activeAssignment.id)}
           />
@@ -244,8 +309,8 @@ export const AppraisalDashboard: React.FC = () => {
 
       {/* FOREGROUND CONTENT (z-10 layer for crisp interactivity and clarity) */}
       <div className="relative z-10">
-        {/* Page Header */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Page Header with Compact Summary Cards Beside Title */}
+        <div className="mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
               <span className="manager-review-title-anim">Quarterly Review</span>
@@ -256,80 +321,94 @@ export const AppraisalDashboard: React.FC = () => {
               </span>
             </p>
           </div>
-        </div>
 
-        {/* SUMMARY CARDS: CURRENT YEAR RATING + DEADLINE */}
-        <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-          <Card className="order-2 rounded-3xl p-5 manager-review-glass-card w-full">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-[#E6F9F0] text-[#05CD99] flex items-center justify-center shrink-0">
-                <Award className="w-5 h-5 stroke-[2.2]" />
-              </div>
-              <h2 className="text-[11px] font-bold text-[#0F172A] uppercase tracking-wider">
-                CURRENT YEAR RATING
-              </h2>
-            </div>
-
-            <div className="pl-1">
-              <span className="text-2xl font-black text-[#0F172A] tracking-tight">—</span>
-              <p className="text-xs text-[#94A3B8] mt-1 font-medium">Not Available</p>
-            </div>
-          </Card>
-
-          {/* DEADLINE CARD */}
-          <Card className="order-1 rounded-3xl p-5 manager-review-glass-card w-full">
-            <div className="flex items-center justify-between gap-3 mb-3">
+          {/* 2 Summary Cards beside title */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+            {/* DEADLINE CARD */}
+            <div
+              onClick={() => {
+                if (deadlineInfo) {
+                  handleOpenEdit(deadlineInfo.assignment);
+                }
+              }}
+              className={`manager-review-glass-card employee-header-stat-card ${
+                deadlineInfo ? "cursor-pointer" : "cursor-default"
+              }`}
+              title={deadlineInfo ? "Click to open review assignment" : undefined}
+            >
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  className={`employee-header-stat-icon-wrap ${
                     deadlineInfo && deadlineInfo.days < 0
-                      ? "bg-[#FEF2F2] text-[#DC2626]"
+                      ? "bg-[#FEF2F2] border border-red-200 text-[#DC2626]"
                       : deadlineInfo && deadlineInfo.days <= 3
-                      ? "bg-[#FFFBEB] text-[#D97706]"
-                      : "bg-[#F0FDFA] text-[#14B8A6]"
+                      ? "bg-[#FFFBEB] border border-amber-200 text-[#D97706]"
+                      : "bg-white/90 border border-white/90 text-[#0F172A]"
                   }`}
                 >
                   <CalendarClock className="w-5 h-5 stroke-[2.2]" />
                 </div>
-                <h2 className="text-[11px] font-bold text-[#0F172A] uppercase tracking-wider">
-                  DEADLINE
-                </h2>
+
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug">
+                      Deadline
+                    </span>
+                    {deadlineInfo && renderQuarterBadge(deadlineInfo.assignment.quarter)}
+                  </div>
+
+                  {deadlineInfo ? (
+                    <div className="text-[11px] sm:text-xs font-semibold leading-snug mt-1">
+                      <span
+                        className={
+                          deadlineInfo.days < 0
+                            ? "text-[#DC2626]"
+                            : deadlineInfo.days <= 3
+                            ? "text-[#D97706]"
+                            : "text-[#0F172A]"
+                        }
+                      >
+                        {deadlineInfo.assignment.deadline}
+                      </span>
+                      <span className="text-[#94A3B8] font-normal">
+                        {" "}· {deadlineInfo.days < 0
+                          ? `Overdue by ${Math.abs(deadlineInfo.days)}d`
+                          : deadlineInfo.days === 0
+                          ? "Due today"
+                          : `${deadlineInfo.days}d left`}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-[11px] sm:text-xs text-[#94A3B8] font-medium leading-snug mt-1">
+                      No pending reviews
+                    </span>
+                  )}
+                </div>
               </div>
-              {deadlineInfo && renderQuarterBadge(deadlineInfo.assignment.quarter)}
+
+              <ChevronRight className="w-4 h-4 text-[#94A3B8] shrink-0 ml-1.5" />
             </div>
 
-            {deadlineInfo ? (
-              <div className="pl-1">
-                <span className="text-2xl font-black text-[#0F172A] tracking-tight">
-                  {deadlineInfo.assignment.deadline}
-                </span>
-                <p
-                  className={`text-xs mt-1 font-semibold ${
-                    deadlineInfo.days < 0
-                      ? "text-[#DC2626]"
-                      : deadlineInfo.days <= 3
-                      ? "text-[#D97706]"
-                      : "text-[#0F766E]"
-                  }`}
-                >
-                  {deadlineInfo.days < 0
-                    ? `Overdue by ${Math.abs(deadlineInfo.days)} day${Math.abs(deadlineInfo.days) === 1 ? "" : "s"}`
-                    : deadlineInfo.days === 0
-                    ? "Due today"
-                    : `${deadlineInfo.days} day${deadlineInfo.days === 1 ? "" : "s"} left`}
-                  <span className="text-[#94A3B8] font-medium">
-                    {" "}· {deadlineInfo.assignment.financialYear}
-                    {deadlineInfo.pendingCount > 1 && ` · ${deadlineInfo.pendingCount} pending`}
+            {/* CURRENT YEAR RATING CARD */}
+            <div className="manager-review-glass-card employee-header-stat-card cursor-default">
+              <div className="flex items-center gap-3">
+                <div className="employee-header-stat-icon-wrap bg-white/90 border border-white/90 text-[#0F172A]">
+                  <Award className="w-5 h-5 stroke-[2.2]" />
+                </div>
+
+                <div className="flex flex-col">
+                  <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug">
+                    Current Year Rating
                   </span>
-                </p>
+                  <span className="text-[11px] sm:text-xs text-[#94A3B8] font-medium leading-snug mt-1">
+                    Not Available
+                  </span>
+                </div>
               </div>
-            ) : (
-              <div className="pl-1">
-                <span className="text-2xl font-black text-[#0F172A] tracking-tight">—</span>
-                <p className="text-xs text-[#94A3B8] mt-1 font-medium">No pending reviews</p>
-              </div>
-            )}
-          </Card>
+
+              <ChevronRight className="w-4 h-4 text-[#94A3B8] shrink-0 ml-1.5" />
+            </div>
+          </div>
         </div>
 
         {/* MAIN SECTION: QUARTERLY REVIEW HISTORY */}
@@ -337,7 +416,7 @@ export const AppraisalDashboard: React.FC = () => {
           {/* Card Header & Filters */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[#F0FDFA] text-[#14B8A6] flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-[#F7EEF2] text-[#6D5284] flex items-center justify-center shrink-0">
                 <BarChart3 className="w-4 h-4" />
               </div>
               <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title">
@@ -361,7 +440,7 @@ export const AppraisalDashboard: React.FC = () => {
                 value={financialYear}
                 onChange={setFinancialYear}
                 maxLabelWidth="max-w-[105px]"
-                buttonClassName="bg-white border border-[#CCFBF1] hover:border-gray-300 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[140px] shadow-none"
+                buttonClassName="bg-white border border-[#EBCED6] hover:border-gray-300 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[140px] shadow-none"
               />
 
               {/* Quarter Dropdown */}
@@ -380,7 +459,7 @@ export const AppraisalDashboard: React.FC = () => {
                 value={quarter}
                 onChange={setQuarter}
                 maxLabelWidth="max-w-[95px]"
-                buttonClassName="bg-white border border-[#CCFBF1] hover:border-gray-300 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[120px] shadow-none"
+                buttonClassName="bg-white border border-[#EBCED6] hover:border-gray-300 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[120px] shadow-none"
               />
 
               {/* Status Dropdown */}
@@ -398,7 +477,7 @@ export const AppraisalDashboard: React.FC = () => {
                 value={statusFilter}
                 onChange={setStatusFilter}
                 maxLabelWidth="max-w-[95px]"
-                buttonClassName="bg-white border border-[#CCFBF1] hover:border-gray-300 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[120px] shadow-none"
+                buttonClassName="bg-white border border-[#EBCED6] hover:border-gray-300 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[120px] shadow-none"
               />
 
               {/* Clear Button */}
@@ -472,7 +551,7 @@ export const AppraisalDashboard: React.FC = () => {
                                 {/* 4. Deadline */}
                                 <td className="text-center">
                                   <span className="qr-date-chip">
-                                    <Calendar className="w-3.5 h-3.5 text-[#14B8A6] mr-1.5 inline" />
+                                    <Calendar className="w-3.5 h-3.5 text-[#6D5284] mr-1.5 inline" />
                                     {assignment.deadline}
                                   </span>
                                 </td>
@@ -487,7 +566,7 @@ export const AppraisalDashboard: React.FC = () => {
                                   <div className="qr-actions-container">
                                     <button
                                       type="button"
-                                      onClick={() => setViewingAssignment(assignment)}
+                                      onClick={() => handleOpenView(assignment)}
                                       className="qr-action-icon-btn qr-action-btn-view"
                                       title={`View appraisal review for ${assignment.quarter}`}
                                       aria-label={`View appraisal review for ${assignment.quarter}`}
@@ -496,7 +575,7 @@ export const AppraisalDashboard: React.FC = () => {
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => openAssignment(assignment)}
+                                      onClick={() => handleOpenEdit(assignment)}
                                       className="qr-action-icon-btn qr-action-btn-edit"
                                       title={`Edit review for ${assignment.quarter}`}
                                       aria-label={`Edit review for ${assignment.quarter}`}
@@ -528,7 +607,7 @@ export const AppraisalDashboard: React.FC = () => {
                             pageSize={pageSize}
                             onPageChange={setCurrentPage}
                             showTotal={false}
-                            activeClassName="!bg-[#14B8A6] !text-white shadow-xs font-black shadow-teal-500/25"
+                            activeClassName="!bg-[#6D5284] !text-white shadow-xs font-black shadow-[#6D5284]/25"
                           />
                         </div>
                       </div>
@@ -547,7 +626,7 @@ export const AppraisalDashboard: React.FC = () => {
                     return (
                       <Card
                         key={assignment.id}
-                        className="p-4 rounded-2xl border border-[#CCFBF1] bg-white shadow-xs space-y-3"
+                        className="p-4 rounded-2xl border border-[#EBCED6] bg-white shadow-xs space-y-3"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -580,7 +659,7 @@ export const AppraisalDashboard: React.FC = () => {
                           <div className="flex items-center justify-between">
                             <span>Deadline:</span>
                             <span className="qr-date-chip">
-                              <Calendar className="w-3 h-3 text-[#14B8A6] mr-1 inline" />
+                              <Calendar className="w-3 h-3 text-[#6D5284] mr-1 inline" />
                               {assignment.deadline}
                             </span>
                           </div>
@@ -589,7 +668,7 @@ export const AppraisalDashboard: React.FC = () => {
                         <div className="flex items-center gap-2 pt-2">
                           <button
                             type="button"
-                            onClick={() => setViewingAssignment(assignment)}
+                            onClick={() => handleOpenView(assignment)}
                             className="qr-action-btn-view flex-1 justify-center py-2 text-xs"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -597,7 +676,7 @@ export const AppraisalDashboard: React.FC = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => openAssignment(assignment)}
+                            onClick={() => handleOpenEdit(assignment)}
                             className="qr-action-btn-edit flex-1 justify-center py-2 text-xs"
                           >
                             <Pencil className="w-3.5 h-3.5" />
@@ -620,7 +699,7 @@ export const AppraisalDashboard: React.FC = () => {
                     xmlns="http://www.w3.org/2000/svg"
                     className="w-full h-auto drop-shadow-sm mx-auto"
                   >
-                    <ellipse cx="120" cy="150" rx="90" ry="18" fill="#F7FEFD" />
+                    <ellipse cx="120" cy="150" rx="90" ry="18" fill="#FAF6F8" />
                     <rect
                       x="50"
                       y="30"
@@ -633,7 +712,7 @@ export const AppraisalDashboard: React.FC = () => {
                     />
                     <path
                       d="M70 45 L170 45"
-                      stroke="#14B8A6"
+                      stroke="#6D5284"
                       strokeWidth="3"
                       strokeLinecap="round"
                     />
@@ -649,10 +728,10 @@ export const AppraisalDashboard: React.FC = () => {
                       strokeWidth="2.5"
                       strokeLinecap="round"
                     />
-                    <circle cx="155" cy="95" r="16" fill="#F7FEFD" stroke="#14B8A6" strokeWidth="2" />
+                    <circle cx="155" cy="95" r="16" fill="#FAF6F8" stroke="#6D5284" strokeWidth="2" />
                     <path
                       d="M150 95 L154 99 L162 91"
-                      stroke="#14B8A6"
+                      stroke="#6D5284"
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"

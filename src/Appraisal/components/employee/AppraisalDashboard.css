@@ -5,38 +5,116 @@
 
 @import "../manager/ManagerQuarterlyReview.css";
 @import "../manager/QuarterlyReviewTable.css";
+@import "../manager/EvaluationPanel.css";
+
+/* ==========================================================================
+   Step Header & Card Entrance Animations (Matching Edit & View Page)
+   ========================================================================== */
+@keyframes stepCardReveal {
+  0% {
+    opacity: 0;
+    transform: translateY(22px) scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.step-reveal-card {
+  animation: stepCardReveal 500ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  will-change: opacity, transform;
+}
+
+.step-reveal-stagger-1 {
+  animation-delay: 50ms;
+}
+.step-reveal-stagger-2 {
+  animation-delay: 100ms;
+}
+.step-reveal-stagger-3 {
+  animation-delay: 150ms;
+}
+.step-reveal-stagger-4 {
+  animation-delay: 200ms;
+}
+.step-reveal-stagger-5 {
+  animation-delay: 250ms;
+}
+.step-reveal-stagger-6 {
+  animation-delay: 300ms;
+}
 
 /* Glassmorphic luxury card with Cream & Rose-Ivory Watercolor gradient and SVG texture */
 .manager-review-glass-card {
-  background: 
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 600' width='100%25' height='100%25' preserveAspectRatio='none'%3E%3Cpath d='M-50 80 C 200 40, 420 120, 680 70 C 850 40, 950 110, 1050 75 L 1050 220 C 850 260, 650 190, 400 240 C 200 270, 80 200, -50 230 Z' fill='%2399F6E4' opacity='0.22'/%3E%3Cpath d='M-50 190 C 220 240, 480 180, 720 230 C 890 260, 980 210, 1050 240 L 1050 390 C 840 430, 600 370, 360 410 C 180 435, 70 380, -50 400 Z' fill='%23CCFBF1' opacity='0.35'/%3E%3Cpath d='M-50 360 C 200 420, 460 360, 700 410 C 870 440, 960 390, 1050 420 L 1050 620 L -50 620 Z' fill='%23CCFBF1' opacity='0.28'/%3E%3C/svg%3E"),
-    linear-gradient(
-      135deg,
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 600' width='100%25' height='100%25' preserveAspectRatio='none'%3E%3Cpath d='M-50 80 C 200 40, 420 120, 680 70 C 850 40, 950 110, 1050 75 L 1050 220 C 850 260, 650 190, 400 240 C 200 270, 80 200, -50 230 Z' fill='%23D7B6C7' opacity='0.22'/%3E%3Cpath d='M-50 190 C 220 240, 480 180, 720 230 C 890 260, 980 210, 1050 240 L 1050 390 C 840 430, 600 370, 360 410 C 180 435, 70 380, -50 400 Z' fill='%23EBCED6' opacity='0.35'/%3E%3Cpath d='M-50 360 C 200 420, 460 360, 700 410 C 870 440, 960 390, 1050 420 L 1050 620 L -50 620 Z' fill='%23EBCED6' opacity='0.28'/%3E%3C/svg%3E"),
+    linear-gradient(135deg,
       #FFFFFF 0%,
-      #F7FEFD 20%,
-      #F0FDFA 45%,
+      #FAF6F8 20%,
+      #F7EEF2 45%,
       #E6FBF7 75%,
-      #CCFBF1 100%
-    ) !important;
+      #EBCED6 100%) !important;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1.5px solid rgba(153, 246, 228, 0.65) !important;
+  border: 1.5px solid rgba(215, 182, 199, 0.65) !important;
   box-shadow:
     0 24px 60px rgba(15, 23, 42, 0.14),
-    0 4px 18px rgba(94, 234, 212, 0.16),
+    0 4px 18px rgba(179, 156, 203, 0.16),
     inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
   border-radius: 1.5rem;
+}
+
+/* ==========================================================================
+   Header Compact Summary Cards (Placed beside title)
+   ========================================================================== */
+.employee-header-stat-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.95rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 1.35rem !important;
+  min-height: 70px;
+  min-width: 230px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 10px 25px rgba(15, 23, 42, 0.08),
+    0 2px 10px rgba(179, 156, 203, 0.12),
+    inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
+}
+
+.employee-header-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 14px 32px rgba(15, 23, 42, 0.12),
+    0 4px 14px rgba(179, 156, 203, 0.18),
+    inset 0 1px 2px rgba(255, 255, 255, 1) !important;
+}
+
+.employee-header-stat-icon-wrap {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
 /* ==========================================================================
    Stepper Numbered Circles Animations
    ========================================================================== */
 @keyframes stepperPulse {
-  0%, 100% {
-    box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.4), 0 4px 14px rgba(20, 184, 166, 0.22);
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(109, 82, 132, 0.4), 0 4px 14px rgba(109, 82, 132, 0.22);
   }
+
   50% {
-    box-shadow: 0 0 0 6px rgba(20, 184, 166, 0.15), 0 6px 18px rgba(20, 184, 166, 0.32);
+    box-shadow: 0 0 0 6px rgba(109, 82, 132, 0.15), 0 6px 18px rgba(109, 82, 132, 0.32);
   }
 }
 
@@ -52,16 +130,20 @@
     transform: scale(0.4) rotate(-120deg);
     filter: drop-shadow(0 0 24px rgba(255, 181, 71, 1)) brightness(1.8);
   }
+
   35% {
     transform: scale(1.65) rotate(190deg);
     filter: drop-shadow(0 0 20px rgba(255, 181, 71, 1)) brightness(1.5);
   }
+
   65% {
     transform: scale(0.85) rotate(380deg);
   }
+
   85% {
     transform: scale(1.2) rotate(355deg);
   }
+
   100% {
     transform: scale(1) rotate(360deg);
     filter: drop-shadow(0 2px 10px rgba(255, 181, 71, 0.65));
@@ -72,13 +154,16 @@
   0% {
     transform: scale(1) translateY(0);
   }
+
   35% {
     transform: scale(1.38) translateY(-4px) rotate(-10deg);
     filter: drop-shadow(0 4px 14px rgba(255, 181, 71, 0.85));
   }
+
   70% {
     transform: scale(1.22) translateY(-2px) rotate(6deg);
   }
+
   100% {
     transform: scale(1.28) translateY(-3px) rotate(0deg);
     filter: drop-shadow(0 3px 10px rgba(255, 181, 71, 0.75));
@@ -86,10 +171,13 @@
 }
 
 @keyframes starBreathingGlow {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     filter: drop-shadow(0 2px 5px rgba(255, 181, 71, 0.4));
   }
+
   50% {
     transform: scale(1.06);
     filter: drop-shadow(0 2px 12px rgba(255, 181, 71, 0.85));
@@ -121,19 +209,24 @@
   0% {
     transform: scale(0.75);
   }
+
   50% {
     transform: scale(1.22);
   }
+
   100% {
     transform: scale(1.1);
   }
 }
 
 @keyframes emojiAuraVeryBad {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1.08);
     filter: drop-shadow(0 0 12px rgba(255, 77, 79, 0.85)) drop-shadow(0 0 4px rgba(207, 19, 34, 0.5));
   }
+
   50% {
     transform: scale(1.14);
     filter: drop-shadow(0 0 18px rgba(255, 77, 79, 1)) drop-shadow(0 0 7px rgba(207, 19, 34, 0.7));
@@ -141,10 +234,13 @@
 }
 
 @keyframes emojiAuraBad {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1.08);
     filter: drop-shadow(0 0 12px rgba(255, 146, 43, 0.85)) drop-shadow(0 0 4px rgba(217, 119, 6, 0.5));
   }
+
   50% {
     transform: scale(1.14);
     filter: drop-shadow(0 0 18px rgba(255, 146, 43, 1)) drop-shadow(0 0 7px rgba(217, 119, 6, 0.7));
@@ -152,10 +248,13 @@
 }
 
 @keyframes emojiAuraNeutral {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1.08);
     filter: drop-shadow(0 0 12px rgba(252, 196, 25, 0.85)) drop-shadow(0 0 4px rgba(217, 119, 6, 0.5));
   }
+
   50% {
     transform: scale(1.14);
     filter: drop-shadow(0 0 18px rgba(252, 196, 25, 1)) drop-shadow(0 0 7px rgba(217, 119, 6, 0.7));
@@ -163,10 +262,13 @@
 }
 
 @keyframes emojiAuraGood {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1.08);
     filter: drop-shadow(0 0 12px rgba(81, 207, 102, 0.85)) drop-shadow(0 0 4px rgba(43, 138, 62, 0.5));
   }
+
   50% {
     transform: scale(1.14);
     filter: drop-shadow(0 0 18px rgba(81, 207, 102, 1)) drop-shadow(0 0 7px rgba(43, 138, 62, 0.7));
@@ -174,10 +276,13 @@
 }
 
 @keyframes emojiAuraExcellent {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1.08);
     filter: drop-shadow(0 0 12px rgba(255, 210, 51, 0.85)) drop-shadow(0 0 6px rgba(255, 45, 117, 0.55));
   }
+
   50% {
     transform: scale(1.14);
     filter: drop-shadow(0 0 18px rgba(255, 210, 51, 1)) drop-shadow(0 0 8px rgba(255, 45, 117, 0.75));
@@ -217,5 +322,606 @@
   animation: emojiAuraExcellent 2.6s infinite ease-in-out;
 }
 
+/* ==========================================================================
+   Smooth Vertical Slide Step Transitions (480ms cubic-bezier)
+   ========================================================================== */
+@keyframes stepSlideOutUp {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+}
 
+@keyframes stepSlideInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+@keyframes stepSlideOutDown {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+}
+
+@keyframes stepSlideInDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.step-slide-out-up {
+  animation: stepSlideOutUp 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.step-slide-in-up {
+  animation: stepSlideInUp 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.step-slide-out-down {
+  animation: stepSlideOutDown 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.step-slide-in-down {
+  animation: stepSlideInDown 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ==========================================================================
+   Card Animation for Inputs & Form Containers
+   ========================================================================== */
+.eval-input-field {
+  width: 100%;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 0.85rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #0F172A;
+  background: #FFFFFF;
+  line-height: 1.5;
+  transition: all 0.22s ease;
+}
+
+.eval-input-field:hover {
+  border-color: #CBD5E1;
+}
+
+.eval-input-field:focus {
+  outline: none;
+  border-color: #6D5284;
+  box-shadow: 0 0 0 3px rgba(109, 82, 132, 0.12);
+  background: #FAF6F8;
+}
+
+/* Input Card Focus-within & Interactive Elevations */
+.eval-step-card:focus-within {
+  border-color: rgba(109, 82, 132, 0.42) !important;
+  box-shadow: 0 12px 28px -4px rgba(109, 82, 132, 0.12), 0 4px 10px rgba(0, 0, 0, 0.03) !important;
+  transform: translateY(-2px);
+}
+
+.eval-step-card:focus-within::before {
+  height: 100% !important;
+}
+
+/* ==========================================================================
+   Company Environment Rating Metaphor Animations (Volcano, Rain, Coffee, Sprout, Rocket)
+   ========================================================================== */
+
+/* 1. Volcano Eruption & Rumble */
+/* ==========================================================================
+   Interactive Animated SVG Emojis (Living Features & Effects)
+   ========================================================================== */
+
+/* 1. Angry Emoji: Steam Puffs & Rage Tremor */
+@keyframes angrySteamPuffL {
+  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { transform: translate(-6px, -7px) scale(1.3); opacity: 0; }
+}
+
+@keyframes angrySteamPuffR {
+  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { transform: translate(6px, -7px) scale(1.3); opacity: 0; }
+}
+
+@keyframes angerVeinPulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.35); opacity: 1; filter: drop-shadow(0 0 3px #EF4444); }
+}
+
+@keyframes angryHeadShake {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: translate(-1.5px, -0.5px) rotate(-4deg); }
+  40% { transform: translate(1.5px, 0.5px) rotate(4deg); }
+  60% { transform: translate(-1px, 0.5px) rotate(-3deg); }
+  80% { transform: translate(1px, -0.5px) rotate(3deg); }
+}
+
+.anim-steam-puff-l {
+  animation: angrySteamPuffL 1.2s infinite ease-out;
+  transform-origin: 8px 14px;
+}
+.anim-steam-puff-r {
+  animation: angrySteamPuffR 1.2s infinite ease-out 0.2s;
+  transform-origin: 36px 14px;
+}
+.anim-anger-vein {
+  animation: angerVeinPulse 0.9s infinite ease-in-out;
+  transform-origin: 29px 10.5px;
+}
+.anim-angry-head {
+  animation: angryHeadShake 1s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+
+/* 2. Sad Emoji: Falling Tear Drop & Sigh */
+@keyframes tearDropFall {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  25% { opacity: 1; transform: translateY(2px) scale(1); }
+  80% { transform: translateY(11px) scale(1.1); opacity: 0.9; }
+  100% { transform: translateY(15px) scale(0.4); opacity: 0; }
+}
+
+@keyframes sadHeadSigh {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  35% { transform: translateY(2.5px) rotate(-4deg); }
+  70% { transform: translateY(1.5px) rotate(3deg); }
+}
+
+.anim-tear-drop {
+  animation: tearDropFall 1.8s infinite ease-in;
+  transform-origin: center top;
+}
+.anim-sad-head {
+  animation: sadHeadSigh 2.2s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+
+/* 3. Neutral Emoji: Eyelid Blink & Gentle Float */
+@keyframes eyeLidBlink {
+  0%, 45%, 55%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.08); }
+}
+
+@keyframes neutralFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.anim-eye-blink {
+  animation: eyeLidBlink 3.2s infinite ease-in-out;
+  transform-origin: 22px 20.5px;
+}
+.anim-neutral-head {
+  animation: neutralFloat 2.4s infinite ease-in-out;
+  transform-origin: center;
+}
+
+/* 4. Good Emoji: Cheerful Bounce, Blush & Twinkling Sparkle */
+@keyframes happyBounceHead {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-5px) rotate(3deg); }
+  60% { transform: translateY(1px) rotate(-2deg); }
+  80% { transform: translateY(-2px) rotate(1deg); }
+}
+
+@keyframes blushPulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+@keyframes sparkleSpin {
+  0% { transform: scale(0.5) rotate(0deg); opacity: 0.3; }
+  50% { transform: scale(1.2) rotate(180deg); opacity: 1; filter: drop-shadow(0 0 4px #FACC15); }
+  100% { transform: scale(0.5) rotate(360deg); opacity: 0.3; }
+}
+
+.anim-happy-head {
+  animation: happyBounceHead 1.7s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+.anim-blush {
+  animation: blushPulse 1.8s infinite ease-in-out;
+  transform-origin: center;
+}
+.anim-sparkle {
+  animation: sparkleSpin 2s infinite linear;
+  transform-origin: 36px 13.5px;
+}
+
+/* 5. Excellent Emoji: Star Eyes Rotate & Celebration Twinkles */
+@keyframes starEyeSpinPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 2px #F59E0B); }
+  50% { transform: scale(1.28) rotate(35deg); filter: drop-shadow(0 0 6px #EC4899); }
+}
+
+@keyframes starEyeSpinPulseAlt {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 2px #F59E0B); }
+  50% { transform: scale(1.28) rotate(-35deg); filter: drop-shadow(0 0 6px #EC4899); }
+}
+
+@keyframes starTwinkleParticle1 {
+  0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.2; }
+  50% { transform: scale(1.25) rotate(90deg); opacity: 1; filter: drop-shadow(0 0 4px #FDE047); }
+}
+
+@keyframes starTwinkleParticle2 {
+  0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.2; }
+  50% { transform: scale(1.25) rotate(-90deg); opacity: 1; filter: drop-shadow(0 0 4px #EC4899); }
+}
+
+@keyframes excellentCelebrationHead {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25% { transform: translateY(-4px) rotate(-6deg) scale(1.04); }
+  50% { transform: translateY(0) rotate(0deg) scale(1); }
+  75% { transform: translateY(-4px) rotate(6deg) scale(1.04); }
+}
+
+.anim-star-eye-l {
+  animation: starEyeSpinPulse 1.5s infinite ease-in-out;
+  transform-origin: 16px 18.5px;
+}
+.anim-star-eye-r {
+  animation: starEyeSpinPulseAlt 1.5s infinite ease-in-out 0.25s;
+  transform-origin: 28px 18.5px;
+}
+.anim-star-twinkle-1 {
+  animation: starTwinkleParticle1 1.4s infinite ease-in-out;
+  transform-origin: 6px 14.5px;
+}
+.anim-star-twinkle-2 {
+  animation: starTwinkleParticle2 1.4s infinite ease-in-out 0.5s;
+  transform-origin: 38px 12.5px;
+}
+.anim-excellent-head {
+  animation: excellentCelebrationHead 1.6s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+
+/* Click Pop Effect */
+@keyframes emojiClickPopEffect {
+  0% { transform: scale(0.9); }
+  45% { transform: scale(1.38) rotate(10deg); }
+  80% { transform: scale(1.15) rotate(-3deg); }
+  100% { transform: scale(1.22) rotate(0deg); }
+}
+
+.emoji-click-pop {
+  animation: emojiClickPopEffect 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
+
+/* ==========================================================================
+   Mandatory Field Validation & Auto-Scroll Attention Styles
+   ========================================================================== */
+
+@keyframes errorAttentionShake {
+  0%, 100% { transform: translateX(0); }
+  15%, 45%, 75% { transform: translateX(-5px); }
+  30%, 60%, 90% { transform: translateX(5px); }
+}
+
+@keyframes errorBorderPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.22); }
+}
+
+.eval-field-has-error {
+  border-color: #EF4444 !important;
+  background-color: rgba(254, 242, 242, 0.4) !important;
+}
+
+.eval-field-error-pulse {
+  animation: errorAttentionShake 0.48s cubic-bezier(0.36, 0.07, 0.19, 0.97) both,
+             errorBorderPulse 1.2s ease-in-out !important;
+  border-color: #EF4444 !important;
+  scroll-margin-top: 120px;
+}
+
+.eval-input-error {
+  border-color: #EF4444 !important;
+  background-color: #FFFDFD !important;
+}
+
+.eval-input-error:focus {
+  border-color: #DC2626 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+}
+
+/* ==========================================================================
+   Star Rating: Unselect Break-Apart & Glowing Shard Scatter Animation
+   ========================================================================== */
+
+/* Left Cracked Half: Compresses, cracks, recoils left and fades */
+@keyframes starHalfLeft {
+  0% {
+    transform: scale(1) translate(0, 0) rotate(0deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8));
+  }
+  18% {
+    /* Compress / shrink anticipation */
+    transform: scale(0.82) translate(0, 0) rotate(-2deg);
+    opacity: 1;
+  }
+  36% {
+    /* Crack snaps and starts splitting */
+    transform: scale(1.04) translate(-2px, -1px) rotate(-6deg);
+    opacity: 0.95;
+    filter: drop-shadow(0 0 7px rgba(245, 158, 11, 1));
+  }
+  70% {
+    transform: scale(0.68) translate(-6px, -4px) rotate(-16deg);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(0.25) translate(-11px, -7px) rotate(-26deg);
+    opacity: 0;
+  }
+}
+
+/* Right Cracked Half: Compresses, cracks, recoils right and fades */
+@keyframes starHalfRight {
+  0% {
+    transform: scale(1) translate(0, 0) rotate(0deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8));
+  }
+  18% {
+    /* Compress / shrink anticipation */
+    transform: scale(0.82) translate(0, 0) rotate(2deg);
+    opacity: 1;
+  }
+  36% {
+    /* Crack snaps and starts splitting */
+    transform: scale(1.04) translate(2px, 1px) rotate(6deg);
+    opacity: 0.95;
+    filter: drop-shadow(0 0 7px rgba(245, 158, 11, 1));
+  }
+  70% {
+    transform: scale(0.68) translate(6px, 4px) rotate(16deg);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(0.25) translate(11px, 7px) rotate(26deg);
+    opacity: 0;
+  }
+}
+
+.anim-star-crack-left {
+  clip-path: polygon(0% 0%, 50% 0%, 42% 35%, 55% 62%, 40% 100%, 0% 100%);
+  animation: starHalfLeft 0.44s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.anim-star-crack-right {
+  clip-path: polygon(50% 0%, 100% 0%, 100% 100%, 40% 100%, 55% 62%, 42% 35%);
+  animation: starHalfRight 0.44s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+/* Electric Crack Flash Line across star */
+@keyframes starCrackFlash {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  16% {
+    opacity: 0;
+  }
+  24% {
+    opacity: 1;
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 5px #FFFBEB) drop-shadow(0 0 9px #F59E0B);
+  }
+  48% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  75% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.anim-star-crack-flash {
+  animation: starCrackFlash 0.38s ease-out forwards;
+}
+
+/* Glowing Star Shards / Fragments Scatter */
+.star-shard {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #FFFBEB 15%, #FBBF24 55%, #D97706 100%);
+  box-shadow: 0 0 5px 1px rgba(245, 158, 11, 0.9), 0 0 8px rgba(251, 191, 36, 0.6);
+  pointer-events: none;
+}
+
+.star-shard:nth-child(2n) {
+  width: 5px;
+  height: 5px;
+  border-radius: 1.5px;
+  transform: rotate(45deg);
+}
+
+.star-shard:nth-child(3n) {
+  width: 3.5px;
+  height: 3.5px;
+}
+
+.star-shard-1 {
+  animation: starShardFly1 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.star-shard-2 {
+  animation: starShardFly2 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.star-shard-3 {
+  animation: starShardFly3 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.star-shard-4 {
+  animation: starShardFly4 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.star-shard-5 {
+  animation: starShardFly5 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.star-shard-6 {
+  animation: starShardFly6 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.star-shard-7 {
+  animation: starShardFly7 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes starShardFly1 {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  18% { transform: translate(0, 0) scale(1.2); opacity: 1; }
+  100% { transform: translate(16px, -11px) scale(0.2) rotate(45deg); opacity: 0; }
+}
+
+@keyframes starShardFly2 {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  18% { transform: translate(0, 0) scale(1.3); opacity: 1; }
+  100% { transform: translate(14px, 12px) scale(0.2) rotate(-35deg); opacity: 0; }
+}
+
+@keyframes starShardFly3 {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  18% { transform: translate(0, 0) scale(1.1); opacity: 1; }
+  100% { transform: translate(-3px, 18px) scale(0.2) rotate(60deg); opacity: 0; }
+}
+
+@keyframes starShardFly4 {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  18% { transform: translate(0, 0) scale(1.3); opacity: 1; }
+  100% { transform: translate(-17px, 7px) scale(0.2) rotate(-45deg); opacity: 0; }
+}
+
+@keyframes starShardFly5 {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  18% { transform: translate(0, 0) scale(1.1); opacity: 1; }
+  100% { transform: translate(-13px, -12px) scale(0.2) rotate(30deg); opacity: 0; }
+}
+
+@keyframes starShardFly6 {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  18% { transform: translate(0, 0) scale(1.2); opacity: 1; }
+  100% { transform: translate(2px, -18px) scale(0.2) rotate(-60deg); opacity: 0; }
+}
+
+@keyframes starShardFly7 {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  18% { transform: translate(0, 0) scale(1.4); opacity: 1; }
+  100% { transform: translate(18px, -2px) scale(0.2) rotate(50deg); opacity: 0; }
+}
+
+/* ==========================================================================
+   Step 3: Average Rating Animated Star & Sparkles SVG
+   ========================================================================== */
+
+@keyframes avgStarFloat {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-2.5px) rotate(3deg);
+  }
+}
+
+@keyframes avgStarAura {
+  0%, 100% {
+    transform: scale(0.9);
+    opacity: 0.45;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.9;
+  }
+}
+
+@keyframes avgStarPulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.4));
+  }
+  50% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.9));
+  }
+}
+
+@keyframes avgSparkleRotate1 {
+  0% {
+    transform: scale(0.5) rotate(0deg);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.3) rotate(90deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.5) rotate(180deg);
+    opacity: 0.3;
+  }
+}
+
+@keyframes avgSparkleRotate2 {
+  0% {
+    transform: scale(1.2) rotate(0deg);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(0.5) rotate(-90deg);
+    opacity: 0.2;
+  }
+  100% {
+    transform: scale(1.2) rotate(-180deg);
+    opacity: 0.9;
+  }
+}
+
+.anim-avg-star-float {
+  animation: avgStarFloat 2.6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+.anim-avg-star-aura {
+  animation: avgStarAura 2s ease-in-out infinite;
+  transform-origin: 16px 16px;
+}
+
+.anim-avg-star-pulse {
+  animation: avgStarPulse 2s ease-in-out infinite;
+  transform-origin: 16px 16px;
+}
+
+.anim-avg-sparkle-1 {
+  animation: avgSparkleRotate1 1.8s ease-in-out infinite;
+  transform-origin: 27px 7px;
+}
+
+.anim-avg-sparkle-2 {
+  animation: avgSparkleRotate2 2.2s ease-in-out infinite;
+  transform-origin: 5px 26px;
+}
+
+

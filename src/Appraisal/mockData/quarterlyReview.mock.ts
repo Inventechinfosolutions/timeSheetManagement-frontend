@@ -358,6 +358,42 @@ export const mockQuarterlyReviewAssignments: QuarterlyReviewAssignment[] = [
 
 export const initialReviewFormData: ReviewFormData = {
   // Step 1: Overview
+  overview: "",
+  roleSummary: "",
+  keyResponsibilities: "",
+  quarterHighlights: "",
+  // Step 2: Achievements
+  projectTitle: "",
+  projectDescription: "",
+  projectChallenge: "",
+  majorAchievements: "",
+  kpisMet: "",
+  challengesOvercome: "",
+  selfRatingAchievements: 0,
+  // Step 3: Team Contribution
+  collaborationDetails: "",
+  mentorshipAssistance: "",
+  peerSupport: "",
+  teamRatings: {},
+  // Step 4: Learning Goals
+  learningGoals: "",
+  skillsAcquired: "",
+  certificationsOrCourses: "",
+  nextQuarterLearningGoals: "",
+  // Step 5: Company Environment
+  workCultureFeedback: "",
+  workLifeBalance: "",
+  suggestionsForImprovement: "",
+  companyEnvironmentRating: undefined,
+  toolingAndResources: "",
+  managementSupportRating: 0,
+  // Step 6: Review & Final Comments
+  overallSelfRating: 0,
+  finalComments: "",
+};
+
+export const sampleCompletedReviewFormData: ReviewFormData = {
+  // Step 1: Overview
   overview: "Frontend Developer focused on building and optimizing web applications. Delivered responsive UI components, collaborated with backend and design teams, and completed major modules ahead of schedule with zero critical bugs.",
   roleSummary: "Frontend Developer focused on building and optimizing web applications.",
   keyResponsibilities: "Delivering responsive UI components, collaborating with backend and design teams, code reviews.",
@@ -374,7 +410,16 @@ export const initialReviewFormData: ReviewFormData = {
   collaborationDetails: "Actively participated in daily standups, sprint retrospectives, and pair-programming sessions.",
   mentorshipAssistance: "Assisted new teammates in onboarding with the codebase and local environment setup.",
   peerSupport: "Consistently reviewed pull requests within 2 hours of submission.",
+  teamRatings: {
+    communication: 5,
+    ownership: 5,
+    collaboration: 4,
+    problemSolving: 5,
+    leadership: 4,
+    adaptability: 5,
+  },
   // Step 4: Learning Goals
+  learningGoals: "Advanced TypeScript patterns, Tailwind CSS v4 architecture, state management optimization. Completed Advanced Web Performance Optimization course. Explore Next.js server components and GraphQL integration.",
   skillsAcquired: "Advanced TypeScript patterns, Tailwind CSS v4 architecture, state management optimization.",
   certificationsOrCourses: "Completed Advanced Web Performance Optimization course.",
   nextQuarterLearningGoals: "Explore Next.js server components and GraphQL integration.",
@@ -382,9 +427,9 @@ export const initialReviewFormData: ReviewFormData = {
   workCultureFeedback: "The collaborative workspace is highly productive. The developer tools provided are excellent and help speed up development cycles.",
   workLifeBalance: "I feel highly aligned with the company's vision of delivering fast, reliable employee portals.",
   suggestionsForImprovement: "I feel highly aligned with the company's vision of delivering fast, reliable employee portals.",
-  companyEnvironmentRating: undefined,
+  companyEnvironmentRating: 5,
   toolingAndResources: "Standard developer tooling provided is great. More design system documentation will help further.",
-  managementSupportRating: 0,
+  managementSupportRating: 5,
   // Step 6: Review & Final Comments
   overallSelfRating: 4.5,
   finalComments: "Excited about the upcoming quarter goals and looking forward to taking ownership of bigger feature initiatives.",
