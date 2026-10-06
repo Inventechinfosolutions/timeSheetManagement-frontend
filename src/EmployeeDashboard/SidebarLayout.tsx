@@ -61,6 +61,21 @@ const SidebarLayout = ({
     };
   }, []);
 
+  // Track whether citizen is inside Note Workspace (Create/Edit/View) alone vs List mode / other pages
+  const [isWorkspaceMode, setIsWorkspaceMode] = useState(false);
+
+  useEffect(() => {
+    const handleWorkspaceMode = (e: any) => {
+      setIsWorkspaceMode(Boolean(e.detail?.isWorkspace));
+    };
+
+    window.addEventListener("note-workspace-mode", handleWorkspaceMode);
+    return () => {
+      window.removeEventListener("note-workspace-mode", handleWorkspaceMode);
+    };
+  }, []);
+
+
   // Get employee details from Redux
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
@@ -90,6 +105,10 @@ const SidebarLayout = ({
         return "Dashboard";
     }
   }, [tab, activeTab]);
+
+  useEffect(() => {
+    setIsWorkspaceMode(false);
+  }, [derivedActiveTab]);
 
   // Sidebar opens if it's either hovered OR locked
   const isOpen = isHovered || isLocked;
@@ -135,7 +154,7 @@ const SidebarLayout = ({
 
   return (
     <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
-      <Header />
+      {!isWorkspaceMode && <Header />}
       <div className="flex flex-1 min-h-0 relative overflow-hidden">
         {/* Mobile Menu Trigger - Floating Pulse Button */}
         <button

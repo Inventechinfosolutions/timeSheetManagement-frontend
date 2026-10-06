@@ -642,12 +642,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
             </div>
           </div>
 
-          {/* DESCRIPTION & RICH TEXT FORMATTING TOOLBAR */}
-          <div className="space-y-1.5 w-full">
-            <span className="block text-xs md:text-sm font-bold text-[#1B2559] uppercase tracking-wider">
-              DESCRIPTION
-            </span>
-
+          {/* RICH TEXT FORMATTING TOOLBAR & WORKSPACE */}
+          <div className="w-full">
             <div className="w-full bg-white border border-slate-200 rounded-2xl focus-within:border-[#4318FF] focus-within:ring-1 focus-within:ring-[#4318FF]/20 transition-all shadow-xs flex flex-col">
               {/* Modular Rich Text Toolbar */}
               <NoteEditorToolbar

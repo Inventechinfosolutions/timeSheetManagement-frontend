@@ -321,17 +321,10 @@ export const NoteView: React.FC<NoteViewProps> = ({
           </div>
         </div>
 
-        {/* DESCRIPTION / NOTE CONTENT VIEW */}
-        <div className="space-y-3 w-full">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#4318FF]" />
-              <span className="text-xs md:text-sm font-bold text-[#1B2559] uppercase tracking-wider">
-                Description & Content
-              </span>
-            </div>
-
-            {activeNote.description && activeNote.description.trim() && (
+        {/* NOTE CONTENT VIEW */}
+        <div className="space-y-2 w-full">
+          {activeNote.description && activeNote.description.trim() && (
+            <div className="flex items-center justify-end">
               <button
                 type="button"
                 onClick={() => copyNoteContentToClipboard(activeNote.description)}
@@ -341,8 +334,8 @@ export const NoteView: React.FC<NoteViewProps> = ({
                 <Copy className="w-3.5 h-3.5" />
                 <span>Copy Page</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* A4 Workspace Simulation for View Mode */}
           <div className="a4-page-workspace w-full rounded-2xl flex justify-start items-start overflow-x-auto bg-slate-100/80 p-4 sm:p-8 min-h-[640px] border border-slate-200/60">
