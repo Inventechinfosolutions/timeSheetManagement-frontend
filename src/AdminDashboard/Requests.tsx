@@ -33,6 +33,8 @@ import {
   updateLeaveRequestStatus,
   bulkApproveLeaveRequests,
   bulkRejectLeaveRequests,
+  bulkCancellationLeaveRequests,
+  bulkModificationLeaveRequests,
   getLeaveRequestById,
   getLeaveRequestFiles,
   previewLeaveRequestFile,
@@ -409,8 +411,19 @@ const Requests = () => {
       bulkModal.action === LeaveRequestStatus.MODIFICATION_APPROVED;
     setIsBulkProcessing(true);
     try {
-      const thunk = isApproval ? bulkApproveLeaveRequests : bulkRejectLeaveRequests;
-      const result = await dispatch(thunk({ ids })).unwrap();
+      let result;
+      if (bulkModal.action === LeaveRequestStatus.CANCELLATION_APPROVED) {
+        result = await dispatch(bulkCancellationLeaveRequests({ ids, action: "approve" })).unwrap();
+      } else if (bulkModal.action === LeaveRequestStatus.CANCELLATION_REJECTED) {
+        result = await dispatch(bulkCancellationLeaveRequests({ ids, action: "reject" })).unwrap();
+      } else if (bulkModal.action === LeaveRequestStatus.MODIFICATION_APPROVED) {
+        result = await dispatch(bulkModificationLeaveRequests({ ids, action: "approve" })).unwrap();
+      } else if (bulkModal.action === LeaveRequestStatus.MODIFICATION_REJECTED) {
+        result = await dispatch(bulkModificationLeaveRequests({ ids, action: "reject" })).unwrap();
+      } else {
+        const thunk = isApproval ? bulkApproveLeaveRequests : bulkRejectLeaveRequests;
+        result = await dispatch(thunk({ ids })).unwrap();
+      }
       const actionVerb =
         bulkModal.action === LeaveRequestStatus.CANCELLATION_APPROVED ? "Cancellation Approved"
         : bulkModal.action === LeaveRequestStatus.CANCELLATION_REJECTED ? "Cancellation Rejected"

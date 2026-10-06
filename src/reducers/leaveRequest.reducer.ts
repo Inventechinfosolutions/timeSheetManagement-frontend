@@ -37,6 +37,7 @@ export interface LeaveRequest {
   assignedManagerEmail?: string | null;
   hrEmail?: string | null;
   documentKeys?: string[];
+  suppressEmail?: boolean;
 }
 
 export interface LeaveBalanceResponse {
@@ -244,6 +245,27 @@ export const submitLeaveRequest = createAsyncThunk(
   }
 );
 
+// Async Thunk for Triggering a Consolidated Batch Notification Email
+export const notifyBatchLeaveRequests = createAsyncThunk(
+  "leaveRequest/notifyBatch",
+  async (
+    params: { employeeId: string; requestIds: number[] },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.post(
+        `${apiUrl}/${params.employeeId}/leave-requests/batch-notify`,
+        { requestIds: params.requestIds }
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data || "Failed to send batch notification email"
+      );
+    }
+  }
+);
+
 // Async Thunk for Deleting a Request
 export const deleteLeaveRequest = createAsyncThunk(
   "leaveRequest/delete",
@@ -312,6 +334,44 @@ export const bulkRejectLeaveRequests = createAsyncThunk(
       return response.data as { successCount: number; failCount: number; total: number };
     } catch (error: any) {
       return rejectWithValue(error.response?.data || "Failed to bulk reject requests");
+    }
+  }
+);
+
+// Async Thunk for Bulk Cancellation Actions (Approve or Reject)
+export const bulkCancellationLeaveRequests = createAsyncThunk(
+  "leaveRequest/bulkCancellation",
+  async (
+    params: {
+      ids: number[];
+      action: "approve" | "reject";
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.post(`${apiUrl}/bulk/cancellation`, params);
+      return response.data as { successCount: number; failCount: number; total: number };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to bulk update cancellation requests");
+    }
+  }
+);
+
+// Async Thunk for Bulk Modification Actions (Approve or Reject)
+export const bulkModificationLeaveRequests = createAsyncThunk(
+  "leaveRequest/bulkModification",
+  async (
+    params: {
+      ids: number[];
+      action: "approve" | "reject";
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.post(`${apiUrl}/bulk/modification`, params);
+      return response.data as { successCount: number; failCount: number; total: number };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data || "Failed to bulk update modification requests");
     }
   }
 );
