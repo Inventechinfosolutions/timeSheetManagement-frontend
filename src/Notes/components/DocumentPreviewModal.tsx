@@ -22,6 +22,12 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   const isWord = /\.(docx?|rtf|odt)$/i.test(titleLower);
   const isExcel = /\.(xlsx?|csv)$/i.test(titleLower);
 
+  // PDF open parameters to hide the left thumbnail/contents sidebar and fit full page width
+  const pdfViewerUrl =
+    isPdf && url
+      ? `${url}${url.includes("#") ? "&" : "#"}navpanes=0&pagemode=none&view=FitH`
+      : url;
+
   return (
     <Modal
       open={open}
@@ -66,7 +72,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
         {url &&
           (isPdf ? (
             <iframe
-              src={url}
+              src={pdfViewerUrl}
               title={title}
               className="w-full h-[76vh] rounded-lg border border-slate-200 bg-white"
             />
