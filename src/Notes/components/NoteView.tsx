@@ -336,24 +336,24 @@ export const NoteView: React.FC<NoteViewProps> = ({
                 type="button"
                 onClick={() => copyNoteContentToClipboard(activeNote.description)}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#4318FF] bg-slate-50 hover:bg-indigo-50/50 px-3 py-1.5 rounded-lg border border-slate-200/70 transition cursor-pointer"
-                title="Copy note text to clipboard"
+                title="Copy page content to clipboard"
               >
                 <Copy className="w-3.5 h-3.5" />
-                <span>Copy Text</span>
+                <span>Copy Page</span>
               </button>
             )}
           </div>
 
           {/* A4 Workspace Simulation for View Mode */}
-          <div className="a4-page-workspace w-full rounded-2xl flex justify-center items-start overflow-x-auto bg-slate-100/80 p-4 sm:p-8 min-h-[640px] border border-slate-200/60">
+          <div className="a4-page-workspace w-full rounded-2xl flex justify-start items-start overflow-x-auto bg-slate-100/80 p-4 sm:p-8 min-h-[640px] border border-slate-200/60">
             <div
               className={`a4-page shrink-0 transition-all duration-300 ${
                 activeNote.isVertical === false ? "landscape" : ""
               }`}
               style={
                 activeNote.isVertical === false
-                  ? { width: "337mm", maxWidth: "337mm", minHeight: "210mm" }
-                  : { width: "210mm", maxWidth: "210mm", minHeight: "297mm" }
+                  ? { minWidth: "337mm", width: "max-content", minHeight: "210mm" }
+                  : { minWidth: "210mm", width: "max-content", minHeight: "297mm" }
               }
             >
               {activeNote.description && activeNote.description.trim() ? (
