@@ -20,6 +20,8 @@ import {
 import { useEmployeeAppraisal } from "../../hooks/useEmployeeAppraisal";
 import QuarterlyReviewStepper from "./QuarterlyReviewStepper";
 import EvaluationPanel from "../manager/EvaluationPanel";
+import RatingVerificationModal from "./RatingVerificationModal";
+import AnnualRatingView from "./AnnualRatingView";
 import {
   Card,
   CardTitle,
@@ -87,6 +89,11 @@ export const AppraisalDashboard: React.FC = () => {
   // Viewing assignment in EvaluationPanel
   const [viewingAssignment, setViewingAssignment] = useState<QuarterlyReviewAssignment | null>(null);
 
+  // Annual Rating Page and Verification states
+  const [isAnnualRatingOpen, setIsAnnualRatingOpen] = useState<boolean>(false);
+  const [isRatingAuthModalOpen, setIsRatingAuthModalOpen] = useState<boolean>(false);
+  const [isRatingAuthenticated, setIsRatingAuthenticated] = useState<boolean>(false);
+
   // Comprehensive scroll to top helper that handles window, body, documentElement,
   // and inner layout containers like <main> or overflow-y-auto elements in SidebarLayout
   const scrollToPageTop = () => {
@@ -136,9 +143,20 @@ export const AppraisalDashboard: React.FC = () => {
     setTimeout(scrollToPageTop, 50);
   };
 
+  const handleOpenAnnualRating = () => {
+    scrollToPageTop();
+    setIsRatingAuthModalOpen(true);
+  };
+
+  const handleVerificationSuccess = () => {
+    setIsRatingAuthModalOpen(false);
+    setIsAnnualRatingOpen(true);
+    setTimeout(scrollToPageTop, 50);
+  };
+
   // Ensure scroll to top whenever entering view or edit screen
   useEffect(() => {
-    if (activeAssignment || viewingAssignment) {
+    if (activeAssignment || viewingAssignment || isAnnualRatingOpen) {
       scrollToPageTop();
       const raf = requestAnimationFrame(scrollToPageTop);
       const t = setTimeout(scrollToPageTop, 60);
@@ -147,7 +165,7 @@ export const AppraisalDashboard: React.FC = () => {
         clearTimeout(t);
       };
     }
-  }, [activeAssignment, viewingAssignment]);
+  }, [activeAssignment, viewingAssignment, isAnnualRatingOpen]);
 
   // Pagination state (10 items per page, right-aligned)
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -251,6 +269,21 @@ export const AppraisalDashboard: React.FC = () => {
           />
         </div>
       </div>
+    );
+  }
+
+  // If annual rating view is open, render AnnualRatingView
+  if (isAnnualRatingOpen) {
+    return (
+      <AnnualRatingView
+        onBack={() => {
+          scrollToPageTop();
+          setIsAnnualRatingOpen(false);
+          setTimeout(scrollToPageTop, 50);
+        }}
+        employeeName="Current Employee"
+        employeeRole="Software Engineer"
+      />
     );
   }
 
@@ -389,24 +422,25 @@ export const AppraisalDashboard: React.FC = () => {
               <ChevronRight className="w-4 h-4 text-[#94A3B8] shrink-0 ml-1.5" />
             </div>
 
-            {/* CURRENT YEAR RATING CARD */}
-            <div className="manager-review-glass-card employee-header-stat-card cursor-default">
+            {/* FINANCIAL RATING CARD */}
+            <div
+              onClick={handleOpenAnnualRating}
+              className="manager-review-glass-card employee-header-stat-card cursor-pointer group hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+              title="Click to view Financial Rating breakdown & calculation"
+            >
               <div className="flex items-center gap-3">
-                <div className="employee-header-stat-icon-wrap bg-white/90 border border-white/90 text-[#0F172A]">
+                <div className="employee-header-stat-icon-wrap bg-white/90 border border-white/90 text-[#6D5284] group-hover:bg-[#6D5284] group-hover:text-white transition-colors duration-200 shadow-2xs">
                   <Award className="w-5 h-5 stroke-[2.2]" />
                 </div>
 
-                <div className="flex flex-col">
-                  <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug">
-                    Current Year Rating
-                  </span>
-                  <span className="text-[11px] sm:text-xs text-[#94A3B8] font-medium leading-snug mt-1">
-                    Not Available
+                <div className="flex flex-col justify-center">
+                  <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug group-hover:text-[#6D5284] transition-colors">
+                    Financial Rating
                   </span>
                 </div>
               </div>
 
-              <ChevronRight className="w-4 h-4 text-[#94A3B8] shrink-0 ml-1.5" />
+              <ChevronRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#6D5284] group-hover:translate-x-0.5 transition-all shrink-0 ml-1.5" />
             </div>
           </div>
         </div>
@@ -750,6 +784,13 @@ export const AppraisalDashboard: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* RATING VERIFICATION MODAL */}
+      <RatingVerificationModal
+        isOpen={isRatingAuthModalOpen}
+        onClose={() => setIsRatingAuthModalOpen(false)}
+        onSuccess={handleVerificationSuccess}
+      />
     </div>
   );
 };
