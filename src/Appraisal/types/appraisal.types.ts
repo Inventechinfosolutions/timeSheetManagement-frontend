@@ -60,6 +60,9 @@ export interface ReviewFormData {
   projectTitle?: string;
   projectDescription?: string;
   projectChallenge?: string;
+  projectAttachment?: string | null;
+  projectAttachmentName?: string;
+  projectAttachmentSize?: string;
   majorAchievements: string;
   kpisMet: string;
   challengesOvercome: string;

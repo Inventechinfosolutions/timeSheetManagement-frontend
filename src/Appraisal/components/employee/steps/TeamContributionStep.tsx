@@ -42,7 +42,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
   const [shatteringStars, setShatteringStars] = useState<ShatteringStarItem[]>([]);
 
   const handleRate = (criterionKey: string, score: number) => {
-    const currentScore = ratings[criterionKey] || 0;
+    const currentScore = (ratings as Record<string, number>)[criterionKey] || 0;
     let finalScore = score;
     const unselectedStars: number[] = [];
 
@@ -91,20 +91,52 @@ export const TeamContributionStep: React.FC<StepProps> = ({
     }
 
     // Sync human-readable summary
-    const filledCount = Object.keys(updated).filter((k) => (updated[k as keyof typeof updated] || 0) > 0).length;
-    const avgScore = (Object.values(updated).reduce((a, b) => a + (b || 0), 0) / (filledCount || 1)).toFixed(1);
-    const summaryText = `Teamwork evaluation: ${filledCount}/6 criteria rated (Avg score: ${avgScore}/5.0). ${
-      formData.collaborationDetails && !formData.collaborationDetails.startsWith("Teamwork evaluation:")
+    const filledCount = Object.keys(updated).filter((k) => (((updated as Record<string, number>)[k] || 0) > 0)).length;
+    const avgScore = (Object.values(updated).reduce((a: number, b) => a + ((b as number) || 0), 0) / (filledCount || 1)).toFixed(1);
+    const summaryText = `Teamwork evaluation: ${filledCount}/6 criteria rated (Avg score: ${avgScore}/5.0). ${formData.collaborationDetails && !formData.collaborationDetails.startsWith("Teamwork evaluation:")
         ? formData.collaborationDetails
         : ""
-    }`.trim();
+      }`.trim();
     onChange("collaborationDetails", summaryText);
   };
 
-  const ratedCount = Object.values(ratings).filter((v) => (v || 0) > 0).length;
-  const overallAvg = ratedCount > 0
-    ? (Object.values(ratings).reduce((acc, curr) => acc + (curr || 0), 0) / ratedCount).toFixed(1)
-    : null;
+  const ratedCount = Object.values(ratings).filter((v) => ((v as number) || 0) > 0).length;
+  const overallAvgNum =
+    ratedCount > 0
+      ? Object.values(ratings).reduce((acc: number, curr) => acc + ((curr as number) || 0), 0) / ratedCount
+      : 0;
+  const overallAvg = ratedCount > 0 ? overallAvgNum.toFixed(1) : null;
+
+  const prevAvgScoreRef = React.useRef(overallAvgNum);
+  const isFirstRender = React.useRef(true);
+  const [transferAnim, setTransferAnim] = useState<"increase" | "decrease" | null>(null);
+
+  React.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      prevAvgScoreRef.current = overallAvgNum;
+      return;
+    }
+
+    const prev = prevAvgScoreRef.current;
+    if (overallAvgNum > prev) {
+      // Numbers increased: star transfers TO the default star for 2 sec
+      setTransferAnim("increase");
+      prevAvgScoreRef.current = overallAvgNum;
+      const timer = setTimeout(() => {
+        setTransferAnim(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else if (overallAvgNum < prev) {
+      // Numbers decreased: star breaks & removes FROM the default star for 2 sec
+      setTransferAnim("decrease");
+      prevAvgScoreRef.current = overallAvgNum;
+      const timer = setTimeout(() => {
+        setTransferAnim(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [overallAvgNum]);
 
   return (
     <div className="space-y-4">
@@ -123,15 +155,19 @@ export const TeamContributionStep: React.FC<StepProps> = ({
 
         <div className="flex items-center gap-2">
           <div
-            className={`px-3 py-1.5 rounded-2xl bg-gradient-to-r from-amber-50/90 via-white to-purple-50/80 border shadow-xs flex items-center gap-2.5 shrink-0 eval-subtitle-anim transition-all duration-300 ${
-              ratedCount === 6
+            className={`px-3 py-1.5 rounded-2xl bg-gradient-to-r from-amber-50/90 via-white to-purple-50/80 border shadow-xs flex items-center gap-2.5 shrink-0 eval-subtitle-anim transition-all duration-300 relative overflow-visible ${ratedCount === 6
                 ? "border-emerald-300/80 shadow-emerald-100"
                 : "border-[#D7B6C7]/60"
-            }`}
+              }`}
           >
-            {/* Animated Golden Celestial Star SVG with Living Twinkle & Pulsing Aura */}
-            <div className="relative w-5 h-5 flex items-center justify-center shrink-0">
-              <svg viewBox="0 0 32 32" className="w-5 h-5 overflow-visible anim-avg-star-float">
+            {/* The Default Star: Receives transfer on increase, or emits breaking star on decrease (2 sec) */}
+            <div className="relative w-5 h-5 flex items-center justify-center shrink-0 overflow-visible">
+              <svg
+                viewBox="0 0 32 32"
+                className={`w-5 h-5 overflow-visible anim-avg-star-float ${
+                  transferAnim === "increase" ? "anim-default-star-absorb" : ""
+                }`}
+              >
                 <defs>
                   <linearGradient id="avgStarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#FEF08A" />
@@ -177,6 +213,54 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                   />
                 </g>
               </svg>
+
+              {/* 1. Rating INCREASE: Star transfers TO the default star for 2 seconds */}
+              {transferAnim === "increase" && (
+                <div className="absolute inset-0 flex items-center justify-center anim-transfer-to-default">
+                  <Star className="w-5 h-5 fill-amber-300 text-amber-500 drop-shadow-[0_0_12px_rgba(251,191,36,1)]" />
+                  <span className="star-transfer-particle particle-1" />
+                  <span className="star-transfer-particle particle-2" />
+                </div>
+              )}
+
+              {/* 2. Rating DECREASE: Star separates & breaks FROM the default star for 2 seconds */}
+              {transferAnim === "decrease" && (
+                <div className="absolute inset-0 flex items-center justify-center anim-break-from-default">
+                  {/* Left Cracked Half */}
+                  <div className="absolute inset-0 flex items-center justify-center anim-star-crack-left">
+                    <Star className="w-5 h-5 fill-amber-400 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.9)]" />
+                  </div>
+
+                  {/* Right Cracked Half */}
+                  <div className="absolute inset-0 flex items-center justify-center anim-star-crack-right">
+                    <Star className="w-5 h-5 fill-amber-400 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.9)]" />
+                  </div>
+
+                  {/* Electric Crack Flash Line */}
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="absolute w-5 h-5 anim-star-crack-flash"
+                  >
+                    <path
+                      d="M12 3 L10.5 8 L13.5 12 L10 16 L12.5 21"
+                      stroke="#FFFBEB"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      fill="none"
+                    />
+                  </svg>
+
+                  {/* Glowing Star Shards Scattering */}
+                  <span className="star-shard star-shard-1" />
+                  <span className="star-shard star-shard-2" />
+                  <span className="star-shard star-shard-3" />
+                  <span className="star-shard star-shard-4" />
+                  <span className="star-shard star-shard-5" />
+                  <span className="star-shard star-shard-6" />
+                  <span className="star-shard star-shard-7" />
+                </div>
+              )}
             </div>
 
             {/* Average Rating Text */}
@@ -207,13 +291,12 @@ export const TeamContributionStep: React.FC<StepProps> = ({
             <div
               key={criterion.key}
               id={`field-criterion-${criterion.key}`}
-              className={`eval-step-card !py-3 !px-4 flex flex-col justify-between transition-all duration-300 ${
-                criterionError
+              className={`eval-step-card !py-3 !px-4 flex flex-col justify-between transition-all duration-300 ${criterionError
                   ? "eval-field-has-error"
                   : isSelected
-                  ? "!border-[#8D73A8]/50 shadow-sm"
-                  : "!border-[#D7B6C7]/50"
-              }`}
+                    ? "!border-[#8D73A8]/50 shadow-sm"
+                    : "!border-[#D7B6C7]/50"
+                }`}
             >
               <div className="flex items-center justify-between gap-2">
                 {/* Criterion Title */}
@@ -256,21 +339,19 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                             }))
                           }
                           title={`${criterion.title}: ${starIndex} of 5 (${RATING_LABELS[starIndex]})`}
-                          className={`relative p-1 sm:p-1.5 rounded-lg transition-transform cursor-pointer focus:outline-none select-none star-jelly-hover overflow-visible ${
-                            isDirectlyClicked
+                          className={`relative p-1 sm:p-1.5 rounded-lg transition-transform cursor-pointer focus:outline-none select-none star-jelly-hover overflow-visible ${isDirectlyClicked
                               ? "star-spin-pop"
                               : isFilled && !isShattering
-                              ? "star-active-glow"
-                              : ""
-                          }`}
+                                ? "star-active-glow"
+                                : ""
+                            }`}
                         >
                           {/* Base Star: Smooth transition into unselected gray state */}
                           <Star
-                            className={`w-5 h-5 sm:w-6 sm:h-6 transition-all duration-300 ease-out ${
-                              isFilled && !isShattering
+                            className={`w-5 h-5 sm:w-6 sm:h-6 transition-all duration-300 ease-out ${isFilled && !isShattering
                                 ? "fill-amber-400 text-amber-400 drop-shadow-[0_2px_8px_rgba(251,191,36,0.75)]"
                                 : "text-gray-300 fill-transparent hover:text-amber-300"
-                            }`}
+                              }`}
                           />
 
                           {/* Break-Apart Animation: Cracks, shatters, and scatters glowing particles */}

@@ -456,7 +456,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       <Card className="rounded-3xl p-6 sm:p-8 manager-review-glass-card">
         {submitted ? (
           <div className="py-16 text-center animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 rounded-full bg-[#E6F9F0] text-[#8D73A8] mx-auto flex items-center justify-center mb-4 shadow-sm">
+            <div className="w-16 h-16 rounded-full bg-[#F7EEF2] text-[#6D5284] mx-auto flex items-center justify-center mb-4 shadow-sm">
               <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
             </div>
             <h3 className="text-xl font-bold text-[#0F172A]">Quarterly Review Submitted!</h3>
@@ -478,6 +478,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   {renderStepContent(exitingStep)}
                 </div>
               )}
+
               <div
                 key={`enter-${currentStep}`}
                 className={
@@ -537,11 +538,11 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   </Button>
                 ) : (
                   <Button
-                    variant="success"
+                    variant="primary"
                     size="md"
                     onClick={handleSubmit}
                     leftIcon={<Send className="w-4 h-4 fill-white -rotate-12" />}
-                    className="px-7 py-2.5 rounded-xl font-bold shadow-md shadow-emerald-100"
+                    className="px-7 py-2.5 rounded-xl font-bold !bg-gradient-to-r !from-[#6D5284] !to-[#4A355E] hover:!from-[#5C4570] hover:!to-[#3E2B52] !text-white shadow-md shadow-[#6D5284]/30 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                   >
                     Submit Review
                   </Button>

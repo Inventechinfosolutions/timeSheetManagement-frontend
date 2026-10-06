@@ -1,6 +1,6 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { StepProps } from "../../../types/appraisal.types";
-import { Star } from "lucide-react";
+import { Star, FileText } from "lucide-react";
 import { renderAnimatedEmojiIcon } from "./CompanyEnvironmentStep";
 
 const TEAM_CRITERIA = [
@@ -33,6 +33,56 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
   const envRating = formData.companyEnvironmentRating || formData.managementSupportRating || 0;
   const envRatingInfo = ENVIRONMENT_RATINGS[envRating];
 
+  // Scroll-based reveal animation for review cards using IntersectionObserver (matching View mode)
+  useEffect(() => {
+    // Respect prefers-reduced-motion
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      document.querySelectorAll(".eval-reveal-card").forEach((el) => {
+        el.classList.add("is-revealed");
+      });
+      return;
+    }
+
+    if (!("IntersectionObserver" in window)) {
+      document.querySelectorAll(".eval-reveal-card").forEach((el) => {
+        el.classList.add("is-revealed");
+      });
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.intersectionRatio >= 0.12) {
+            entry.target.classList.add("is-revealed");
+          } else if (entry.intersectionRatio === 0 || !entry.isIntersecting) {
+            entry.target.classList.remove("is-revealed");
+          }
+        });
+      },
+      {
+        root: null,
+        threshold: [0, 0.12],
+      }
+    );
+
+    const observeAllCards = () => {
+      const cards = document.querySelectorAll(".eval-reveal-card");
+      cards.forEach((card) => {
+        observer.observe(card);
+      });
+    };
+
+    const rafId = requestAnimationFrame(observeAllCards);
+    const timerId = setTimeout(observeAllCards, 50);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(timerId);
+      observer.disconnect();
+    };
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Step Header */}
@@ -46,26 +96,25 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             Review all responses from previous steps. This summary is strictly uneditable.
           </p>
         </div>
-     
       </div>
 
       <div className="space-y-4">
         {/* ===================================================================
             STEP 1: ROLE & QUARTER OVERVIEW
            =================================================================== */}
-        <div className="eval-step-card space-y-3">
+        <div className="eval-step-card eval-reveal-card space-y-3">
           <div className="flex items-center justify-between border-b border-[#D7B6C7]/30 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold">
+              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 1
               </span>
-              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">
+              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider eval-stagger-item eval-stagger-2">
                 Step 1: Role & Quarter Overview
               </h4>
             </div>
           </div>
 
-          <div>
+          <div className="eval-stagger-item eval-stagger-3">
             <label className="text-xs font-bold text-[#64748B] block mb-1.5 uppercase tracking-wider">
               Overview
             </label>
@@ -78,20 +127,20 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
         {/* ===================================================================
             STEP 2: KEY ACHIEVEMENTS & PROJECTS
            =================================================================== */}
-        <div className="eval-step-card space-y-3.5">
+        <div className="eval-step-card eval-reveal-card space-y-3.5">
           <div className="flex items-center justify-between border-b border-[#D7B6C7]/30 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold">
+              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 2
               </span>
-              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">
+              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider eval-stagger-item eval-stagger-2">
                 Step 2: Key Achievements & Projects
               </h4>
             </div>
           </div>
 
           {/* Project Title */}
-          <div>
+          <div className="eval-stagger-item eval-stagger-3">
             <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
               Project Title
             </label>
@@ -101,7 +150,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
           </div>
 
           {/* Description and Challenge Side-by-Side Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 eval-stagger-item eval-stagger-4">
             {/* Project Description */}
             <div className="flex flex-col">
               <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
@@ -109,6 +158,19 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
               </label>
               <div className="p-3.5 bg-gray-50/70 border border-[#EBCED6] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium flex-1">
                 {formData.projectDescription || formData.kpisMet || "No description provided."}
+                {formData.projectAttachmentName && (
+                  <div className="mt-3 pt-2.5 border-t border-[#D7B6C7]/30 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[#8D73A8] shrink-0" />
+                    <span className="text-xs font-bold text-[#0F172A]">
+                      Attached: {formData.projectAttachmentName}
+                    </span>
+                    {formData.projectAttachmentSize && (
+                      <span className="text-[10px] text-[#64748B]">
+                        ({formData.projectAttachmentSize})
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -127,18 +189,18 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
         {/* ===================================================================
             STEP 3: TEAMWORK & COLLABORATION
            =================================================================== */}
-        <div className="eval-step-card space-y-3.5">
+        <div className="eval-step-card eval-reveal-card space-y-3.5">
           <div className="flex items-center justify-between border-b border-[#D7B6C7]/30 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold">
+              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 3
               </span>
-              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">
+              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider eval-stagger-item eval-stagger-2">
                 Step 3: Teamwork & Collaboration
               </h4>
             </div>
             {avgTeamScore ? (
-              <span className="text-xs font-bold text-[#8D73A8] px-2.5 py-0.5 rounded-full bg-[#8D73A8]/10 flex items-center gap-1">
+              <span className="text-xs font-bold text-[#8D73A8] px-2.5 py-0.5 rounded-full bg-[#8D73A8]/10 flex items-center gap-1 eval-stagger-item eval-stagger-2">
                 <Star className="w-3.5 h-3.5 fill-current" />
                 Avg Score: {avgTeamScore}/5.0
               </span>
@@ -146,7 +208,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
           </div>
 
           {/* 6 Dimensions Rating Display */}
-          <div>
+          <div className="eval-stagger-item eval-stagger-3">
             <label className="text-xs font-bold text-[#64748B] block mb-2 uppercase tracking-wider">
               Evaluated Teamwork Dimensions
             </label>
@@ -184,19 +246,19 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
         {/* ===================================================================
             STEP 4: CONTINUOUS LEARNING & GOALS
            =================================================================== */}
-        <div className="eval-step-card space-y-3">
+        <div className="eval-step-card eval-reveal-card space-y-3">
           <div className="flex items-center justify-between border-b border-[#D7B6C7]/30 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold">
+              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 4
               </span>
-              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">
+              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider eval-stagger-item eval-stagger-2">
                 Step 4: Continuous Learning & Goals
               </h4>
             </div>
           </div>
 
-          <div>
+          <div className="eval-stagger-item eval-stagger-3">
             <label className="text-xs font-bold text-[#64748B] block mb-1.5 uppercase tracking-wider">
               Learning Goals
             </label>
@@ -212,18 +274,18 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
         {/* ===================================================================
             STEP 5: COMPANY ENVIRONMENT
            =================================================================== */}
-        <div className="eval-step-card space-y-3.5">
+        <div className="eval-step-card eval-reveal-card space-y-3.5">
           <div className="flex items-center justify-between border-b border-[#D7B6C7]/30 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold">
+              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 5
               </span>
-              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">
+              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider eval-stagger-item eval-stagger-2">
                 Step 5: Company Environment
               </h4>
             </div>
             {envRating > 0 && envRatingInfo ? (
-              <span className="text-xs font-bold text-[#6D5284] px-3 py-1 rounded-full bg-[#6D5284]/10 flex items-center gap-2">
+              <span className="text-xs font-bold text-[#6D5284] px-3 py-1 rounded-full bg-[#6D5284]/10 flex items-center gap-2 eval-stagger-item eval-stagger-2">
                 <span className="w-5 h-5 flex items-center justify-center shrink-0">
                   {renderAnimatedEmojiIcon(envRating, false)}
                 </span>
@@ -233,7 +295,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
           </div>
 
           {/* Feedback on Work Culture */}
-          <div>
+          <div className="eval-stagger-item eval-stagger-3">
             <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
               Feedback on Work Culture
             </label>
@@ -243,7 +305,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
           </div>
 
           {/* Work Life Balance */}
-          <div>
+          <div className="eval-stagger-item eval-stagger-3">
             <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
               Work Life Balance
             </label>
@@ -253,7 +315,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
           </div>
 
           {/* Suggestions for Improvement */}
-          <div>
+          <div className="eval-stagger-item eval-stagger-4">
             <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
               Suggestions for Improvement
             </label>
@@ -268,3 +330,4 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
 };
 
 export default ReviewStep;
+

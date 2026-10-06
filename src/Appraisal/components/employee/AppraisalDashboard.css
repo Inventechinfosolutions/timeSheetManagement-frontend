@@ -15,6 +15,7 @@
     opacity: 0;
     transform: translateY(22px) scale(0.985);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -29,18 +30,23 @@
 .step-reveal-stagger-1 {
   animation-delay: 50ms;
 }
+
 .step-reveal-stagger-2 {
   animation-delay: 100ms;
 }
+
 .step-reveal-stagger-3 {
   animation-delay: 150ms;
 }
+
 .step-reveal-stagger-4 {
   animation-delay: 200ms;
 }
+
 .step-reveal-stagger-5 {
   animation-delay: 250ms;
 }
+
 .step-reveal-stagger-6 {
   animation-delay: 300ms;
 }
@@ -330,6 +336,7 @@
     opacity: 1;
     transform: translateY(0);
   }
+
   100% {
     opacity: 0;
     transform: translateY(-30px);
@@ -341,6 +348,7 @@
     opacity: 0;
     transform: translateY(30px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
@@ -352,6 +360,7 @@
     opacity: 1;
     transform: translateY(0);
   }
+
   100% {
     opacity: 0;
     transform: translateY(30px);
@@ -363,6 +372,7 @@
     opacity: 0;
     transform: translateY(-30px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
@@ -433,42 +443,91 @@
 
 /* 1. Angry Emoji: Steam Puffs & Rage Tremor */
 @keyframes angrySteamPuffL {
-  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
-  30% { opacity: 0.9; }
-  100% { transform: translate(-6px, -7px) scale(1.3); opacity: 0; }
+  0% {
+    transform: translate(0, 0) scale(0.4);
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translate(-6px, -7px) scale(1.3);
+    opacity: 0;
+  }
 }
 
 @keyframes angrySteamPuffR {
-  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
-  30% { opacity: 0.9; }
-  100% { transform: translate(6px, -7px) scale(1.3); opacity: 0; }
+  0% {
+    transform: translate(0, 0) scale(0.4);
+    opacity: 0;
+  }
+
+  30% {
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translate(6px, -7px) scale(1.3);
+    opacity: 0;
+  }
 }
 
 @keyframes angerVeinPulse {
-  0%, 100% { transform: scale(1); opacity: 0.7; }
-  50% { transform: scale(1.35); opacity: 1; filter: drop-shadow(0 0 3px #EF4444); }
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+
+  50% {
+    transform: scale(1.35);
+    opacity: 1;
+    filter: drop-shadow(0 0 3px #EF4444);
+  }
 }
 
 @keyframes angryHeadShake {
-  0%, 100% { transform: rotate(0deg); }
-  20% { transform: translate(-1.5px, -0.5px) rotate(-4deg); }
-  40% { transform: translate(1.5px, 0.5px) rotate(4deg); }
-  60% { transform: translate(-1px, 0.5px) rotate(-3deg); }
-  80% { transform: translate(1px, -0.5px) rotate(3deg); }
+
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  20% {
+    transform: translate(-1.5px, -0.5px) rotate(-4deg);
+  }
+
+  40% {
+    transform: translate(1.5px, 0.5px) rotate(4deg);
+  }
+
+  60% {
+    transform: translate(-1px, 0.5px) rotate(-3deg);
+  }
+
+  80% {
+    transform: translate(1px, -0.5px) rotate(3deg);
+  }
 }
 
 .anim-steam-puff-l {
   animation: angrySteamPuffL 1.2s infinite ease-out;
   transform-origin: 8px 14px;
 }
+
 .anim-steam-puff-r {
   animation: angrySteamPuffR 1.2s infinite ease-out 0.2s;
   transform-origin: 36px 14px;
 }
+
 .anim-anger-vein {
   animation: angerVeinPulse 0.9s infinite ease-in-out;
   transform-origin: 29px 10.5px;
 }
+
 .anim-angry-head {
   animation: angryHeadShake 1s infinite ease-in-out;
   transform-origin: center bottom;
@@ -476,22 +535,48 @@
 
 /* 2. Sad Emoji: Falling Tear Drop & Sigh */
 @keyframes tearDropFall {
-  0% { transform: translateY(0) scale(0.6); opacity: 0; }
-  25% { opacity: 1; transform: translateY(2px) scale(1); }
-  80% { transform: translateY(11px) scale(1.1); opacity: 0.9; }
-  100% { transform: translateY(15px) scale(0.4); opacity: 0; }
+  0% {
+    transform: translateY(0) scale(0.6);
+    opacity: 0;
+  }
+
+  25% {
+    opacity: 1;
+    transform: translateY(2px) scale(1);
+  }
+
+  80% {
+    transform: translateY(11px) scale(1.1);
+    opacity: 0.9;
+  }
+
+  100% {
+    transform: translateY(15px) scale(0.4);
+    opacity: 0;
+  }
 }
 
 @keyframes sadHeadSigh {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  35% { transform: translateY(2.5px) rotate(-4deg); }
-  70% { transform: translateY(1.5px) rotate(3deg); }
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  35% {
+    transform: translateY(2.5px) rotate(-4deg);
+  }
+
+  70% {
+    transform: translateY(1.5px) rotate(3deg);
+  }
 }
 
 .anim-tear-drop {
   animation: tearDropFall 1.8s infinite ease-in;
   transform-origin: center top;
 }
+
 .anim-sad-head {
   animation: sadHeadSigh 2.2s infinite ease-in-out;
   transform-origin: center bottom;
@@ -499,19 +584,36 @@
 
 /* 3. Neutral Emoji: Eyelid Blink & Gentle Float */
 @keyframes eyeLidBlink {
-  0%, 45%, 55%, 100% { transform: scaleY(1); }
-  50% { transform: scaleY(0.08); }
+
+  0%,
+  45%,
+  55%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  50% {
+    transform: scaleY(0.08);
+  }
 }
 
 @keyframes neutralFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-3px);
+  }
 }
 
 .anim-eye-blink {
   animation: eyeLidBlink 3.2s infinite ease-in-out;
   transform-origin: 22px 20.5px;
 }
+
 .anim-neutral-head {
   animation: neutralFloat 2.4s infinite ease-in-out;
   transform-origin: center;
@@ -519,31 +621,67 @@
 
 /* 4. Good Emoji: Cheerful Bounce, Blush & Twinkling Sparkle */
 @keyframes happyBounceHead {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  30% { transform: translateY(-5px) rotate(3deg); }
-  60% { transform: translateY(1px) rotate(-2deg); }
-  80% { transform: translateY(-2px) rotate(1deg); }
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  30% {
+    transform: translateY(-5px) rotate(3deg);
+  }
+
+  60% {
+    transform: translateY(1px) rotate(-2deg);
+  }
+
+  80% {
+    transform: translateY(-2px) rotate(1deg);
+  }
 }
 
 @keyframes blushPulse {
-  0%, 100% { opacity: 0.55; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.15); }
+
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
 }
 
 @keyframes sparkleSpin {
-  0% { transform: scale(0.5) rotate(0deg); opacity: 0.3; }
-  50% { transform: scale(1.2) rotate(180deg); opacity: 1; filter: drop-shadow(0 0 4px #FACC15); }
-  100% { transform: scale(0.5) rotate(360deg); opacity: 0.3; }
+  0% {
+    transform: scale(0.5) rotate(0deg);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 4px #FACC15);
+  }
+
+  100% {
+    transform: scale(0.5) rotate(360deg);
+    opacity: 0.3;
+  }
 }
 
 .anim-happy-head {
   animation: happyBounceHead 1.7s infinite ease-in-out;
   transform-origin: center bottom;
 }
+
 .anim-blush {
   animation: blushPulse 1.8s infinite ease-in-out;
   transform-origin: center;
 }
+
 .anim-sparkle {
   animation: sparkleSpin 2s infinite linear;
   transform-origin: 36px 13.5px;
@@ -551,48 +689,103 @@
 
 /* 5. Excellent Emoji: Star Eyes Rotate & Celebration Twinkles */
 @keyframes starEyeSpinPulse {
-  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 2px #F59E0B); }
-  50% { transform: scale(1.28) rotate(35deg); filter: drop-shadow(0 0 6px #EC4899); }
+
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 2px #F59E0B);
+  }
+
+  50% {
+    transform: scale(1.28) rotate(35deg);
+    filter: drop-shadow(0 0 6px #EC4899);
+  }
 }
 
 @keyframes starEyeSpinPulseAlt {
-  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 2px #F59E0B); }
-  50% { transform: scale(1.28) rotate(-35deg); filter: drop-shadow(0 0 6px #EC4899); }
+
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    filter: drop-shadow(0 0 2px #F59E0B);
+  }
+
+  50% {
+    transform: scale(1.28) rotate(-35deg);
+    filter: drop-shadow(0 0 6px #EC4899);
+  }
 }
 
 @keyframes starTwinkleParticle1 {
-  0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.2; }
-  50% { transform: scale(1.25) rotate(90deg); opacity: 1; filter: drop-shadow(0 0 4px #FDE047); }
+
+  0%,
+  100% {
+    transform: scale(0.4) rotate(0deg);
+    opacity: 0.2;
+  }
+
+  50% {
+    transform: scale(1.25) rotate(90deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 4px #FDE047);
+  }
 }
 
 @keyframes starTwinkleParticle2 {
-  0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.2; }
-  50% { transform: scale(1.25) rotate(-90deg); opacity: 1; filter: drop-shadow(0 0 4px #EC4899); }
+
+  0%,
+  100% {
+    transform: scale(0.4) rotate(0deg);
+    opacity: 0.2;
+  }
+
+  50% {
+    transform: scale(1.25) rotate(-90deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 4px #EC4899);
+  }
 }
 
 @keyframes excellentCelebrationHead {
-  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-  25% { transform: translateY(-4px) rotate(-6deg) scale(1.04); }
-  50% { transform: translateY(0) rotate(0deg) scale(1); }
-  75% { transform: translateY(-4px) rotate(6deg) scale(1.04); }
+
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+
+  25% {
+    transform: translateY(-4px) rotate(-6deg) scale(1.04);
+  }
+
+  50% {
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+
+  75% {
+    transform: translateY(-4px) rotate(6deg) scale(1.04);
+  }
 }
 
 .anim-star-eye-l {
   animation: starEyeSpinPulse 1.5s infinite ease-in-out;
   transform-origin: 16px 18.5px;
 }
+
 .anim-star-eye-r {
   animation: starEyeSpinPulseAlt 1.5s infinite ease-in-out 0.25s;
   transform-origin: 28px 18.5px;
 }
+
 .anim-star-twinkle-1 {
   animation: starTwinkleParticle1 1.4s infinite ease-in-out;
   transform-origin: 6px 14.5px;
 }
+
 .anim-star-twinkle-2 {
   animation: starTwinkleParticle2 1.4s infinite ease-in-out 0.5s;
   transform-origin: 38px 12.5px;
 }
+
 .anim-excellent-head {
   animation: excellentCelebrationHead 1.6s infinite ease-in-out;
   transform-origin: center bottom;
@@ -600,10 +793,21 @@
 
 /* Click Pop Effect */
 @keyframes emojiClickPopEffect {
-  0% { transform: scale(0.9); }
-  45% { transform: scale(1.38) rotate(10deg); }
-  80% { transform: scale(1.15) rotate(-3deg); }
-  100% { transform: scale(1.22) rotate(0deg); }
+  0% {
+    transform: scale(0.9);
+  }
+
+  45% {
+    transform: scale(1.38) rotate(10deg);
+  }
+
+  80% {
+    transform: scale(1.15) rotate(-3deg);
+  }
+
+  100% {
+    transform: scale(1.22) rotate(0deg);
+  }
 }
 
 .emoji-click-pop {
@@ -615,14 +819,35 @@
    ========================================================================== */
 
 @keyframes errorAttentionShake {
-  0%, 100% { transform: translateX(0); }
-  15%, 45%, 75% { transform: translateX(-5px); }
-  30%, 60%, 90% { transform: translateX(5px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  15%,
+  45%,
+  75% {
+    transform: translateX(-5px);
+  }
+
+  30%,
+  60%,
+  90% {
+    transform: translateX(5px);
+  }
 }
 
 @keyframes errorBorderPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-  50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.22); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+
+  50% {
+    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.22);
+  }
 }
 
 .eval-field-has-error {
@@ -632,7 +857,7 @@
 
 .eval-field-error-pulse {
   animation: errorAttentionShake 0.48s cubic-bezier(0.36, 0.07, 0.19, 0.97) both,
-             errorBorderPulse 1.2s ease-in-out !important;
+    errorBorderPulse 1.2s ease-in-out !important;
   border-color: #EF4444 !important;
   scroll-margin-top: 120px;
 }
@@ -658,21 +883,25 @@
     opacity: 1;
     filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8));
   }
+
   18% {
     /* Compress / shrink anticipation */
     transform: scale(0.82) translate(0, 0) rotate(-2deg);
     opacity: 1;
   }
+
   36% {
     /* Crack snaps and starts splitting */
     transform: scale(1.04) translate(-2px, -1px) rotate(-6deg);
     opacity: 0.95;
     filter: drop-shadow(0 0 7px rgba(245, 158, 11, 1));
   }
+
   70% {
     transform: scale(0.68) translate(-6px, -4px) rotate(-16deg);
     opacity: 0.55;
   }
+
   100% {
     transform: scale(0.25) translate(-11px, -7px) rotate(-26deg);
     opacity: 0;
@@ -686,21 +915,25 @@
     opacity: 1;
     filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8));
   }
+
   18% {
     /* Compress / shrink anticipation */
     transform: scale(0.82) translate(0, 0) rotate(2deg);
     opacity: 1;
   }
+
   36% {
     /* Crack snaps and starts splitting */
     transform: scale(1.04) translate(2px, 1px) rotate(6deg);
     opacity: 0.95;
     filter: drop-shadow(0 0 7px rgba(245, 158, 11, 1));
   }
+
   70% {
     transform: scale(0.68) translate(6px, 4px) rotate(16deg);
     opacity: 0.55;
   }
+
   100% {
     transform: scale(0.25) translate(11px, 7px) rotate(26deg);
     opacity: 0;
@@ -723,21 +956,26 @@
     opacity: 0;
     transform: scale(0.8);
   }
+
   16% {
     opacity: 0;
   }
+
   24% {
     opacity: 1;
     transform: scale(1.08);
     filter: drop-shadow(0 0 5px #FFFBEB) drop-shadow(0 0 9px #F59E0B);
   }
+
   48% {
     opacity: 0.75;
     transform: scale(1);
   }
+
   75% {
     opacity: 0;
   }
+
   100% {
     opacity: 0;
   }
@@ -773,65 +1011,148 @@
 .star-shard-1 {
   animation: starShardFly1 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
 .star-shard-2 {
   animation: starShardFly2 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
 .star-shard-3 {
   animation: starShardFly3 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
 .star-shard-4 {
   animation: starShardFly4 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
 .star-shard-5 {
   animation: starShardFly5 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
 .star-shard-6 {
   animation: starShardFly6 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
 .star-shard-7 {
   animation: starShardFly7 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes starShardFly1 {
-  0% { transform: translate(0, 0) scale(0); opacity: 0; }
-  18% { transform: translate(0, 0) scale(1.2); opacity: 1; }
-  100% { transform: translate(16px, -11px) scale(0.2) rotate(45deg); opacity: 0; }
+  0% {
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+
+  18% {
+    transform: translate(0, 0) scale(1.2);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(16px, -11px) scale(0.2) rotate(45deg);
+    opacity: 0;
+  }
 }
 
 @keyframes starShardFly2 {
-  0% { transform: translate(0, 0) scale(0); opacity: 0; }
-  18% { transform: translate(0, 0) scale(1.3); opacity: 1; }
-  100% { transform: translate(14px, 12px) scale(0.2) rotate(-35deg); opacity: 0; }
+  0% {
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+
+  18% {
+    transform: translate(0, 0) scale(1.3);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(14px, 12px) scale(0.2) rotate(-35deg);
+    opacity: 0;
+  }
 }
 
 @keyframes starShardFly3 {
-  0% { transform: translate(0, 0) scale(0); opacity: 0; }
-  18% { transform: translate(0, 0) scale(1.1); opacity: 1; }
-  100% { transform: translate(-3px, 18px) scale(0.2) rotate(60deg); opacity: 0; }
+  0% {
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+
+  18% {
+    transform: translate(0, 0) scale(1.1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(-3px, 18px) scale(0.2) rotate(60deg);
+    opacity: 0;
+  }
 }
 
 @keyframes starShardFly4 {
-  0% { transform: translate(0, 0) scale(0); opacity: 0; }
-  18% { transform: translate(0, 0) scale(1.3); opacity: 1; }
-  100% { transform: translate(-17px, 7px) scale(0.2) rotate(-45deg); opacity: 0; }
+  0% {
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+
+  18% {
+    transform: translate(0, 0) scale(1.3);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(-17px, 7px) scale(0.2) rotate(-45deg);
+    opacity: 0;
+  }
 }
 
 @keyframes starShardFly5 {
-  0% { transform: translate(0, 0) scale(0); opacity: 0; }
-  18% { transform: translate(0, 0) scale(1.1); opacity: 1; }
-  100% { transform: translate(-13px, -12px) scale(0.2) rotate(30deg); opacity: 0; }
+  0% {
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+
+  18% {
+    transform: translate(0, 0) scale(1.1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(-13px, -12px) scale(0.2) rotate(30deg);
+    opacity: 0;
+  }
 }
 
 @keyframes starShardFly6 {
-  0% { transform: translate(0, 0) scale(0); opacity: 0; }
-  18% { transform: translate(0, 0) scale(1.2); opacity: 1; }
-  100% { transform: translate(2px, -18px) scale(0.2) rotate(-60deg); opacity: 0; }
+  0% {
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+
+  18% {
+    transform: translate(0, 0) scale(1.2);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(2px, -18px) scale(0.2) rotate(-60deg);
+    opacity: 0;
+  }
 }
 
 @keyframes starShardFly7 {
-  0% { transform: translate(0, 0) scale(0); opacity: 0; }
-  18% { transform: translate(0, 0) scale(1.4); opacity: 1; }
-  100% { transform: translate(18px, -2px) scale(0.2) rotate(50deg); opacity: 0; }
+  0% {
+    transform: translate(0, 0) scale(0);
+    opacity: 0;
+  }
+
+  18% {
+    transform: translate(0, 0) scale(1.4);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate(18px, -2px) scale(0.2) rotate(50deg);
+    opacity: 0;
+  }
 }
 
 /* ==========================================================================
@@ -839,19 +1160,25 @@
    ========================================================================== */
 
 @keyframes avgStarFloat {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0) rotate(0deg);
   }
+
   50% {
     transform: translateY(-2.5px) rotate(3deg);
   }
 }
 
 @keyframes avgStarAura {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(0.9);
     opacity: 0.45;
   }
+
   50% {
     transform: scale(1.25);
     opacity: 0.9;
@@ -859,10 +1186,13 @@
 }
 
 @keyframes avgStarPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.4));
   }
+
   50% {
     transform: scale(1.08);
     filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.9));
@@ -874,10 +1204,12 @@
     transform: scale(0.5) rotate(0deg);
     opacity: 0.3;
   }
+
   50% {
     transform: scale(1.3) rotate(90deg);
     opacity: 1;
   }
+
   100% {
     transform: scale(0.5) rotate(180deg);
     opacity: 0.3;
@@ -889,10 +1221,12 @@
     transform: scale(1.2) rotate(0deg);
     opacity: 0.9;
   }
+
   50% {
     transform: scale(0.5) rotate(-90deg);
     opacity: 0.2;
   }
+
   100% {
     transform: scale(1.2) rotate(-180deg);
     opacity: 0.9;
@@ -923,5 +1257,297 @@
   animation: avgSparkleRotate2 2.2s ease-in-out infinite;
   transform-origin: 5px 26px;
 }
+
+/* ==========================================================================
+   2-Second Transfer TO Default Star & Break FROM Default Star Animations
+   ========================================================================== */
+
+/* Transfer star TO the default star (Rating Increased) - 2s */
+@keyframes transferToDefaultStar {
+  0% {
+    transform: translate(28px, -12px) scale(0.2) rotate(40deg);
+    opacity: 0;
+    filter: drop-shadow(0 0 14px #F59E0B);
+  }
+  20% {
+    transform: translate(20px, -9px) scale(1.2) rotate(18deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 18px #FBBF24);
+  }
+  50% {
+    transform: translate(10px, -4px) scale(1.3) rotate(-8deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 22px #FEF08A);
+  }
+  75% {
+    transform: translate(2px, -1px) scale(1.15) rotate(4deg);
+    opacity: 0.95;
+  }
+  90% {
+    transform: translate(0, 0) scale(1.4) rotate(0deg);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(0, 0) scale(0) rotate(0deg);
+    opacity: 0;
+    filter: drop-shadow(0 0 30px #F59E0B);
+  }
+}
+
+/* Default Star pulse when absorbing newly transferred star */
+@keyframes defaultStarAbsorbPulse {
+  0%, 68% {
+    transform: scale(1);
+  }
+  80% {
+    transform: scale(1.45);
+    filter: drop-shadow(0 0 16px rgba(251, 191, 36, 1)) drop-shadow(0 0 24px rgba(245, 158, 11, 0.9));
+  }
+  90% {
+    transform: scale(0.92);
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.4));
+  }
+}
+
+.anim-transfer-to-default {
+  animation: transferToDefaultStar 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.anim-default-star-absorb {
+  animation: defaultStarAbsorbPulse 2s ease-in-out forwards;
+}
+
+/* Transfer & Break FROM the default star (Rating Decreased) - 2s */
+@keyframes breakFromDefaultContainer {
+  0% {
+    transform: translate(0, 0) scale(0.85);
+    opacity: 1;
+  }
+  25% {
+    transform: translate(14px, -6px) scale(1.22) rotate(10deg);
+    opacity: 1;
+  }
+  55% {
+    transform: translate(22px, -10px) scale(1.08) rotate(18deg);
+    opacity: 0.95;
+  }
+  85% {
+    transform: translate(28px, -14px) scale(0.65) rotate(26deg);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(32px, -16px) scale(0) rotate(35deg);
+    opacity: 0;
+  }
+}
+
+.anim-break-from-default {
+  animation: breakFromDefaultContainer 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.star-transfer-particle {
+  position: absolute;
+  width: 3.5px;
+  height: 3.5px;
+  border-radius: 50%;
+  background: #FFFBEB;
+  box-shadow: 0 0 6px 2px #FDE047;
+  pointer-events: none;
+}
+
+.particle-1 {
+  top: -2px;
+  left: -2px;
+  animation: starTwinkleParticle1 0.8s infinite ease-in-out;
+}
+
+.particle-2 {
+  bottom: -2px;
+  right: -2px;
+  animation: starTwinkleParticle2 0.8s infinite ease-in-out 0.3s;
+}
+
+/* ========================================================
+   ANIMATED ATTACH DOCUMENT BUTTON & SVG
+   ======================================================== */
+@keyframes attachClipBounce {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-2px) rotate(-4deg);
+  }
+  75% {
+    transform: translateY(1.5px) rotate(3deg);
+  }
+}
+
+@keyframes attachAuraPulse {
+  0%, 100% {
+    transform: scale(0.85);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 0.75;
+  }
+}
+
+@keyframes attachSparkleTwinkle1 {
+  0%, 100% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  30%, 70% {
+    transform: scale(1.15) rotate(45deg);
+    opacity: 1;
+  }
+  85% {
+    transform: scale(0.6) rotate(90deg);
+    opacity: 0.35;
+  }
+}
+
+@keyframes attachSparkleTwinkle2 {
+  0%, 25%, 100% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  50%, 85% {
+    transform: scale(1.25) rotate(-45deg);
+    opacity: 1;
+  }
+  95% {
+    transform: scale(0.4) rotate(-90deg);
+    opacity: 0.3;
+  }
+}
+
+.anim-attach-clip {
+  animation: attachClipBounce 2.4s infinite ease-in-out;
+  transform-origin: 12px 12px;
+}
+
+.anim-attach-aura {
+  animation: attachAuraPulse 2s infinite ease-in-out;
+  transform-origin: 12px 12px;
+}
+
+.anim-attach-sparkle-1 {
+  animation: attachSparkleTwinkle1 2s infinite ease-in-out;
+  transform-origin: 19px 4px;
+}
+
+.anim-attach-sparkle-2 {
+  animation: attachSparkleTwinkle2 2.2s infinite ease-in-out 0.6s;
+  transform-origin: 5px 17px;
+}
+
+.btn-attach-document:hover .anim-attach-clip {
+  animation: attachClipBounce 1.2s infinite ease-in-out;
+}
+
+.btn-attach-document:hover .anim-attach-sparkle-1 {
+  animation: attachSparkleTwinkle1 1.1s infinite ease-in-out;
+}
+
+.btn-attach-document:hover .anim-attach-sparkle-2 {
+  animation: attachSparkleTwinkle2 1.2s infinite ease-in-out 0.3s;
+}
+
+/* ==========================================================================
+   Smooth Scroll-Based Reveal Animation System (IntersectionObserver Powered)
+   Used in View & Review Step
+   ========================================================================== */
+
+/* Initial state: card positioned 40px below, subtle 0.98 scale, transparent */
+.eval-reveal-card {
+  opacity: 0 !important;
+  transform: translateY(40px) scale(0.98) !important;
+  transition: opacity 650ms cubic-bezier(0.16, 1, 0.3, 1),
+              transform 650ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  will-change: opacity, transform;
+  animation: none !important;
+}
+
+/* Final state: card smoothly ascends to normal position, full opacity & scale 1 */
+.eval-reveal-card.is-revealed {
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+/* Maintain hover interactions after reveal */
+.eval-step-card.eval-reveal-card.is-revealed:hover {
+  transform: translateY(-3px) !important;
+}
+
+/* Internal Content Stagger System */
+.eval-reveal-card .eval-stagger-item {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 550ms ease-out,
+              transform 550ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-1 {
+  transition-delay: 80ms;
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-2 {
+  transition-delay: 160ms;
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-3 {
+  transition-delay: 240ms;
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-4 {
+  transition-delay: 320ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eval-reveal-card,
+  .eval-reveal-card .eval-stagger-item {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* ==========================================================================
+   Harmonious Theme Overrides (Replacing Unwanted Green Shades)
+   ========================================================================== */
+.qr-quarter-q2 {
+  background: #EEF2FF !important;
+  color: #4F46E5 !important;
+  border: 1px solid #C7D2FE !important;
+}
+
+.qr-assigned-by-pill {
+  background: #F7EEF2 !important;
+  color: #6D5284 !important;
+  border: 1px solid #EBCED6 !important;
+}
+
+.qr-assigned-by-admin {
+  background: #FAF5FF !important;
+  color: #7E22CE !important;
+  border-color: #F3E8FF !important;
+}
+
+
 
 

@@ -234,9 +234,9 @@
 }
 
 .qr-quarter-q2 {
-  background: #ECFDF5;
-  color: #059669;
-  border: 1px solid #A7F3D0;
+  background: #EEF2FF;
+  color: #4F46E5;
+  border: 1px solid #C7D2FE;
 }
 
 .qr-quarter-q3 {
@@ -287,9 +287,9 @@
   font-size: 0.75rem;
   padding: 0.2rem 0.6rem;
   border-radius: 0.5rem;
-  background: #F0FDF4;
-  color: #15803D;
-  border: 1px solid #DCFCE7;
+  background: #F7EEF2;
+  color: #6D5284;
+  border: 1px solid #EBCED6;
 }
 
 .qr-assigned-by-admin {
