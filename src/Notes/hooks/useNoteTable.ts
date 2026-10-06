@@ -46,6 +46,9 @@ export const useNoteTable = ({
   const [fillMode, setFillMode] = useState<"bg" | "text">("bg");
   const lastActiveCellRef = useRef<HTMLTableCellElement | null>(null);
   const selectedCellsRef = useRef<HTMLTableCellElement[]>([]);
+  const skipColumnClickRef = useRef(false);
+  const selectionKindRef = useRef<"row" | "column" | null>(null);
+  const fillHandleSyncRef = useRef<() => void>(() => {});
 
   // Helper to get active table
   const getTargetTable = (): HTMLTableElement | null => {
@@ -107,6 +110,7 @@ export const useNoteTable = ({
     if (!editor) return;
 
     const handleTableClick = (e: MouseEvent) => {
+      if (skipColumnClickRef.current) return;
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
@@ -223,13 +227,15 @@ export const useNoteTable = ({
         if (isFirstColSl && cell.cellIndex === 0) {
           clearSelectionVisuals(table);
           selectedCellsRef.current = [];
+          selectionKindRef.current = null;
+          fillHandleSyncRef.current();
           return;
         }
         clearSelectionVisuals(table);
         const colIdx = cell.cellIndex;
         const colCells: HTMLTableCellElement[] = [];
-        Array.from(table.rows).forEach((row, rIdx) => {
-          if (rIdx > 0 && row.cells[colIdx]) {
+        Array.from(table.rows).forEach((row) => {
+          if (row.cells[colIdx]) {
             colCells.push(row.cells[colIdx] as HTMLTableCellElement);
           }
         });
@@ -237,6 +243,8 @@ export const useNoteTable = ({
           lastActiveCellRef.current = colCells[0];
           selectedCellsRef.current = colCells;
           applySelectionVisuals(colCells, "column");
+          selectionKindRef.current = "column";
+          fillHandleSyncRef.current();
         }
       }
       // Click on SL cell (1st col TD) -> select entire row's BODY cells only
@@ -251,6 +259,8 @@ export const useNoteTable = ({
             lastActiveCellRef.current = bodyCells[0];
             selectedCellsRef.current = bodyCells;
             applySelectionVisuals(bodyCells, "row");
+            selectionKindRef.current = "row";
+            fillHandleSyncRef.current();
           }
         }
       }
@@ -259,6 +269,8 @@ export const useNoteTable = ({
         clearSelectionVisuals(table);
         lastActiveCellRef.current = cell;
         selectedCellsRef.current = [cell];
+        selectionKindRef.current = null;
+        fillHandleSyncRef.current();
       }
     };
 
@@ -268,18 +280,237 @@ export const useNoteTable = ({
     };
   }, [editorRef, onDownloadAttachment, onPreviewAttachment]);
 
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const EDGE = 10;
+    let drag: {
+      table: HTMLTableElement;
+      colIndex: number;
+      startX: number;
+      startWidth: number;
+      moved: boolean;
+    } | null = null;
+
+    const ensureColgroup = (table: HTMLTableElement) => {
+      const colCount = table.rows[0]?.cells.length || 0;
+      let colgroup = table.querySelector("colgroup");
+      if (!colgroup) {
+        colgroup = document.createElement("colgroup");
+        table.insertBefore(colgroup, table.firstChild);
+      }
+      while (colgroup.children.length < colCount) {
+        colgroup.appendChild(document.createElement("col"));
+      }
+      while (colgroup.children.length > colCount) {
+        colgroup.lastElementChild?.remove();
+      }
+      return colgroup;
+    };
+
+    const getPageInnerWidth = (table: HTMLTableElement) => {
+      const page = table.closest(".page") as HTMLElement | null;
+      if (page) {
+        const styles = window.getComputedStyle(page);
+        return (
+          page.clientWidth -
+          (parseFloat(styles.paddingLeft) || 0) -
+          (parseFloat(styles.paddingRight) || 0)
+        );
+      }
+      return table.parentElement?.clientWidth || table.getBoundingClientRect().width;
+    };
+
+    const isLockedCol = (cell?: HTMLTableCellElement) =>
+      Boolean(cell?.classList.contains("excel-sl-col"));
+
+    const minWidthFor = (cell?: HTMLTableCellElement) => {
+      if (!cell) return 48;
+      if (cell.classList.contains("excel-sl-col")) return 44;
+      if (cell.classList.contains("excel-attachment-col") || cell.classList.contains("excel-attachment-cell")) {
+        return 120;
+      }
+      return 48;
+    };
+
+    const applyWidths = (table: HTMLTableElement, widths: number[]) => {
+      const colgroup = ensureColgroup(table);
+      const maxTableWidth = Math.max(120, Math.round(getPageInnerWidth(table)));
+      const next = widths.map((w, i) =>
+        Math.max(minWidthFor(table.rows[0]?.cells[i] as HTMLTableCellElement), Math.round(w))
+      );
+      next.forEach((width, index) => {
+        const col = colgroup.children[index] as HTMLTableColElement | undefined;
+        if (col) col.style.width = `${width}px`;
+        Array.from(table.rows).forEach((row) => {
+          const cell = row.cells[index] as HTMLTableCellElement | undefined;
+          if (!cell) return;
+          cell.style.setProperty("width", `${width}px`, "important");
+          if (isLockedCol(cell)) {
+            cell.style.setProperty("min-width", `${width}px`, "important");
+            cell.style.setProperty("max-width", `${width}px`, "important");
+          } else {
+            cell.style.setProperty("min-width", "0", "important");
+            cell.style.removeProperty("max-width");
+          }
+        });
+      });
+      const total = next.reduce((sum, w) => sum + w, 0);
+      table.style.setProperty("width", `${Math.min(total, maxTableWidth)}px`, "important");
+      table.style.setProperty("max-width", "100%", "important");
+      table.style.setProperty("table-layout", "fixed", "important");
+    };
+
+    const currentWidths = (table: HTMLTableElement) =>
+      Array.from(table.rows[0]?.cells || []).map((cell) =>
+        Math.round((cell as HTMLTableCellElement).getBoundingClientRect().width)
+      );
+
+    const setColumnWidth = (table: HTMLTableElement, colIndex: number, width: number) => {
+      const headerCell = table.rows[0]?.cells[colIndex] as HTMLTableCellElement | undefined;
+      if (!headerCell || isLockedCol(headerCell)) return;
+      const widths = currentWidths(table);
+      const maxTableWidth = Math.max(120, Math.round(getPageInnerWidth(table)));
+      const others = widths.reduce((sum, w, i) => (i === colIndex ? sum : sum + w), 0);
+      const maxThis = Math.max(minWidthFor(headerCell), maxTableWidth - others);
+      widths[colIndex] = Math.min(Math.max(minWidthFor(headerCell), Math.round(width)), maxThis);
+      applyWidths(table, widths);
+    };
+
+    const snapshotColumnWidths = (table: HTMLTableElement) => {
+      applyWidths(table, currentWidths(table));
+    };
+
+    const autoFitColumn = (table: HTMLTableElement, colIndex: number) => {
+      const headerCell = table.rows[0]?.cells[colIndex];
+      if (!headerCell || isLockedCol(headerCell)) return;
+      let fitWidth = minWidthFor(headerCell);
+      Array.from(table.rows).forEach((row) => {
+        const cell = row.cells[colIndex] as HTMLTableCellElement | undefined;
+        if (!cell) return;
+        const probe = cell.cloneNode(true) as HTMLElement;
+        probe.style.cssText =
+          "position:absolute;visibility:hidden;height:auto;width:auto;min-width:0;max-width:none;white-space:normal;overflow-wrap:anywhere;";
+        document.body.appendChild(probe);
+        fitWidth = Math.max(fitWidth, Math.ceil(probe.getBoundingClientRect().width) + 16);
+        probe.remove();
+      });
+      const maxTableWidth = getPageInnerWidth(table);
+      const others = currentWidths(table).reduce(
+        (sum, w, i) => (i === colIndex ? sum : sum + w),
+        0
+      );
+      setColumnWidth(table, colIndex, Math.min(fitWidth, Math.max(48, maxTableWidth - others)));
+    };
+
+    const getResizeColumn = (e: MouseEvent) => {
+      const cell = (e.target as HTMLElement | null)?.closest("th, td") as HTMLTableCellElement | null;
+      if (!cell || !editor.contains(cell)) return null;
+      const table = cell.closest("table");
+      if (!table) return null;
+      const headerRow = table.rows[0];
+      const inHeader = cell.tagName === "TH" || cell.parentElement === headerRow;
+      if (!inHeader) return null;
+      const rect = cell.getBoundingClientRect();
+      let colIndex = -1;
+      if (rect.right - e.clientX <= EDGE) colIndex = cell.cellIndex;
+      else if (e.clientX - rect.left <= EDGE) colIndex = cell.cellIndex - 1;
+      if (colIndex < 0) return null;
+      const headerCell = headerRow?.cells[colIndex];
+      if (!headerCell || headerCell.classList.contains("excel-sl-col")) return null;
+      return { table, colIndex };
+    };
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      const target = getResizeColumn(e);
+      if (!target) return;
+      e.preventDefault();
+      e.stopPropagation();
+      snapshotColumnWidths(target.table);
+      drag = {
+        ...target,
+        startX: e.clientX,
+        startWidth: Math.round(
+          (target.table.rows[0]?.cells[target.colIndex] as HTMLTableCellElement).getBoundingClientRect().width
+        ),
+        moved: false,
+      };
+      skipColumnClickRef.current = true;
+      editor.classList.add("notes-col-resizing");
+      saveUndoSnapshot();
+    };
+
+    const onMouseMove = (e: MouseEvent) => {
+      if (drag) {
+        const delta = e.clientX - drag.startX;
+        if (!drag.moved && Math.abs(delta) < 4) return;
+        drag.moved = true;
+        setColumnWidth(drag.table, drag.colIndex, drag.startWidth + delta);
+        return;
+      }
+      editor.classList.toggle("notes-col-resize-hover", Boolean(getResizeColumn(e)));
+    };
+
+    const finishDrag = (e?: MouseEvent) => {
+      if (!drag) return;
+      const current = drag;
+      drag = null;
+      editor.classList.remove("notes-col-resizing");
+      if (!current.moved) {
+        autoFitColumn(current.table, current.colIndex);
+      }
+      handleEditorInputWrapper();
+      window.setTimeout(() => {
+        skipColumnClickRef.current = false;
+      }, 0);
+    };
+
+    const onMouseUp = (e: MouseEvent) => finishDrag(e);
+
+    const onDoubleClick = (e: MouseEvent) => {
+      const target = getResizeColumn(e);
+      if (!target) return;
+      e.preventDefault();
+      e.stopPropagation();
+      skipColumnClickRef.current = true;
+      snapshotColumnWidths(target.table);
+      saveUndoSnapshot();
+      autoFitColumn(target.table, target.colIndex);
+      handleEditorInputWrapper();
+      window.setTimeout(() => {
+        skipColumnClickRef.current = false;
+      }, 0);
+    };
+
+    editor.addEventListener("mousedown", onMouseDown, true);
+    editor.addEventListener("mousemove", onMouseMove);
+    editor.addEventListener("dblclick", onDoubleClick, true);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      editor.removeEventListener("mousedown", onMouseDown, true);
+      editor.removeEventListener("mousemove", onMouseMove);
+      editor.removeEventListener("dblclick", onDoubleClick, true);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+      editor.classList.remove("notes-col-resizing", "notes-col-resize-hover");
+    };
+  }, [editorRef]);
+
   // Insert standard table with Excel headers: SL, A, B, C...
   const handleInsertTable = (numRows: number, numCols: number) => {
     if (!editorRef.current) return;
     editorRef.current.focus();
 
-    let tableHtml = `<table><thead><tr>`;
+    let tableHtml = `<table style="width:100%;max-width:100%;table-layout:fixed;"><thead><tr>`;
     for (let c = 0; c < numCols; c++) {
       const isSlCol = numCols > 1 && c === 0;
       const colName = getColLabel(c, numCols);
       tableHtml += `<th contenteditable="false" class="${
         isSlCol ? "excel-sl-col" : ""
-      }" title="Column ${colName} (Click to select column)">${colName}</th>`;
+      }" style="${isSlCol ? "width:44px;min-width:44px;max-width:44px;" : ""}" title="Column ${colName} (Click to select column)">${colName}</th>`;
     }
     tableHtml += `</tr></thead><tbody>`;
 
@@ -631,10 +862,14 @@ export const useNoteTable = ({
   };
 
   const handleApplyFillColor = (color: string, mode: "bg" | "text" = "bg") => {
-    const table = getTargetTable();
-    const cell = lastActiveCellRef.current;
-    if (!table || !cell || cell.closest("table") !== table) {
-      message.warning("Click inside a table cell or header first to color it");
+    const selected = selectedCellsRef.current.filter((c) => document.contains(c));
+    const activeCell =
+      lastActiveCellRef.current && document.contains(lastActiveCellRef.current)
+        ? lastActiveCellRef.current
+        : null;
+    const cellsToColor = selected.length > 0 ? selected : activeCell ? [activeCell] : [];
+    if (!cellsToColor.length) {
+      message.warning("Select a table cell, row, or column first");
       return;
     }
 
@@ -648,22 +883,16 @@ export const useNoteTable = ({
         } else {
           el.style.setProperty("background-color", color, "important");
         }
+      } else if (isClear) {
+        el.style.removeProperty("color");
       } else {
-        if (isClear) {
-          el.style.removeProperty("color");
-        } else {
-          el.style.setProperty("color", color, "important");
-        }
+        el.style.setProperty("color", color, "important");
       }
     };
 
-    const cellsToColor =
-      selectedCellsRef.current.length > 0
-        ? selectedCellsRef.current.filter((c) => table.contains(c))
-        : [cell];
-
     cellsToColor.forEach((c) => applyToElement(c));
-    clearSelectionVisuals(table);
+    const table = cellsToColor[0]?.closest("table");
+    if (table) clearSelectionVisuals(table);
     message.success(
       isClear
         ? "Color cleared"
@@ -674,6 +903,214 @@ export const useNoteTable = ({
 
     handleEditorInputWrapper();
   };
+
+  useEffect(() => {
+    const handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "notes-excel-fill-handle";
+    handle.textContent = "+";
+    handle.title = "Click or drag to expand this column";
+    handle.contentEditable = "false";
+    document.body.appendChild(handle);
+
+    const isSl = (cell?: Element | null) => Boolean(cell?.classList.contains("excel-sl-col"));
+
+    const colWidths = (table: HTMLTableElement) =>
+      Array.from(table.rows[0]?.cells || []).map((cell) =>
+        Math.round((cell as HTMLTableCellElement).getBoundingClientRect().width)
+      );
+
+    const minDataWidth = 48;
+
+    const applyAllWidths = (table: HTMLTableElement, widths: number[]) => {
+      Array.from(table.rows).forEach((row) => {
+        widths.forEach((width, index) => {
+          const cell = row.cells[index] as HTMLTableCellElement | undefined;
+          if (!cell) return;
+          if (isSl(cell)) {
+            cell.style.setProperty("width", "44px", "important");
+            cell.style.setProperty("min-width", "44px", "important");
+            cell.style.setProperty("max-width", "44px", "important");
+            return;
+          }
+          cell.style.setProperty("width", `${width}px`, "important");
+          cell.style.setProperty("min-width", "0", "important");
+          cell.style.removeProperty("max-width");
+        });
+      });
+      table.style.setProperty("width", "100%", "important");
+      table.style.setProperty("max-width", "100%", "important");
+      table.style.setProperty("table-layout", "fixed", "important");
+    };
+
+    const growColumn = (table: HTMLTableElement, colIndex: number, extra: number) => {
+      const header = table.rows[0]?.cells[colIndex] as HTMLTableCellElement | undefined;
+      if (!header || isSl(header) || extra === 0) return;
+      const widths = colWidths(table);
+      let need = Math.abs(extra);
+      const growing = extra > 0;
+      const order: number[] = [];
+      for (let i = colIndex + 1; i < widths.length; i++) order.push(i);
+      for (let i = colIndex - 1; i >= 0; i--) order.push(i);
+      for (const i of order) {
+        if (need <= 0) break;
+        const cell = table.rows[0]?.cells[i] as HTMLTableCellElement | undefined;
+        if (!cell || isSl(cell)) continue;
+        if (growing) {
+          const take = Math.min(need, widths[i] - minDataWidth);
+          if (take > 0) {
+            widths[i] -= take;
+            widths[colIndex] += take;
+            need -= take;
+          }
+        } else {
+          const take = Math.min(need, widths[colIndex] - minDataWidth);
+          if (take > 0) {
+            widths[colIndex] -= take;
+            widths[i] += take;
+            need -= take;
+          }
+        }
+      }
+      applyAllWidths(table, widths);
+    };
+
+    const applyColWidth = (table: HTMLTableElement, colIndex: number, width: number) => {
+      const current = colWidths(table)[colIndex] || 0;
+      growColumn(table, colIndex, Math.round(width) - current);
+    };
+
+    const applyRowHeight = (row: HTMLTableRowElement, height: number) => {
+      const next = Math.max(28, Math.round(height));
+      Array.from(row.cells).forEach((cell) => {
+        if (isSl(cell)) return;
+        (cell as HTMLTableCellElement).style.setProperty("height", `${next}px`, "important");
+      });
+    };
+
+    const syncFillHandle = () => {
+      const kind = selectionKindRef.current;
+      const cells = selectedCellsRef.current.filter(
+        (cell) => document.contains(cell) && cell.classList.contains("excel-cell-selected")
+      );
+      const table = cells[0]?.closest("table");
+      if (!kind || !table || !cells.length) {
+        handle.classList.remove("is-visible");
+        return;
+      }
+      if (kind === "column") {
+        const header = table.rows[0]?.cells[cells[0].cellIndex] as HTMLTableCellElement | undefined;
+        if (!header || isSl(header)) {
+          handle.classList.remove("is-visible");
+          return;
+        }
+        const rect = header.getBoundingClientRect();
+        handle.style.left = `${rect.right}px`;
+        handle.style.top = `${rect.top}px`;
+        handle.classList.add("is-visible");
+        return;
+      }
+      const first = cells[0].getBoundingClientRect();
+      const last = cells[cells.length - 1].getBoundingClientRect();
+      handle.style.left = `${(first.left + last.right) / 2}px`;
+      handle.style.top = `${first.top}px`;
+      handle.classList.add("is-visible");
+    };
+
+    fillHandleSyncRef.current = syncFillHandle;
+
+    let sizeDrag: {
+      kind: "row" | "column";
+      table: HTMLTableElement;
+      colIndex: number;
+      row: HTMLTableRowElement | null;
+      startX: number;
+      startY: number;
+      startSize: number;
+      moved: boolean;
+    } | null = null;
+
+    const onHandleMouseDown = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const cells = selectedCellsRef.current.filter((c) => document.contains(c));
+      const table = cells[0]?.closest("table");
+      const kind = selectionKindRef.current;
+      if (!table || !kind) return;
+      const header = table.rows[0]?.cells[cells[0].cellIndex];
+      if (kind === "column" && isSl(header)) return;
+      skipColumnClickRef.current = true;
+      saveUndoSnapshot();
+      const row = cells[0].closest("tr");
+      sizeDrag = {
+        kind,
+        table,
+        colIndex: cells[0].cellIndex,
+        row,
+        startX: e.clientX,
+        startY: e.clientY,
+        startSize:
+          kind === "column"
+            ? header?.getBoundingClientRect().width || 80
+            : row?.getBoundingClientRect().height || 32,
+        moved: false,
+      };
+    };
+
+    const onSizeMove = (e: MouseEvent) => {
+      if (!sizeDrag) return;
+      const dx = e.clientX - sizeDrag.startX;
+      const dy = e.clientY - sizeDrag.startY;
+      if (!sizeDrag.moved && Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
+      sizeDrag.moved = true;
+      if (sizeDrag.kind === "column") {
+        applyColWidth(sizeDrag.table, sizeDrag.colIndex, sizeDrag.startSize + dx);
+      } else if (sizeDrag.row) {
+        applyRowHeight(sizeDrag.row, sizeDrag.startSize + dy);
+      }
+      syncFillHandle();
+    };
+
+    const onSizeUp = () => {
+      if (!sizeDrag) return;
+      const current = sizeDrag;
+      sizeDrag = null;
+      if (!current.moved) {
+        if (current.kind === "column") {
+          growColumn(current.table, current.colIndex, 72);
+        } else if (current.row) {
+          applyRowHeight(current.row, current.startSize + 28);
+        }
+      }
+      handleEditorInputWrapper();
+      requestAnimationFrame(syncFillHandle);
+      window.setTimeout(() => {
+        skipColumnClickRef.current = false;
+      }, 0);
+    };
+
+    const onHandleClick = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    handle.addEventListener("mousedown", onHandleMouseDown);
+    handle.addEventListener("click", onHandleClick);
+    window.addEventListener("mousemove", onSizeMove);
+    window.addEventListener("mouseup", onSizeUp);
+    window.addEventListener("scroll", syncFillHandle, true);
+    window.addEventListener("resize", syncFillHandle);
+
+    return () => {
+      handle.removeEventListener("mousedown", onHandleMouseDown);
+      handle.removeEventListener("click", onHandleClick);
+      window.removeEventListener("mousemove", onSizeMove);
+      window.removeEventListener("mouseup", onSizeUp);
+      window.removeEventListener("scroll", syncFillHandle, true);
+      window.removeEventListener("resize", syncFillHandle);
+      handle.remove();
+    };
+  }, []);
 
   return {
     isTableDropdownOpen,

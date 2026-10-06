@@ -60,3 +60,5 @@ src/
 - `/register` - Registration page
 - `/welcome` - Welcome page (after login/registration)
 
+//install excel
+npm install react react-dom scheduler react-spreadsheet

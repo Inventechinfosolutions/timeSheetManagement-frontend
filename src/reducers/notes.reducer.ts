@@ -114,9 +114,7 @@ export const createNote = createAsyncThunk(
         formData.append("isAutoSave", String(payload.isAutoSave));
         formData.append("autoSave", String(payload.isAutoSave));
       }
-      if (payload.isVertical !== undefined) {
-        formData.append("isVertical", String(payload.isVertical));
-      }
+      if (payload.rotation !== undefined) formData.append("rotation", String(payload.rotation));
 
       if (payload.subNotes && payload.subNotes.length > 0) {
         formData.append("subNotes", JSON.stringify(payload.subNotes));
@@ -162,6 +160,7 @@ export const updateNote = createAsyncThunk(
       }
       if (data.isVertical !== undefined) sanitized.isVertical = data.isVertical;
       if (data.orderIndex !== undefined) sanitized.orderIndex = data.orderIndex;
+      if (data.rotation !== undefined) sanitized.rotation = data.rotation;
 
       const response = await axios.patch(`${API_BASE}/${id}`, sanitized);
       return response.data as Note;
@@ -277,6 +276,7 @@ export const createSubNote = createAsyncThunk(
       if (payload.description) formData.append("description", payload.description);
       if (payload.color) formData.append("color", payload.color);
       if (payload.orderIndex !== undefined) formData.append("orderIndex", String(payload.orderIndex));
+      if (payload.rotation !== undefined) formData.append("rotation", String(payload.rotation));
       if (payload.attachmentKeys && payload.attachmentKeys.length > 0) {
         formData.append("attachmentKeys", JSON.stringify(payload.attachmentKeys));
       }

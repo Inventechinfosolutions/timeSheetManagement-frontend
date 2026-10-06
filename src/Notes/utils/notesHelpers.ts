@@ -36,6 +36,64 @@ export const formatFileSize = (bytes?: number): string => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 };
 
+const SKIP_JUSTIFY_TAGS = new Set(["SCRIPT", "STYLE", "PRE", "CODE", "TEXTAREA"]);
+
+const collapseLetterSpacedWords = (text: string): string => {
+  const tokens = text.split(" ").filter((token) => token.length > 0);
+  if (tokens.length < 4) return text.replace(/ {2,}/g, " ").trim();
+  const singleCount = tokens.filter((token) => token.length === 1).length;
+  if (singleCount / tokens.length < 0.5) return text.replace(/ {2,}/g, " ").trim();
+
+  let rebuilt = "";
+  tokens.forEach((token) => {
+    if (token.length === 1) {
+      rebuilt += token;
+    } else {
+      if (rebuilt && !rebuilt.endsWith(" ")) rebuilt += " ";
+      rebuilt += `${token} `;
+    }
+  });
+  return rebuilt.replace(/ {2,}/g, " ").trim();
+};
+
+const normalizeImportedText = (raw: string): string => {
+  const flattened = raw
+    .replace(/\u00a0/g, " ")
+    .replace(/[\u2000-\u200B\u202F\u205F\u3000]/g, " ")
+    .replace(/[\r\n\t]+/g, " ")
+    .replace(/ {2,}/g, " ");
+  return collapseLetterSpacedWords(flattened);
+};
+
+/**
+ * Clean extra imported spaces and justify text like a PDF/DOCX.
+ */
+export const justifyImportedContent = (root: HTMLElement) => {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+  while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
+
+  textNodes.forEach((node) => {
+    const parent = node.parentElement;
+    if (!parent || SKIP_JUSTIFY_TAGS.has(parent.tagName)) return;
+    node.textContent = normalizeImportedText(node.textContent || "");
+  });
+
+  root.querySelectorAll<HTMLElement>("*").forEach((el) => {
+    if (SKIP_JUSTIFY_TAGS.has(el.tagName)) return;
+    el.style.whiteSpace = "normal";
+    el.style.letterSpacing = "normal";
+    el.style.wordSpacing = "normal";
+    el.style.textAlignLast = "left";
+    if (!["H1", "H2", "H3", "H4", "H5", "H6", "IMG", "TABLE", "THEAD", "TBODY", "TR"].includes(el.tagName)) {
+      el.style.textAlign = "justify";
+    }
+  });
+
+  root.classList.add("is-justified");
+  root.querySelectorAll(".page").forEach((page) => page.classList.add("is-justified"));
+};
+
 /**
  * Export Note to PDF with 100% exact visual fidelity (highlighter colors, text colors,
  * boxes, cards, tables, and HTML formatting) matching the Word export and on-screen view.
@@ -56,7 +114,10 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
     const baseWidthPx = isHorizontal ? 1123 : 794;
 
     // 1. Create temporary container placed at top-left behind UI for accurate html2canvas bounding boxes
-    const wrapper = document.createElement("div");
+    const isLandscape = note.rotation === 90 || note.rotation === 270;
+    const pdfWidth = isLandscape ? 297 : 210;
+    const pdfHeight = isLandscape ? 210 : 297;
+
     wrapper.style.position = "absolute";
     wrapper.style.left = "0px";
     wrapper.style.top = "0px";
@@ -64,9 +125,7 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
     wrapper.style.opacity = "1";
     wrapper.style.pointerEvents = "none";
     wrapper.style.overflow = "visible";
-    wrapper.style.minWidth = `${baseWidthPx}px`;
-    wrapper.style.width = "max-content";
-    wrapper.style.display = "inline-block";
+    wrapper.style.width = isLandscape ? "1122px" : "794px"; // 1122px for A4 Landscape, 794px for Portrait
     wrapper.style.backgroundColor = "#FFFFFF";
     wrapper.style.boxSizing = "border-box";
 
@@ -214,26 +273,21 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
       useCORS: true,
       logging: false,
       backgroundColor: "#FFFFFF",
-      width: actualWidthPx,
-      windowWidth: actualWidthPx,
+      width: isLandscape ? 1122 : 794,
+      windowWidth: isLandscape ? 1122 : 794,
     });
 
     document.body.removeChild(wrapper);
 
-    // Convert pixel width to mm (96 DPI: 1 inch = 25.4mm = 96px => 1px ≈ 0.264583mm)
-    const pageWidthMm = (actualWidthPx * 25.4) / 96;
-    const isLandscape = isHorizontal || actualWidthPx > 794;
-    // Maintain standard A4 aspect ratio (210/297 for landscape, 297/210 for portrait)
-    const aspect = isLandscape ? (210 / 297) : (297 / 210);
-    const pageHeightMm = pageWidthMm * aspect;
-    const pageHeightPx = Math.floor(canvas.width * aspect);
-
-    // Initialize jsPDF with dynamic full-width format
+    // Initialize jsPDF in A4 with correct orientation
     const pdf = new jsPDF({
       orientation: isLandscape ? "landscape" : "portrait",
       unit: "mm",
-      format: [pageWidthMm, pageHeightMm],
+      format: "a4",
     });
+
+    const a4Aspect = pdfHeight / pdfWidth;
+    const pageHeightPx = Math.floor(canvas.width * a4Aspect);
 
     // 1. If note content fits on 1 full page (common for tables/notes), render on single page without any cuts
     if (canvas.height <= pageHeightPx) {
@@ -247,7 +301,7 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
         ctx.drawImage(canvas, 0, 0);
       }
       const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.95);
-      pdf.addImage(pageImgData, "JPEG", 0, 0, pageWidthMm, pageHeightMm);
+      pdf.addImage(pageImgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
     } else {
       // 2. Multi-page document: slice at natural blank whitespace rows so no text, headings, or table rows are ever cut
       const canvasCtx = canvas.getContext("2d");
@@ -256,7 +310,7 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
 
       while (currentY < canvas.height) {
         if (pageNum > 0) {
-          pdf.addPage([pageWidthMm, pageHeightMm], isLandscape ? "landscape" : "portrait");
+          pdf.addPage("a4", isLandscape ? "landscape" : "portrait");
         }
 
         const remainingHeight = canvas.height - currentY;
@@ -323,7 +377,7 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
         }
 
         const pageImgData = pageCanvas.toDataURL("image/jpeg", 0.95);
-        pdf.addImage(pageImgData, "JPEG", 0, 0, pageWidthMm, pageHeightMm);
+        pdf.addImage(pageImgData, "JPEG", 0, 0, pdfWidth, pdfHeight);
 
         currentY += sliceHeight;
         pageNum++;
@@ -351,6 +405,7 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
   try {
     const isProject = note.type === "PROJECT";
     const projectLabel = note.projectName || "Worksphere Project";
+    const isLandscape = note.rotation === 90 || note.rotation === 270;
 
     const isHorizontal = note.isVertical === false;
     const firstRowMatch = (note.description || "").match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
@@ -382,11 +437,11 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
         <title>${note.title || "Note"}</title>
         <style>
           @page Section1 {
-            size: ${pageWidthPt}pt ${pageHeightPt}pt;
-            mso-page-orientation: ${isWide ? "landscape" : "portrait"};
-            margin: 0.4in 0.4in 0.4in 0.4in;
-            mso-header-margin: 28pt;
-            mso-footer-margin: 28pt;
+            size: ${isLandscape ? "841.9pt 595.3pt" : "595.3pt 841.9pt"};
+            margin: 1.0in 1.0in 1.0in 1.0in;
+            mso-header-margin: 35.4pt;
+            mso-footer-margin: 35.4pt;
+            mso-page-orientation: ${isLandscape ? "landscape" : "portrait"};
             mso-paper-source: 0;
           }
           div.Section1 { page: Section1; }

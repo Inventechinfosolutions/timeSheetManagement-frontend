@@ -572,10 +572,11 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
               <div className="grid grid-cols-5 gap-1.5 pt-0.5">
                 {BOLD_DARK_COLORS.map((c) => (
                   <button
-                    key={`tbl-bg-${c.className}`}
+                    key={`tbl-bg-${c.color}`}
                     type="button"
                     onClick={() => onApplyFillColor(c.color, fillMode)}
-                    className={`w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 active:scale-95 transition-all duration-150 shadow-xs cursor-pointer outline-none focus:outline-none focus:ring-2 focus:ring-slate-400/50 focus:border-slate-500 ${c.className}`}
+                    className="w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 active:scale-95 transition-all duration-150 shadow-xs cursor-pointer outline-none"
+                    style={{ backgroundColor: c.color }}
                     title={c.label}
                   />
                 ))}
@@ -590,10 +591,11 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
               <div className="grid grid-cols-5 gap-1.5 pt-0.5">
                 {LIGHT_SHADING_COLORS.map((c) => (
                   <button
-                    key={`tbl-bg-${c.className}`}
+                    key={`tbl-bg-${c.color}`}
                     type="button"
                     onClick={() => onApplyFillColor(c.color, fillMode)}
-                    className={`w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 active:scale-95 transition-all duration-150 shadow-xs cursor-pointer outline-none focus:outline-none focus:ring-2 focus:ring-slate-400/50 focus:border-slate-500 ${c.className}`}
+                    className="w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 active:scale-95 transition-all duration-150 shadow-xs cursor-pointer outline-none"
+                    style={{ backgroundColor: c.color }}
                     title={c.label}
                   />
                 ))}
