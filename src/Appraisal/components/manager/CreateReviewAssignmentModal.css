@@ -1,13 +1,14 @@
 /* ==========================================================================
    Create Review Assignment Modal - Circular Spring Expansion & Luxury Colors
+   Frosted Ice-Blue Aesthetic & Royal Blue Highlights
    ========================================================================== */
 
 /* 1. Modal Overlay Backdrop Entrance & Exit */
 .create-assignment-modal-overlay {
   animation: createModalOverlayFade 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-  background: rgba(15, 23, 42, 0.2) !important;
-  backdrop-filter: blur(3.5px) !important;
-  -webkit-backdrop-filter: blur(3.5px) !important;
+  background: rgba(15, 23, 42, 0.3) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   z-index: 0 !important;
   pointer-events: auto !important;
 }
@@ -25,16 +26,16 @@
   }
   100% {
     opacity: 1;
-    backdrop-filter: blur(3.5px);
-    -webkit-backdrop-filter: blur(3.5px);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
 }
 
 @keyframes createModalOverlayFadeOut {
   0% {
     opacity: 1;
-    backdrop-filter: blur(3.5px);
-    -webkit-backdrop-filter: blur(3.5px);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
   100% {
     opacity: 0;
@@ -72,15 +73,15 @@ body.modal-open-active .sidebar-footer {
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.98) 0%,
-    rgba(250, 248, 243, 0.96) 50%,
-    rgba(247, 242, 232, 0.94) 100%
+    rgba(240, 244, 250, 0.96) 50%,
+    rgba(232, 240, 250, 0.94) 100%
   ) !important;
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  border: 1.5px solid rgba(229, 201, 143, 0.55) !important;
+  border: 1.5px solid rgba(219, 234, 254, 0.85) !important;
   box-shadow:
     0 28px 75px -15px rgba(15, 23, 42, 0.22),
-    0 6px 24px rgba(229, 201, 143, 0.25),
+    0 6px 24px rgba(37, 99, 235, 0.15),
     inset 0 1px 2px rgba(255, 255, 255, 1) !important;
   border-radius: 1.75rem !important;
   animation: createModalCircularExpand 0.5s cubic-bezier(0.34, 1.45, 0.64, 1) forwards !important;
@@ -103,23 +104,20 @@ body.modal-open-active .sidebar-footer {
     filter: blur(0px);
     box-shadow:
       0 28px 75px -15px rgba(15, 23, 42, 0.22),
-      0 6px 24px rgba(229, 201, 143, 0.25);
+      0 6px 24px rgba(37, 99, 235, 0.15);
   }
   28% {
     opacity: 0.96;
-    /* Squeeze vertically & horizontally with an initial 3D page curl/fold */
     transform: perspective(1200px) scale(0.86, 0.92) rotateX(14deg) rotateY(-16deg) rotateZ(-4deg) translateY(6px);
     box-shadow: 0 16px 40px -10px rgba(15, 23, 42, 0.26);
   }
   65% {
     opacity: 0.55;
-    /* Deep 3D origami page fold diagonal curl while zooming out */
     transform: perspective(1200px) scale(0.44, 0.28) rotateX(36deg) rotateY(-44deg) rotateZ(-14deg) translateY(22px);
     filter: blur(2px);
   }
   100% {
     opacity: 0;
-    /* Total squeeze, flat page fold crease, and zoom-out vanishing point into close button */
     transform: perspective(1200px) scale(0.05, 0.01) rotateX(60deg) rotateY(-70deg) rotateZ(-26deg) translateY(38px);
     filter: blur(8px);
   }
@@ -154,7 +152,7 @@ body.modal-open-active .sidebar-footer {
   }
 }
 
-/* 3. Card Content Reveal (Fades/reveals during expansion) */
+/* 3. Card Content Reveal */
 .create-assignment-modal-dialog > * {
   animation: createModalContentReveal 0.45s cubic-bezier(0.16, 1, 0.3, 1) 0.12s backwards;
 }
@@ -180,13 +178,13 @@ body.modal-open-active .sidebar-footer {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, #FAF2EE 0%, #F5E8E2 100%);
-  color: #A36361;
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  color: #1D4ED8;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(163, 99, 97, 0.18), inset 0 1px 1px #FFFFFF;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.18), inset 0 1px 1px #FFFFFF;
 }
 
 /* 5. Header Title & Subtitle */
@@ -205,7 +203,7 @@ body.modal-open-active .sidebar-footer {
   margin-top: 0.2rem;
 }
 
-/* 5.1 Close Button - Squeeze, Rotate & Page Fold Micro-Animation */
+/* 5.1 Close Button */
 .create-assignment-modal-dialog .create-modal-close-btn {
   width: 2.35rem !important;
   height: 2.35rem !important;
@@ -213,18 +211,17 @@ body.modal-open-active .sidebar-footer {
   align-items: center !important;
   justify-content: center !important;
   border-radius: 0.85rem !important;
-  color: #8F9BBA !important;
-  background: #FAF2EE !important;
-  border: 1.5px solid #E2E8F0 !important;
+  color: #64748B !important;
+  background: #EFF6FF !important;
+  border: 1.5px solid #BFDBFE !important;
   cursor: pointer !important;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
   transform-origin: center center !important;
   position: relative !important;
   overflow: hidden !important;
-  box-shadow: 0 2px 6px rgba(163, 99, 97, 0.08) !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08) !important;
 }
 
-/* Close Button Hover: Squeeze + 90deg Spin + Soft Crimson Highlight */
 .create-assignment-modal-dialog .create-modal-close-btn:hover {
   background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%) !important;
   color: #EF4444 !important;
@@ -235,14 +232,12 @@ body.modal-open-active .sidebar-footer {
     0 2px 4px rgba(239, 68, 68, 0.12) !important;
 }
 
-/* Close Button Active: Deeper Squeeze + 180deg Flip */
 .create-assignment-modal-dialog .create-modal-close-btn:active {
   transform: scale(0.66) rotate(180deg) !important;
   background: #FCA5A5 !important;
   box-shadow: 0 2px 6px rgba(239, 68, 68, 0.28) !important;
 }
 
-/* Inner Icon Micro-spring */
 .create-assignment-modal-dialog .create-modal-close-btn svg {
   transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -258,19 +253,18 @@ body.modal-open-active .sidebar-footer {
 /* 6. Option Cards (Individual & All Members) */
 .create-modal-option {
   background: #FFFFFF !important;
-  border: 1.5px solid #E2E8F0 !important;
+  border: 1.5px solid rgba(219, 234, 254, 0.85) !important;
   border-radius: 1.25rem !important;
   padding: 1rem 1.15rem !important;
   transition: all 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(163, 99, 97, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.05) !important;
   position: relative;
   overflow: hidden;
   opacity: 1 !important;
   filter: none !important;
 }
 
-/* Subtle light gleam sweep on hover */
 .create-modal-option::before {
   content: "";
   position: absolute;
@@ -295,11 +289,10 @@ body.modal-open-active .sidebar-footer {
 
 .create-modal-option:hover {
   transform: translateY(-2px) !important;
-  border-color: #CBD5E1 !important;
-  box-shadow: 0 12px 26px rgba(163, 99, 97, 0.16), 0 2px 6px rgba(229, 201, 143, 0.2) !important;
+  border-color: #93C5FD !important;
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.12), 0 2px 6px rgba(37, 99, 235, 0.1) !important;
 }
 
-/* Staggered entrance for option cards */
 .create-modal-option-individual {
   animation: optionCardSlideIn 0.52s cubic-bezier(0.16, 1, 0.3, 1) 0.18s backwards;
 }
@@ -323,20 +316,19 @@ body.modal-open-active .sidebar-footer {
 
 /* Individual Option Selected */
 .create-modal-option-individual.is-selected {
-  border-color: #A36361 !important;
-  background: linear-gradient(135deg, #FFFFFF 0%, #FAF2EE 100%) !important;
-  box-shadow: 0 10px 28px rgba(163, 99, 97, 0.18), 0 0 0 2px rgba(163, 99, 97, 0.2) !important;
+  border-color: #2563EB !important;
+  background: linear-gradient(135deg, #FFFFFF 0%, #EFF6FF 100%) !important;
+  box-shadow: 0 10px 28px rgba(37, 99, 235, 0.18), 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
   animation: optionSelectedPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* All Members Option Selected */
 .create-modal-option-all.is-selected {
-  border-color: #D3A29D !important;
-  background: linear-gradient(135deg, #FFFFFF 0%, #FAF0EB 100%) !important;
-  box-shadow: 0 10px 28px rgba(211, 162, 157, 0.2), 0 0 0 2px rgba(211, 162, 157, 0.2) !important;
+  border-color: #3B82F6 !important;
+  background: linear-gradient(135deg, #FFFFFF 0%, #F0F9FF 100%) !important;
+  box-shadow: 0 10px 28px rgba(59, 130, 246, 0.18), 0 0 0 2px rgba(59, 130, 246, 0.2) !important;
   animation: optionSelectedPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-
 
 @keyframes optionSelectedPop {
   0% {
@@ -355,17 +347,16 @@ body.modal-open-active .sidebar-footer {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, #FAF2EE 0%, #F5E8E2 100%);
-  color: #A36361;
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  color: #1D4ED8;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(163, 99, 97, 0.12);
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.12);
   transition: box-shadow 0.25s ease;
 }
 
-/* Option Icons - No zoom/scaling on hover or selection */
 .create-option-icon-wrap-individual,
 .create-option-icon-wrap-all,
 .create-option-icon-wrap-individual svg,
@@ -383,33 +374,33 @@ body.modal-open-active .sidebar-footer {
 }
 
 .create-modal-option-individual:hover .create-option-icon-wrap-individual {
-  box-shadow: 0 6px 18px rgba(163, 99, 97, 0.24);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.24);
 }
 
 .create-modal-option-individual.is-selected .create-option-icon-wrap-individual {
-  box-shadow: 0 4px 14px rgba(163, 99, 97, 0.22);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.22);
 }
 
 .create-option-icon-wrap-all {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, #FAF0EB 0%, #F5E5DC 100%);
-  color: #D3A29D;
+  background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+  color: #0284C7;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 3px 10px rgba(211, 162, 157, 0.14);
+  box-shadow: 0 3px 10px rgba(2, 132, 199, 0.14);
   transition: box-shadow 0.25s ease;
 }
 
 .create-modal-option-all:hover .create-option-icon-wrap-all {
-  box-shadow: 0 6px 18px rgba(211, 162, 157, 0.26);
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.26);
 }
 
 .create-modal-option-all.is-selected .create-option-icon-wrap-all {
-  box-shadow: 0 4px 14px rgba(211, 162, 157, 0.25);
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.25);
 }
 
 /* Radio button styles */
@@ -431,20 +422,20 @@ body.modal-open-active .sidebar-footer {
 }
 
 .create-modal-option-individual.is-selected .create-option-radio {
-  border-color: #A36361;
-  box-shadow: 0 0 0 3px rgba(163, 99, 97, 0.12);
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .create-modal-option-all.is-selected .create-option-radio {
-  border-color: #D3A29D;
-  box-shadow: 0 0 0 3px rgba(211, 162, 157, 0.14);
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
 .create-option-radio-dot-individual {
   width: 0.65rem;
   height: 0.65rem;
   border-radius: 9999px;
-  background: #A36361;
+  background: #2563EB;
   animation: radioDotSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -452,7 +443,7 @@ body.modal-open-active .sidebar-footer {
   width: 0.65rem;
   height: 0.65rem;
   border-radius: 9999px;
-  background: #D3A29D;
+  background: #3B82F6;
   animation: radioDotSpring 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -471,7 +462,6 @@ body.modal-open-active .sidebar-footer {
   }
 }
 
-
 .create-option-title {
   font-size: 0.925rem;
   font-weight: 700;
@@ -486,10 +476,10 @@ body.modal-open-active .sidebar-footer {
   opacity: 1 !important;
 }
 
-/* 7. Continue Button - Activation Spring, Shimmer Gleam & Ambient Pulse */
+/* 7. Continue Button - Activation Spring, Shimmer Gleam & Glossy Pill Style */
 .create-modal-continue-btn {
-  padding: 0.7rem 2.25rem !important;
-  border-radius: 0.95rem !important;
+  padding: 0.75rem 2.25rem !important;
+  border-radius: 9999px !important;
   font-weight: 700 !important;
   font-size: 0.95rem !important;
   letter-spacing: -0.01em !important;
@@ -498,14 +488,14 @@ body.modal-open-active .sidebar-footer {
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
 
-/* Active State: Spring Pop + Vibrant Terracotta Gradient + Breathing Pulse */
+/* Active State: Spring Pop + Vibrant Royal Blue Gradient + Breathing Pulse */
 .create-modal-continue-btn.is-active {
-  background: linear-gradient(135deg, #A36361 0%, #8D4E4D 100%) !important;
+  background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%) !important;
   color: #FFFFFF !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
   box-shadow:
-    0 8px 24px rgba(163, 99, 97, 0.38),
-    0 2px 6px rgba(238, 204, 140, 0.25) !important;
+    0 10px 24px -4px rgba(37, 99, 235, 0.45),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.45) !important;
   cursor: pointer !important;
   animation:
     continueBtnActivate 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
@@ -539,8 +529,8 @@ body.modal-open-active .sidebar-footer {
   60% {
     transform: scale(1.07);
     box-shadow:
-      0 14px 34px rgba(163, 99, 97, 0.48),
-      0 0 0 5px rgba(163, 99, 97, 0.22);
+      0 14px 34px rgba(37, 99, 235, 0.48),
+      0 0 0 5px rgba(37, 99, 235, 0.22);
   }
   80% {
     transform: scale(0.98);
@@ -548,21 +538,21 @@ body.modal-open-active .sidebar-footer {
   100% {
     transform: scale(1);
     box-shadow:
-      0 8px 24px rgba(163, 99, 97, 0.38),
-      0 2px 6px rgba(229, 201, 143, 0.25);
+      0 10px 24px -4px rgba(37, 99, 235, 0.45),
+      inset 0 1px 1.5px rgba(255, 255, 255, 0.45);
   }
 }
 
 @keyframes continuePulseGlow {
   0%, 100% {
     box-shadow:
-      0 8px 24px rgba(163, 99, 97, 0.36),
-      0 0 0 0 rgba(163, 99, 97, 0.35);
+      0 10px 24px -4px rgba(37, 99, 235, 0.45),
+      0 0 0 0 rgba(37, 99, 235, 0.35);
   }
   50% {
     box-shadow:
-      0 12px 30px rgba(163, 99, 97, 0.5),
-      0 0 0 6px rgba(163, 99, 97, 0.12);
+      0 14px 32px rgba(37, 99, 235, 0.55),
+      0 0 0 6px rgba(37, 99, 235, 0.15);
   }
 }
 
@@ -578,21 +568,22 @@ body.modal-open-active .sidebar-footer {
 /* Hover: Lift + Expanded Glow */
 .create-modal-continue-btn.is-active:hover {
   transform: translateY(-2.5px) scale(1.03) !important;
+  background: linear-gradient(180deg, #2563EB 0%, #1E40AF 100%) !important;
   box-shadow:
-    0 14px 36px rgba(163, 99, 97, 0.48),
-    0 4px 10px rgba(229, 201, 143, 0.32) !important;
+    0 14px 36px rgba(37, 99, 235, 0.55),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.6) !important;
 }
 
 /* Active Press: Spring Tactile Squeeze */
 .create-modal-continue-btn.is-active:active {
   transform: translateY(1px) scale(0.95) !important;
   box-shadow:
-    0 4px 14px rgba(163, 99, 97, 0.32) !important;
+    0 4px 14px rgba(37, 99, 235, 0.35) !important;
 }
 
 /* Disabled State */
 .create-modal-continue-btn.is-disabled {
-  background: #FAF2EE !important;
+  background: #F1F5F9 !important;
   color: #94A3B8 !important;
   border: 1px solid transparent !important;
   box-shadow: none !important;

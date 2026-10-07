@@ -31,7 +31,7 @@ export const AssignSubmitPanel: React.FC<AssignSubmitPanelProps> = ({ summary, s
     <div className="space-y-3.5">
       <div className="flex flex-col items-center gap-1 py-2 text-center">
         {submitted ? (
-          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#A36361] text-white">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2563EB] text-white shadow-md shadow-blue-500/25">
             <Check className="h-5 w-5 stroke-[3]" />
           </span>
         ) : waiting ? (
@@ -54,20 +54,20 @@ export const AssignSubmitPanel: React.FC<AssignSubmitPanelProps> = ({ summary, s
       </div>
       {error ? <p className="text-xs font-bold text-red-600">{error}</p> : null}
 
-      <div className="rounded-xl border border-[#E5C98F]/55 bg-white px-3.5 py-3">
+      <div className="rounded-xl border border-blue-200/80 bg-white px-3.5 py-3 shadow-sm">
         <p className="text-[11px] font-bold uppercase tracking-wider text-[#0F172A]">Employees</p>
         <ul className="mt-1.5 max-h-[19rem] space-y-1.5 overflow-y-auto pr-1">
           {summary.people.map((person) => (
             <li
               key={person.employeeId}
-              className="rounded-xl border border-[#E5C98F]/70 bg-[#FFFDFB] px-3 py-2"
+              className="rounded-xl border border-blue-100 bg-blue-50/30 px-3 py-2"
             >
               <p className="text-sm font-medium leading-5 text-[#0F172A]">{person.employeeName}</p>
               <p className="text-[11px] leading-4 text-[#64748B]">{person.employeeId}</p>
             </li>
           ))}
         </ul>
-        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-[#E5C98F]/40 pt-3 text-sm">
+        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-blue-100 pt-3 text-sm">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#94A3B8]">Financial year</p>
             <p className="mt-0.5 font-medium text-[#0F172A]">{summary.financialYear}</p>

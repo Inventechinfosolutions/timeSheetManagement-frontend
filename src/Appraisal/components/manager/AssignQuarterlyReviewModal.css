@@ -1,13 +1,14 @@
 /* ==========================================================================
-   Assign Quarterly Review Modal - Animations & No-Scrollbar Styling
+   Assign Quarterly Review Modal - Animations & Frosted Ice-Blue Styling
+   Frosted Ice-Blue Aesthetic & Royal Blue Highlights
    ========================================================================== */
 
 /* 1. Modal Overlay Backdrop Entrance & Exit */
 .assign-quarterly-modal-overlay {
   animation: assignModalOverlayFade 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-  background: rgba(15, 23, 42, 0.2) !important;
-  backdrop-filter: blur(3.5px) !important;
-  -webkit-backdrop-filter: blur(3.5px) !important;
+  background: rgba(15, 23, 42, 0.3) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
   z-index: 0 !important;
   pointer-events: auto !important;
 }
@@ -25,16 +26,16 @@
   }
   100% {
     opacity: 1;
-    backdrop-filter: blur(3.5px);
-    -webkit-backdrop-filter: blur(3.5px);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
 }
 
 @keyframes assignModalOverlayFadeOut {
   0% {
     opacity: 1;
-    backdrop-filter: blur(3.5px);
-    -webkit-backdrop-filter: blur(3.5px);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
   }
   100% {
     opacity: 0;
@@ -50,15 +51,15 @@
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.98) 0%,
-    rgba(250, 248, 243, 0.96) 50%,
-    rgba(247, 242, 232, 0.94) 100%
+    rgba(240, 244, 250, 0.96) 50%,
+    rgba(232, 240, 250, 0.94) 100%
   ) !important;
   backdrop-filter: blur(28px) !important;
   -webkit-backdrop-filter: blur(28px) !important;
-  border: 1.5px solid rgba(229, 201, 143, 0.55) !important;
+  border: 1.5px solid rgba(219, 234, 254, 0.85) !important;
   box-shadow:
     0 28px 75px -15px rgba(15, 23, 42, 0.22),
-    0 6px 24px rgba(229, 201, 143, 0.25),
+    0 6px 24px rgba(37, 99, 235, 0.15),
     inset 0 1px 2px rgba(255, 255, 255, 1) !important;
   border-radius: 1.75rem !important;
   animation: assignModalExpand 0.48s cubic-bezier(0.34, 1.4, 0.64, 1) forwards !important;
@@ -75,7 +76,7 @@
   height: 0 !important;
 }
 
-/* Modal Dialog Exit - Squeeze, 3D Page Fold & Zoom Out */
+/* Modal Dialog Exit */
 .assign-quarterly-modal-dialog.modal-is-closing {
   animation: assignModalSqueezePageFoldExit 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards !important;
   transform-origin: calc(100% - 32px) 32px !important;
@@ -108,7 +109,7 @@
     filter: blur(0px);
     box-shadow:
       0 28px 75px -15px rgba(15, 23, 42, 0.22),
-      0 6px 24px rgba(229, 201, 143, 0.25);
+      0 6px 24px rgba(37, 99, 235, 0.15);
   }
   28% {
     opacity: 0.96;
@@ -127,7 +128,7 @@
   }
 }
 
-/* 3. Close Button - Squeeze, Rotate & Hover Animation */
+/* 3. Close Button */
 .assign-quarterly-modal-dialog .assign-modal-close-btn {
   width: 2.35rem !important;
   height: 2.35rem !important;
@@ -135,15 +136,15 @@
   align-items: center !important;
   justify-content: center !important;
   border-radius: 0.85rem !important;
-  color: #8F9BBA !important;
-  background: #FAF2EE !important;
-  border: 1.5px solid #E2E8F0 !important;
+  color: #64748B !important;
+  background: #EFF6FF !important;
+  border: 1.5px solid #BFDBFE !important;
   cursor: pointer !important;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
   transform-origin: center center !important;
   position: relative !important;
   overflow: hidden !important;
-  box-shadow: 0 2px 6px rgba(163, 99, 97, 0.08) !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08) !important;
 }
 
 .assign-quarterly-modal-dialog .assign-modal-close-btn:hover {
@@ -179,13 +180,13 @@
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, #FAF2EE 0%, #F5E8E2 100%);
-  color: #A36361;
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  color: #1D4ED8;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(163, 99, 97, 0.18), inset 0 1px 1px #FFFFFF;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.18), inset 0 1px 1px #FFFFFF;
 }
 
 /* 5. Form Sections Staggered Entrance */
@@ -211,22 +212,26 @@
 /* 6. Cancel Button */
 .assign-modal-cancel-btn {
   padding: 0.65rem 1.6rem !important;
-  border-radius: 0.85rem !important;
-  border: 1.5px solid #E2E8F0 !important;
-  color: #0F172A !important;
+  border-radius: 9999px !important;
+  border: 1.5px solid #BFDBFE !important;
+  color: #1D4ED8 !important;
+  background: #FFFFFF !important;
   font-weight: 700 !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.06) !important;
 }
 
 .assign-modal-cancel-btn:hover {
-  background: #F1F5F9 !important;
+  background: #EFF6FF !important;
+  border-color: #93C5FD !important;
   transform: translateY(-1.5px);
-  box-shadow: 0 4px 12px rgba(163, 99, 97, 0.12) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12) !important;
 }
 
 .assign-modal-cancel-btn:active {
   transform: scale(0.96);
 }
+
 /* 7. Assign Review Submit Button & Micro-Interactions */
 .assign-modal-submit-btn {
   display: inline-flex !important;
@@ -234,12 +239,12 @@
   justify-content: center !important;
   gap: 0.55rem !important;
   padding: 0.65rem 1.85rem !important;
-  border-radius: 0.85rem !important;
+  border-radius: 9999px !important;
   font-weight: 700 !important;
   font-size: 0.875rem !important;
-  background: linear-gradient(135deg, #A36361 0%, #8D4E4D 100%) !important;
+  background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%) !important;
   color: #FFFFFF !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
   position: relative !important;
   overflow: hidden !important;
   cursor: pointer !important;
@@ -250,20 +255,21 @@
     box-shadow 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
     border-color 0.3s ease !important;
   box-shadow:
-    0 8px 24px rgba(163, 99, 97, 0.38),
-    0 2px 6px rgba(238, 204, 140, 0.25) !important;
+    0 10px 24px -4px rgba(37, 99, 235, 0.45),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.45) !important;
 }
 
 .assign-modal-submit-btn:hover:not(:disabled) {
   transform: translateY(-2.5px) scale(1.02) !important;
+  background: linear-gradient(180deg, #2563EB 0%, #1E40AF 100%) !important;
   box-shadow:
-    0 14px 34px rgba(163, 99, 97, 0.48),
-    0 4px 10px rgba(229, 201, 143, 0.32) !important;
+    0 14px 34px rgba(37, 99, 235, 0.55),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.6) !important;
 }
 
 .assign-modal-submit-btn:active:not(:disabled) {
   transform: translateY(1px) scale(0.96) !important;
-  box-shadow: 0 4px 14px rgba(163, 99, 97, 0.32) !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
 }
 
 /* Icon Container */
@@ -317,20 +323,20 @@
   }
 }
 
-/* Button Animating State (compress slightly on launch) */
+/* Button Animating State */
 .assign-modal-submit-btn.assign-btn-animating {
   transform: scale(0.96) !important;
-  box-shadow: 0 4px 14px rgba(163, 99, 97, 0.3) !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3) !important;
   cursor: default !important;
 }
 
-/* Button Assigned State (smooth terracotta rose success morph) */
+/* Button Assigned State */
 .assign-modal-submit-btn.assign-btn-assigned {
-  background: linear-gradient(135deg, #A36361 0%, #8D4E4D 100%) !important;
+  background: linear-gradient(180deg, #2563EB 0%, #1D4ED8 100%) !important;
   border-color: rgba(255, 255, 255, 0.4) !important;
   box-shadow:
-    0 8px 28px rgba(163, 99, 97, 0.48),
-    0 2px 8px rgba(141, 78, 77, 0.32) !important;
+    0 8px 28px rgba(37, 99, 235, 0.48),
+    0 2px 8px rgba(29, 78, 216, 0.32) !important;
   transform: scale(1.03) !important;
   cursor: default !important;
 }
@@ -401,16 +407,14 @@
   position: relative !important;
 }
 
-/* Input Hover: Gentle lift, indigo border highlight & soft shadow */
 .assign-input-control:hover {
-  border-color: #D3A29D !important;
+  border-color: #93C5FD !important;
   transform: translateY(-1.5px) !important;
   box-shadow:
-    0 6px 18px rgba(163, 99, 97, 0.08),
+    0 6px 18px rgba(37, 99, 235, 0.08),
     0 2px 4px rgba(0, 0, 0, 0.03) !important;
 }
 
-/* Input Focus / Expanded State: Spring pop & vibrant terracotta halo aura */
 .assign-input-control.is-error,
 .assign-input-control.is-error:hover,
 .assign-input-control.is-error:focus,
@@ -423,27 +427,26 @@
 .assign-input-control:focus,
 .assign-input-control:focus-within,
 .assign-input-control[aria-expanded="true"] {
-  border-color: #A36361 !important;
+  border-color: #2563EB !important;
   transform: translateY(-2px) scale(1.008) !important;
   box-shadow:
-    0 0 0 3.5px rgba(163, 99, 97, 0.16),
-    0 8px 24px rgba(163, 99, 97, 0.12) !important;
+    0 0 0 3.5px rgba(37, 99, 235, 0.16),
+    0 8px 24px rgba(37, 99, 235, 0.12) !important;
 }
 
-/* Input Suffix & Dropdown Chevron Icons Animation */
 .assign-input-control svg {
   transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.25s ease !important;
 }
 
 .assign-input-control:hover svg {
   transform: scale(1.18) rotate(6deg) !important;
-  color: #A36361 !important;
+  color: #2563EB !important;
 }
 
 .assign-input-control:focus-within svg,
 .assign-input-control[aria-expanded="true"] svg {
   transform: scale(1.22) rotate(180deg) !important;
-  color: #A36361 !important;
+  color: #2563EB !important;
 }
 
 /* Interactive Form Labels */
@@ -453,7 +456,7 @@
 }
 
 .assign-modal-form-section:hover label {
-  color: #A36361 !important;
+  color: #1D4ED8 !important;
   transform: translateX(1.5px) !important;
 }
 
@@ -465,17 +468,17 @@
 
 .assign-modal-warning-box:hover {
   transform: translateY(-1px) scale(1.005) !important;
-  box-shadow: 0 6px 18px rgba(238, 204, 140, 0.28) !important;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.15) !important;
 }
 
 @keyframes warningPulseGlow {
   0%, 100% {
-    box-shadow: 0 2px 8px rgba(238, 204, 140, 0.12);
-    border-color: #EECC8C;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+    border-color: #BFDBFE;
   }
   50% {
-    box-shadow: 0 4px 16px rgba(238, 204, 140, 0.25);
-    border-color: #E2B666;
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.16);
+    border-color: #93C5FD;
     transform: translateY(-0.5px);
   }
 }
@@ -487,7 +490,7 @@
 
 .assign-select-all-btn:hover {
   transform: scale(1.08) translateX(1px) !important;
-  color: #8D4E4D !important;
+  color: #2563EB !important;
 }
 
 .assign-select-all-btn:active {
@@ -496,9 +499,8 @@
 
 /* Textarea Focus & Hover */
 .assign-input-textarea:focus {
-  border-color: #A36361 !important;
+  border-color: #2563EB !important;
   box-shadow:
-    0 0 0 3.5px rgba(163, 99, 97, 0.16),
-    0 8px 22px rgba(163, 99, 97, 0.1) !important;
+    0 0 0 3.5px rgba(37, 99, 235, 0.16),
+    0 8px 22px rgba(37, 99, 235, 0.1) !important;
 }
-

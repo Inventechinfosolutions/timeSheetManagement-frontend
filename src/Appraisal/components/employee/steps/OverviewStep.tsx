@@ -22,7 +22,7 @@ export const OverviewStep: React.FC<StepProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-[#D3A29D]/40 pb-4">
+      <div className="border-b border-blue-100 pb-4">
         <h3 className="text-lg font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 1: Role & Quarter Overview</span>
           <span className="eval-title-accent-line" />

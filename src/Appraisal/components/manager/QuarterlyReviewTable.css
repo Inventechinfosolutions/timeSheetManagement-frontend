@@ -1,21 +1,21 @@
 /* ==========================================================================
    Quarterly Review Assignment Table - Modern WorkSphere Design
-   Rich Branded Colors, Visual Polish & Interactive Elements
+   Frosted Ice-Blue Aesthetic & Royal Blue Highlights
    ========================================================================== */
 
 .quarterly-review-table-card {
   width: 100%;
   background: #FFFFFF;
   border-radius: 1.25rem;
-  border: 1px solid #E2E8F0;
-  box-shadow: 0 4px 20px rgba(74, 53, 94, 0.08);
+  border: 1px solid rgba(219, 234, 254, 0.85);
+  box-shadow: 0 4px 20px rgba(30, 64, 175, 0.08);
   overflow: hidden;
   position: relative;
   transition: box-shadow 0.3s ease;
 }
 
 .quarterly-review-table-card:hover {
-  box-shadow: 0 8px 30px rgba(74, 53, 94, 0.14);
+  box-shadow: 0 8px 30px rgba(30, 64, 175, 0.14);
 }
 
 /* Horizontal scrollable wrapper - isolated scrollbar */
@@ -31,18 +31,18 @@
 }
 
 .quarterly-review-table-scroll::-webkit-scrollbar-track {
-  background: #FAF2EE;
+  background: #F0F4FA;
   border-radius: 8px;
 }
 
 .quarterly-review-table-scroll::-webkit-scrollbar-thumb {
-  background: #D3A29D;
+  background: #BFDBFE;
   border-radius: 8px;
   transition: background 0.2s ease;
 }
 
 .quarterly-review-table-scroll::-webkit-scrollbar-thumb:hover {
-  background: #A36361;
+  background: #3B82F6;
 }
 
 /* Table element */
@@ -55,11 +55,11 @@
   min-width: 1180px;
 }
 
-/* Table Header - Modern Vibrant Rose Terracotta Gradient */
+/* Table Header - Modern Vibrant Royal Blue Gradient */
 .quarterly-review-table thead tr {
-  background: linear-gradient(135deg, #7A3F3D 0%, #A36361 50%, #D3A29D 100%);
-  border-bottom: 2px solid #5C2D2B;
-  box-shadow: 0 4px 14px rgba(163, 99, 97, 0.25);
+  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #3B82F6 100%);
+  border-bottom: 2px solid #1D4ED8;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
 }
 
 .quarterly-review-table th {
@@ -84,52 +84,52 @@
 .qr-sticky-action-th {
   position: sticky;
   right: 0;
-  background: #7A3F3D !important;
+  background: #1E3A8A !important;
   color: #FFFFFF !important;
   z-index: 10;
-  box-shadow: -5px 0 14px rgba(122, 63, 61, 0.32);
+  box-shadow: -5px 0 14px rgba(30, 58, 138, 0.32);
   border-left: none;
 }
 
-/* Theme Variant 1: Rose Terracotta */
+/* Theme Variant 1: Royal Ice */
 .qr-header-indigo thead tr {
-  background: linear-gradient(135deg, #7A3F3D 0%, #A36361 50%, #D3A29D 100%) !important;
-  border-bottom: 2px solid #5C2D2B !important;
+  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #3B82F6 100%) !important;
+  border-bottom: 2px solid #1D4ED8 !important;
 }
 .qr-header-indigo .qr-sticky-action-th {
-  background: #7A3F3D !important;
+  background: #1E3A8A !important;
 }
 
-/* Theme Variant 2: Deep Clay */
+/* Theme Variant 2: Deep Navy */
 .qr-header-navy thead tr {
-  background: linear-gradient(135deg, #2D1A19 0%, #7A3F3D 55%, #A36361 100%) !important;
-  border-bottom: 2px solid rgba(163, 99, 97, 0.4) !important;
+  background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 55%, #2563EB 100%) !important;
+  border-bottom: 2px solid rgba(37, 99, 235, 0.4) !important;
 }
 .qr-header-navy .qr-sticky-action-th {
-  background: #2D1A19 !important;
+  background: #0F172A !important;
 }
 
-/* Theme Variant 3: Dusty Rose */
+/* Theme Variant 3: Vibrant Sky */
 .qr-header-purple thead tr {
-  background: linear-gradient(135deg, #7A3F3D 0%, #A36361 50%, #D3A29D 100%) !important;
-  border-bottom: 2px solid #5C2D2B !important;
+  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #3B82F6 100%) !important;
+  border-bottom: 2px solid #1D4ED8 !important;
 }
 .qr-header-purple .qr-sticky-action-th {
-  background: #7A3F3D !important;
+  background: #1E3A8A !important;
 }
 
-/* Theme Variant 4: Terracotta mapped */
+/* Theme Variant 4: Cyan Sapphire */
 .qr-header-teal thead tr {
-  background: linear-gradient(135deg, #7A3F3D 0%, #A36361 50%, #D3A29D 100%) !important;
-  border-bottom: 2px solid #5C2D2B !important;
+  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #3B82F6 100%) !important;
+  border-bottom: 2px solid #1D4ED8 !important;
 }
 .qr-header-teal .qr-sticky-action-th {
-  background: #7A3F3D !important;
+  background: #1E3A8A !important;
 }
 
-/* Table Body Rows - Subtle Warm Zebra Striping & Smooth Transitions */
+/* Table Body Rows - Subtle Cool Zebra Striping & Smooth Transitions */
 .quarterly-review-table tbody tr:nth-child(even) {
-  background: #FAF5F2;
+  background: #F8FAFC;
 }
 
 .quarterly-review-table tbody tr:nth-child(odd) {
@@ -142,8 +142,8 @@
 }
 
 .quarterly-review-table tbody tr:hover {
-  background: #FAF2EE !important;
-  box-shadow: inset 4px 0 0 #A36361;
+  background: #EFF6FF !important;
+  box-shadow: inset 4px 0 0 #2563EB;
 }
 
 .quarterly-review-table td {
@@ -200,12 +200,12 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.72rem;
   font-weight: 700;
-  color: #A36361;
-  background: #FAF2EE;
-  border: 1px solid #E8B298;
+  color: #1D4ED8;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
   padding: 0.22rem 0.6rem;
   border-radius: 0.5rem;
-  box-shadow: 0 1px 2px rgba(163, 99, 97, 0.05);
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.06);
 }
 
 /* Role text */
@@ -228,27 +228,27 @@
 }
 
 .qr-quarter-q1 {
-  background: #FAF2EE;
-  color: #A36361;
-  border: 1px solid #D3A29D;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
 }
 
 .qr-quarter-q2 {
-  background: #F0F5F2;
-  color: #4B6355;
-  border: 1px solid #BDD1C5;
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
 }
 
 .qr-quarter-q3 {
-  background: #FFF9EE;
-  color: #B47B1E;
-  border: 1px solid #EECC8C;
+  background: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
 }
 
 .qr-quarter-q4 {
-  background: #FDF3EE;
-  color: #A85A38;
-  border: 1px solid #E8B298;
+  background: #FAF5FF;
+  color: #7E22CE;
+  border: 1px solid #E9D5FF;
 }
 
 /* Financial Year pill */
@@ -287,15 +287,15 @@
   font-size: 0.75rem;
   padding: 0.2rem 0.6rem;
   border-radius: 0.5rem;
-  background: #FAF2EE;
-  color: #A36361;
-  border: 1px solid #E8B298;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
 }
 
 .qr-assigned-by-admin {
-  background: #F0F5F2;
-  color: #4B6355;
-  border-color: #BDD1C5;
+  background: #ECFDF5;
+  color: #047857;
+  border-color: #A7F3D0;
 }
 
 /* Final Rating Pill */
@@ -307,10 +307,10 @@
   border-radius: 9999px;
   font-weight: 800;
   font-size: 0.78rem;
-  background: #FFF9EE;
-  color: #B47B1E;
-  border: 1px solid #EECC8C;
-  box-shadow: 0 1px 3px rgba(238, 204, 140, 0.25);
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.12);
 }
 
 .qr-rating-empty {
@@ -343,48 +343,48 @@
 /* 1. Not Started / Pending */
 .qr-status-not-started,
 .qr-status-pending {
-  background: #FFF9EE;
-  color: #946714;
-  border: 1px solid #EECC8C;
+  background: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
 }
 .qr-status-not-started .qr-status-dot,
 .qr-status-pending .qr-status-dot {
-  background: #EECC8C;
+  background: #F59E0B;
 }
 
 /* 2. In Progress / Awaiting Review */
 .qr-status-in-progress,
 .qr-status-awaiting-review {
-  background: #FDF6F2;
-  color: #995232;
-  border: 1px solid #E8B298;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
 }
 .qr-status-in-progress .qr-status-dot,
 .qr-status-awaiting-review .qr-status-dot {
-  background: #E8B298;
+  background: #3B82F6;
   animation: qrDotPulse 2s infinite ease-in-out;
 }
 
 /* 3. Submitted */
 .qr-status-submitted {
-  background: #FAF2EE;
-  color: #A36361;
-  border: 1px solid #D3A29D;
+  background: #EEF2FF;
+  color: #4338CA;
+  border: 1px solid #C7D2FE;
 }
 .qr-status-submitted .qr-status-dot {
-  background: #A36361;
+  background: #6366F1;
 }
 
-/* 4. Completed / Reviewed (Soft Celadon Mist #BDD1C5) */
+/* 4. Completed / Reviewed */
 .qr-status-completed,
 .qr-status-reviewed {
-  background: #F0F5F2;
-  color: #415A4D;
-  border: 1px solid #BDD1C5;
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
 }
 .qr-status-completed .qr-status-dot,
 .qr-status-reviewed .qr-status-dot {
-  background: #9EABA2;
+  background: #10B981;
 }
 
 @keyframes qrDotPulse {
@@ -419,18 +419,18 @@
 }
 
 .qr-action-btn-edit {
-  background: #FAF2EE;
-  color: #A36361;
-  border: 1px solid #D3A29D;
-  box-shadow: 0 1px 2px rgba(163, 99, 97, 0.08);
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
 }
 
 .qr-action-btn-edit:hover {
-  background: #A36361;
+  background: #2563EB;
   color: #FFFFFF;
-  border-color: #A36361;
+  border-color: #2563EB;
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(163, 99, 97, 0.28);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
 }
 
 .qr-action-btn-edit:active {
@@ -438,18 +438,18 @@
 }
 
 .qr-action-btn-view {
-  background: #FAF5F2;
-  color: #8D4E4D;
-  border: 1px solid #E8B298;
-  box-shadow: 0 1px 2px rgba(163, 99, 97, 0.08);
+  background: #F0F9FF;
+  color: #0284C7;
+  border: 1px solid #BAE6FD;
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.08);
 }
 
 .qr-action-btn-view:hover {
-  background: #8D4E4D;
+  background: #0284C7;
   color: #FFFFFF;
-  border-color: #8D4E4D;
+  border-color: #0284C7;
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(141, 78, 77, 0.28);
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.28);
 }
 
 .qr-action-btn-view:active {
@@ -466,7 +466,7 @@
 }
 
 .quarterly-review-table tbody tr:nth-child(even) .qr-sticky-action-td {
-  background: #FAF5F2 !important;
+  background: #F8FAFC !important;
 }
 
 .quarterly-review-table tbody tr:nth-child(odd) .qr-sticky-action-td {
@@ -474,7 +474,7 @@
 }
 
 .quarterly-review-table tbody tr:hover .qr-sticky-action-td {
-  background: #FAF2EE !important;
+  background: #EFF6FF !important;
 }
 
 /* ==========================================================================
@@ -486,7 +486,7 @@
   justify-content: flex-end;
   padding: 0.875rem 1.25rem;
   background: #FFFFFF;
-  border-top: 1px solid #E2E8F0;
+  border-top: 1px solid rgba(219, 234, 254, 0.8);
   width: 100%;
 }
 
@@ -499,15 +499,16 @@
 }
 
 .quarterly-review-pagination-bar button[class*="bg-[#4318FF]"],
-.quarterly-review-pagination-bar button.bg-\[\#4318FF\] {
-  background-color: #A36361 !important;
+.quarterly-review-pagination-bar button.bg-\[\#4318FF\],
+.quarterly-review-pagination-bar button.active {
+  background-color: #2563EB !important;
   color: #FFFFFF !important;
-  box-shadow: 0 4px 12px rgba(163, 99, 97, 0.35) !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35) !important;
 }
 
 .quarterly-review-pagination-bar button:hover:not(:disabled) {
-  border-color: #A36361 !important;
-  color: #A36361 !important;
+  border-color: #2563EB !important;
+  color: #2563EB !important;
 }
 
 /* ==========================================================================
@@ -521,22 +522,22 @@
 
 @keyframes qrRowGlowHighlight {
   0% {
-    background-color: rgba(163, 99, 97, 0.18) !important;
+    background-color: rgba(37, 99, 235, 0.18) !important;
     box-shadow:
-      inset 4px 0 0 #A36361,
-      0 4px 20px rgba(163, 99, 97, 0.22) !important;
+      inset 4px 0 0 #2563EB,
+      0 4px 20px rgba(37, 99, 235, 0.22) !important;
   }
   30% {
-    background-color: rgba(163, 99, 97, 0.14) !important;
+    background-color: rgba(37, 99, 235, 0.14) !important;
     box-shadow:
-      inset 4px 0 0 #A36361,
-      0 6px 24px rgba(163, 99, 97, 0.25) !important;
+      inset 4px 0 0 #2563EB,
+      0 6px 24px rgba(37, 99, 235, 0.25) !important;
   }
   65% {
-    background-color: rgba(163, 99, 97, 0.07) !important;
+    background-color: rgba(37, 99, 235, 0.07) !important;
     box-shadow:
-      inset 2px 0 0 rgba(163, 99, 97, 0.5),
-      0 3px 12px rgba(163, 99, 97, 0.12) !important;
+      inset 2px 0 0 rgba(37, 99, 235, 0.5),
+      0 3px 12px rgba(37, 99, 235, 0.12) !important;
   }
   100% {
     background-color: inherit;
@@ -552,19 +553,19 @@
 }
 
 .quarterly-review-table tbody tr.quarterly-review-row-highlighted .qr-sticky-action-td {
-  background-color: rgba(248, 250, 252, 0.95) !important;
+  background-color: rgba(240, 244, 250, 0.95) !important;
 }
 
 .quarterly-review-table tbody tr.quarterly-review-row-highlighted .qr-avatar-badge {
-  box-shadow: 0 0 14px rgba(163, 99, 97, 0.4) !important;
+  box-shadow: 0 0 14px rgba(37, 99, 235, 0.4) !important;
   transform: scale(1.08);
   transition: all 0.35s ease;
 }
 
 .quarterly-review-table tbody tr.quarterly-review-row-highlighted .qr-id-chip {
-  background: #FAF2EE !important;
-  color: #A36361 !important;
-  border-color: #D3A29D !important;
-  box-shadow: 0 0 10px rgba(163, 99, 97, 0.25) !important;
+  background: #EFF6FF !important;
+  color: #1D4ED8 !important;
+  border-color: #BFDBFE !important;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.25) !important;
   transition: all 0.35s ease;
 }

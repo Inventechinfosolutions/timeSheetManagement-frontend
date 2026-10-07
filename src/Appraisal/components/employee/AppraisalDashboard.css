@@ -51,21 +51,21 @@
   animation-delay: 300ms;
 }
 
-/* Glassmorphic luxury card with Rose & Peach Watercolor gradient and SVG texture */
+/* Glassmorphic luxury card with Ice-Blue Watercolor gradient and SVG texture */
 .manager-review-glass-card {
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 600' width='100%25' height='100%25' preserveAspectRatio='none'%3E%3Cpath d='M-50 80 C 200 40, 420 120, 680 70 C 850 40, 950 110, 1050 75 L 1050 220 C 850 260, 650 190, 400 240 C 200 270, 80 200, -50 230 Z' fill='%23D3A29D' opacity='0.16'/%3E%3Cpath d='M-50 190 C 220 240, 480 180, 720 230 C 890 260, 980 210, 1050 240 L 1050 390 C 840 430, 600 370, 360 410 C 180 435, 70 380, -50 400 Z' fill='%23E8B298' opacity='0.22'/%3E%3Cpath d='M-50 360 C 200 420, 460 360, 700 410 C 870 440, 960 390, 1050 420 L 1050 620 L -50 620 Z' fill='%23FAF0EB' opacity='0.30'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 600' width='100%25' height='100%25' preserveAspectRatio='none'%3E%3Cpath d='M-50 80 C 200 40, 420 120, 680 70 C 850 40, 950 110, 1050 75 L 1050 220 C 850 260, 650 190, 400 240 C 200 270, 80 200, -50 230 Z' fill='%2393C5FD' opacity='0.16'/%3E%3Cpath d='M-50 190 C 220 240, 480 180, 720 230 C 890 260, 980 210, 1050 240 L 1050 390 C 840 430, 600 370, 360 410 C 180 435, 70 380, -50 400 Z' fill='%2360A5FA' opacity='0.14'/%3E%3Cpath d='M-50 360 C 200 420, 460 360, 700 410 C 870 440, 960 390, 1050 420 L 1050 620 L -50 620 Z' fill='%23EFF6FF' opacity='0.30'/%3E%3C/svg%3E"),
     linear-gradient(135deg,
-      rgba(255, 255, 255, 0.94) 0%,
-      rgba(253, 248, 246, 0.92) 35%,
-      rgba(250, 243, 240, 0.90) 70%,
-      rgba(255, 255, 255, 0.95) 100%) !important;
+      rgba(255, 255, 255, 0.96) 0%,
+      rgba(240, 246, 255, 0.94) 35%,
+      rgba(230, 240, 252, 0.92) 70%,
+      rgba(255, 255, 255, 0.96) 100%) !important;
   backdrop-filter: blur(28px);
   -webkit-backdrop-filter: blur(28px);
-  border: 1.5px solid rgba(255, 255, 255, 0.85) !important;
+  border: 1.5px solid rgba(219, 234, 254, 0.85) !important;
   box-shadow:
-    0 24px 60px rgba(58, 30, 30, 0.12),
-    0 4px 18px rgba(163, 99, 97, 0.10),
+    0 24px 60px rgba(30, 64, 175, 0.08),
+    0 4px 18px rgba(37, 99, 235, 0.06),
     inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
   border-radius: 1.5rem;
 }
@@ -80,20 +80,22 @@
   gap: 0.95rem;
   padding: 0.85rem 1.25rem;
   border-radius: 1.35rem !important;
+  border: 1px solid rgba(219, 234, 254, 0.8) !important;
   min-height: 70px;
   min-width: 230px;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow:
-    0 10px 25px rgba(15, 23, 42, 0.08),
-    0 2px 10px rgba(163, 99, 97, 0.12),
+    0 10px 25px rgba(30, 64, 175, 0.06),
+    0 2px 10px rgba(37, 99, 235, 0.08),
     inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
 }
 
 .employee-header-stat-card:hover {
   transform: translateY(-2px);
+  border-color: rgba(147, 197, 253, 0.9) !important;
   box-shadow:
-    0 14px 32px rgba(15, 23, 42, 0.12),
-    0 4px 14px rgba(163, 99, 97, 0.18),
+    0 14px 32px rgba(30, 64, 175, 0.1),
+    0 4px 14px rgba(37, 99, 235, 0.14),
     inset 0 1px 2px rgba(255, 255, 255, 1) !important;
 }
 
@@ -115,11 +117,11 @@
 
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(163, 99, 97, 0.4), 0 4px 14px rgba(163, 99, 97, 0.22);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4), 0 4px 14px rgba(37, 99, 235, 0.22);
   }
 
   50% {
-    box-shadow: 0 0 0 6px rgba(163, 99, 97, 0.15), 0 6px 18px rgba(163, 99, 97, 0.32);
+    box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.15), 0 6px 18px rgba(37, 99, 235, 0.32);
   }
 }
 
@@ -415,15 +417,15 @@
 
 .eval-input-field:focus {
   outline: none;
-  border-color: #A36361;
-  box-shadow: 0 0 0 3px rgba(163, 99, 97, 0.12);
-  background: #FAF2EE;
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  background: #F8FAFC;
 }
 
 /* Input Card Focus-within & Interactive Elevations */
 .eval-step-card:focus-within {
-  border-color: rgba(163, 99, 97, 0.42) !important;
-  box-shadow: 0 12px 28px -4px rgba(163, 99, 97, 0.12), 0 4px 10px rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(37, 99, 235, 0.42) !important;
+  box-shadow: 0 12px 28px -4px rgba(37, 99, 235, 0.15), 0 4px 10px rgba(0, 0, 0, 0.03) !important;
   transform: translateY(-2px);
 }
 
@@ -1560,42 +1562,42 @@
 }
 
 /* ==========================================================================
-   Harmonious Theme Overrides (Palette: #A36361, #D3A29D, #E8B298, #EECC8C, #BDD1C5, #9EABA2)
+   Harmonious Theme Overrides (Frosted Ice Blue & Royal Blue Theme)
    ========================================================================== */
 .qr-quarter-q1 {
-  background: #FAF2EE !important;
-  color: #A36361 !important;
-  border: 1px solid #D3A29D !important;
+  background: #EFF6FF !important;
+  color: #1D4ED8 !important;
+  border: 1px solid #BFDBFE !important;
 }
 
 .qr-quarter-q2 {
-  background: #F4F7F5 !important;
-  color: #6F8778 !important;
-  border: 1px solid #BDD1C5 !important;
+  background: #ECFDF5 !important;
+  color: #047857 !important;
+  border: 1px solid #A7F3D0 !important;
 }
 
 .qr-quarter-q3 {
-  background: #FDF8ED !important;
-  color: #B3862A !important;
-  border: 1px solid #EECC8C !important;
+  background: #FFFBEB !important;
+  color: #B45309 !important;
+  border: 1px solid #FDE68A !important;
 }
 
 .qr-quarter-q4 {
-  background: #FAF2EE !important;
-  color: #A36361 !important;
-  border: 1px solid #E8B298 !important;
+  background: #FAF5FF !important;
+  color: #7E22CE !important;
+  border: 1px solid #E9D5FF !important;
 }
 
 .qr-assigned-by-pill {
-  background: #FAF2EE !important;
-  color: #A36361 !important;
-  border: 1px solid #E8B298 !important;
+  background: #EFF6FF !important;
+  color: #1D4ED8 !important;
+  border: 1px solid #BFDBFE !important;
 }
 
 .qr-assigned-by-admin {
-  background: #F4F7F5 !important;
-  color: #6F8778 !important;
-  border-color: #BDD1C5 !important;
+  background: #ECFDF5 !important;
+  color: #047857 !important;
+  border-color: #A7F3D0 !important;
 }
 
 /* ==========================================================================
@@ -1615,7 +1617,6 @@
 
 /* ==========================================================================
    Access Request Button Styling & Animations in Actions Column (Icon Only)
-   Palette: #9EABA2, #BDD1C5, #EECC8C, #E8B298, #D3A29D, #A36361
    ========================================================================== */
 .qr-action-btn-access {
   display: inline-flex;
@@ -1630,19 +1631,19 @@
 }
 
 .qr-action-btn-access-enabled {
-  background: #FAF2EE;
-  color: #A36361;
-  border: 1px solid #D3A29D;
-  box-shadow: 0 1px 2px rgba(163, 99, 97, 0.08);
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
   cursor: pointer;
 }
 
 .qr-action-btn-access-enabled:hover {
-  background: #A36361;
+  background: #2563EB;
   color: #FFFFFF;
-  border-color: #A36361;
+  border-color: #2563EB;
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(163, 99, 97, 0.28);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
 }
 
 .qr-action-btn-access-enabled:hover svg {
@@ -1662,11 +1663,11 @@
 }
 
 .qr-action-btn-access-requested {
-  background: #FAF5F2;
-  color: #8D4E4D;
-  border: 1px dashed #E8B298;
+  background: #F0F9FF;
+  color: #0284C7;
+  border: 1px dashed #BAE6FD;
   cursor: default;
-  box-shadow: 0 1px 2px rgba(163, 99, 97, 0.05);
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.05);
 }
 
 @keyframes qrKeyBounce {
@@ -1693,7 +1694,7 @@
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 180' fill='none'%3E%3Cellipse cx='120' cy='150' rx='90' ry='18' fill='%23FAF6F4'/%3E%3Crect x='50' y='30' width='140' height='100' rx='16' fill='%23FFFFFF' stroke='%23E2E8F0' stroke-width='2'/%3E%3Cpath d='M70 45 L170 45' stroke='%23A36361' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M70 70 L150 70' stroke='%23CBD5E1' stroke-width='2.5' stroke-linecap='round'/%3E%3Cpath d='M70 90 L130 90' stroke='%23E2E8F0' stroke-width='2.5' stroke-linecap='round'/%3E%3Ccircle cx='155' cy='95' r='16' fill='%23FAF5F2' stroke='%23A36361' stroke-width='2'/%3E%3Cpath d='M150 95 L154 99 L162 91' stroke='%23A36361' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 180' fill='none'%3E%3Cellipse cx='120' cy='150' rx='90' ry='18' fill='%23EFF6FF'/%3E%3Crect x='50' y='30' width='140' height='100' rx='16' fill='%23FFFFFF' stroke='%23BFDBFE' stroke-width='2'/%3E%3Cpath d='M70 45 L170 45' stroke='%232563EB' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M70 70 L150 70' stroke='%2393C5FD' stroke-width='2.5' stroke-linecap='round'/%3E%3Cpath d='M70 90 L130 90' stroke='%23DBEAFE' stroke-width='2.5' stroke-linecap='round'/%3E%3Ccircle cx='155' cy='95' r='16' fill='%23EFF6FF' stroke='%232563EB' stroke-width='2'/%3E%3Cpath d='M150 95 L154 99 L162 91' stroke='%232563EB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   animation: appraisalEmptyFloat 4s ease-in-out infinite;
 }
 

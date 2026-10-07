@@ -56,14 +56,14 @@ const MOCK_FY_RATINGS: FinancialYearRow[] = [
 const renderQuarterCell = (val: number | null) => {
   if (val === null || val === undefined) {
     return (
-      <span className="text-[#9EABA2] font-semibold text-sm select-none">
+      <span className="text-[#94A3B8] font-semibold text-sm select-none">
         —
       </span>
     );
   }
 
   return (
-    <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-xl bg-white/90 border border-[#E8B298]/40 shadow-2xs">
+    <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-xl bg-white/90 border border-blue-100 shadow-2xs">
       <Star className="w-3.5 h-3.5 fill-[#EECC8C] text-[#EECC8C] drop-shadow-[0_0_3px_rgba(238,204,140,0.5)] shrink-0" />
       <span className="text-sm font-bold text-[#0F172A]">{val}</span>
     </div>
@@ -103,7 +103,7 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
                 size="sm"
                 onClick={onBack}
                 leftIcon={<ArrowLeft className="w-4 h-4" />}
-                className="text-[#A36361] hover:text-[#8D4E4D] !p-2 rounded-xl cursor-pointer"
+                className="text-[#2563EB] hover:text-[#1D4ED8] hover:bg-blue-50/80 !p-2 rounded-xl cursor-pointer"
                 title="Back to Dashboard"
               />
               <div>
@@ -111,7 +111,7 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
                   <h1 className="text-xl sm:text-2xl font-bold tracking-tight w-fit">
                     <span className="manager-review-title-anim">Financial Rating</span>
                   </h1>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#D3A29D]/15 text-[#A36361] border border-[#D3A29D]/40 flex items-center gap-1">
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#EFF6FF] text-[#2563EB] border border-[#BFDBFE] flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5" />
                     Verified Authenticated
                   </span>
@@ -129,7 +129,7 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
 
         {/* Financial Rating Table: ONLY FY, Q1, Q2, Q3, Q4, Total */}
         <Card className="w-full p-5 sm:p-7 manager-review-glass-card rounded-3xl animate-in fade-in duration-300 shadow-sm">
-          <div className="flex items-center justify-between mb-5 border-b border-[#D3A29D]/30 pb-4">
+          <div className="flex items-center justify-between mb-5 border-b border-blue-100 pb-4">
             <div>
               <h2 className="text-lg sm:text-xl font-bold tracking-tight w-fit">
                 <span className="manager-review-title-anim">Financial Year Rating Summary</span>
@@ -159,7 +159,7 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
                   {MOCK_FY_RATINGS.map((row) => (
                     <tr
                       key={row.fy}
-                      className="hover:bg-[#FAF2EE]/60 transition-colors border-b border-[#F5E8E2]/70 last:border-b-0"
+                      className="hover:bg-[#EFF6FF]/70 transition-colors border-b border-blue-50 last:border-b-0"
                     >
                       {/* 1. FY */}
                       <td className="px-4 py-3.5">
@@ -168,7 +168,7 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
                             {row.fy}
                           </span>
                           {row.isCurrent && (
-                            <span className="text-[10px] font-bold bg-[#D3A29D]/15 text-[#A36361] px-2 py-0.5 rounded-full border border-[#D3A29D]/40 shrink-0">
+                            <span className="text-[10px] font-bold bg-[#EFF6FF] text-[#2563EB] px-2 py-0.5 rounded-full border border-[#BFDBFE] shrink-0">
                               Current
                             </span>
                           )}
@@ -189,9 +189,9 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
 
                       {/* 6. Total (With Star) */}
                       <td className="text-center px-3 py-3.5">
-                        <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-xl bg-[#FAF2EE] border border-[#D3A29D] shadow-2xs whitespace-nowrap">
+                        <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] shadow-2xs whitespace-nowrap">
                           <Star className="w-3.5 h-3.5 fill-[#EECC8C] text-[#EECC8C] drop-shadow-[0_0_3px_rgba(238,204,140,0.5)] shrink-0" />
-                          <span className="text-sm font-extrabold text-[#A36361]">
+                          <span className="text-sm font-extrabold text-[#1D4ED8]">
                             {row.total.toFixed(2)}
                           </span>
                         </div>
@@ -203,8 +203,8 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
             </div>
 
             {/* Note below the table with calculation */}
-            <div className="p-4 rounded-2xl bg-[#FAF2EE]/80 border border-[#E8B298]/60 flex items-start gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[#FAF2EE] text-[#A36361] flex items-center justify-center shrink-0 border border-[#D3A29D]/60 shadow-2xs">
+            <div className="p-4 rounded-2xl bg-[#F0F7FF] border border-[#BFDBFE] flex items-start gap-3">
+              <div className="w-8 h-8 rounded-xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center shrink-0 border border-[#BFDBFE] shadow-2xs">
                 <Info className="w-4 h-4" />
               </div>
               <div className="text-xs text-[#64748B] space-y-1">
@@ -214,7 +214,7 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
                 <p>
                   The Total rating is calculated as the sum of all quarter ratings divided by 4:
                 </p>
-                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 pt-1 font-mono text-[11px] text-[#A36361] font-semibold">
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 pt-1 font-mono text-[11px] text-[#2563EB] font-semibold">
                   <span>• FY 2026-27: (5 + 5) ÷ 4 = 2.50</span>
                   <span>• FY 2025-26: (3 + 5 + 2.6 + 4) ÷ 4 = 3.65</span>
                   <span>• FY 2024-25: (4 + 4 + 4.5 + 4.5) ÷ 4 = 4.25</span>

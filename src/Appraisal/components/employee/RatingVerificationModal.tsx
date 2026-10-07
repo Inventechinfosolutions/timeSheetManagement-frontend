@@ -21,7 +21,7 @@ interface RatingVerificationModalProps {
 }
 
 const appraisalButtonClass =
-  "!bg-[#A36361] hover:!bg-[#8D4E4D] !text-white !shadow-md !shadow-[#A36361]/25";
+  "!bg-gradient-to-b !from-[#3B82F6] !to-[#1D4ED8] hover:!from-[#2563EB] hover:!to-[#1E40AF] !text-white !shadow-md !shadow-blue-500/25";
 
 const ratingText = (value: number | string | null | undefined): string => {
   if (value === null || value === undefined || value === "") {
@@ -166,16 +166,16 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
             {(["q1Rating", "q2Rating", "q3Rating", "q4Rating"] as const).map((key, index) => (
               <div
                 key={key}
-                className="rounded-xl border border-[#D3A29D]/50 bg-[#FAF2EE] px-3 py-2"
+                className="rounded-xl border border-blue-100 bg-[#EFF6FF] px-3 py-2"
               >
                 <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">
                   Q{index + 1}
                 </p>
-                <p className="text-sm font-bold text-[#A36361]">{ratingText(summary[key]) || "—"}</p>
+                <p className="text-sm font-bold text-[#2563EB]">{ratingText(summary[key]) || "—"}</p>
               </div>
             ))}
           </div>
-          <div className="rounded-xl border border-[#D3A29D]/50 bg-white px-3 py-2">
+          <div className="rounded-xl border border-blue-100 bg-white px-3 py-2">
             <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Annual rating</p>
             <p className="text-sm font-bold text-[#0F172A]">
               {ratingText(summary.annualAverageRating) || "—"} {summary.annualRatingDescription || ""}
@@ -203,7 +203,7 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
               onChange={handleYearChange}
               loading={yearsLoading}
               className="w-full"
-              buttonClassName="w-full justify-between border border-[#D3A29D]/50 bg-white px-3.5 py-2.5 text-sm font-medium text-[#0F172A] shadow-none hover:border-[#A36361]"
+              buttonClassName="w-full justify-between border border-blue-200/80 bg-white px-3.5 py-2.5 text-sm font-medium text-[#0F172A] shadow-none hover:border-blue-500"
             />
           </div>
           {financialYear ? (
@@ -222,7 +222,7 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
                   <button
                     type="button"
                     onClick={() => setShowPassword((current) => !current)}
-                    className="text-[#A36361]"
+                    className="text-[#2563EB]"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

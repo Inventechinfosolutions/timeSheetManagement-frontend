@@ -141,7 +141,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-4">
       {/* Header with Progress Counter */}
-      <div className="border-b border-[#D3A29D]/30 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="border-b border-blue-100 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-base sm:text-lg font-bold text-[#0F172A]">
             <span className="eval-title-anim">Step 3: Teamwork & Collaboration</span>{" "}
@@ -155,9 +155,9 @@ export const TeamContributionStep: React.FC<StepProps> = ({
 
         <div className="flex items-center gap-2">
           <div
-            className={`px-3 py-1.5 rounded-2xl bg-gradient-to-r from-[#FAF2EE] via-white to-[#F8EFEA] border shadow-xs flex items-center gap-2.5 shrink-0 eval-subtitle-anim transition-all duration-300 relative overflow-visible ${ratedCount === 6
-                ? "border-[#A36361]/70 shadow-[#A36361]/15"
-                : "border-[#D3A29D]/40"
+            className={`px-3 py-1.5 rounded-2xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border shadow-xs flex items-center gap-2.5 shrink-0 eval-subtitle-anim transition-all duration-300 relative overflow-visible ${ratedCount === 6
+                ? "border-blue-500 shadow-blue-500/20"
+                : "border-blue-200/80"
               }`}
           >
             {/* The Default Star: Receives transfer on increase, or emits breaking star on decrease (2 sec) */}
@@ -176,7 +176,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                   </linearGradient>
                   <radialGradient id="avgGlowGrad" cx="50%" cy="50%" r="50%">
                     <stop offset="0%" stopColor="#EECC8C" stopOpacity="0.8" />
-                    <stop offset="100%" stopColor="#E8B298" stopOpacity="0" />
+                    <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
                   </radialGradient>
                 </defs>
 
@@ -294,15 +294,15 @@ export const TeamContributionStep: React.FC<StepProps> = ({
               className={`eval-step-card !py-3 !px-4 flex flex-col justify-between transition-all duration-300 ${criterionError
                   ? "eval-field-has-error"
                   : isSelected
-                    ? "!border-[#A36361]/50 shadow-sm"
-                    : "!border-[#D3A29D]/40"
+                    ? "!border-blue-500/60 shadow-sm"
+                    : "!border-blue-200/60"
                 }`}
             >
               <div className="flex items-center justify-between gap-2">
                 {/* Criterion Title */}
                 <div className="flex items-center gap-1.5 min-w-0 pr-2">
                   {isSelected && (
-                    <CheckCircle2 className="w-4 h-4 text-[#A36361] shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-[#2563EB] shrink-0" />
                   )}
                   <span className="text-xs sm:text-sm font-semibold text-[#0F172A] truncate">
                     {criterion.title} <span className="text-red-500">*</span>

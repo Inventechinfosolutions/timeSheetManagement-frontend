@@ -63,8 +63,8 @@ body.modal-open-active .sidebar-footer {
 
 /* Target Recipient Banner */
 .access-target-banner {
-  background: linear-gradient(135deg, #FAF2EE 0%, #FFF9EE 100%);
-  border: 1px solid rgba(211, 162, 157, 0.45);
+  background: linear-gradient(135deg, #F0F7FF 0%, #E0F2FE 100%);
+  border: 1px solid rgba(191, 219, 254, 0.8);
   border-radius: 0.75rem;
   padding: 0.45rem 0.75rem;
 }
@@ -78,18 +78,18 @@ body.modal-open-active .sidebar-footer {
   border-radius: 0.75rem;
   font-size: 0.8125rem;
   font-weight: 700;
-  color: #64748B;
-  background: #FAF5F2;
-  border: 1px solid #E8B298;
+  color: #2563EB;
+  background: #FFFFFF;
+  border: 1px solid #BFDBFE;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   min-height: 35px;
 }
 
 .access-modal-cancel-btn:hover:not(:disabled) {
-  background: #FAF2EE;
-  color: #0F172A;
-  border-color: #D3A29D;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border-color: #93C5FD;
   transform: translateY(-1px);
 }
 
@@ -113,15 +113,15 @@ body.modal-open-active .sidebar-footer {
 }
 
 .access-modal-submit-btn.is-active {
-  background: linear-gradient(135deg, #A36361 0%, #8D4E4D 100%) !important;
+  background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%) !important;
   color: #FFFFFF !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow: 0 4px 14px rgba(163, 99, 97, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.45), 0 4px 14px rgba(37, 99, 235, 0.35) !important;
 }
 
 .access-modal-submit-btn.is-active:hover {
   transform: translateY(-1px) scale(1.01) !important;
-  box-shadow: 0 8px 20px rgba(163, 99, 97, 0.38) !important;
+  box-shadow: inset 0 1px 1.5px rgba(255, 255, 255, 0.5), 0 8px 20px rgba(37, 99, 235, 0.45) !important;
 }
 
 .access-modal-submit-btn.is-active:active {
@@ -129,9 +129,9 @@ body.modal-open-active .sidebar-footer {
 }
 
 .access-modal-submit-btn.is-disabled {
-  background: #FAF2EE !important;
+  background: #F1F5F9 !important;
   color: #94A3B8 !important;
-  border: 1px solid rgba(232, 178, 152, 0.35) !important;
+  border: 1px solid rgba(203, 213, 225, 0.6) !important;
   box-shadow: none !important;
   cursor: not-allowed !important;
   opacity: 0.85;
@@ -146,18 +146,18 @@ body.modal-open-active .sidebar-footer {
   border-radius: 9999px;
   font-size: 0.6875rem;
   font-weight: 700;
-  background: #FAF2EE;
-  color: #A36361;
-  border: 1px solid #D3A29D;
+  background: #EFF6FF;
+  color: #2563EB;
+  border: 1px solid #BFDBFE;
   animation: accessBadgePulse 3s ease-in-out infinite;
 }
 
 @keyframes accessBadgePulse {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(163, 99, 97, 0.2);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.2);
   }
   50% {
-    box-shadow: 0 0 0 4px rgba(163, 99, 97, 0.1);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
   }
 }
 
@@ -183,9 +183,9 @@ body.modal-open-active .sidebar-footer {
 
 .access-textarea-field:focus {
   outline: none;
-  border-color: #A36361;
-  box-shadow: 0 0 0 3px rgba(163, 99, 97, 0.12);
-  background: #FAF2EE;
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  background: #F8FAFC;
 }
 
 /* Error State: Bright Red Border & Subtle Red Focus Ring for Clear Differentiation */

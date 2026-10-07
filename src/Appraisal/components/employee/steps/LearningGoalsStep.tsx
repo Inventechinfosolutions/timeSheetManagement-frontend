@@ -32,7 +32,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-[#D3A29D]/30 pb-4">
+      <div className="border-b border-blue-100 pb-4">
         <h3 className="text-lg font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 4: Continuous Learning & Goals</span>
           <span className="eval-title-accent-line" />

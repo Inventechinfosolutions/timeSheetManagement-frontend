@@ -377,7 +377,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
           <div className="flex items-center justify-between mb-1">
             <label className="text-[11px] font-bold tracking-wider text-[#0F172A] uppercase">
               SELECT EMPLOYEES
-              <span className="ml-2 normal-case tracking-normal text-[#A36361]">
+              <span className="ml-2 normal-case tracking-normal text-blue-600 font-semibold">
                 Selected ({selectedEmployees.length})
               </span>
             </label>
@@ -389,7 +389,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
                   setSelectedEmployees(employeeOptions.map((employee) => employee.value));
                   clearFieldError(AssignFormField.EMPLOYEES);
                 }}
-                className="!p-0 text-xs font-semibold text-[#A36361] hover:bg-transparent hover:underline !shadow-none assign-select-all-btn"
+                className="!p-0 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-transparent hover:underline !shadow-none assign-select-all-btn"
               >
                 Select All ({employeeOptions.length})
               </Button>
@@ -431,7 +431,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             buttonClassName={`w-full justify-between bg-white border rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] shadow-none assign-input-control assign-input-dropdown ${
               errorField === AssignFormField.EMPLOYEES
                 ? "is-error !border-red-500"
-                : "border-[#A36361] ring-2 ring-[#A36361]/15"
+                : "border-blue-400 ring-2 ring-blue-500/15"
             }`}
           />
           {errorField === AssignFormField.EMPLOYEES ? (
@@ -440,11 +440,11 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
 
           {/* Info / Warning Box */}
           {assignmentType === AssignmentKind.ALL ? (
-            <div className="assign-modal-warning-box mt-1.5 py-1.5 px-3 rounded-xl border border-[#BDD1C5] bg-[#F0F5F2] text-[#3B5244] text-[11px] leading-relaxed font-medium">
+            <div className="assign-modal-warning-box mt-1.5 py-1.5 px-3 rounded-xl border border-blue-200/80 bg-blue-50/80 text-blue-900 text-[11px] leading-relaxed font-medium">
               Review access will be granted to all reporting team members in your department.
             </div>
           ) : employeeOptions.length === 0 ? (
-            <div className="assign-modal-warning-box mt-1.5 py-1.5 px-3 rounded-xl border border-[#EECC8C] bg-[#FFF9EE] text-[#B47B1E] text-[11px] leading-relaxed font-normal">
+            <div className="assign-modal-warning-box mt-1.5 py-1.5 px-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-[11px] leading-relaxed font-normal">
               No mapped team members found for your manager account. Please contact an Administrator to map employees.
             </div>
           ) : null}
@@ -473,7 +473,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${
                 errorField === AssignFormField.FINANCIAL_YEAR
                   ? "is-error !border-red-500"
-                  : "border-[#D3A29D]/50"
+                  : "border-blue-200/70"
               }`}
             />
             {errorField === AssignFormField.FINANCIAL_YEAR ? (
@@ -499,7 +499,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${
                 errorField === AssignFormField.QUARTER
                   ? "is-error !border-red-500"
-                  : "border-[#D3A29D]/50"
+                  : "border-blue-200/70"
               }`}
             />
             {errorField === AssignFormField.QUARTER ? (
@@ -514,7 +514,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
               ASSIGNED DATE
             </label>
-            <div className="ui-date-field flex w-full items-center rounded-xl border border-[#D3A29D]/50 bg-white px-3.5 py-2.5 text-sm assign-input-control">
+            <div className="ui-date-field flex w-full items-center rounded-xl border border-blue-200/70 bg-white px-3.5 py-2.5 text-sm assign-input-control">
               <span className="font-mono text-[#0F172A]">{fromDate}</span>
             </div>
           </div>
@@ -551,7 +551,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Add instructions, focus areas, or deadline remarks for the employee(s)..."
-            className="w-full px-3.5 py-2 bg-white border border-[#D3A29D]/50 rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[64px] assign-input-control assign-input-textarea"
+            className="w-full px-3.5 py-2 bg-white border border-blue-200/70 rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[64px] assign-input-control assign-input-textarea"
           />
         </div>
       </div>

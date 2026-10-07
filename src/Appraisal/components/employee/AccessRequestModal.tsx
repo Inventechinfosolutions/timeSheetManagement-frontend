@@ -155,7 +155,7 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
       {isSuccess ? (
         /* SUCCESS STATE */
         <div className="py-5 px-3 text-center access-success-box space-y-3">
-          <div className="w-12 h-12 rounded-full bg-[#FAF2EE] border-2 border-[#A36361] flex items-center justify-center text-[#A36361] mx-auto shadow-md">
+          <div className="w-12 h-12 rounded-full bg-[#EFF6FF] border-2 border-[#2563EB] flex items-center justify-center text-[#2563EB] mx-auto shadow-md">
             <CheckCircle2 className="w-7 h-7 access-icon-check" />
           </div>
           <div>
@@ -164,11 +164,11 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
             </h4>
             <p className="text-xs text-[#64748B] max-w-xs mx-auto mt-0.5 leading-relaxed">
               Dispatched directly to your{" "}
-              <strong className="text-[#A36361]">{recipientTitle}</strong> for{" "}
+              <strong className="text-[#2563EB]">{recipientTitle}</strong> for{" "}
               <strong className="text-[#0F172A]">{assignment.quarter} ({assignment.financialYear})</strong>.
             </p>
           </div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FAF5F2] text-[#8D4E4D] border border-[#E8B298]">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE]">
             <Sparkles className="w-3 h-3" />
             Status: Pending Approval
           </div>
@@ -179,15 +179,15 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
           {/* Target Authority Routing Banner */}
           <div className="access-target-banner flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-white border border-[#D3A29D] flex items-center justify-center text-[#A36361] shadow-2xs shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-white border border-[#BFDBFE] flex items-center justify-center text-[#2563EB] shadow-2xs shrink-0">
                 {isAssignedByAdmin ? (
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#A36361]" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-[#2563EB]" />
                 ) : (
-                  <UserCheck className="w-3.5 h-3.5 text-[#A36361]" />
+                  <UserCheck className="w-3.5 h-3.5 text-[#2563EB]" />
                 )}
               </div>
               <div className="min-w-0">
-                <div className="text-[10px] font-bold uppercase tracking-wider text-[#A36361] whitespace-nowrap leading-tight">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-[#2563EB] whitespace-nowrap leading-tight">
                   Routed Recipient ({assignment.quarter})
                 </div>
                 <div className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5 whitespace-nowrap leading-tight mt-0.5">
@@ -200,7 +200,7 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
             </div>
 
             <div className="shrink-0 text-right">
-              <span className="inline-flex items-center text-[10.5px] px-2.5 py-0.5 rounded-md font-semibold bg-white border border-[#D3A29D] text-[#8D4E4D] whitespace-nowrap shadow-2xs">
+              <span className="inline-flex items-center text-[10.5px] px-2.5 py-0.5 rounded-md font-semibold bg-white border border-[#BFDBFE] text-[#1D4ED8] whitespace-nowrap shadow-2xs">
                 Assigned by {assignment.assignedBy}
               </span>
             </div>
@@ -213,8 +213,8 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
                 htmlFor="access-description-input"
                 className="text-xs font-bold text-[#0F172A] flex items-center gap-1.5"
               >
-                <FileText className="w-3.5 h-3.5 text-[#A36361]" />
-                Reason / Description <span className="text-[#A36361]">*</span>
+                <FileText className="w-3.5 h-3.5 text-[#2563EB]" />
+                Reason / Description <span className="text-[#2563EB]">*</span>
               </label>
               <span className="text-[10.5px] text-[#94A3B8]">
                 {description.length} / 500 characters
@@ -244,8 +244,8 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
           </div>
 
           {/* One-day Notice Box */}
-          <div className="py-1.5 px-2.5 rounded-lg bg-[#FAF5F2] border border-[#E8B298]/40 flex items-center gap-2">
-            <HelpCircle className="w-3.5 h-3.5 text-[#A36361] shrink-0" />
+          <div className="py-1.5 px-2.5 rounded-lg bg-[#EFF6FF] border border-[#BFDBFE]/60 flex items-center gap-2">
+            <HelpCircle className="w-3.5 h-3.5 text-[#2563EB] shrink-0" />
             <p className="text-[10.5px] text-[#64748B] leading-tight">
               Edit requests can only be sent within <strong className="text-[#0F172A]">24 hours</strong> of submission. Approved requests unlock the review for adjustments.
             </p>

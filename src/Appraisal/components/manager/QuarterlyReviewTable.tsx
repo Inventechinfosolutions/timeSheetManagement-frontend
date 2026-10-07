@@ -18,14 +18,14 @@ interface QuarterlyReviewTableProps {
   headerTheme?: "indigo" | "navy" | "purple" | "teal";
 }
 
-// Harmonious colorful avatar palettes derived strictly from 6-color swatch palette
+// Harmonious colorful avatar palettes matching the frosted ice-blue & royal blue aesthetic
 const AVATAR_PALETTES = [
-  { bg: "linear-gradient(135deg, #FAF2EE 0%, #F5E8E2 100%)", text: "#A36361", border: "#D3A29D" }, // Deep Terracotta Wine (#A36361)
-  { bg: "linear-gradient(135deg, #FAF0EB 0%, #F5E5DC 100%)", text: "#8D4E4D", border: "#E8B298" }, // Dusty Rose Mauve (#D3A29D)
-  { bg: "linear-gradient(135deg, #FFF9EE 0%, #FDF1DB 100%)", text: "#B47B1E", border: "#EECC8C" }, // Warm Amber (#EECC8C)
-  { bg: "linear-gradient(135deg, #FDF3EE 0%, #FBE5DC 100%)", text: "#A85A38", border: "#E8B298" }, // Soft Peach Terracotta (#E8B298)
-  { bg: "linear-gradient(135deg, #F0F5F2 0%, #E2ECE5 100%)", text: "#415A4D", border: "#BDD1C5" }, // Soft Celadon Mist (#BDD1C5)
-  { bg: "linear-gradient(135deg, #F4F6F5 0%, #E7ECE8 100%)", text: "#4E5C53", border: "#9EABA2" }, // Mineral Slate Sage (#9EABA2)
+  { bg: "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)", text: "#1D4ED8", border: "#BFDBFE" }, // Royal Blue
+  { bg: "linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)", text: "#0284C7", border: "#BAE6FD" }, // Sky Blue
+  { bg: "linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)", text: "#4338CA", border: "#C7D2FE" }, // Indigo Blue
+  { bg: "linear-gradient(135deg, #ECFEFF 0%, #CFFAFE 100%)", text: "#0891B2", border: "#A5F3FC" }, // Electric Cyan
+  { bg: "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)", text: "#334155", border: "#CBD5E1" }, // Ice Slate
+  { bg: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)", text: "#059669", border: "#A7F3D0" }, // Mint Teal
 ];
 
 export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
@@ -356,7 +356,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               pageSize={pageSize}
               onPageChange={isServerPage ? onPageChange : setCurrentPage}
               showTotal={false}
-              activeClassName="!bg-[#A36361] !text-white shadow-xs font-black shadow-[#A36361]/25"
+              activeClassName="!bg-[#2563EB] !text-white shadow-xs font-black shadow-[#2563EB]/25"
             />
           </div>
         </div>
