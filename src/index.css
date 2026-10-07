@@ -523,7 +523,6 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-content-view .page.is-landscape table {
   width: 100% !important;
   max-width: 100% !important;
-  min-width: 0 !important;
   table-layout: fixed !important;
 }
 
@@ -535,13 +534,6 @@ input[type="password"]::-webkit-password-reveal-button {
   overflow-wrap: anywhere !important;
   word-break: break-word !important;
   vertical-align: top !important;
-}
-
-.notes-rich-editor table td,
-.notes-content-view table td,
-.notes-rich-editor table tr,
-.notes-content-view table tr {
-  height: auto !important;
 }
 
 .notes-rich-editor .page:empty::before {
@@ -673,8 +665,6 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-rich-editor table,
 .notes-content-view table {
   width: 100% !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
   table-layout: fixed !important;
   border-collapse: collapse !important;
   margin: 1rem 0 !important;
@@ -690,6 +680,45 @@ input[type="password"]::-webkit-password-reveal-button {
   white-space: normal !important;
   overflow-wrap: anywhere !important;
   word-break: break-word !important;
+}
+
+.notes-excel-fill-handle {
+  position: fixed;
+  z-index: 90;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1.5px solid #2563eb;
+  background: #2563eb;
+  color: #ffffff;
+  border-radius: 3px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: grab;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+  user-select: none;
+  touch-action: none;
+}
+
+.notes-excel-fill-handle.is-visible {
+  display: flex;
+}
+
+.notes-excel-fill-handle:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+
+.notes-excel-fill-handle.is-dragging {
+  cursor: grabbing;
+  background: #1e40af;
+  border-color: #1e40af;
 }
 
 .notes-rich-editor th,
@@ -1075,32 +1104,10 @@ button[class*="bg-tbl-"]:active {
 }
 
 /* Attachment Column & Row Interactive Cells */
-.notes-rich-editor table th {
-  position: relative;
-}
-
-.notes-rich-editor table th::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: -4px;
-  width: 8px;
-  height: 100%;
-  cursor: col-resize;
-  z-index: 4;
-}
-
-.notes-rich-editor.notes-col-resize-hover,
-.notes-rich-editor.notes-col-resize-hover *,
-.notes-rich-editor.notes-col-resizing,
-.notes-rich-editor.notes-col-resizing * {
-  cursor: col-resize !important;
-  user-select: none !important;
-}
-
 .notes-rich-editor table th.excel-attachment-col,
 .notes-content-view table th.excel-attachment-col {
   min-width: 140px !important;
+  width: 155px !important;
   text-align: center !important;
   background-color: #f1f5f9 !important;
   color: #334155 !important;
@@ -1121,6 +1128,7 @@ button[class*="bg-tbl-"]:active {
 .notes-rich-editor table td.excel-attachment-cell,
 .notes-content-view table td.excel-attachment-cell {
   min-width: 140px !important;
+  width: 155px !important;
   padding: 6px 8px !important;
   text-align: center !important;
   vertical-align: middle !important;
@@ -1288,31 +1296,4 @@ button[class*="bg-tbl-"]:active {
 
 .notes-content-view .table-file-btn.remove {
   display: none !important;
-}
-
-.notes-excel-fill-handle {
-  position: fixed;
-  z-index: 80;
-  width: 16px;
-  height: 16px;
-  margin-left: -8px;
-  margin-top: -8px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  border: 1.5px solid #2563eb;
-  background: #ffffff;
-  color: #2563eb;
-  border-radius: 2px;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-  cursor: crosshair;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
-  user-select: none;
-}
-
-.notes-excel-fill-handle.is-visible {
-  display: flex;
 }
