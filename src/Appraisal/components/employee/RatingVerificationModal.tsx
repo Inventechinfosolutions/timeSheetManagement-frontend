@@ -1,397 +1,245 @@
-import React, { useState, useRef, useEffect } from "react";
-import { ShieldCheck, Mail, AlertCircle, ArrowRight, X, RefreshCw } from "lucide-react";
-import { message } from "antd";
+import React, { useEffect, useState } from "react";
+import { Check, Eye, EyeOff, Send } from "lucide-react";
+import { Button, Dropdown, Input, Modal } from "../../../components/ui";
+import { WorksphereLogoLoader } from "../../../components/ApiLoadingSpinner";
+import { useAppSelector } from "../../../hooks";
+import { AssignButtonState } from "../../enums/appraisal.enums";
+import "../manager/AssignQuarterlyReviewModal.css";
+import {
+  AppraisalCopy,
+} from "../../constants/appraisal.constants";
+import {
+  AnnualSummaryRecord,
+  AppraisalApi,
+  MasterFinancialYearOption,
+  readApiError,
+} from "../../services/appraisal.api";
 
 interface RatingVerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
-  defaultEmail?: string;
 }
+
+const appraisalButtonClass =
+  "!bg-[#A36361] hover:!bg-[#8D4E4D] !text-white !shadow-md !shadow-[#A36361]/25";
+
+const ratingText = (value: number | string | null | undefined): string => {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+  return String(value);
+};
+
+const hasStoredRating = (record: AnnualSummaryRecord): boolean =>
+  [record.q1Rating, record.q2Rating, record.q3Rating, record.q4Rating, record.annualAverageRating].some(
+    (value) => ratingText(value) !== "",
+  );
 
 export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = ({
   isOpen,
   onClose,
-  onSuccess,
-  defaultEmail = "employee@worksphere.com",
 }) => {
-  const [modalStage, setModalStage] = useState<"email" | "otp" | "success">("email");
-  const [emailInput, setEmailInput] = useState<string>(defaultEmail);
-  const [emailError, setEmailError] = useState<string>("");
-  const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
-  const [activeOtpIndex, setActiveOtpIndex] = useState<number>(0);
-  const [illuminatedIndex, setIlluminatedIndex] = useState<number | null>(null);
-  const [isGlowPhase, setIsGlowPhase] = useState<boolean>(false);
-  const [isMorphingPhase, setIsMorphingPhase] = useState<boolean>(false);
-  const [resendTimer, setResendTimer] = useState<number>(45);
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const employeeId = currentUser?.employeeId || currentUser?.loginId || "";
+  const [financialYear, setFinancialYear] = useState("");
+  const [yearOptions, setYearOptions] = useState<MasterFinancialYearOption[]>([]);
+  const [yearsLoading, setYearsLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [buttonState, setButtonState] = useState<AssignButtonState>(AssignButtonState.IDLE);
+  const [summary, setSummary] = useState<AnnualSummaryRecord | null>(null);
 
-  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  // Reset states when opened
   useEffect(() => {
-    if (isOpen) {
-      setModalStage("email");
-      setEmailError("");
-      setOtp(["", "", "", "", "", ""]);
-      setActiveOtpIndex(0);
-      setIsGlowPhase(false);
-      setIsMorphingPhase(false);
-      setResendTimer(45);
+    if (!isOpen) {
+      setFinancialYear("");
+      setPassword("");
+      setShowPassword(false);
+      setError("");
+      setButtonState(AssignButtonState.IDLE);
+      setSummary(null);
+      return;
     }
+    setYearsLoading(true);
+    void AppraisalApi.getMasterFinancialYears()
+      .then((years) => setYearOptions(years || []))
+      .catch(() => setYearOptions([]))
+      .finally(() => setYearsLoading(false));
   }, [isOpen]);
 
-  // Countdown timer for OTP resend
-  useEffect(() => {
-    let interval: any;
-    if (isOpen && modalStage === "otp" && resendTimer > 0) {
-      interval = setInterval(() => {
-        setResendTimer((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isOpen, modalStage, resendTimer]);
-
-  if (!isOpen) return null;
-
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!emailInput.trim()) {
-      setEmailError("Please enter your email address.");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.trim())) {
-      setEmailError("Please enter a valid corporate email address.");
-      return;
-    }
-    setEmailError("");
-
-    message.success(
-      `Verification code sent to your email ID: ${emailInput.trim()}`,
-      2
-    );
-
-    setModalStage("otp");
-    setResendTimer(45);
-    setOtp(["", "", "", "", "", ""]);
-    setActiveOtpIndex(0);
-    setIsGlowPhase(false);
-    setIsMorphingPhase(false);
-    setTimeout(() => {
-      otpInputRefs.current[0]?.focus();
-    }, 200);
+  const handleYearChange = (value: string) => {
+    setFinancialYear(value);
+    setPassword("");
+    setError("");
+    setSummary(null);
   };
 
-  const handleOtpInput = (index: number, val: string) => {
-    const clean = val.replace(/\D/g, "");
-    if (!clean) {
-      const nextOtp = [...otp];
-      nextOtp[index] = "";
-      setOtp(nextOtp);
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!financialYear) {
+      setError(AppraisalCopy.selectFinancialYear);
       return;
     }
-
-    if (clean.length > 1) {
-      const digits = clean.slice(0, 6).split("");
-      const nextOtp = [...otp];
-      digits.forEach((d, i) => {
-        nextOtp[i] = d;
-      });
-      setOtp(nextOtp);
-      const nextFocus = Math.min(digits.length, 5);
-      setActiveOtpIndex(nextFocus);
-      otpInputRefs.current[nextFocus]?.focus();
-      if (digits.length >= 6) {
-        setTimeout(() => triggerVerificationSequence(), 250);
+    if (!employeeId) {
+      setError(AppraisalCopy.missingEmployee);
+      return;
+    }
+    if (!password.trim()) {
+      setError(AppraisalCopy.passwordLabel);
+      return;
+    }
+    setButtonState(AssignButtonState.ANIMATING);
+    setError("");
+    setSummary(null);
+    try {
+      const record = await AppraisalApi.revealAnnualSummary(employeeId, financialYear, password.trim());
+      if (!record.passwordVerified) {
+        setError(AppraisalCopy.passwordMismatch);
+        setButtonState(AssignButtonState.IDLE);
+        return;
       }
-      return;
+      setPassword("");
+      setButtonState(AssignButtonState.ASSIGNED);
+      window.setTimeout(() => setSummary(record), 420);
+    } catch (requestError) {
+      setSummary(null);
+      setButtonState(AssignButtonState.IDLE);
+      setError(readApiError(requestError));
     }
-
-    const singleDigit = clean.slice(-1);
-    const nextOtp = [...otp];
-    nextOtp[index] = singleDigit;
-    setOtp(nextOtp);
-
-    setIlluminatedIndex(index);
-    setTimeout(() => setIlluminatedIndex(null), 300);
-
-    if (index < 5) {
-      setActiveOtpIndex(index + 1);
-      setTimeout(() => {
-        otpInputRefs.current[index + 1]?.focus();
-      }, 50);
-    } else {
-      setActiveOtpIndex(5);
-      if (nextOtp.every((d) => d !== "")) {
-        setTimeout(() => {
-          triggerVerificationSequence();
-        }, 300);
-      }
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace") {
-      if (!otp[index] && index > 0) {
-        e.preventDefault();
-        const nextOtp = [...otp];
-        nextOtp[index - 1] = "";
-        setOtp(nextOtp);
-        setActiveOtpIndex(index - 1);
-        otpInputRefs.current[index - 1]?.focus();
-      }
-    } else if (e.key === "ArrowLeft" && index > 0) {
-      e.preventDefault();
-      setActiveOtpIndex(index - 1);
-      otpInputRefs.current[index - 1]?.focus();
-    } else if (e.key === "ArrowRight" && index < 5) {
-      e.preventDefault();
-      setActiveOtpIndex(index + 1);
-      otpInputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const triggerVerificationSequence = () => {
-    setIsGlowPhase(true);
-
-    setTimeout(() => {
-      setIsMorphingPhase(true);
-
-      setTimeout(() => {
-        setModalStage("success");
-        setIsGlowPhase(false);
-        setIsMorphingPhase(false);
-
-        // Smooth delay, then invoke onSuccess to navigate
-        setTimeout(() => {
-          onSuccess();
-          onClose();
-        }, 1400);
-      }, 600);
-    }, 550);
-  };
-
-  const handleResendCode = () => {
-    if (resendTimer > 0) return;
-    setResendTimer(45);
-    setOtp(["", "", "", "", "", ""]);
-    setActiveOtpIndex(0);
-    setIsGlowPhase(false);
-    setIsMorphingPhase(false);
-    message.info(`A fresh 6-digit verification code was sent to ${emailInput}`);
-    setTimeout(() => {
-      otpInputRefs.current[0]?.focus();
-    }, 150);
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[1050] flex items-center justify-center p-4 eval-themed-modal-overlay animate-in fade-in duration-300"
-      onClick={() => {
-        if (!isGlowPhase && !isMorphingPhase) {
-          onClose();
-        }
-      }}
-    >
-      <div
-        className="eval-themed-modal-card max-w-sm sm:max-w-md w-full p-6 sm:p-8 text-[#0F172A] relative shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Ambient Energy Glow */}
-        <div className={`eval-modal-ambient-glow ${isGlowPhase ? "glowing" : ""}`} />
-
-        {/* Close Button */}
-        {!isGlowPhase && !isMorphingPhase && modalStage !== "success" && (
+    <Modal
+      open={isOpen}
+      onClose={onClose}
+      title={AppraisalCopy.ratingModalTitle}
+      maxWidth="sm"
+      footer={
+        summary ? (
+          <Button type="button" onClick={onClose} className={appraisalButtonClass}>
+            {AppraisalCopy.closeAction}
+          </Button>
+        ) : (
           <button
-            type="button"
-            onClick={onClose}
-            className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors z-20 cursor-pointer"
-            title="Close"
+            type="submit"
+            form="rating-password-form"
+            disabled={
+              !financialYear ||
+              buttonState === AssignButtonState.ANIMATING ||
+              buttonState === AssignButtonState.ASSIGNED
+            }
+            className={`assign-modal-submit-btn ${
+              buttonState === AssignButtonState.ANIMATING
+                ? "assign-btn-animating"
+                : buttonState === AssignButtonState.ASSIGNED
+                  ? "assign-btn-assigned"
+                  : ""
+            }`}
           >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-
-        {/* STAGE 1: Email Input */}
-        {modalStage === "email" && (
-          <div className="relative z-10 space-y-5 animate-in fade-in duration-200">
-            <div className="text-center space-y-1.5">
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-[#A36361] to-[#D3A29D] flex items-center justify-center text-white shadow-lg shadow-[#A36361]/25 mb-3">
-                <ShieldCheck className="w-6 h-6" />
-              </div>
-              <h3 className="text-xl font-bold tracking-tight text-[#0F172A]">
-                Authenticate Rating Access
-              </h3>
-              <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
-                Enter your corporate email address to receive the verification code and view your annual performance rating.
-              </p>
-            </div>
-
-            <form onSubmit={handleEmailSubmit} className="space-y-4 pt-1">
-              <div>
-                <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
-                  Corporate Email Address <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    required
-                    value={emailInput}
-                    onChange={(e) => {
-                      setEmailInput(e.target.value);
-                      if (emailError) setEmailError("");
-                    }}
-                    placeholder="employee@worksphere.com"
-                    className={`w-full px-4 py-3 pl-10 rounded-2xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none transition-all ${
-                      emailError
-                        ? "bg-[#FEF2F2] border border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                        : "bg-[#FFFDFB] border border-[#E2E8F0] focus:border-[#A36361] focus:ring-2 focus:ring-[#A36361]/15"
-                    }`}
-                    autoFocus
-                  />
-                  <Mail className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                </div>
-                {emailError && (
-                  <p className="text-xs font-medium text-red-500 mt-1.5 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    {emailError}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#A36361] to-[#8D4E4D] hover:from-[#8D4E4D] hover:to-[#7A3F3D] text-white text-xs font-bold shadow-lg shadow-[#A36361]/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
-                >
-                  <span>Continue</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* STAGE 2: 6-Digit OTP Verification Screen */}
-        {modalStage === "otp" && (
-          <div className={`relative z-10 space-y-6 ${isMorphingPhase ? "eval-otp-fade-out" : ""}`}>
-            <div className="text-center space-y-1.5">
-              <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0F172A]">
-                Enter Verification Code
-              </h3>
-              <p className="text-xs sm:text-sm text-[#64748B] max-w-xs mx-auto leading-relaxed">
-                Enter the 6-digit code sent to{" "}
-                <span className="text-[#0F172A] font-semibold">{emailInput || "your email"}</span>
-              </p>
-            </div>
-
-            <div className="py-2">
-              <div className={`eval-otp-boxes-wrap flex items-center justify-center gap-1.5 sm:gap-2.5 ${isGlowPhase ? "energy-glow" : ""}`}>
-                {isGlowPhase && <div className="eval-energy-beam" />}
-                {[0, 1, 2, 3, 4, 5].map((idx) => {
-                  const digit = otp[idx] || "";
-                  const hasNumber = Boolean(digit);
-                  const isIlluminated = illuminatedIndex === idx;
-
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => {
-                        setActiveOtpIndex(idx);
-                        otpInputRefs.current[idx]?.focus();
-                      }}
-                      className={`eval-theme-otp-box cursor-text ${
-                        hasNumber ? "has-number" : ""
-                      } ${isIlluminated ? "illuminated" : ""}`}
-                    >
-                      <input
-                        ref={(el) => {
-                          otpInputRefs.current[idx] = el;
-                        }}
-                        type="text"
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOtpInput(idx, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        onFocus={() => setActiveOtpIndex(idx)}
-                        className="eval-otp-digit-input select-none"
-                        aria-label={`Digit ${idx + 1}`}
-                        autoFocus={idx === 0}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between text-xs pt-1 px-1 border-t border-[#F1F5F9]">
-              <span className="text-[#64748B]">Didn't get the code?</span>
-              {resendTimer > 0 ? (
-                <span className="text-[#64748B]">
-                  Resend in <span className="text-[#A36361] font-semibold">{resendTimer}s</span>
-                </span>
+            <span className="assign-btn-icon-wrapper">
+              {buttonState === AssignButtonState.ASSIGNED ? (
+                <Check className="w-4 h-4 text-white stroke-[3] assign-icon-check" />
               ) : (
-                <button
-                  type="button"
-                  onClick={handleResendCode}
-                  className="text-[#A36361] hover:text-[#8D4E4D] font-bold flex items-center gap-1 hover:underline cursor-pointer"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  <span>Resend Code</span>
-                </button>
+                <Send
+                  className={`w-4 h-4 fill-white -rotate-12 ${
+                    buttonState === AssignButtonState.ANIMATING ? "assign-icon-launching" : ""
+                  }`}
+                />
               )}
-            </div>
-          </div>
-        )}
-
-        {/* STAGE 3: Success State */}
-        {modalStage === "success" && (
-          <div className="eval-success-fade-in relative z-10 py-5 flex flex-col items-center justify-center text-center space-y-6">
-            <div className="space-y-1.5">
-              <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0F172A]">
-                Verified Successfully
-              </h3>
-              <p className="text-xs sm:text-sm text-[#64748B] max-w-xs mx-auto">
-                Access granted! Unlocking Annual Performance &amp; Quarterly Ratings...
-              </p>
-            </div>
-
-            <div className="eval-success-square-wrap my-2">
-              <div className="eval-success-glow-ring" />
-              <div className="eval-success-square">
-                <svg className="eval-success-checkmark-svg" viewBox="0 0 24 24">
-                  <path
-                    className="eval-success-checkmark-path"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
-            </div>
-
-            <div className="w-full pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  onSuccess();
-                  onClose();
-                }}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#A36361] to-[#8D4E4D] hover:from-[#8D4E4D] hover:to-[#7A3F3D] text-white text-xs font-bold transition-all shadow-md active:scale-[0.98] cursor-pointer"
+            </span>
+            <span className="assign-btn-text">
+              {buttonState === AssignButtonState.ASSIGNED
+                ? "Shown"
+                : buttonState === AssignButtonState.ANIMATING
+                  ? "Checking"
+                  : AppraisalCopy.passwordAction}
+            </span>
+          </button>
+        )
+      }
+    >
+      {summary ? (
+        hasStoredRating(summary) ? (
+        <div className="space-y-2">
+          <p className="text-sm font-bold text-[#0F172A]">{summary.financialYear}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {(["q1Rating", "q2Rating", "q3Rating", "q4Rating"] as const).map((key, index) => (
+              <div
+                key={key}
+                className="rounded-xl border border-[#D3A29D]/50 bg-[#FAF2EE] px-3 py-2"
               >
-                View Annual Ratings
-              </button>
-            </div>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">
+                  Q{index + 1}
+                </p>
+                <p className="text-sm font-bold text-[#A36361]">{ratingText(summary[key]) || "—"}</p>
+              </div>
+            ))}
           </div>
-        )}
-      </div>
-    </div>
+          <div className="rounded-xl border border-[#D3A29D]/50 bg-white px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#64748B]">Annual rating</p>
+            <p className="text-sm font-bold text-[#0F172A]">
+              {ratingText(summary.annualAverageRating) || "—"} {summary.annualRatingDescription || ""}
+            </p>
+          </div>
+        </div>
+        ) : (
+          <p className="py-6 text-center text-sm font-bold text-[#64748B]">{AppraisalCopy.noReviewsYet}</p>
+        )
+      ) : (
+        <form id="rating-password-form" onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#0F172A]">
+              {AppraisalCopy.financialYearLabel}
+            </label>
+            <Dropdown
+              placeholder="Select financial year"
+              allowClear={false}
+              defaultValue=""
+              options={yearOptions.map((year) => ({
+                value: year.financialYear,
+                label: year.financialYear,
+              }))}
+              value={financialYear}
+              onChange={handleYearChange}
+              loading={yearsLoading}
+              className="w-full"
+              buttonClassName="w-full justify-between border border-[#D3A29D]/50 bg-white px-3.5 py-2.5 text-sm font-medium text-[#0F172A] shadow-none hover:border-[#A36361]"
+            />
+          </div>
+          {financialYear ? (
+            <div>
+              <label className="mb-1 block text-[11px] font-bold uppercase tracking-wider text-[#0F172A]">
+                {AppraisalCopy.passwordLabel}
+              </label>
+              <Input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder={AppraisalCopy.passwordLabel}
+                suffixIcon={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((current) => !current)}
+                    className="text-[#A36361]"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                }
+              />
+            </div>
+          ) : null}
+          {buttonState === AssignButtonState.ANIMATING ? (
+            <div className="flex justify-center py-2">
+              <WorksphereLogoLoader />
+            </div>
+          ) : null}
+          {error ? <p className="text-xs font-bold text-red-600">{error}</p> : null}
+        </form>
+      )}
+    </Modal>
   );
 };
 

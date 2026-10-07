@@ -25,7 +25,10 @@ import {
   ManagerQuarterlyReviewRecord,
   ReviewFormData,
 } from "../../types/appraisal.types";
-import { sampleCompletedReviewFormData } from "../../mockData/quarterlyReview.mock";
+import { emptyReviewFormData } from "../../constants/emptyReviewForm";
+import { QuarterlyReviewStatus } from "../../enums/appraisal.enums";
+import { AppraisalApi, formatAppraisalDisplayDate, readApiError } from "../../services/appraisal.api";
+import { DatePicker } from "../../../components/ui";
 import { message } from "antd";
 import "./EvaluationPanel.css";
 
@@ -44,6 +47,12 @@ export interface EvaluationPanelProps {
   hideScoreParameters?: boolean;
   onBack: () => void;
   onSubmitEvaluation?: (recordId: string, evaluation: EvaluationData) => void;
+  onAssignmentSaved?: (patch: {
+    reviewId: number;
+    assignedDate: string;
+    deadline: string;
+    description: string;
+  }) => void;
   submissionData?: ReviewFormData;
 }
 
@@ -85,6 +94,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   hideScoreParameters = false,
   onBack,
   onSubmitEvaluation,
+  onAssignmentSaved,
   submissionData,
 }) => {
   const isViewMode = mode === "view";
@@ -402,21 +412,16 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   } | null>(null);
 
   // Form comments
-  const [strengths, setStrengths] = useState<string>(() => {
-    return isViewMode || record.status === "COMPLETED"
-      ? "Demonstrates great ownership, high quality deliverables, and strong technical problem-solving capabilities."
-      : "";
-  });
-  const [improvements, setImprovements] = useState<string>(() => {
-    return isViewMode || record.status === "COMPLETED"
-      ? "Continue mentoring junior engineers and leading system architecture discussions."
-      : "";
-  });
-  const [remarks, setRemarks] = useState<string>(() => {
-    return isViewMode || record.status === "COMPLETED"
-      ? "Consistently exceeds delivery expectations. Recommended for senior engineering track."
-      : "";
-  });
+  const [reviewId, setReviewId] = useState<number | undefined>(record.reviewId);
+  const [assignedDate, setAssignedDate] = useState<string>(record.assignedOn || record.fromDate || "");
+  const [deadlineDate, setDeadlineDate] = useState<string>(record.toDate || "");
+  const [assignmentDescription, setAssignmentDescription] = useState<string>(record.description || "");
+  const [savingAssignment, setSavingAssignment] = useState<boolean>(false);
+  const [assignmentError, setAssignmentError] = useState<string>("");
+
+  const [strengths, setStrengths] = useState<string>("");
+  const [improvements, setImprovements] = useState<string>("");
+  const [remarks, setRemarks] = useState<string>("");
 
   // Submission / Loading states
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -435,7 +440,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
   // Form data for employee submission
   const formData: ReviewFormData = useMemo(() => {
-    return submissionData || sampleCompletedReviewFormData;
+    return submissionData || emptyReviewFormData;
   }, [submissionData]);
 
   // Click on a star
@@ -709,14 +714,80 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const ratedTeamKeys = Object.keys(teamRatings).filter(
     (k) => (teamRatings[k as keyof typeof teamRatings] || 0) > 0
   );
-  const ratedDimensionsCount = ratedTeamKeys.length > 0 ? ratedTeamKeys.length : 6;
+  const ratedDimensionsCount = ratedTeamKeys.length;
 
-  // Environment rating info
-  const envRating = formData.companyEnvironmentRating || 5;
-  const envInfo = ENVIRONMENT_RATINGS[envRating] || ENVIRONMENT_RATINGS[5];
+  const envRating = formData.companyEnvironmentRating || 0;
+  const envInfo = ENVIRONMENT_RATINGS[envRating];
+  const employeeSubmitted =
+    record.status === QuarterlyReviewStatus.SUBMITTED ||
+    record.status === QuarterlyReviewStatus.UNDER_REVIEW ||
+    record.status === QuarterlyReviewStatus.COMPLETED;
+
+  const toIsoDate = (value: string): string | undefined => {
+    const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value.trim());
+    if (!match) {
+      return undefined;
+    }
+    return `${match[3]}-${match[2]}-${match[1]}`;
+  };
+
+  useEffect(() => {
+    setReviewId(record.reviewId);
+    setAssignedDate(record.assignedOn || record.fromDate || "");
+    setDeadlineDate(record.toDate || "");
+    setAssignmentDescription(record.description || "");
+    if (record.reviewId) {
+      return;
+    }
+    void AppraisalApi.getEmployeeReviews(record.id)
+      .then((result) => {
+        const match = (result.data || []).find(
+          (item) => item.quarter === record.quarter && item.financialYear === record.financialYear,
+        );
+        if (!match) {
+          return;
+        }
+        setReviewId(match.id);
+        setAssignmentDescription(match.description || "");
+        setAssignedDate(formatAppraisalDisplayDate(match.assignedDate));
+        setDeadlineDate(formatAppraisalDisplayDate(match.deadlineDate));
+      })
+      .catch(() => undefined);
+  }, [record]);
+
+  const saveAssignment = async () => {
+    if (!reviewId) {
+      setAssignmentError("This assignment cannot be saved.");
+      return;
+    }
+    const deadlineIso = toIsoDate(deadlineDate);
+    if (!deadlineIso) {
+      setAssignmentError("Enter the deadline as dd-mm-yyyy.");
+      return;
+    }
+    setSavingAssignment(true);
+    setAssignmentError("");
+    try {
+      await AppraisalApi.updateReview(reviewId, {
+        deadlineDate: deadlineIso,
+        description: assignmentDescription.trim(),
+      });
+      onAssignmentSaved?.({
+        reviewId,
+        assignedDate,
+        deadline: deadlineDate,
+        description: assignmentDescription.trim(),
+      });
+      message.success("Assignment saved");
+    } catch (error) {
+      setAssignmentError(readApiError(error));
+    } finally {
+      setSavingAssignment(false);
+    }
+  };
 
   // Employee initials for avatar
-  const empInitials = (record.name || "Rahul Verma")
+  const empInitials = (record.name || "")
     .split(" ")
     .map((n) => n[0])
     .join("")
@@ -837,10 +908,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 EMPLOYEE NAME
               </span>
               <span className="text-sm font-extrabold text-[#0F172A] truncate block">
-                {record.name || "Rahul Verma"}
-              </span>
-              <span className="text-[11px] font-bold text-[#A36361] block mt-0.5">
-                Verified Employee
+                {record.name}
               </span>
             </div>
           </div>
@@ -852,10 +920,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 EMPLOYEE ID
               </span>
               <span className="text-sm font-extrabold text-[#0F172A] block">
-                {record.id || "EE-I-071"}
-              </span>
-              <span className="text-[11px] font-medium text-[#64748B] block mt-0.5">
-                Permanent Staff
+                {record.id}
               </span>
             </div>
           </div>
@@ -867,10 +932,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 DESIGNATION &amp; DEPT
               </span>
               <span className="text-sm font-extrabold text-[#0F172A] block truncate">
-                {record.role || "Frontend Developer"}
-              </span>
-              <span className="text-[11px] font-semibold text-[#64748B] block mt-0.5 truncate">
-                Engineering &amp; Technology
+                {record.role || "—"}
               </span>
             </div>
           </div>
@@ -882,10 +944,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 SUBMITTED DATE
               </span>
               <span className="text-sm font-extrabold text-[#0F172A] block">
-                {record.assignedOn || "07/09/2026"}
-              </span>
-              <span className="text-[11px] font-semibold text-[#A36361] block mt-0.5">
-                On-Time Submission
+                {employeeSubmitted ? record.assignedOn || "—" : "Not submitted"}
               </span>
             </div>
           </div>
@@ -916,6 +975,70 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               </div>
             </div>
 
+          <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 space-y-3">
+            <h3 className="text-sm font-bold text-[#0F172A]">Assignment</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-1">
+                  Assigned quarter
+                </span>
+                <div className="rounded-xl border border-[#D3A29D]/50 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A]">
+                  {record.quarter} · {record.financialYear}
+                </div>
+              </div>
+              <div>
+                <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-1">
+                  Assigned date
+                </span>
+                <div className="rounded-xl border border-[#D3A29D]/50 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A]">
+                  {assignedDate || "—"}
+                </div>
+              </div>
+              <div>
+                <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-1">
+                  Deadline
+                </span>
+                {isViewMode ? (
+                  <div className="rounded-xl border border-[#D3A29D]/50 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A]">
+                    {deadlineDate || "—"}
+                  </div>
+                ) : (
+                  <DatePicker className="w-full" value={deadlineDate} onChange={setDeadlineDate} />
+                )}
+              </div>
+            </div>
+            <div>
+              <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-1">
+                Description
+              </span>
+              <textarea
+                rows={3}
+                readOnly={isViewMode}
+                value={assignmentDescription}
+                onChange={(event) => setAssignmentDescription(event.target.value)}
+                placeholder="Assignment description"
+                className={`eval-textarea-field w-full ${isViewMode ? "eval-textarea-readonly" : ""}`}
+              />
+            </div>
+            {!isViewMode && (
+              <div className="flex items-center justify-end gap-3">
+                {assignmentError ? (
+                  <p className="text-xs font-bold text-red-600">{assignmentError}</p>
+                ) : null}
+                <button
+                  type="button"
+                  disabled={savingAssignment}
+                  onClick={() => void saveAssignment()}
+                  className="inline-flex items-center justify-center rounded-xl bg-[#A36361] px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+                >
+                  {savingAssignment ? "Saving" : "Save"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {employeeSubmitted ? (
+          <>
           {/* STEP 1: ROLE & QUARTER OVERVIEW */}
           <div className="eval-step-card eval-reveal-card space-y-3">
             <div className="flex items-center justify-between border-b border-[#D3A29D]/30 pb-2.5">
@@ -937,8 +1060,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 className="eval-readonly-field p-3.5 bg-gray-50/80 border border-[#D3A29D]/50 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
                 title="Employee submitted response (Read-only)"
               >
-                {formData.overview ||
-                  "Frontend Developer focused on building and optimizing web applications. Delivered responsive UI components, collaborated with backend and design teams, and completed major modules ahead of schedule with zero critical bugs."}
+                {formData.overview || "—"}
               </div>
             </div>
           </div>
@@ -965,7 +1087,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 className="eval-readonly-field p-3 bg-gray-50/80 border border-[#D3A29D]/50 rounded-xl text-sm font-extrabold text-[#0F172A]"
                 title="Employee submitted response (Read-only)"
               >
-                {formData.projectTitle || "Worksphere Timesheet & Appraisal Platform"}
+                {formData.projectTitle || "—"}
               </div>
             </div>
 
@@ -978,8 +1100,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 className="eval-readonly-field p-3.5 bg-gray-50/80 border border-[#D3A29D]/50 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
                 title="Employee submitted response (Read-only)"
               >
-                {formData.projectDescription ||
-                  "Spearheaded the component library unification, streamlined workflow interfaces, and achieved 99% on-time delivery across quarterly deliverables."}
+                {formData.projectDescription || "—"}
               </div>
             </div>
 
@@ -992,8 +1113,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 className="eval-readonly-field p-3.5 bg-gray-50/80 border border-[#D3A29D]/50 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
                 title="Employee submitted response (Read-only)"
               >
-                {formData.projectChallenge ||
-                  "Adapted to rapid requirements changes and resolved complex state synchronization challenges without delaying deployment milestones."}
+                {formData.projectChallenge || "—"}
               </div>
             </div>
           </div>
@@ -1020,7 +1140,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 eval-stagger-item eval-stagger-4">
                 {TEAM_CRITERIA.map((criterion) => {
                   const score =
-                    teamRatings[criterion.key as keyof typeof teamRatings] || 4;
+                    teamRatings[criterion.key as keyof typeof teamRatings] || 0;
                   return (
                     <div
                       key={criterion.key}
@@ -1070,9 +1190,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 className="eval-readonly-field p-3.5 bg-gray-50/80 border border-[#D3A29D]/50 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
                 title="Employee submitted response (Read-only)"
               >
-                {formData.learningGoals ||
-                  formData.nextQuarterLearningGoals ||
-                  "Explore Next.js server components and GraphQL integration."}
+                {formData.learningGoals || formData.nextQuarterLearningGoals || "—"}
               </div>
             </div>
           </div>
@@ -1088,12 +1206,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   Step 5: Company Environment
                 </h3>
               </div>
+              {envInfo ? (
               <span className="text-xs font-bold text-[#A36361] px-3 py-1 rounded-full bg-[#A36361]/10 flex items-center gap-1.5 border border-[#A36361]/20 shadow-xs eval-stagger-item eval-stagger-2">
                 <span className="text-sm">{envInfo.emoji}</span>
                 <span>
                   {envInfo.label} ({envRating}/5)
                 </span>
               </span>
+              ) : null}
             </div>
 
             {/* Feedback on Work Culture */}
@@ -1105,8 +1225,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 className="eval-readonly-field p-3.5 bg-gray-50/80 border border-[#D3A29D]/50 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
                 title="Employee submitted response (Read-only)"
               >
-                {formData.workCultureFeedback ||
-                  "The collaborative workspace is highly productive. The developer tools provided are excellent and help speed up development cycles."}
+                {formData.workCultureFeedback || "—"}
               </div>
             </div>
 
@@ -1119,8 +1238,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 className="eval-readonly-field p-3.5 bg-gray-50/80 border border-[#D3A29D]/50 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
                 title="Employee submitted response (Read-only)"
               >
-                {formData.workLifeBalance ||
-                  "I feel highly aligned with the company's vision of delivering fast, reliable employee portals."}
+                {formData.workLifeBalance || "—"}
               </div>
             </div>
 
@@ -1133,8 +1251,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 className="eval-readonly-field p-3.5 bg-gray-50/80 border border-[#D3A29D]/50 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
                 title="Employee submitted response (Read-only)"
               >
-                {formData.suggestionsForImprovement ||
-                  "I feel highly aligned with the company's vision of delivering fast, reliable employee portals."}
+                {formData.suggestionsForImprovement || "—"}
               </div>
             </div>
           </div>
@@ -1224,7 +1341,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </button>
               </div>
             </div>
-          </div>
+          </>
+          ) : (
+            <div className="eval-glass-card eval-reveal-card p-4 sm:p-5">
+              <p className="text-sm font-medium text-[#64748B]">
+                This employee has not submitted the quarterly review yet. The data appear here after they submit.
+              </p>
+            </div>
+          )}
+        </div>
         )}
 
         {/* ===================================================================

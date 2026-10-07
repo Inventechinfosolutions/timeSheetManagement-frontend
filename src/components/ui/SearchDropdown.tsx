@@ -1,5 +1,7 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
-import { ChevronDown, Search, X, Loader2 } from "lucide-react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { Check, ChevronDown, Search, X } from "lucide-react";
+import { WorksphereLogoLoader } from "../ApiLoadingSpinner";
 import { Tooltip } from "./Tooltip";
 import { useDebounce } from "../../hooks/useDebounce";
 
@@ -37,6 +39,9 @@ export interface SearchDropdownProps<T = string> {
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
   serverSearch?: boolean;
   emptyMessage?: string;
+  multiple?: boolean;
+  values?: T[];
+  onToggle?: (value: T) => void;
 }
 
 export function SearchDropdown<T extends string = string>({
@@ -62,11 +67,30 @@ export function SearchDropdown<T extends string = string>({
   onScroll,
   serverSearch = false,
   emptyMessage = "No matching options",
+  multiple = false,
+  values = [],
+  onToggle,
 }: SearchDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const placeMenu = useCallback(() => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMenuStyle({
+      position: "fixed",
+      top: rect.bottom + 8,
+      left: rect.left,
+      width: rect.width,
+      minWidth: rect.width,
+      maxWidth: rect.width,
+      zIndex: 10050,
+    });
+  }, []);
 
   const isControlledSearch = searchValue !== undefined;
   const currentSearch = isControlledSearch ? searchValue : searchQuery;
@@ -80,19 +104,29 @@ export function SearchDropdown<T extends string = string>({
   // Close on outside click and reset search query
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-        if (!isControlledSearch) {
-          setSearchQuery("");
-        }
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
+      }
+      setIsOpen(false);
+      if (!isControlledSearch) {
+        setSearchQuery("");
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isControlledSearch]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    placeMenu();
+    window.addEventListener("resize", placeMenu);
+    window.addEventListener("scroll", placeMenu, true);
+    return () => {
+      window.removeEventListener("resize", placeMenu);
+      window.removeEventListener("scroll", placeMenu, true);
+    };
+  }, [isOpen, placeMenu, options.length]);
 
   // Focus search input when dropdown opens
   useEffect(() => {
@@ -112,12 +146,29 @@ export function SearchDropdown<T extends string = string>({
     }
   }, [debouncedSearch, onSearchChange]);
 
+  const labelCache = useRef(new Map<string, string>());
+  options.forEach((opt) => {
+    labelCache.current.set(String(opt.value), opt.label);
+  });
+  const selectedValues = multiple ? values : value ? [value] : [];
   const selectedOption = options.find((opt) => opt.value === value);
-  const currentLabel = selectedOption?.label || placeholder;
-  const isSelected = Boolean(value && (defaultValue !== undefined ? value !== defaultValue : true));
+  const currentLabel = multiple
+    ? selectedValues.length === 0
+      ? placeholder
+      : selectedValues
+          .map((selected) => labelCache.current.get(String(selected)) || String(selected))
+          .join(", ")
+    : selectedOption?.label || placeholder;
+  const isSelected = multiple
+    ? selectedValues.length > 0
+    : Boolean(value && (defaultValue !== undefined ? value !== defaultValue : true));
 
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (multiple) {
+      onClear?.();
+      return;
+    }
     if (onClear) {
       onClear();
     } else if (defaultValue !== undefined) {
@@ -148,9 +199,14 @@ export function SearchDropdown<T extends string = string>({
         title={isSelected && maxLabelWidth !== "max-w-none" ? currentLabel : undefined}
         placement="top"
         mouseEnterDelay={0.3}
+        className={className.includes("w-full") ? "!flex !w-full" : ""}
       >
         <div
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onClick={() => {
+            if (disabled) return;
+            if (!isOpen) placeMenu();
+            setIsOpen(!isOpen);
+          }}
           className={`flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F7FE] hover:bg-gray-100 rounded-xl text-xs font-bold text-[#2B3674] transition-all border ${
             error ? "border-red-500 ring-2 ring-red-100" : "border-transparent"
           } cursor-pointer select-none ${
@@ -169,7 +225,27 @@ export function SearchDropdown<T extends string = string>({
               {selectedOption.badgeText}
             </span>
           )}
-          {allowClear && isSelected && !disabled ? (
+          {multiple ? (
+            <span className="ml-auto inline-flex items-center gap-1 shrink-0">
+              {allowClear && isSelected && !disabled ? (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={handleClear}
+                  className="p-0.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer shrink-0"
+                  title="Clear selection"
+                >
+                  <X size={14} />
+                </span>
+              ) : null}
+              <ChevronDown
+                size={14}
+                className={`text-gray-400 shrink-0 transition-transform cursor-pointer ${
+                  isOpen ? "rotate-180" : ""
+                }`}
+              />
+            </span>
+          ) : allowClear && isSelected && !disabled ? (
             <span
               role="button"
               tabIndex={0}
@@ -192,9 +268,11 @@ export function SearchDropdown<T extends string = string>({
 
       {error && <p className="text-red-500 text-xs mt-1 ml-2 font-medium">{error}</p>}
 
-      {isOpen && (
+      {isOpen && createPortal(
         <div
-          className={`absolute top-full left-0 mt-2 ${menuClassName ? menuClassName : "w-64"} bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150`}
+          ref={menuRef}
+          style={menuStyle}
+          className={`${menuClassName || ""} bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-[10050] animate-in fade-in slide-in-from-top-2 duration-150`}
         >
           {/* Internal Search Input */}
           <div className="flex items-center bg-[#F4F7FE] rounded-xl px-2.5 py-2 mb-2 border border-transparent focus-within:border-[#4318FF]/30 transition-all">
@@ -231,8 +309,10 @@ export function SearchDropdown<T extends string = string>({
             className="max-h-56 overflow-y-auto overflow-x-hidden custom-scrollbar flex flex-col gap-0.5"
           >
             {loading && filteredOptions.length === 0 ? (
-              <div className="py-6 flex items-center justify-center text-[#4318FF]">
-                <Loader2 size={20} className="animate-spin" />
+              <div className="py-2 flex items-center justify-center overflow-hidden">
+                <div className="scale-75 origin-center">
+                  <WorksphereLogoLoader />
+                </div>
               </div>
             ) : filteredOptions.length === 0 ? (
               <div className="py-5 text-center text-xs font-medium text-gray-400">
@@ -240,13 +320,17 @@ export function SearchDropdown<T extends string = string>({
               </div>
             ) : (
               filteredOptions.map((option) => {
-                const isItemActive = option.value === value;
+                const isItemActive = selectedValues.includes(option.value);
                 return (
                   <button
                     key={String(option.value)}
                     type="button"
                     title={option.label}
                     onClick={() => {
+                      if (multiple) {
+                        onToggle?.(option.value);
+                        return;
+                      }
                       onChange(option.value);
                       setIsOpen(false);
                       if (!isControlledSearch) {
@@ -285,6 +369,17 @@ export function SearchDropdown<T extends string = string>({
                         )}
                       </div>
                     </div>
+                    {multiple ? (
+                      <span
+                        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                          isItemActive
+                            ? "bg-white border-white text-[#4318FF]"
+                            : "border-gray-300 text-transparent"
+                        }`}
+                      >
+                        <Check size={12} />
+                      </span>
+                    ) : null}
                     {option.badgeText && (
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-[6px] border shrink-0 tracking-wide uppercase ml-1.5 ${
@@ -302,12 +397,15 @@ export function SearchDropdown<T extends string = string>({
               })
             )}
             {loading && filteredOptions.length > 0 && (
-              <div className="py-2 flex justify-center items-center text-[#4318FF]">
-                <Loader2 size={16} className="animate-spin" />
+              <div className="py-2 flex justify-center items-center overflow-hidden">
+                <div className="scale-75 origin-center">
+                  <WorksphereLogoLoader />
+                </div>
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

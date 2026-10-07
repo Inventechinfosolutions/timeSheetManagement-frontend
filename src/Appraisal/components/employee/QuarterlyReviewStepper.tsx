@@ -8,7 +8,9 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { ReviewFormData, QuarterlyReviewAssignment } from "../../types/appraisal.types";
-import { initialReviewFormData } from "../../mockData/quarterlyReview.mock";
+import { emptyReviewFormData } from "../../constants/emptyReviewForm";
+import { AppraisalApi, readApiError, toPerformancePayload } from "../../services/appraisal.api";
+import { QuaterlyEnum } from "../../enums/appraisal.enums";
 import OverviewStep from "./steps/OverviewStep";
 import AchievementsStep from "./steps/AchievementsStep";
 import TeamContributionStep from "./steps/TeamContributionStep";
@@ -20,6 +22,7 @@ import "./AppraisalDashboard.css";
 
 interface QuarterlyReviewStepperProps {
   assignment: QuarterlyReviewAssignment;
+  initialFormData?: ReviewFormData;
   onBack: () => void;
   onSubmitSuccess?: () => void;
 }
@@ -33,15 +36,31 @@ const STEP_DEFINITIONS = [
   { id: 6, label: "Final Review" },
 ];
 
+const quarterValue = (value: string): QuaterlyEnum | null => {
+  if (
+    value === QuaterlyEnum.Q1 ||
+    value === QuaterlyEnum.Q2 ||
+    value === QuaterlyEnum.Q3 ||
+    value === QuaterlyEnum.Q4
+  ) {
+    return value;
+  }
+  return null;
+};
+
 export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   assignment,
+  initialFormData,
   onBack,
   onSubmitSuccess,
 }) => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [exitingStep, setExitingStep] = useState<number | null>(null);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
-  const [formData, setFormData] = useState<ReviewFormData>(initialReviewFormData);
+  const [formData, setFormData] = useState<ReviewFormData>(initialFormData || emptyReviewFormData);
+  const [performanceId, setPerformanceId] = useState<number | null>(assignment.performanceId ?? null);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [saveError, setSaveError] = useState<string>("");
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -229,17 +248,53 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     };
   };
 
-  const handleNext = () => {
-    if (currentStep < 6) {
-      const validation = validateStep(currentStep);
-      if (!validation.isValid) {
-        setErrors(validation.errors);
-        scrollToField(validation.firstFieldId);
-        return;
-      }
-      setErrors({});
-      goToStep(currentStep + 1, true);
+  const persistStep = async (): Promise<boolean> => {
+    const quarter = quarterValue(assignment.quarter);
+    if (!assignment.employeeId || !quarter || !assignment.financialYear) {
+      setSaveError("This quarter is missing an employee, quarter, or financial year.");
+      return false;
     }
+    const payload = toPerformancePayload(
+      assignment.employeeId,
+      quarter,
+      assignment.financialYear,
+      formData,
+    );
+    setSaving(true);
+    setSaveError("");
+    try {
+      if (!performanceId) {
+        const created = await AppraisalApi.createPerformance(payload);
+        setPerformanceId(created.id);
+        return true;
+      }
+      await AppraisalApi.getPerformanceById(performanceId);
+      await AppraisalApi.updatePerformance(performanceId, payload);
+      return true;
+    } catch (error) {
+      setSaveError(readApiError(error));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleNext = async () => {
+    if (currentStep >= 6 || saving) {
+      return;
+    }
+    const validation = validateStep(currentStep);
+    if (!validation.isValid) {
+      setErrors(validation.errors);
+      scrollToField(validation.firstFieldId);
+      return;
+    }
+    const saved = await persistStep();
+    if (!saved) {
+      return;
+    }
+    setErrors({});
+    goToStep(currentStep + 1, true);
   };
 
   const handlePrev = () => {
@@ -271,13 +326,22 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     goToStep(targetStep, true);
   };
 
-  const handleSaveAndExit = () => {
+  const handleSaveAndExit = async () => {
+    if (saving) {
+      return;
+    }
+    const saved = await persistStep();
+    if (!saved) {
+      return;
+    }
     scrollToTop();
     onBack();
   };
 
-  const handleSubmit = () => {
-    // Validate all 5 input steps before final submission
+  const handleSubmit = async () => {
+    if (saving) {
+      return;
+    }
     for (let s = 1; s <= 5; s++) {
       const validation = validateStep(s);
       if (!validation.isValid) {
@@ -287,7 +351,27 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         return;
       }
     }
-
+    const saved = await persistStep();
+    if (!saved) {
+      return;
+    }
+    const quarter = quarterValue(assignment.quarter);
+    if (!quarter) {
+      return;
+    }
+    setSaving(true);
+    try {
+      await AppraisalApi.submitPerformance({
+        employeeId: assignment.employeeId,
+        quarter,
+        financialYear: assignment.financialYear,
+      });
+    } catch (error) {
+      setSaveError(readApiError(error));
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
     setSubmitted(true);
     setTimeout(() => {
       onSubmitSuccess?.();
@@ -503,7 +587,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                 <Button
                   variant="outline"
                   size="md"
-                  onClick={handleSaveAndExit}
+                  onClick={onBack}
                   leftIcon={<ArrowLeft className="w-4 h-4" />}
                   className="px-5 py-2.5 rounded-xl border-[#D3A29D]/50 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-[#A36361]"
                 >
@@ -521,20 +605,23 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               )}
 
               <div className="flex items-center gap-3">
+                {saveError ? <p className="text-xs font-bold text-red-600">{saveError}</p> : null}
                 <Button
                   variant="ghost"
                   size="md"
-                  onClick={handleSaveAndExit}
+                  onClick={() => void handleSaveAndExit()}
+                  disabled={saving}
                   className="text-[#64748B] hover:text-[#0F172A]"
                 >
-                  Save & Exit
+                  {saving ? "Saving" : "Save & Exit"}
                 </Button>
 
                 {currentStep < 6 ? (
                   <Button
                     variant="primary"
                     size="md"
-                    onClick={handleNext}
+                    onClick={() => void handleNext()}
+                    disabled={saving}
                     rightIcon={<ChevronRight className="w-4 h-4" />}
                     className="px-6 py-2.5 rounded-xl font-bold !bg-gradient-to-r !from-[#A36361] !to-[#8D4E4D] hover:!from-[#8D4E4D] hover:!to-[#7A3F3D] !text-white shadow-md shadow-[#A36361]/25 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all"
                   >
@@ -544,7 +631,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   <Button
                     variant="primary"
                     size="md"
-                    onClick={handleSubmit}
+                    onClick={() => void handleSubmit()}
+                    disabled={saving}
                     leftIcon={<Send className="w-4 h-4 fill-white -rotate-12" />}
                     className="px-7 py-2.5 rounded-xl font-bold !bg-gradient-to-r !from-[#A36361] !to-[#8D4E4D] hover:!from-[#8D4E4D] hover:!to-[#7A3F3D] !text-white shadow-md shadow-[#A36361]/30 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                   >

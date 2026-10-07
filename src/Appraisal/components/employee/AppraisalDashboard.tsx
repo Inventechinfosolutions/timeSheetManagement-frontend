@@ -18,12 +18,14 @@ import {
   QuarterlyReviewAssignment,
   ManagerQuarterlyReviewRecord,
   AccessRequest,
+  ReviewFormData,
 } from "../../types/appraisal.types";
 import {
   mockQuarterlyReviewAssignments,
   initialMockAccessRequests,
 } from "../../mockData/quarterlyReview.mock";
 import { useEmployeeAppraisal } from "../../hooks/useEmployeeAppraisal";
+import { AppraisalApi, readApiError, toReviewFormData } from "../../services/appraisal.api";
 import QuarterlyReviewStepper from "./QuarterlyReviewStepper";
 import EvaluationPanel from "../manager/EvaluationPanel";
 import RatingVerificationModal from "./RatingVerificationModal";
@@ -84,6 +86,7 @@ export const AppraisalDashboard: React.FC = () => {
     financialYear,
     quarter,
     statusFilter,
+    yearOptions,
     hasActiveFilters,
     setFinancialYear,
     setQuarter,
@@ -91,8 +94,10 @@ export const AppraisalDashboard: React.FC = () => {
     handleClearFilters,
     openAssignment,
     closeAssignment,
+    reloadAssignments,
     submitReview,
   } = useEmployeeAppraisal();
+  const [editingForm, setEditingForm] = useState<ReviewFormData | undefined>(undefined);
 
   // Viewing assignment in EvaluationPanel
   const [viewingAssignment, setViewingAssignment] = useState<QuarterlyReviewAssignment | null>(null);
@@ -100,7 +105,6 @@ export const AppraisalDashboard: React.FC = () => {
   // Annual Rating Page and Verification states
   const [isAnnualRatingOpen, setIsAnnualRatingOpen] = useState<boolean>(false);
   const [isRatingAuthModalOpen, setIsRatingAuthModalOpen] = useState<boolean>(false);
-  const [isRatingAuthenticated, setIsRatingAuthenticated] = useState<boolean>(false);
 
   // Comprehensive scroll to top helper that handles window, body, documentElement,
   // and inner layout containers like <main> or overflow-y-auto elements in SidebarLayout
@@ -139,9 +143,23 @@ export const AppraisalDashboard: React.FC = () => {
   };
 
   // Scroll to top helper handlers for View and Edit
-  const handleOpenEdit = (assignment: QuarterlyReviewAssignment) => {
+  const handleOpenEdit = async (assignment: QuarterlyReviewAssignment) => {
     scrollToPageTop();
-    openAssignment(assignment);
+    try {
+      const performance = await AppraisalApi.getPerformanceForAssignment(
+        assignment.employeeId,
+        assignment.quarter,
+        assignment.financialYear,
+      );
+      setEditingForm(performance ? toReviewFormData(performance) : undefined);
+      openAssignment({
+        ...assignment,
+        performanceId: performance?.id ?? assignment.performanceId,
+      });
+    } catch (error) {
+      message.error(readApiError(error));
+      return;
+    }
     setTimeout(scrollToPageTop, 50);
   };
 
@@ -403,13 +421,20 @@ export const AppraisalDashboard: React.FC = () => {
 
         <div className="relative z-10">
           <QuarterlyReviewStepper
+            key={activeAssignment.id}
             assignment={activeAssignment}
+            initialFormData={editingForm}
             onBack={() => {
               scrollToPageTop();
+              setEditingForm(undefined);
               closeAssignment();
+              reloadAssignments();
               setTimeout(scrollToPageTop, 50);
             }}
-            onSubmitSuccess={() => submitReview(activeAssignment.id)}
+            onSubmitSuccess={() => {
+              submitReview(activeAssignment.id);
+              reloadAssignments();
+            }}
           />
         </div>
       </div>
@@ -557,12 +582,9 @@ export const AppraisalDashboard: React.FC = () => {
                 className="shrink-0"
                 placeholder="Financial Year"
                 allowClear={true}
-                defaultValue="FY 2026-27"
+                defaultValue=""
                 prefixIcon={<Calendar size={15} />}
-                options={[
-                  { value: "FY 2026-27", label: "FY 2026-27" },
-                  { value: "FY 2025-26", label: "FY 2025-26" },
-                ]}
+                options={yearOptions}
                 value={financialYear}
                 onChange={setFinancialYear}
                 maxLabelWidth="max-w-[105px]"
@@ -881,7 +903,6 @@ export const AppraisalDashboard: React.FC = () => {
       <RatingVerificationModal
         isOpen={isRatingAuthModalOpen}
         onClose={() => setIsRatingAuthModalOpen(false)}
-        onSuccess={handleVerificationSuccess}
       />
 
       {/* ACCESS REQUEST MODAL */}

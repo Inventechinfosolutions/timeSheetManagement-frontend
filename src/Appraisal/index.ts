@@ -20,6 +20,5 @@ export * from "./pages/EmployeeAppraisalPage";
 // Hooks
 export * from "./hooks/useEmployeeAppraisal";
 
-// Types & Mock Data
+// Types
 export * from "./types/appraisal.types";
-export * from "./mockData/quarterlyReview.mock";

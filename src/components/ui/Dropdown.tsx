@@ -1,5 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, X } from "lucide-react";
+import { WorksphereLogoLoader } from "../ApiLoadingSpinner";
 import { Tooltip } from "./Tooltip";
 
 export interface DropdownOption<T = string> {
@@ -24,6 +26,9 @@ export interface DropdownProps<T = string> {
   menuClassName?: string;
   maxLabelWidth?: string; // e.g. "max-w-[85px]"
   disabled?: boolean;
+  onOpen?: () => void;
+  loading?: boolean;
+  contentWidth?: boolean;
 }
 
 export function Dropdown<T extends string = string>({
@@ -39,22 +44,51 @@ export function Dropdown<T extends string = string>({
   menuClassName = "",
   maxLabelWidth = "max-w-[85px]",
   disabled = false,
+  onOpen,
+  loading = false,
+  contentWidth = false,
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
   const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const placeMenu = useCallback(() => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setMenuStyle({
+      position: "fixed",
+      top: rect.bottom + 8,
+      left: rect.left,
+      width: contentWidth ? "max-content" : rect.width,
+      minWidth: rect.width,
+      maxWidth: contentWidth ? undefined : rect.width,
+      zIndex: 10050,
+    });
+  }, [contentWidth]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
       }
+      setIsOpen(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    placeMenu();
+    window.addEventListener("resize", placeMenu);
+    window.addEventListener("scroll", placeMenu, true);
+    return () => {
+      window.removeEventListener("resize", placeMenu);
+      window.removeEventListener("scroll", placeMenu, true);
+    };
+  }, [isOpen, placeMenu, options.length]);
 
   const selectedOption = options.find((opt) => opt.value === value);
   const currentLabel = selectedOption?.label || placeholder;
@@ -75,43 +109,63 @@ export function Dropdown<T extends string = string>({
         title={isFiltered ? currentLabel : undefined}
         placement="top"
         mouseEnterDelay={0.3}
+        className={className.includes("w-full") ? "!flex !w-full" : ""}
       >
         <div
-          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onClick={() => {
+            if (disabled) return;
+            if (isOpen) {
+              setIsOpen(false);
+              return;
+            }
+            placeMenu();
+            onOpen?.();
+            setIsOpen(true);
+          }}
           className={`flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F7FE] hover:bg-gray-100 rounded-xl text-xs font-bold text-[#2B3674] transition-all border border-transparent cursor-pointer select-none ${
             disabled ? "opacity-50 cursor-not-allowed" : ""
           } ${buttonClassName}`}
         >
           {prefixIcon && <span className="text-[#4318FF] shrink-0">{prefixIcon}</span>}
-          <span className={`${maxLabelWidth} truncate`}>{currentLabel}</span>
-          {allowClear && isFiltered && !disabled ? (
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={handleClear}
-              className="p-0.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-200/70 transition-colors cursor-pointer ml-0.5 shrink-0"
-              title="Clear filter"
-            >
-              <X size={12} />
-            </span>
-          ) : (
+          <span className={`${maxLabelWidth} truncate flex-1 min-w-0 text-left`}>{currentLabel}</span>
+          <span className="ml-auto inline-flex items-center gap-1 shrink-0">
+            {allowClear && isFiltered && !disabled ? (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={handleClear}
+                className="p-0.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-200/70 transition-colors cursor-pointer shrink-0"
+                title="Clear filter"
+              >
+                <X size={12} />
+              </span>
+            ) : null}
             <ChevronDown
               size={12}
               className={`text-gray-400 shrink-0 transition-transform cursor-pointer ${
                 isOpen ? "rotate-180" : ""
               }`}
             />
-          )}
+          </span>
         </div>
       </Tooltip>
 
-      {isOpen && (
+      {isOpen &&
+        createPortal(
         <div
-          className={`absolute top-full left-0 mt-2 ${
-            menuClassName || "min-w-[260px] max-w-[340px] w-max"
-          } bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150 max-h-64 overflow-y-auto overflow-x-hidden custom-scrollbar`}
+          ref={menuRef}
+          style={menuStyle}
+          className={`${
+            menuClassName || ""
+          } bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-[10050] animate-in fade-in slide-in-from-top-2 duration-150 max-h-64 overflow-y-auto overflow-x-hidden custom-scrollbar`}
         >
-          {options.map((option) => {
+          {loading ? (
+            <div className="py-2 flex items-center justify-center overflow-hidden">
+              <div className="scale-75 origin-center">
+                <WorksphereLogoLoader />
+              </div>
+            </div>
+          ) : options.map((option) => {
             const isSelected = option.value === value;
             return (
               <button
@@ -137,7 +191,7 @@ export function Dropdown<T extends string = string>({
                       className="w-2 h-2 rounded-full shrink-0"
                     />
                   )}
-                  <span className="truncate">{option.label}</span>
+                  <span className={contentWidth ? "whitespace-nowrap" : "truncate"}>{option.label}</span>
                 </div>
                 {option.badgeText && (
                   <span
@@ -154,8 +208,9 @@ export function Dropdown<T extends string = string>({
               </button>
             );
           })}
-        </div>
-      )}
+        </div>,
+        document.body,
+        )}
     </div>
   );
 }

@@ -37,16 +37,23 @@ export interface ManagerQuarterlyReviewRecord {
   assignedBy: string;
   finalRating: string;
   status: ReviewAssignmentStatus;
+  reviewId?: number;
+  description?: string;
 }
 
 export interface QuarterlyReviewAssignment {
   id: string;
+  employeeId: string;
+  employeeName: string;
+  designation: string;
   quarter: string;
   financialYear: string;
   assignedBy: string;
   assignedDate: string;
   deadline: string;
   status: ReviewStatus;
+  canEdit: boolean;
+  performanceId?: number;
   description?: string;
   submittedAt?: string;
 }

@@ -4,6 +4,7 @@ export * from "./Toggle";
 export * from "./Input";
 export * from "./SearchBox";
 export * from "./Dropdown";
+export * from "./DatePicker";
 export * from "./SearchDropdown";
 export * from "./Badge";
 export * from "./Button";

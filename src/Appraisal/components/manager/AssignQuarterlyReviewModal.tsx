@@ -1,100 +1,289 @@
-import React, { useState, useEffect, useMemo } from "react";
-import { Send, Calendar, Check } from "lucide-react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
+import { Send, Check } from "lucide-react";
 import { AssignQuarterlyReviewModalProps } from "../../types/appraisal.types";
-import { initialMockQuarterlyReviewTableData } from "../../mockData/quarterlyReview.mock";
+import { useAppSelector } from "../../../hooks";
+import {
+  AppraisalApi,
+  MappedEmployee,
+  MasterFinancialYearOption,
+  MasterQuarterRecord,
+  readApiError,
+} from "../../services/appraisal.api";
+import { AppraisalCopy } from "../../constants/appraisal.constants";
+import { AssignButtonState, AssignFormField, AssignmentKind, QuaterlyEnum } from "../../enums/appraisal.enums";
 import {
   Modal,
   Button,
-  Input,
   Dropdown,
   SearchDropdown,
+  DatePicker,
 } from "../../../components/ui";
+import { AssignSubmitPanel, AssignSubmitSummary } from "./AssignSubmitPanel";
 import "./AssignQuarterlyReviewModal.css";
+
+const todayDisplayDate = (): string => {
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${day}-${month}-${now.getFullYear()}`;
+};
+
+const toIsoDate = (value: string): string | undefined => {
+  const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value.trim());
+  if (!match) {
+    return undefined;
+  }
+  return `${match[3]}-${match[2]}-${match[1]}`;
+};
 
 export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProps> = ({
   isOpen,
   onClose,
-  assignmentType = "individual",
+  assignmentType = AssignmentKind.INDIVIDUAL,
   onAssign,
 }) => {
-  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("FY 2026-27");
-  const [selectedQuarter, setSelectedQuarter] = useState<string>("Q1");
-  const [fromDate, setFromDate] = useState<string>("01-04-2026");
-  const [toDate, setToDate] = useState<string>("30-06-2026");
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const managerId = currentUser?.employeeId || currentUser?.loginId || "";
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("");
+  const [selectedQuarter, setSelectedQuarter] = useState<string>("");
+  const [masterYears, setMasterYears] = useState<MasterFinancialYearOption[]>([]);
+  const [masterQuarters, setMasterQuarters] = useState<MasterQuarterRecord[]>([]);
+  const [yearsLoading, setYearsLoading] = useState(false);
+  const [quartersLoading, setQuartersLoading] = useState(false);
+  const [fromDate, setFromDate] = useState<string>(todayDisplayDate);
+  const [toDate, setToDate] = useState<string>("");
   const [description, setDescription] = useState<string>("");
-  const [selectedEmployee, setSelectedEmployee] = useState<string>("");
-  const [buttonState, setButtonState] = useState<"idle" | "animating" | "assigned">("idle");
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [mappedEmployees, setMappedEmployees] = useState<MappedEmployee[]>([]);
+  const [assignError, setAssignError] = useState<string>("");
+  const [errorField, setErrorField] = useState<AssignFormField | null>(null);
+  const [submitSummary, setSubmitSummary] = useState<AssignSubmitSummary | null>(null);
+  const [buttonState, setButtonState] = useState<AssignButtonState>(AssignButtonState.IDLE);
   const [isModalClosing, setIsModalClosing] = useState<boolean>(false);
+  const [formSession, setFormSession] = useState(0);
+  const [trackedOpen, setTrackedOpen] = useState(isOpen);
 
-  // Available employee options for the search dropdown
-  const employeeOptions = useMemo(() => {
-    return initialMockQuarterlyReviewTableData.map((emp) => ({
-      value: emp.id,
-      label: `${emp.name} (${emp.id})`,
-      subLabel: emp.role,
-    }));
-  }, []);
-
-  // Sync date ranges when Quarter is changed
-  const handleQuarterChange = (q: string) => {
-    setSelectedQuarter(q);
-    const yr = selectedFinancialYear.includes("2026") ? 2026 : 2025;
-    if (q === "Q1") {
-      setFromDate(`01-04-${yr}`);
-      setToDate(`30-06-${yr}`);
-    } else if (q === "Q2") {
-      setFromDate(`01-07-${yr}`);
-      setToDate(`30-09-${yr}`);
-    } else if (q === "Q3") {
-      setFromDate(`01-10-${yr}`);
-      setToDate(`31-12-${yr}`);
-    } else if (q === "Q4") {
-      setFromDate(`01-01-${yr + 1}`);
-      setToDate(`31-03-${yr + 1}`);
+  if (isOpen !== trackedOpen) {
+    setTrackedOpen(isOpen);
+    if (isOpen) {
+      setFormSession((current) => current + 1);
+      setButtonState(AssignButtonState.IDLE);
+      setIsModalClosing(false);
+      setAssignError("");
+      setErrorField(null);
+      setSelectedEmployees([]);
+      setSubmitSummary(null);
+      setSelectedFinancialYear("");
+      setSelectedQuarter("");
+      setFromDate(todayDisplayDate());
+      setToDate("");
+      setDescription("");
     }
+  }
+
+  const employeeOptions = useMemo(() => {
+    return mappedEmployees.map((emp) => ({
+      value: emp.employeeId,
+      label: `${emp.employeeName} (${emp.employeeId})`,
+      subLabel: emp.department || "",
+    }));
+  }, [mappedEmployees]);
+
+  const loadEmployees = useCallback((search?: string) => {
+    if (!managerId) {
+      setMappedEmployees([]);
+      return;
+    }
+    void AppraisalApi.getMappedEmployees(managerId, search)
+      .then(setMappedEmployees)
+      .catch(() => setMappedEmployees([]));
+  }, [managerId]);
+
+  const yearsLoaded = useRef(false);
+  const quartersLoaded = useRef(false);
+
+  const loadFinancialYears = () => {
+    if (yearsLoaded.current) return;
+    yearsLoaded.current = true;
+    setYearsLoading(true);
+    void AppraisalApi.getMasterFinancialYears()
+      .then(setMasterYears)
+      .catch(() => {
+        yearsLoaded.current = false;
+        setMasterYears([]);
+      })
+      .finally(() => setYearsLoading(false));
   };
 
-  useEffect(() => {
-    if (!isOpen) {
-      setButtonState("idle");
-      setIsModalClosing(false);
-    }
-  }, [isOpen]);
+  const loadQuarters = () => {
+    if (quartersLoaded.current) return;
+    quartersLoaded.current = true;
+    setQuartersLoading(true);
+    const fromYear = masterYears.find((item) => item.financialYear === selectedFinancialYear)?.fromYear;
+    void AppraisalApi.getMasterQuarters(fromYear)
+      .then(setMasterQuarters)
+      .catch(() => {
+        quartersLoaded.current = false;
+        setMasterQuarters([]);
+      })
+      .finally(() => setQuartersLoading(false));
+  };
+
+  const quarterOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const options: { value: string; label: string }[] = [];
+    const selected = masterYears.find((year) => year.financialYear === selectedFinancialYear);
+    (selected?.quarters ?? []).forEach((item) => {
+      if (!item.quarter || seen.has(item.quarter)) return;
+      seen.add(item.quarter);
+      options.push({ value: item.quarter, label: item.quarterName || item.quarter });
+    });
+    masterQuarters.forEach((item) => {
+      if (!item.quaterLabel || seen.has(item.quaterLabel)) return;
+      seen.add(item.quaterLabel);
+      options.push({ value: item.quaterLabel, label: item.description || item.quaterLabel });
+    });
+    return options;
+  }, [masterYears, masterQuarters, selectedFinancialYear]);
+
+  const clearFieldError = (field: AssignFormField) => {
+    if (errorField !== field) return;
+    setErrorField(null);
+    setAssignError("");
+  };
+
+  const showFieldError = (field: AssignFormField, message: string) => {
+    setErrorField(field);
+    setAssignError(message);
+  };
+
+  const handleFinancialYearChange = (value: string) => {
+    setSelectedFinancialYear(value);
+    setSelectedQuarter("");
+    quartersLoaded.current = false;
+    clearFieldError(AssignFormField.FINANCIAL_YEAR);
+  };
+
+  const handleQuarterChange = (q: string) => {
+    setSelectedQuarter(q);
+    clearFieldError(AssignFormField.QUARTER);
+  };
+
+  const resetForm = useCallback(() => {
+    setButtonState(AssignButtonState.IDLE);
+    setIsModalClosing(false);
+    setAssignError("");
+    setErrorField(null);
+    setSelectedEmployees([]);
+    setSubmitSummary(null);
+    setSelectedFinancialYear("");
+    setSelectedQuarter("");
+    setFromDate(todayDisplayDate());
+    setToDate("");
+    setDescription("");
+  }, []);
+
+  const handleModalClose = () => {
+    resetForm();
+    onClose();
+  };
 
   if (!isOpen) return null;
 
   const handleAssignClick = () => {
-    if (buttonState !== "idle") return;
+    if (buttonState !== AssignButtonState.IDLE) return;
+    const targets =
+      assignmentType === AssignmentKind.ALL
+        ? mappedEmployees.map((employee) => employee.employeeId)
+        : selectedEmployees;
+    if (!managerId || targets.length === 0) {
+      showFieldError(AssignFormField.EMPLOYEES, AppraisalCopy.selectMappedEmployee);
+      return;
+    }
 
-    // Step 1: Animate the Assign icon (launches forward/up)
-    setButtonState("animating");
+    const quarter = (Object.values(QuaterlyEnum) as string[]).includes(selectedQuarter)
+      ? (selectedQuarter as QuaterlyEnum)
+      : undefined;
+    if (!selectedFinancialYear) {
+      showFieldError(AssignFormField.FINANCIAL_YEAR, AppraisalCopy.selectFinancialYear);
+      return;
+    }
+    if (!quarter) {
+      showFieldError(AssignFormField.QUARTER, AppraisalCopy.invalidQuarter);
+      return;
+    }
+    if (!toDate || !toIsoDate(toDate)) {
+      showFieldError(AssignFormField.DEADLINE, AppraisalCopy.selectDates);
+      return;
+    }
 
-    // Step 2: Smoothly transition button text from "Assign" to "Assigned" with checkmark & emerald state
-    setTimeout(() => {
-      setButtonState("assigned");
-    }, 280);
+    setAssignError("");
+    setErrorField(null);
+    setSubmitSummary({
+      people: targets.map((employeeId) => {
+        const match = mappedEmployees.find((employee) => employee.employeeId === employeeId);
+        return {
+          employeeId,
+          employeeName: match?.employeeName || employeeId,
+        };
+      }),
+      financialYear: selectedFinancialYear,
+      quarter: selectedQuarter,
+      fromDate,
+      toDate,
+      description,
+    });
+    setButtonState(AssignButtonState.CONFIRM);
+  };
 
-    // Step 3: Initiate smooth modal closing animation
-    setTimeout(() => {
-      setIsModalClosing(true);
-    }, 850);
+  const handleConfirmClick = () => {
+    if (buttonState !== AssignButtonState.CONFIRM || !submitSummary) return;
+    const quarter = (Object.values(QuaterlyEnum) as string[]).includes(selectedQuarter)
+      ? (selectedQuarter as QuaterlyEnum)
+      : undefined;
+    if (!quarter || !managerId) return;
 
-    // Step 4: After modal closing completes, notify parent to add/highlight table row and close modal
-    setTimeout(() => {
-      if (onAssign) {
-        onAssign({
-          quarter: selectedQuarter || "Q1",
-          employee: selectedEmployee || (assignmentType === "all" ? "ALL" : "EMP001"),
+    setAssignError("");
+    setButtonState(AssignButtonState.ANIMATING);
+    void Promise.all(
+      submitSummary.people.map((person) =>
+        AppraisalApi.createReview({
+          employeeId: person.employeeId,
+          quarter,
           financialYear: selectedFinancialYear,
-          fromDate,
-          toDate,
-          description,
-        });
-      }
-      onClose();
-      setIsModalClosing(false);
-      setButtonState("idle");
-    }, 1150);
+          assignedDate: toIsoDate(fromDate),
+          deadlineDate: toIsoDate(toDate),
+          description: description || undefined,
+          assignerId: managerId,
+        }),
+      ),
+    )
+      .then(() => {
+        setTimeout(() => {
+          setButtonState(AssignButtonState.ASSIGNED);
+        }, 280);
+        setTimeout(() => {
+          setIsModalClosing(true);
+        }, 850);
+        setTimeout(() => {
+          onAssign?.({
+            quarter: selectedQuarter,
+            employee: selectedEmployees[0] || "",
+            financialYear: selectedFinancialYear,
+            fromDate,
+            toDate,
+            description,
+          });
+          onClose();
+          setIsModalClosing(false);
+          setButtonState(AssignButtonState.IDLE);
+        }, 1150);
+      })
+      .catch((error: unknown) => {
+        setButtonState(AssignButtonState.CONFIRM);
+        setErrorField(null);
+        setAssignError(readApiError(error));
+      });
   };
 
   const modalTitle = (
@@ -114,32 +303,53 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   );
 
   const modalFooter = (
-    <div className="flex justify-end w-full">
+    <div className="flex justify-end gap-2 w-full">
+      {buttonState === AssignButtonState.CONFIRM ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setButtonState(AssignButtonState.IDLE);
+            setSubmitSummary(null);
+            setAssignError("");
+            setErrorField(null);
+          }}
+          className="assign-modal-cancel-btn"
+        >
+          Back
+        </Button>
+      ) : null}
       <button
         type="button"
-        disabled={buttonState !== "idle"}
-        onClick={handleAssignClick}
+        disabled={buttonState === AssignButtonState.ANIMATING || buttonState === AssignButtonState.ASSIGNED}
+        onClick={buttonState === AssignButtonState.CONFIRM ? handleConfirmClick : handleAssignClick}
         className={`assign-modal-submit-btn ${
-          buttonState === "animating"
+          buttonState === AssignButtonState.ANIMATING
             ? "assign-btn-animating"
-            : buttonState === "assigned"
+            : buttonState === AssignButtonState.ASSIGNED
             ? "assign-btn-assigned"
             : ""
         }`}
       >
         <span className="assign-btn-icon-wrapper">
-          {buttonState === "assigned" ? (
+          {buttonState === AssignButtonState.ASSIGNED ? (
             <Check className="w-4 h-4 text-white stroke-[3] assign-icon-check" />
           ) : (
             <Send
               className={`w-4 h-4 fill-white -rotate-12 ${
-                buttonState === "animating" ? "assign-icon-launching" : ""
+                buttonState === AssignButtonState.ANIMATING ? "assign-icon-launching" : ""
               }`}
             />
           )}
         </span>
         <span className="assign-btn-text">
-          {buttonState === "assigned" ? "Assigned" : "Assign"}
+          {buttonState === AssignButtonState.ASSIGNED
+            ? "Assigned"
+            : buttonState === AssignButtonState.ANIMATING
+              ? "Assigning"
+              : buttonState === AssignButtonState.CONFIRM
+                ? "Confirm"
+                : "Assign"}
         </span>
       </button>
     </div>
@@ -148,7 +358,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   return (
     <Modal
       open={isOpen}
-      onClose={onClose}
+      onClose={handleModalClose}
       title={modalTitle}
       footer={modalFooter}
       maxWidth="xl"
@@ -158,22 +368,26 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       closeOnEsc={false}
       className={`assign-quarterly-modal-dialog ${isModalClosing ? "modal-is-closing" : ""} p-5 sm:p-6 overflow-hidden [&>div:first-child]:border-none [&>div:first-child]:pb-1.5 [&>div:first-child]:mb-1.5 [&>div:last-child]:border-none [&>div:last-child]:pt-2.5 [&>div:last-child]:mt-2.5`}
     >
-      {/* Form Body */}
-      <div className="space-y-3.5">
+      {buttonState !== AssignButtonState.IDLE && submitSummary ? (
+        <AssignSubmitPanel summary={submitSummary} status={buttonState} error={assignError} />
+      ) : (
+      <div key={formSession} className="space-y-3.5">
         {/* SELECT EMPLOYEES */}
         <div className="assign-modal-form-section">
           <div className="flex items-center justify-between mb-1">
             <label className="text-[11px] font-bold tracking-wider text-[#0F172A] uppercase">
               SELECT EMPLOYEES
+              <span className="ml-2 normal-case tracking-normal text-[#A36361]">
+                Selected ({selectedEmployees.length})
+              </span>
             </label>
-            {assignmentType !== "all" && (
+            {assignmentType !== AssignmentKind.ALL && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  if (employeeOptions.length > 0) {
-                    setSelectedEmployee(employeeOptions[0].value);
-                  }
+                  setSelectedEmployees(employeeOptions.map((employee) => employee.value));
+                  clearFieldError(AssignFormField.EMPLOYEES);
                 }}
                 className="!p-0 text-xs font-semibold text-[#A36361] hover:bg-transparent hover:underline !shadow-none assign-select-all-btn"
               >
@@ -185,25 +399,47 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
           {/* Searchable employee selector - full length search bar */}
           <SearchDropdown
             placeholder={
-              assignmentType === "all"
+              assignmentType === AssignmentKind.ALL
                 ? "All team members selected (Entire Team)"
-                : selectedEmployee
-                ? employeeOptions.find((e) => e.value === selectedEmployee)?.label || selectedEmployee
                 : "Select one or more team members..."
             }
             searchPlaceholder="Search employees by name, role or ID..."
             allowClear={true}
             defaultValue=""
             options={employeeOptions}
-            value={selectedEmployee}
-            onChange={setSelectedEmployee}
+            value=""
+            onChange={() => undefined}
+            multiple
+            values={selectedEmployees}
+            onToggle={(employeeId) => {
+              setSelectedEmployees((current) =>
+                current.includes(employeeId)
+                  ? current.filter((id) => id !== employeeId)
+                  : [...current, employeeId],
+              );
+              clearFieldError(AssignFormField.EMPLOYEES);
+            }}
+            onClear={() => {
+              setSelectedEmployees([]);
+              clearFieldError(AssignFormField.EMPLOYEES);
+            }}
+            serverSearch
+            onSearchChange={loadEmployees}
             className="w-full"
-            menuClassName="w-full !w-full left-0 right-0 min-w-full shadow-2xl"
-            buttonClassName="w-full justify-between bg-white border border-[#A36361] ring-2 ring-[#A36361]/15 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] shadow-none assign-input-control assign-input-dropdown"
+            maxLabelWidth="min-w-0 flex-1"
+            menuClassName="shadow-2xl"
+            buttonClassName={`w-full justify-between bg-white border rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] shadow-none assign-input-control assign-input-dropdown ${
+              errorField === AssignFormField.EMPLOYEES
+                ? "is-error !border-red-500"
+                : "border-[#A36361] ring-2 ring-[#A36361]/15"
+            }`}
           />
+          {errorField === AssignFormField.EMPLOYEES ? (
+            <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+          ) : null}
 
           {/* Info / Warning Box */}
-          {assignmentType === "all" ? (
+          {assignmentType === AssignmentKind.ALL ? (
             <div className="assign-modal-warning-box mt-1.5 py-1.5 px-3 rounded-xl border border-[#BDD1C5] bg-[#F0F5F2] text-[#3B5244] text-[11px] leading-relaxed font-medium">
               Review access will be granted to all reporting team members in your department.
             </div>
@@ -224,18 +460,25 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             <Dropdown
               placeholder="Select financial year"
               allowClear={false}
-              defaultValue="FY 2026-27"
-              options={[
-                { value: "FY 2026-27", label: "FY 2026-27" },
-                { value: "FY 2025-26", label: "FY 2025-26" },
-                { value: "FY 2024-25", label: "FY 2024-25" },
-                { value: "FY 2027-28", label: "FY 2027-28" },
-              ]}
+              defaultValue=""
+              options={masterYears.map((year) => ({
+                value: year.financialYear,
+                label: year.financialYear,
+              }))}
               value={selectedFinancialYear}
-              onChange={setSelectedFinancialYear}
+              onChange={handleFinancialYearChange}
+              onOpen={loadFinancialYears}
+              loading={yearsLoading}
               className="w-full"
-              buttonClassName="w-full justify-between bg-white border border-[#D3A29D]/50 hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown"
+              buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${
+                errorField === AssignFormField.FINANCIAL_YEAR
+                  ? "is-error !border-red-500"
+                  : "border-[#D3A29D]/50"
+              }`}
             />
+            {errorField === AssignFormField.FINANCIAL_YEAR ? (
+              <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+            ) : null}
           </div>
 
           {/* QUARTER * */}
@@ -246,38 +489,34 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             <Dropdown
               placeholder="Select quarter"
               allowClear={false}
-              defaultValue="Q1"
-              options={[
-                { value: "Q1", label: "Q1 - First Quarter" },
-                { value: "Q2", label: "Q2 - Second Quarter" },
-                { value: "Q3", label: "Q3 - Third Quarter" },
-                { value: "Q4", label: "Q4 - Fourth Quarter" },
-              ]}
+              defaultValue=""
+              options={quarterOptions}
               value={selectedQuarter}
               onChange={handleQuarterChange}
+              onOpen={loadQuarters}
+              loading={quartersLoading && quarterOptions.length === 0}
               className="w-full"
-              buttonClassName="w-full justify-between bg-white border border-[#D3A29D]/50 hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown"
+              buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${
+                errorField === AssignFormField.QUARTER
+                  ? "is-error !border-red-500"
+                  : "border-[#D3A29D]/50"
+              }`}
             />
+            {errorField === AssignFormField.QUARTER ? (
+              <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+            ) : null}
           </div>
         </div>
 
-        {/* FROM DATE & TO (DEADLINE) (2-Column Grid) */}
+        {/* ASSIGNED DATE (today) & TO (DEADLINE) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          {/* FROM DATE * */}
           <div className="assign-modal-form-section">
             <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
-              FROM DATE <span className="text-red-500">*</span>
+              ASSIGNED DATE
             </label>
-            <Input
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              placeholder="dd-mm-yyyy"
-              variant="outlined"
-              inputSize="lg"
-              suffixIcon={<Calendar className="w-4 h-4 text-[#A36361]" />}
-              containerClassName="rounded-xl border-[#D3A29D]/50 transition-colors bg-white assign-input-control assign-input-field"
-              className="placeholder:text-[#64748B] font-mono text-sm"
-            />
+            <div className="ui-date-field flex w-full items-center rounded-xl border border-[#D3A29D]/50 bg-white px-3.5 py-2.5 text-sm assign-input-control">
+              <span className="font-mono text-[#0F172A]">{fromDate}</span>
+            </div>
           </div>
 
           {/* TO (DEADLINE) * */}
@@ -285,16 +524,20 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
               TO (DEADLINE) <span className="text-red-500">*</span>
             </label>
-            <Input
+            <DatePicker
               value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
+              onChange={(value) => {
+                setToDate(value);
+                clearFieldError(AssignFormField.DEADLINE);
+              }}
               placeholder="dd-mm-yyyy"
-              variant="outlined"
-              inputSize="lg"
-              suffixIcon={<Calendar className="w-4 h-4 text-[#A36361]" />}
-              containerClassName="rounded-xl border-[#D3A29D]/50 transition-colors bg-white assign-input-control assign-input-field"
-              className="placeholder:text-[#64748B] font-mono text-sm"
+              className={`assign-input-control ${
+                errorField === AssignFormField.DEADLINE ? "is-error !border-red-500" : ""
+              }`}
             />
+            {errorField === AssignFormField.DEADLINE ? (
+              <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+            ) : null}
           </div>
         </div>
 
@@ -312,6 +555,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
           />
         </div>
       </div>
+      )}
     </Modal>
   );
 };

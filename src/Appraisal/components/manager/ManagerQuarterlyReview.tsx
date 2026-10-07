@@ -1,18 +1,29 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Plus,
   Calendar,
   Clock,
-  Users,
   ClipboardList,
   RotateCcw,
 } from "lucide-react";
 import { AssignmentType, ManagerQuarterlyReviewRecord } from "../../types/appraisal.types";
-import { initialMockQuarterlyReviewTableData } from "../../mockData/quarterlyReview.mock";
+import { useAppSelector } from "../../../hooks";
+import {
+  AppraisalApi,
+  MasterFinancialYearOption,
+  MasterQuarterRecord,
+  toManagerReviewRecord,
+} from "../../services/appraisal.api";
+import {
+  AppraisalFilterAll,
+  QuaterlyEnum,
+  QuarterlyReviewStatus,
+} from "../../enums/appraisal.enums";
 import CreateReviewAssignmentModal from "./CreateReviewAssignmentModal";
 import AssignQuarterlyReviewModal from "./AssignQuarterlyReviewModal";
 import { QuarterlyReviewTable } from "./QuarterlyReviewTable";
 import EvaluationPanel, { EvaluationData } from "./EvaluationPanel";
+import { QUARTERLY_REVIEW_TABLE_PAGE_SIZE } from "../../constants/appraisal.constants";
 import {
   Button,
   Card,
@@ -25,15 +36,22 @@ import {
 import "./ManagerQuarterlyReview.css";
 
 export const ManagerQuarterlyReview: React.FC = () => {
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const managerId = currentUser?.employeeId || currentUser?.loginId || "";
   // Modal flow state (for visual presentation / prototyping)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [assignFormKey, setAssignFormKey] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [masterYears, setMasterYears] = useState<MasterFinancialYearOption[]>([]);
+  const [masterQuarters, setMasterQuarters] = useState<MasterQuarterRecord[]>([]);
+  const [yearsLoading, setYearsLoading] = useState(false);
+  const [quartersLoading, setQuartersLoading] = useState(false);
   const [assignmentType, setAssignmentType] = useState<AssignmentType | null>(null);
 
-  // Mock table data state (initialized with centralized mock records)
-  const [assignments, setAssignments] = useState<ManagerQuarterlyReviewRecord[]>(
-    initialMockQuarterlyReviewTableData
-  );
+  const [assignments, setAssignments] = useState<ManagerQuarterlyReviewRecord[]>([]);
+  const [tablePage, setTablePage] = useState(1);
+  const [tableTotal, setTableTotal] = useState(0);
 
   // Active record being evaluated/viewed in the Appraisal Review Evaluation Panel
   const [evaluatingRecord, setEvaluatingRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
@@ -74,6 +92,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
     setTimeout(scrollToTop, 150);
   };
 
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
+
   useEffect(() => {
     if (!evaluatingRecord) {
       triggerScrollToTop();
@@ -106,7 +126,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
         if (rec.id === recordId || rec.name === evaluatingRecord?.name) {
           return {
             ...rec,
-            status: "COMPLETED",
+            status: QuarterlyReviewStatus.COMPLETED,
             finalRating: evaluation.averageScore.toFixed(1),
           };
         }
@@ -130,11 +150,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [financialYear, setFinancialYear] = useState<string>("");
   const [quarter, setQuarter] = useState<string>("");
-  const [memberFilter, setMemberFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
 
   const hasActiveFilters = Boolean(
-    searchTerm.trim() || financialYear || quarter || memberFilter || statusFilter
+    searchTerm.trim() || financialYear || quarter || statusFilter
   );
 
   const handleOpenCreateModal = () => {
@@ -149,115 +168,138 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const handleContinueToAssign = (type: AssignmentType) => {
     setAssignmentType(type);
     setIsCreateModalOpen(false);
+    setAssignFormKey((current) => current + 1);
     setIsAssignModalOpen(true);
   };
 
   const handleCloseAssignModal = () => {
     setIsAssignModalOpen(false);
+    setAssignFormKey((current) => current + 1);
   };
 
-  // Mock assignment flow handler - prepends newly assigned employee to the table and highlights the row
-  const handleAssignSuccess = (data: { quarter: string; employee: string }) => {
-    const nextIndex = assignments.length + 1;
-    const assignedId = data.employee.startsWith("EMP") ? data.employee : `EMP00${nextIndex}`;
-    const newRecord: ManagerQuarterlyReviewRecord = {
-      name:
-        data.employee === "EMP001"
-          ? "Ananya Sharma"
-          : data.employee === "EMP002"
-            ? "Rahul Kumar"
-            : data.employee === "EMP003"
-              ? "Priya N"
-              : data.employee === "EMP004"
-                ? "Arjun R"
-                : data.employee === "EMP005"
-                  ? "Sneha Gowda"
-                  : "Deepak Verma",
-      id: assignedId,
-      role:
-        data.employee === "EMP001"
-          ? "Frontend Developer"
-          : data.employee === "EMP002"
-            ? "Backend Developer"
-            : "Software Engineer",
-      quarter: data.quarter || "Q1",
-      financialYear: data.financialYear || "FY 2026-27",
-      fromDate: data.fromDate || "01-04-2026",
-      toDate: data.toDate || "30-06-2026",
-      assignedOn: new Date().toLocaleDateString("en-GB").replace(/\//g, "-"),
-      assignedBy: "Manager",
-      finalRating: "-",
-      status: "NOT_STARTED",
-    };
-
-    // Prepend to assignments table
-    setAssignments((prev) => [newRecord, ...prev.filter((r) => !(r.id === assignedId && r.quarter === newRecord.quarter))]);
-
-    // Briefly highlight the exact row for about 1 second with a subtle background/glow
-    setHighlightedRowId(assignedId);
-
-    // After 1 second, smoothly return row to normal styling
-    setTimeout(() => {
-      setHighlightedRowId(null);
-    }, 1150);
+  const handleAssignSuccess = () => {
+    setReloadKey((current) => current + 1);
   };
 
   const handleClearFilters = () => {
     setSearchTerm("");
+    setDebouncedSearch("");
     setFinancialYear("");
     setQuarter("");
-    setMemberFilter("");
     setStatusFilter("");
   };
 
-  // Filtered assignments based on current filter selections
-  const filteredAssignments = useMemo(() => {
-    return assignments.filter((item) => {
-      if (searchTerm.trim()) {
-        const query = searchTerm.toLowerCase();
-        const matches =
-          item.name.toLowerCase().includes(query) ||
-          item.id.toLowerCase().includes(query) ||
-          item.role.toLowerCase().includes(query);
-        if (!matches) return false;
-      }
+  const yearsLoaded = useRef(false);
+  const quartersLoaded = useRef(false);
 
-      if (financialYear && financialYear !== "all") {
-        if (!item.financialYear.toLowerCase().includes(financialYear.toLowerCase())) {
-          return false;
-        }
-      }
+  const loadFinancialYears = () => {
+    if (yearsLoaded.current) return;
+    yearsLoaded.current = true;
+    setYearsLoading(true);
+    void AppraisalApi.getMasterFinancialYears()
+      .then(setMasterYears)
+      .catch(() => {
+        yearsLoaded.current = false;
+        setMasterYears([]);
+      })
+      .finally(() => setYearsLoading(false));
+  };
 
-      if (quarter && quarter !== "all") {
-        if (item.quarter.toLowerCase() !== quarter.toLowerCase()) return false;
-      }
+  const loadQuarters = () => {
+    if (quartersLoaded.current) return;
+    if (masterYears.some((year) => (year.quarters?.length ?? 0) > 0)) {
+      quartersLoaded.current = true;
+      return;
+    }
+    quartersLoaded.current = true;
+    setQuartersLoading(true);
+    void AppraisalApi.getMasterQuarters()
+      .then(setMasterQuarters)
+      .catch(() => {
+        quartersLoaded.current = false;
+        setMasterQuarters([]);
+      })
+      .finally(() => setQuartersLoading(false));
+  };
 
-      if (memberFilter && memberFilter !== "all") {
-        if (item.id !== memberFilter && item.name !== memberFilter) return false;
-      }
+  const tableFilters = `${debouncedSearch}|${financialYear}|${quarter}|${statusFilter}`;
+  const [appliedTableFilters, setAppliedTableFilters] = useState(tableFilters);
+  if (appliedTableFilters !== tableFilters) {
+    setAppliedTableFilters(tableFilters);
+    setTablePage(1);
+  }
 
-      if (statusFilter && statusFilter !== "all") {
-        const itemStatusNorm = item.status.toLowerCase().replace(/_/g, " ");
-        const filterNorm = statusFilter.toLowerCase().replace(/_/g, " ");
-        if (itemStatusNorm !== filterNorm) return false;
-      }
+  useEffect(() => {
+    if (!managerId) {
+      setAssignments([]);
+      setTableTotal(0);
+      return;
+    }
+    const selectedYear =
+      financialYear && financialYear !== AppraisalFilterAll.ALL ? financialYear : undefined;
+    const selectedQuarter =
+      quarter && quarter !== AppraisalFilterAll.ALL ? (quarter as QuaterlyEnum) : undefined;
+    const selectedStatus =
+      !statusFilter || statusFilter === AppraisalFilterAll.ALL
+        ? undefined
+        : statusFilter === QuarterlyReviewStatus.COMPLETED
+          ? QuarterlyReviewStatus.REVIEWED
+          : (statusFilter as QuarterlyReviewStatus);
+    const query = {
+      assignerId: managerId,
+      page: tablePage,
+      limit: QUARTERLY_REVIEW_TABLE_PAGE_SIZE,
+      financialYear: selectedYear,
+      quarter: selectedQuarter,
+      status: selectedStatus,
+    };
+    const searchText = debouncedSearch.trim();
+    const request = searchText
+      ? AppraisalApi.searchReviews({ ...query, q: searchText })
+      : AppraisalApi.getReviews(query);
 
-      return true;
-    });
-  }, [assignments, searchTerm, financialYear, quarter, memberFilter, statusFilter]);
+    void request
+      .then((result) => {
+        setAssignments((result.data || []).map(toManagerReviewRecord));
+        setTableTotal(result.total ?? 0);
+      })
+      .catch(() => {
+        setAssignments([]);
+        setTableTotal(0);
+      });
+  }, [managerId, debouncedSearch, financialYear, quarter, statusFilter, reloadKey, tablePage]);
 
-  // Dynamic member filter options based on assignments
-  const memberOptions = useMemo(() => {
+  const financialYearOptions = masterYears.map((year) => ({
+    value: year.financialYear,
+    label: year.financialYear,
+  }));
+
+  const quarterOptions = (() => {
     const seen = new Set<string>();
-    const opts = [{ value: "all", label: "Members" }];
-    assignments.forEach((a) => {
-      if (!seen.has(a.id)) {
-        seen.add(a.id);
-        opts.push({ value: a.id, label: `${a.name} (${a.id})` });
-      }
+    const options: { value: string; label: string }[] = [];
+    masterYears.forEach((year) => {
+      year.quarters?.forEach((item) => {
+        if (!item.quarter || seen.has(item.quarter)) return;
+        seen.add(item.quarter);
+        options.push({ value: item.quarter, label: item.quarterName || item.quarter });
+      });
     });
-    return opts;
-  }, [assignments]);
+    masterQuarters.forEach((item) => {
+      if (!item.quaterLabel || seen.has(item.quaterLabel)) return;
+      seen.add(item.quaterLabel);
+      options.push({ value: item.quaterLabel, label: item.quaterLabel });
+    });
+    return options;
+  })();
+
+  const statusOptions = [
+    { value: AppraisalFilterAll.ALL, label: "Status" },
+    { value: QuarterlyReviewStatus.NOT_STARTED, label: "Not Started" },
+    { value: QuarterlyReviewStatus.IN_PROGRESS, label: "In Progress" },
+    { value: QuarterlyReviewStatus.SUBMITTED, label: "Submitted" },
+    { value: QuarterlyReviewStatus.UNDER_REVIEW, label: "Under Review" },
+    { value: QuarterlyReviewStatus.COMPLETED, label: "Completed" },
+  ];
 
   if (evaluatingRecord) {
     return (
@@ -278,6 +320,32 @@ export const ManagerQuarterlyReview: React.FC = () => {
             mode={evaluationMode}
             onBack={handleBackToDashboard}
             onSubmitEvaluation={handleEvaluationSubmit}
+            onAssignmentSaved={(patch) => {
+              setEvaluatingRecord((current) =>
+                current
+                  ? {
+                      ...current,
+                      fromDate: patch.assignedDate,
+                      assignedOn: patch.assignedDate,
+                      toDate: patch.deadline,
+                      description: patch.description,
+                    }
+                  : current,
+              );
+              setAssignments((current) =>
+                current.map((item) =>
+                  item.reviewId === patch.reviewId
+                    ? {
+                        ...item,
+                        fromDate: patch.assignedDate,
+                        assignedOn: patch.assignedDate,
+                        toDate: patch.deadline,
+                        description: patch.description,
+                      }
+                    : item,
+                ),
+              );
+            }}
           />
         </div>
       </div>
@@ -318,6 +386,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
           </div>
 
           {/* Create Button at top of card with animated SVG icon */}
+          <div className="flex w-full sm:w-auto gap-2">
           <Button
             variant="primary"
             size="lg"
@@ -357,6 +426,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
           >
             Create
           </Button>
+          </div>
         </div>
 
         {/* Main Section Card */}
@@ -373,6 +443,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onClear={() => setSearchTerm("")}
+                  onDebounce={setDebouncedSearch}
                   placeholder="Search..."
                   variant="outlined"
                   inputSize="md"
@@ -388,16 +459,13 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 allowClear={true}
                 defaultValue=""
                 prefixIcon={<Calendar size={14} className="filter-icon-fy" />}
-                options={[
-                  { value: "all", label: "All FY" },
-                  { value: "FY 2026-27", label: "FY 2026-27" },
-                  { value: "FY 2025-26", label: "FY 2025-26" },
-                  { value: "FY 2024-25", label: "FY 2024-25" },
-                ]}
+                options={financialYearOptions}
                 value={financialYear}
                 onChange={setFinancialYear}
-                maxLabelWidth="max-w-[70px]"
-                buttonClassName="manager-review-filter-btn filter-btn-fy rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[108px]"
+                onOpen={loadFinancialYears}
+                loading={yearsLoading}
+                maxLabelWidth="max-w-[124px]"
+                buttonClassName="manager-review-filter-btn filter-btn-fy rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[172px]"
               />
 
               <Dropdown
@@ -406,30 +474,13 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 allowClear={true}
                 defaultValue=""
                 prefixIcon={<Clock size={14} className="filter-icon-quarters" />}
-                options={[
-                  { value: "all", label: "Quarters" },
-                  { value: "Q1", label: "Quarter 1" },
-                  { value: "Q2", label: "Quarter 2" },
-                  { value: "Q3", label: "Quarter 3" },
-                  { value: "Q4", label: "Quarter 4" },
-                ]}
+                options={quarterOptions}
                 value={quarter}
                 onChange={setQuarter}
-                maxLabelWidth="max-w-[55px]"
-                buttonClassName="manager-review-filter-btn filter-btn-quarters rounded-xl px-2 py-1.5 text-xs font-medium min-w-[84px]"
-              />
-
-              <Dropdown
-                className="shrink-0 filter-item-stagger-4"
-                placeholder="Members"
-                allowClear={true}
-                defaultValue=""
-                prefixIcon={<Users size={14} className="filter-icon-members" />}
-                options={memberOptions}
-                value={memberFilter}
-                onChange={setMemberFilter}
-                maxLabelWidth="max-w-[62px]"
-                buttonClassName="manager-review-filter-btn filter-btn-members rounded-xl px-2 py-1.5 text-xs font-medium min-w-[88px]"
+                onOpen={loadQuarters}
+                loading={quartersLoading && quarterOptions.length === 0}
+                maxLabelWidth="max-w-[100px]"
+                buttonClassName="manager-review-filter-btn filter-btn-quarters rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[150px]"
               />
 
               <Dropdown
@@ -438,18 +489,12 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 allowClear={true}
                 defaultValue=""
                 prefixIcon={<ClipboardList size={14} className="filter-icon-status" />}
-                options={[
-                  { value: "all", label: "Status" },
-                  { value: "NOT_STARTED", label: "Not Started" },
-                  { value: "IN_PROGRESS", label: "In Progress" },
-                  { value: "SUBMITTED", label: "Submitted" },
-                  { value: "UNDER_REVIEW", label: "Under Review" },
-                  { value: "COMPLETED", label: "Completed" },
-                ]}
+                options={statusOptions}
                 value={statusFilter}
                 onChange={setStatusFilter}
-                maxLabelWidth="max-w-[52px]"
-                buttonClassName="manager-review-filter-btn filter-btn-status rounded-xl px-2 py-1.5 text-xs font-medium min-w-[78px]"
+                maxLabelWidth="max-w-[80px]"
+                contentWidth
+                buttonClassName="manager-review-filter-btn filter-btn-status rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[124px]"
               />
 
               {hasActiveFilters && (
@@ -470,12 +515,16 @@ export const ManagerQuarterlyReview: React.FC = () => {
           <CardContent className="p-0">
 
             {/* Table populated state vs Empty state */}
-            {filteredAssignments.length > 0 ? (
+            {assignments.length > 0 ? (
               <QuarterlyReviewTable
-                data={filteredAssignments}
+                data={assignments}
                 highlightedId={highlightedRowId}
                 onEdit={handleEditRecord}
                 onView={handleViewRecord}
+                page={tablePage}
+                totalCount={tableTotal}
+                defaultPageSize={QUARTERLY_REVIEW_TABLE_PAGE_SIZE}
+                onPageChange={setTablePage}
               />
             ) : (
               /* Empty State UI with Rich Colors and Animated SVG */
@@ -496,7 +545,6 @@ export const ManagerQuarterlyReview: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Modals for Flow Visualization */}
         <CreateReviewAssignmentModal
           isOpen={isCreateModalOpen}
           onClose={handleCloseCreateModal}
@@ -505,6 +553,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
         />
 
         <AssignQuarterlyReviewModal
+          key={assignFormKey}
           isOpen={isAssignModalOpen}
           onClose={handleCloseAssignModal}
           assignmentType={assignmentType}

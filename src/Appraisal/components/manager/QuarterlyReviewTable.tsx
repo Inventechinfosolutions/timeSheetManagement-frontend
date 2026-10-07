@@ -12,6 +12,9 @@ interface QuarterlyReviewTableProps {
   highlightedId?: string | null;
   defaultPageSize?: number;
   showPagination?: boolean;
+  page?: number;
+  totalCount?: number;
+  onPageChange?: (page: number) => void;
   headerTheme?: "indigo" | "navy" | "purple" | "teal";
 }
 
@@ -34,17 +37,23 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   defaultPageSize = 10,
   showPagination = true,
   headerTheme = "indigo",
+  page,
+  totalCount,
+  onPageChange,
 }) => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = defaultPageSize;
+  const isServerPage = typeof onPageChange === "function";
+  const activePage = isServerPage ? page ?? 1 : currentPage;
 
   // Automatically reset to page 1 if data length shrinks beyond current page boundary
   useEffect(() => {
+    if (isServerPage) return;
     const maxPage = Math.max(1, Math.ceil(data.length / pageSize));
     if (currentPage > maxPage) {
       setCurrentPage(1);
     }
-  }, [data.length, pageSize, currentPage]);
+  }, [data.length, pageSize, currentPage, isServerPage]);
 
   // When an assignment is newly added and highlighted, navigate to the page containing that item
   useEffect(() => {
@@ -69,10 +78,10 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
 
   // Compute paginated slice of data
   const paginatedData = useMemo(() => {
-    if (!showPagination) return data;
+    if (!showPagination || isServerPage) return data;
     const startIndex = (currentPage - 1) * pageSize;
     return data.slice(startIndex, startIndex + pageSize);
-  }, [data, currentPage, pageSize, showPagination]);
+  }, [data, currentPage, pageSize, showPagination, isServerPage]);
 
   const getInitials = (name: string): string => {
     const parts = name.trim().split(" ");
@@ -93,9 +102,12 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
 
   const STATUS_LABELS: Record<string, string> = {
     NOT_STARTED: "Not Started",
+    DRAFT: "In Progress",
     IN_PROGRESS: "In Progress",
     SUBMITTED: "Submitted",
     UNDER_REVIEW: "Under Review",
+    EDIT_REQUESTED: "Under Review",
+    EDIT_GRANTED: "In Progress",
     COMPLETED: "Completed",
   };
 
@@ -206,9 +218,9 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
     );
   };
 
-  const totalItems = data.length;
-  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const endItem = Math.min(currentPage * pageSize, totalItems);
+  const totalItems = isServerPage ? totalCount ?? 0 : data.length;
+  const startItem = totalItems === 0 ? 0 : (activePage - 1) * pageSize + 1;
+  const endItem = Math.min(activePage * pageSize, totalItems);
 
   return (
     <div className={`quarterly-review-table-card ${className}`}>
@@ -339,10 +351,10 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
             </span>
 
             <Pagination
-              currentPage={currentPage}
+              currentPage={activePage}
               totalItems={totalItems}
               pageSize={pageSize}
-              onPageChange={setCurrentPage}
+              onPageChange={isServerPage ? onPageChange : setCurrentPage}
               showTotal={false}
               activeClassName="!bg-[#A36361] !text-white shadow-xs font-black shadow-[#A36361]/25"
             />

@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { QuarterlyReviewAssignment, ReviewFormData } from "../types/appraisal.types";
-import {
-  mockQuarterlyReviewAssignments,
-  initialReviewFormData,
-} from "../mockData/quarterlyReview.mock";
+import { emptyReviewFormData } from "../constants/emptyReviewForm";
+import { AppraisalApi, toEmployeeAssignment } from "../services/appraisal.api";
+import { useAppSelector } from "../../hooks";
+import { EmployeeReviewStatus } from "../enums/appraisal.enums";
 
 export interface UseEmployeeAppraisalReturn {
   assignments: QuarterlyReviewAssignment[];
@@ -12,6 +12,7 @@ export interface UseEmployeeAppraisalReturn {
   financialYear: string;
   quarter: string;
   statusFilter: string;
+  yearOptions: { value: string; label: string }[];
   showEmptyState: boolean;
   hasActiveFilters: boolean;
   setFinancialYear: (val: string) => void;
@@ -21,30 +22,50 @@ export interface UseEmployeeAppraisalReturn {
   handleClearFilters: () => void;
   openAssignment: (assignment: QuarterlyReviewAssignment) => void;
   closeAssignment: () => void;
+  reloadAssignments: () => void;
   updateFormField: (field: keyof ReviewFormData, value: any) => void;
   submitReview: (assignmentId: string) => void;
 }
 
 export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
-  const [assignments, setAssignments] = useState<QuarterlyReviewAssignment[]>(
-    mockQuarterlyReviewAssignments
-  );
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const employeeId = currentUser?.employeeId || currentUser?.loginId || "";
+  const [assignments, setAssignments] = useState<QuarterlyReviewAssignment[]>([]);
   const [activeAssignment, setActiveAssignment] = useState<QuarterlyReviewAssignment | null>(null);
-  const [formData, setFormData] = useState<ReviewFormData>(initialReviewFormData);
+  const [formData, setFormData] = useState<ReviewFormData>(emptyReviewFormData);
+
+  const reloadAssignments = useCallback(() => {
+    if (!employeeId) {
+      setAssignments([]);
+      return;
+    }
+    void AppraisalApi.getEmployeeReviews(employeeId)
+      .then((result) => setAssignments((result.data || []).map(toEmployeeAssignment)))
+      .catch(() => setAssignments([]));
+  }, [employeeId]);
+
+  useEffect(() => {
+    reloadAssignments();
+  }, [reloadAssignments]);
 
   // Filter states
-  const [financialYear, setFinancialYear] = useState<string>("FY 2026-27");
+  const [financialYear, setFinancialYear] = useState<string>("");
   const [quarter, setQuarter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showEmptyState, setShowEmptyState] = useState<boolean>(false);
 
+  const yearOptions = useMemo(() => {
+    const years = Array.from(new Set(assignments.map((item) => item.financialYear).filter(Boolean)));
+    return years.map((year) => ({ value: year, label: year }));
+  }, [assignments]);
+
   const hasActiveFilters = useMemo(
-    () => Boolean(quarter || statusFilter || (financialYear && financialYear !== "FY 2026-27")),
+    () => Boolean(quarter || statusFilter || financialYear),
     [quarter, statusFilter, financialYear]
   );
 
   const handleClearFilters = () => {
-    setFinancialYear("FY 2026-27");
+    setFinancialYear("");
     setQuarter("");
     setStatusFilter("");
   };
@@ -64,9 +85,7 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
   const submitReview = (assignmentId: string) => {
     setAssignments((prev) =>
       prev.map((a) =>
-        a.id === assignmentId
-          ? { ...a, status: "submitted", submittedAt: new Date().toISOString() }
-          : a
+        a.id === assignmentId ? { ...a, status: EmployeeReviewStatus.SUBMITTED } : a,
       )
     );
     setActiveAssignment(null);
@@ -89,6 +108,7 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
     financialYear,
     quarter,
     statusFilter,
+    yearOptions,
     showEmptyState,
     hasActiveFilters,
     setFinancialYear,
@@ -98,6 +118,7 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
     handleClearFilters,
     openAssignment,
     closeAssignment,
+    reloadAssignments,
     updateFormField,
     submitReview,
   };
