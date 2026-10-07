@@ -1,4 +1,7 @@
 import { NoteTypeEnum, PageModeEnum } from "../enums/notes.enums";
+import type { ExcelWorkbookData } from "../utils/excelExtract";
+
+export type { ExcelWorkbookData };
 
 export type NoteType = "PERSONAL" | "PROJECT" | "ARCHIVED" | NoteTypeEnum;
 export type PageMode = "list" | "create" | "edit" | "view" | PageModeEnum;
@@ -55,6 +58,7 @@ export interface Note {
   canView?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
+  rotation?: number;
 }
 
 export interface NoteDocumentItem {
@@ -78,7 +82,8 @@ export interface NotesFormData {
   files: File[];
   isPinned?: boolean;
   isAutoSave?: boolean;
-  isVertical?: boolean;
+  rotation?: number;
+  excelWorkbook?: ExcelWorkbookData | null;
 }
 
 export interface ColorOption {

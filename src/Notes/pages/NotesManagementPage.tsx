@@ -9,7 +9,7 @@ import {
   NoteSendModal,
 } from "../components";
 import DocumentPreviewModal from "../components/DocumentPreviewModal";
-import UniverExcelEditorModal from "../../components/UniverExcelEditorModal";
+import ExcelViewerModal from "../../components/ExcelViewerModal";
 
 export const NotesManagementPage: React.FC = () => {
   const {
@@ -44,7 +44,9 @@ export const NotesManagementPage: React.FC = () => {
     setHighlightColor,
     fileInputRef,
     doclingJsonInputRef,
+    excelExtractInputRef,
     isImportingDocling,
+    isExtractingExcel,
     editorRef,
     expandedNotes,
     toggleExpand,
@@ -58,6 +60,7 @@ export const NotesManagementPage: React.FC = () => {
     handleStartView,
     handleBackToList,
     handleDoclingJsonUpload,
+    handleExcelExtract,
     handleProcessUploadFiles,
     handleFileChange,
     handleRemoveSelectedFile,
@@ -113,14 +116,17 @@ export const NotesManagementPage: React.FC = () => {
           highlightColor={highlightColor}
           setHighlightColor={setHighlightColor}
           isImportingDocling={isImportingDocling}
+          isExtractingExcel={isExtractingExcel}
           totalAttachmentsCount={totalAttachmentsCount}
           editorRef={editorRef}
           fileInputRef={fileInputRef}
           doclingJsonInputRef={doclingJsonInputRef}
+          excelExtractInputRef={excelExtractInputRef}
           onEditorInput={handleEditorInput}
           onExecuteCommand={executeEditorCommand}
           onInsertLink={handleInsertLink}
           onDoclingUpload={handleDoclingJsonUpload}
+          onExcelExtract={handleExcelExtract}
           onFileChange={handleFileChange}
           onProcessDropFiles={handleProcessUploadFiles}
           onRemoveAttachment={handleRemoveSelectedFile}
@@ -140,6 +146,7 @@ export const NotesManagementPage: React.FC = () => {
       {pageMode === "view" && activeNote && (
         <NoteView
           activeNote={activeNote}
+          excelWorkbook={formData.excelWorkbook}
           onStartEdit={handleStartEdit}
           onBack={handleBackToList}
           onPreviewAttachment={handlePreviewAttachment}
@@ -207,7 +214,7 @@ export const NotesManagementPage: React.FC = () => {
       />
 
       {/* Global Excel Spreadsheet Editor Modal */}
-      <UniverExcelEditorModal
+      <ExcelViewerModal
         open={excelViewerModal.open}
         onClose={() => setExcelViewerModal({ open: false, fileName: "", blob: null, file: null })}
         fileName={excelViewerModal.fileName}

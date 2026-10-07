@@ -9,18 +9,38 @@ import {
   Loader2,
   Check,
   User,
+  FileText,
+  RectangleHorizontal,
+  FileSpreadsheet,
+  AlignJustify,
+  Undo2,
+  Trash2,
+  Copy,
+  List,
+  ListOrdered,
+  Quote,
+  Link as LinkIcon,
+  Palette,
+  Highlighter,
+  FileCode,
+  Heading1,
+  Heading2,
+  Type,
+  Table as TableIcon,
+  PaintBucket,
+  ChevronDown,
 } from "lucide-react";
-import { message } from "antd";
+import { message, Popover } from "antd";
 import { Toggle } from "../../components/ui";
 import { Note, NotesFormData, NoteDocumentItem, AutoSaveStatus } from "../types/notes.types";
 import { NoteAttachmentChip } from "./NoteAttachmentChip";
-import { NoteEditorToolbar } from "./NoteEditorToolbar";
+import { TEXT_COLORS, HIGHLIGHT_COLORS, justifyImportedContent } from "../utils/notesHelpers";
+import { FONT_SIZES, BOLD_DARK_COLORS, LIGHT_SHADING_COLORS } from "../utils/noteEditorConstants";
+import { applyLandscapeToPages, isLandscapeRotation } from "../utils/documentLayout";
+import { descriptionFromExcelWorkbook } from "../utils/excelExtract";
+import { ExcelSpreadsheetView } from "../../components/ExcelSpreadsheetView";
 import { useNoteTable } from "../hooks";
-import {
-  normalizeAttachmentCell,
-  updateTableHeadersAndSl,
-  formatDocumentStructure,
-} from "../utils";
+import { applyToolbarCommandToCells, getSelectedTableCells } from "../utils/noteEditorTableHelpers";
 
 interface NoteEditorProps {
   formData: NotesFormData;
@@ -36,14 +56,17 @@ interface NoteEditorProps {
   highlightColor: string;
   setHighlightColor: (val: string) => void;
   isImportingDocling: boolean;
+  isExtractingExcel?: boolean;
   totalAttachmentsCount: number;
-  editorRef: React.RefObject<HTMLDivElement>;
-  fileInputRef: React.RefObject<HTMLInputElement>;
-  doclingJsonInputRef: React.RefObject<HTMLInputElement>;
+  editorRef: React.RefObject<HTMLDivElement | null>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  doclingJsonInputRef: React.RefObject<HTMLInputElement | null>;
+  excelExtractInputRef?: React.RefObject<HTMLInputElement | null>;
   onEditorInput: () => void;
   onExecuteCommand: (command: string, value?: string) => void;
   onInsertLink: () => void;
   onDoclingUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onExcelExtract?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onProcessDropFiles: (files: File[]) => void;
   onRemoveAttachment: (index: number) => void;
@@ -72,14 +95,17 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   highlightColor,
   setHighlightColor,
   isImportingDocling,
+  isExtractingExcel = false,
   totalAttachmentsCount,
   editorRef,
   fileInputRef,
   doclingJsonInputRef,
+  excelExtractInputRef,
   onEditorInput,
   onExecuteCommand,
   onInsertLink,
   onDoclingUpload,
+  onExcelExtract,
   onFileChange,
   onProcessDropFiles,
   onRemoveAttachment,
@@ -94,22 +120,37 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   onXlsImport,
 }) => {
   const isProjectNote = formData.type === "PROJECT";
-  const [orientation, setOrientation] = useState<"portrait" | "landscape">(
-    formData.isVertical === false ? "landscape" : "portrait"
-  );
-  const [fontSize, setFontSize] = useState<string>("14");
-  const [isFontSizeOpen, setIsFontSizeOpen] = useState<boolean>(false);
-  const [isCopied, setIsCopied] = useState<boolean>(false);
-  const [hasContent, setHasContent] = useState<boolean>(false);
-  const fontSizeDropdownRef = useRef<HTMLDivElement>(null);
-
-  // History & Snapshot management
+  const isLandscape = formData.rotation === 90 || formData.rotation === 270;
+  const [isCopied, setIsCopied] = useState(false);
+  const [hasContent, setHasContent] = useState(false);
+  const [fontSize, setFontSize] = useState("14");
+  const [isFontSizeOpen, setIsFontSizeOpen] = useState(false);
   const lastClearedHtmlRef = useRef<string | null>(null);
   const undoHistoryRef = useRef<string[]>([]);
   const redoHistoryRef = useRef<string[]>([]);
-  const isHistoryNavigatingRef = useRef<boolean>(false);
-  const typingTimerRef = useRef<any>(null);
-  const isTypingSessionRef = useRef<boolean>(false);
+  const isHistoryNavigatingRef = useRef(false);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingSessionRef = useRef(false);
+
+  const checkHasContent = useCallback(() => {
+    if (formData.excelWorkbook) {
+      return (formData.excelWorkbook.sheetNames || []).length > 0;
+    }
+    if (editorRef.current) {
+      const text = (editorRef.current.innerText || editorRef.current.textContent || "").trim();
+      const hasMedia = Boolean(editorRef.current.querySelector("img, table, video, canvas, svg, iframe"));
+      return text.length > 0 || hasMedia;
+    }
+    if (formData.description) {
+      const stripped = formData.description.replace(/<[^>]*>/g, "").trim();
+      return stripped.length > 0 || /<(img|table|video|canvas|svg|iframe)/i.test(formData.description);
+    }
+    return false;
+  }, [editorRef, formData.description, formData.excelWorkbook]);
+
+  useEffect(() => {
+    setHasContent(checkHasContent());
+  }, [formData.description, formData.excelWorkbook, checkHasContent]);
 
   const saveUndoSnapshot = () => {
     if (!editorRef.current || isHistoryNavigatingRef.current) return;
@@ -117,9 +158,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     const lastSnap = undoHistoryRef.current[undoHistoryRef.current.length - 1];
     if (currentHtml && currentHtml !== lastSnap) {
       undoHistoryRef.current.push(currentHtml);
-      if (undoHistoryRef.current.length > 50) {
-        undoHistoryRef.current.shift();
-      }
+      if (undoHistoryRef.current.length > 50) undoHistoryRef.current.shift();
       redoHistoryRef.current = [];
     }
   };
@@ -127,7 +166,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   const handleEditorInputWrapper = () => {
     onEditorInput();
     setHasContent(checkHasContent());
-
     if (!isTypingSessionRef.current) {
       saveUndoSnapshot();
       isTypingSessionRef.current = true;
@@ -139,8 +177,9 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     }, 700);
   };
 
-  // Encapsulated Table Operations Hook
   const {
+    rowAttachmentInputRef,
+    handleRowFileChange,
     isTableDropdownOpen,
     setIsTableDropdownOpen,
     hoverGrid,
@@ -149,22 +188,18 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     setCustomRows,
     customCols,
     setCustomCols,
-    fillMode,
-    setFillMode,
-    rowAttachmentInputRef,
-    selectedCellsRef,
-    getTargetTable,
-    clearSelectionVisuals,
     handleInsertTable,
     handleInsertRow,
     handleDeleteRow,
     handleInsertColumn,
     handleDeleteColumn,
     handleAddAttachmentColumn,
-    handleRowFileChange,
+    selectedCellsRef,
+    fillMode,
+    setFillMode,
     handleApplyFillColor,
   } = useNoteTable({
-    editorRef,
+    editorRef: editorRef as React.RefObject<HTMLDivElement>,
     setFormData,
     activeNote,
     saveUndoSnapshot,
@@ -173,145 +208,62 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     onDownloadAttachment,
   });
 
-  const handleToolbarCommand = (command: string, value?: string) => {
+  const runToolbarCommand = (command: string, value?: string) => {
     saveUndoSnapshot();
+    const selected = getSelectedTableCells(selectedCellsRef.current);
+    if (selected.length > 0) {
+      applyToolbarCommandToCells(selected, command, value || "");
+      handleEditorInputWrapper();
+      return;
+    }
     onExecuteCommand(command, value);
-    handleEditorInputWrapper();
   };
 
-  const checkHasContent = useCallback(() => {
-    if (editorRef.current) {
-      const text = (editorRef.current.innerText || editorRef.current.textContent || "").trim();
-      const hasMedia = Boolean(
-        editorRef.current.querySelector("img, table, video, canvas, svg, iframe")
-      );
-      return text.length > 0 || hasMedia;
-    }
-    if (formData.description) {
-      const stripped = formData.description.replace(/<[^>]*>/g, "").trim();
-      return (
-        stripped.length > 0 ||
-        /<(img|table|video|canvas|svg|iframe)/i.test(formData.description)
-      );
-    }
-    return false;
-  }, [editorRef, formData.description]);
-
-  useEffect(() => {
-    setHasContent(checkHasContent());
-  }, [formData.description, checkHasContent]);
-
-
-  useEffect(() => {
-    if (formData.isVertical !== undefined) {
-      setOrientation(formData.isVertical ? "portrait" : "landscape");
-    }
-  }, [formData.isVertical]);
-
-  const handleToggleOrientation = () => {
-    const next = orientation === "portrait" ? "landscape" : "portrait";
-    setOrientation(next);
-    setFormData((prev) => ({
-      ...prev,
-      isVertical: next === "portrait",
-    }));
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("note-orientation-change", {
-          detail: { orientation: next, isVertical: next === "portrait" },
-        })
-      );
-    }
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        fontSizeDropdownRef.current &&
-        !fontSizeDropdownRef.current.contains(e.target as Node)
-      ) {
-        setIsFontSizeOpen(false);
-      }
-    };
-    const handleScroll = () => {
-      setIsFontSizeOpen(false);
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    window.addEventListener("scroll", handleScroll, true);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      window.removeEventListener("scroll", handleScroll, true);
-    };
-  }, []);
-
-  const handleFontSizeChange = (size: string) => {
+  const applyFontSize = (size: string) => {
     setFontSize(size);
+    setIsFontSizeOpen(false);
+    saveUndoSnapshot();
+    const selected = getSelectedTableCells(selectedCellsRef.current);
+    if (selected.length > 0) {
+      selected.forEach((cell) => {
+        cell.style.fontSize = `${size}px`;
+      });
+      handleEditorInputWrapper();
+      return;
+    }
     if (!editorRef.current) return;
     editorRef.current.focus();
-
-    saveUndoSnapshot();
-
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
-
-    const range = selection.getRangeAt(0);
-    if (range.collapsed) {
-      const span = document.createElement("span");
-      span.style.fontSize = `${size}px`;
-      span.innerHTML = "&#8203;";
-      range.insertNode(span);
-      range.selectNodeContents(span);
-      range.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    } else {
-      document.execCommand("styleWithCSS", false, "true");
-      document.execCommand("fontSize", false, "7");
-      const fontTags = editorRef.current.querySelectorAll('font[size="7"]');
-      fontTags.forEach((tag: Element) => {
-        const el = tag as HTMLElement;
-        el.removeAttribute("size");
-        el.style.fontSize = `${size}px`;
-      });
-      const spans = editorRef.current.querySelectorAll('span[style*="xxx-large"]');
-      spans.forEach((tag: Element) => {
-        const el = tag as HTMLElement;
-        el.style.fontSize = `${size}px`;
-      });
-    }
+    document.execCommand("styleWithCSS", false, "true");
+    document.execCommand("fontSize", false, "7");
+    editorRef.current.querySelectorAll('font[size="7"]').forEach((tag) => {
+      const el = tag as HTMLElement;
+      el.removeAttribute("size");
+      el.style.fontSize = `${size}px`;
+    });
+    editorRef.current.querySelectorAll('span[style*="xxx-large"]').forEach((tag) => {
+      (tag as HTMLElement).style.fontSize = `${size}px`;
+    });
     handleEditorInputWrapper();
   };
 
   const handleCopyAll = async () => {
-    if (!editorRef.current || !hasContent) return;
+    if (!hasContent) return;
     try {
-      editorRef.current.focus();
-      const range = document.createRange();
-      range.selectNodeContents(editorRef.current);
-      const selection = window.getSelection();
-      if (selection) {
-        selection.removeAllRanges();
-        selection.addRange(range);
+      if (editorRef.current) {
+        editorRef.current.focus();
+        const textToCopy = editorRef.current.innerText || editorRef.current.textContent || "";
+        const htmlToCopy = editorRef.current.innerHTML || "";
+        if (navigator.clipboard && window.ClipboardItem) {
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              "text/plain": new Blob([textToCopy], { type: "text/plain" }),
+              "text/html": new Blob([htmlToCopy], { type: "text/html" }),
+            }),
+          ]);
+        } else if (textToCopy) {
+          await navigator.clipboard.writeText(textToCopy);
+        }
       }
-      const textToCopy = editorRef.current.innerText || editorRef.current.textContent || "";
-      const htmlToCopy = editorRef.current.innerHTML || "";
-
-      if (navigator.clipboard && window.ClipboardItem) {
-        const textBlob = new Blob([textToCopy], { type: "text/plain" });
-        const htmlBlob = new Blob([htmlToCopy], { type: "text/html" });
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            "text/plain": textBlob,
-            "text/html": htmlBlob,
-          }),
-        ]);
-      } else if (textToCopy) {
-        await navigator.clipboard.writeText(textToCopy);
-      } else {
-        document.execCommand("copy");
-      }
-
       setIsCopied(true);
       message.success("Page copied to clipboard!");
       setTimeout(() => setIsCopied(false), 2000);
@@ -324,51 +276,37 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   };
 
   const handleClearPage = () => {
-    if (!editorRef.current || !hasContent) return;
-    editorRef.current.focus();
-
-    const range = document.createRange();
-    range.selectNodeContents(editorRef.current);
-    const selection = window.getSelection();
-    if (selection) {
-      selection.removeAllRanges();
-      selection.addRange(range);
+    if (!hasContent) return;
+    if (formData.excelWorkbook) {
+      setFormData((prev) => ({ ...prev, excelWorkbook: null, description: "" }));
+      setHasContent(false);
+      message.success("Cleared spreadsheet from this note");
+      return;
     }
-
+    if (!editorRef.current) return;
+    editorRef.current.focus();
     lastClearedHtmlRef.current = editorRef.current.innerHTML;
-    document.execCommand("delete", false);
+    saveUndoSnapshot();
+    editorRef.current.innerHTML = "";
     handleEditorInputWrapper();
   };
 
   const handleUndo = () => {
     if (!editorRef.current) return;
     editorRef.current.focus();
-
     if (undoHistoryRef.current.length > 0) {
       isHistoryNavigatingRef.current = true;
-      const currentHtml = editorRef.current.innerHTML;
-      redoHistoryRef.current.push(currentHtml);
-
+      redoHistoryRef.current.push(editorRef.current.innerHTML);
       const prevHtml = undoHistoryRef.current.pop();
       if (prevHtml !== undefined) {
         editorRef.current.innerHTML = prevHtml;
-        // Move cursor to END of content (browser resets to start after innerHTML set)
         const undoRange = document.createRange();
         const undoSel = window.getSelection();
         undoRange.selectNodeContents(editorRef.current);
         undoRange.collapse(false);
         undoSel?.removeAllRanges();
         undoSel?.addRange(undoRange);
-        const currentTable = getTargetTable();
-        if (currentTable) {
-          updateTableHeadersAndSl(currentTable);
-          clearSelectionVisuals(currentTable);
-        }
-        const updated = editorRef.current.innerHTML;
-        setFormData((prev) => ({
-          ...prev,
-          description: updated,
-        }));
+        setFormData((prev) => ({ ...prev, description: editorRef.current?.innerHTML || "" }));
         onEditorInput();
         setHasContent(checkHasContent());
         message.info("Undid last action");
@@ -376,7 +314,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       isHistoryNavigatingRef.current = false;
       return;
     }
-
     document.execCommand("undo", false);
     if (
       (!editorRef.current.innerHTML || editorRef.current.innerHTML === "<br>") &&
@@ -388,101 +325,17 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     handleEditorInputWrapper();
   };
 
-  const handleRedo = () => {
-    if (!editorRef.current) return;
-    editorRef.current.focus();
-
-    if (redoHistoryRef.current.length > 0) {
-      isHistoryNavigatingRef.current = true;
-      const currentHtml = editorRef.current.innerHTML;
-      undoHistoryRef.current.push(currentHtml);
-
-      const nextHtml = redoHistoryRef.current.pop();
-      if (nextHtml !== undefined) {
-        editorRef.current.innerHTML = nextHtml;
-        // Move cursor to END of content (browser resets to start after innerHTML set)
-        const redoRange = document.createRange();
-        const redoSel = window.getSelection();
-        redoRange.selectNodeContents(editorRef.current);
-        redoRange.collapse(false);
-        redoSel?.removeAllRanges();
-        redoSel?.addRange(redoRange);
-        const currentTable = getTargetTable();
-        if (currentTable) {
-          updateTableHeadersAndSl(currentTable);
-          clearSelectionVisuals(currentTable);
-        }
-        const updated = editorRef.current.innerHTML;
-        setFormData((prev) => ({
-          ...prev,
-          description: updated,
-        }));
-        onEditorInput();
-        setHasContent(checkHasContent());
-        message.info("Redid action");
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        handleUndo();
       }
-      isHistoryNavigatingRef.current = false;
-      return;
-    }
-
-    document.execCommand("redo", false);
-    handleEditorInputWrapper();
-  };
-
-  const handleFormatContent = () => {
-    const editor = editorRef.current;
-    if (!editor || !hasContent) return;
-
-    saveUndoSnapshot();
-
-    const selection = window.getSelection();
-    const hasTextSelection =
-      selection &&
-      !selection.isCollapsed &&
-      selection.rangeCount > 0 &&
-      editor.contains(selection.anchorNode) &&
-      (selection.toString() || "").trim().length > 0;
-
-    const hasSelectedCells =
-      selectedCellsRef.current.length > 0 &&
-      selectedCellsRef.current.some((c) => editor.contains(c));
-
-    if (hasTextSelection) {
-      const range = selection.getRangeAt(0);
-      try {
-        const fragment = range.extractContents();
-        const tempDiv = document.createElement("div");
-        tempDiv.appendChild(fragment);
-        formatDocumentStructure(tempDiv);
-
-        const cleanedFragment = document.createDocumentFragment();
-        while (tempDiv.firstChild) {
-          cleanedFragment.appendChild(tempDiv.firstChild);
-        }
-        range.insertNode(cleanedFragment);
-        message.success("Formatted selected content");
-      } catch {
-        document.execCommand("removeFormat", false, undefined);
-        message.success("Formatted selected content");
-      }
-    } else if (hasSelectedCells) {
-      selectedCellsRef.current.forEach((cell) => {
-        formatDocumentStructure(cell);
-      });
-      clearSelectionVisuals();
-      message.success(`Formatted ${selectedCellsRef.current.length} selected cell(s)`);
-    } else {
-      formatDocumentStructure(editor);
-      message.success("Formatted entire document");
-    }
-
-    const currentHtml = editor.innerHTML;
-    setFormData((prev) => ({
-      ...prev,
-      description: currentHtml,
-    }));
-    handleEditorInputWrapper();
-  };
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="w-full min-h-full bg-[#F4F7FE] p-2 sm:p-3 md:p-4 flex flex-col gap-3 font-sans">
@@ -563,7 +416,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     if (onToggleAutoSave) {
                       onToggleAutoSave();
                     } else {
-                      setFormData((prev) => ({ ...prev, isAutoSave: !prev.isAutoSave }));
+                      setFormData((prev) => ({ ...prev, isAutoSave: prev.isAutoSave ? false : true }));
                     }
                   }}
                   label="Auto-Save"
@@ -642,98 +495,772 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
             </div>
           </div>
 
-          {/* RICH TEXT FORMATTING TOOLBAR & WORKSPACE */}
-          <div className="w-full">
-            <div className="w-full bg-white border border-slate-200 rounded-2xl focus-within:border-[#4318FF] focus-within:ring-1 focus-within:ring-[#4318FF]/20 transition-all shadow-xs flex flex-col">
-              {/* Modular Rich Text Toolbar */}
-              <NoteEditorToolbar
-                fontSize={fontSize}
-                isFontSizeOpen={isFontSizeOpen}
-                setIsFontSizeOpen={setIsFontSizeOpen}
-                onFontSizeChange={handleFontSizeChange}
-                orientation={orientation}
-                onToggleOrientation={handleToggleOrientation}
-                onToolbarCommand={handleToolbarCommand}
-                onInsertLink={onInsertLink}
-                isTableDropdownOpen={isTableDropdownOpen}
-                setIsTableDropdownOpen={setIsTableDropdownOpen}
-                hoverGrid={hoverGrid}
-                setHoverGrid={setHoverGrid}
-                customRows={customRows}
-                setCustomRows={setCustomRows}
-                customCols={customCols}
-                setCustomCols={setCustomCols}
-                onInsertTable={handleInsertTable}
-                onInsertRow={handleInsertRow}
-                onDeleteRow={handleDeleteRow}
-                onInsertColumn={handleInsertColumn}
-                onDeleteColumn={handleDeleteColumn}
-                onAddAttachmentColumn={handleAddAttachmentColumn}
-                fillMode={fillMode}
-                setFillMode={setFillMode}
-                onApplyFillColor={handleApplyFillColor}
-                textColor={textColor}
-                setTextColor={setTextColor}
-                highlightColor={highlightColor}
-                setHighlightColor={setHighlightColor}
-                onExecuteCommand={onExecuteCommand}
-                saveUndoSnapshot={saveUndoSnapshot}
-                handleEditorInputWrapper={handleEditorInputWrapper}
-                doclingJsonInputRef={doclingJsonInputRef}
-                onDoclingUpload={onDoclingUpload}
-                isImportingDocling={isImportingDocling}
-                xlsImportInputRef={xlsImportInputRef}
-                onXlsImport={onXlsImport}
-                hasContent={hasContent}
-                handleFormatContent={handleFormatContent}
-                handleUndo={handleUndo}
-                handleClearPage={handleClearPage}
-                handleCopyAll={handleCopyAll}
-                isCopied={isCopied}
-              />
+          {/* DESCRIPTION & RICH TEXT FORMATTING TOOLBAR */}
+          <div className="space-y-1.5 w-full">
+            <span className="block text-xs md:text-sm font-bold text-[#1B2559] uppercase tracking-wider">
+              DESCRIPTION
+            </span>
 
-              {/* A4 Workspace Simulation */}
-              <div className="a4-page-workspace w-full flex justify-start items-start overflow-x-auto bg-slate-100/80 p-4 sm:p-8 min-h-[640px] rounded-b-2xl">
-                <div
-                  className={`a4-page shrink-0 transition-all duration-300 ${orientation === "landscape" ? "landscape" : ""
-                    }`}
-                  style={
-                    orientation === "landscape"
-                      ? { minWidth: "337mm", width: "max-content", minHeight: "210mm" }
-                      : { minWidth: "210mm", width: "max-content", minHeight: "297mm" }
+            <div className="w-full bg-white border border-slate-200 rounded-2xl focus-within:border-[#4318FF] focus-within:ring-1 focus-within:ring-[#4318FF]/20 transition-all shadow-xs flex flex-col overflow-hidden">
+              {/* Rich Text Toolbar */}
+              <div className="flex flex-nowrap items-center gap-0.5 sm:gap-1 p-1.5 px-2 bg-white border-b border-slate-100 text-slate-700 select-none shrink-0 sticky top-0 z-10 overflow-x-auto">
+                {/* Bold */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    runToolbarCommand("bold");
+                  }}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg font-bold text-sm text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  title="Bold (Ctrl+B)"
+                >
+                  B
+                </button>
+
+                {/* Italic */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    runToolbarCommand("italic");
+                  }}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg italic font-serif text-sm text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  title="Italic (Ctrl+I)"
+                >
+                  I
+                </button>
+
+                {/* Underline */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    runToolbarCommand("underline");
+                  }}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg underline text-sm text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  title="Underline (Ctrl+U)"
+                >
+                  U
+                </button>
+
+                {/* Strikethrough */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    runToolbarCommand("strikeThrough");
+                  }}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg line-through text-sm text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  title="Strikethrough"
+                >
+                  S
+                </button>
+
+                <Popover
+                  trigger="click"
+                  placement="bottomLeft"
+                  open={isFontSizeOpen}
+                  onOpenChange={setIsFontSizeOpen}
+                  arrow={false}
+                  overlayInnerStyle={{ padding: "4px" }}
+                  content={
+                    <div className="w-[52px] max-h-48 overflow-y-auto select-none flex flex-col gap-0.5">
+                      {FONT_SIZES.map((size) => (
+                        <button
+                          key={size}
+                          type="button"
+                          onClick={() => applyFontSize(size)}
+                          className={`w-full py-1 text-center rounded-md text-xs font-semibold transition cursor-pointer ${
+                            size === fontSize
+                              ? "bg-indigo-50 text-[#4318FF] font-bold"
+                              : "text-slate-700 hover:bg-indigo-50/60 hover:text-[#4318FF]"
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
                   }
                 >
-                  <div
-                    ref={editorRef}
-                    contentEditable
-                    onInput={handleEditorInputWrapper}
-                    onKeyDown={(e) => {
-                      if (e.ctrlKey || e.metaKey) {
-                        if (e.key.toLowerCase() === "z") {
-                          e.preventDefault();
-                          if (e.shiftKey) {
-                            handleRedo();
-                          } else {
-                            handleUndo();
-                          }
-                          return;
-                        }
-                        if (e.key.toLowerCase() === "y") {
-                          e.preventDefault();
-                          handleRedo();
-                          return;
-                        }
+                  <button
+                    type="button"
+                    className={`h-8 w-[52px] shrink-0 px-2 bg-white rounded-lg text-xs font-semibold text-slate-800 flex items-center justify-between gap-1 transition cursor-pointer border ${
+                      isFontSizeOpen ? "border-[#4318FF] text-[#4318FF]" : "border-slate-200 hover:border-slate-300"
+                    }`}
+                    title="Font Size"
+                  >
+                    <span>{fontSize}</span>
+                    <ChevronDown className={`w-3 h-3 text-slate-400 ${isFontSizeOpen ? "rotate-180 text-[#4318FF]" : ""}`} />
+                  </button>
+                </Popover>
+
+                <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
+
+                {/* Heading 1 */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    runToolbarCommand("formatBlock", "<h1>");
+                  }}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  title="Heading 1"
+                >
+                  <Heading1 className="w-4 h-4" />
+                </button>
+
+                {/* Heading 2 */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    runToolbarCommand("formatBlock", "<h2>");
+                  }}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  title="Heading 2"
+                >
+                  <Heading2 className="w-4 h-4" />
+                </button>
+
+                {/* Normal */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    runToolbarCommand("formatBlock", "<p>");
+                  }}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  title="Normal Text"
+                >
+                  <Type className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    const selected = getSelectedTableCells(selectedCellsRef.current);
+                    if (selected.length > 0) {
+                      selected.forEach((cell) => {
+                        justifyImportedContent(cell);
+                        cell.style.textAlign = "justify";
+                      });
+                      handleEditorInputWrapper();
+                      return;
+                    }
+                    if (!editorRef.current) return;
+                    justifyImportedContent(editorRef.current);
+                    onEditorInput();
+                  }}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  title="Justify: remove extra spaces and align like a PDF/DOCX"
+                >
+                  <AlignJustify className="w-4 h-4" />
+                </button>
+
+                <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
+
+                {/* Bullet List */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    runToolbarCommand("insertUnorderedList");
+                  }}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  title="Bullet List"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+
+                {/* Numbered List */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    runToolbarCommand("insertOrderedList");
+                  }}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  title="Numbered List"
+                >
+                  <ListOrdered className="w-4 h-4" />
+                </button>
+
+                {/* Quote */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    runToolbarCommand("formatBlock", "<blockquote>");
+                  }}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  title="Quote"
+                >
+                  <Quote className="w-4 h-4" />
+                </button>
+
+                {/* Link */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onInsertLink();
+                  }}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                  title="Insert Link"
+                >
+                  <LinkIcon className="w-4 h-4" />
+                </button>
+
+                <Popover
+                  trigger="click"
+                  placement="bottomLeft"
+                  open={isTableDropdownOpen}
+                  onOpenChange={(v) => {
+                    setIsTableDropdownOpen(v);
+                    if (!v) setHoverGrid({ rows: 0, cols: 0 });
+                  }}
+                  content={
+                    <div className="p-3 w-64 select-none">
+                      <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                        <span className="text-xs font-bold text-slate-700">Insert Table</span>
+                        <span className="text-xs font-semibold text-[#4318FF]">
+                          {hoverGrid.rows > 0 && hoverGrid.cols > 0
+                            ? `${hoverGrid.cols} × ${hoverGrid.rows}`
+                            : "Hover to pick"}
+                        </span>
+                      </div>
+                      <div
+                        className="grid grid-cols-8 gap-1 p-1 bg-slate-50/80 rounded-lg border border-slate-200"
+                        onMouseLeave={() => setHoverGrid({ rows: 0, cols: 0 })}
+                      >
+                        {Array.from({ length: 8 }).map((_, rIdx) =>
+                          Array.from({ length: 8 }).map((_, cIdx) => {
+                            const r = rIdx + 1;
+                            const c = cIdx + 1;
+                            const isHighlighted = r <= hoverGrid.rows && c <= hoverGrid.cols;
+                            return (
+                              <button
+                                key={`grid-${r}-${c}`}
+                                type="button"
+                                onMouseEnter={() => setHoverGrid({ rows: r, cols: c })}
+                                onClick={() => handleInsertTable(r, c)}
+                                className={`w-5 h-5 rounded-xs border transition cursor-pointer ${
+                                  isHighlighted
+                                    ? "bg-[#4318FF] border-[#4318FF]"
+                                    : "bg-white border-slate-300 hover:border-indigo-400"
+                                }`}
+                                title={`${c} × ${r}`}
+                              />
+                            );
+                          })
+                        )}
+                      </div>
+                      <div className="mt-2.5 pt-2 border-t border-slate-100 flex flex-col gap-1.5">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">
+                          Custom Size
+                        </span>
+                        <div className="flex items-center gap-1.5 px-0.5">
+                          <div className="flex items-center gap-1 flex-1">
+                            <input
+                              type="number"
+                              min={1}
+                              max={50}
+                              value={customRows}
+                              onChange={(e) => setCustomRows(Math.max(1, parseInt(e.target.value) || 1))}
+                              className="w-11 px-1.5 py-1 text-xs text-center font-bold text-slate-800 bg-white border border-slate-200 rounded-md focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
+                              title="Number of rows"
+                            />
+                            <span className="text-xs text-slate-400 font-bold">×</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={50}
+                              value={customCols}
+                              onChange={(e) => setCustomCols(Math.max(1, parseInt(e.target.value) || 1))}
+                              className="w-11 px-1.5 py-1 text-xs text-center font-bold text-slate-800 bg-white border border-slate-200 rounded-md focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
+                              title="Number of columns"
+                            />
+                            <span className="text-[11px] text-slate-500 font-medium">grid</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleInsertTable(customRows, customCols)}
+                            className="px-2.5 py-1 bg-[#4318FF] hover:bg-[#320fe0] text-white text-xs font-bold rounded-md shadow-xs transition cursor-pointer shrink-0"
+                            title={`Insert ${customRows}×${customCols} Table`}
+                          >
+                            Insert
+                          </button>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-2.5 border-t border-slate-100 flex flex-col gap-2">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">
+                            Rows
+                          </span>
+                          <div className="grid grid-cols-3 gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleInsertRow("above");
+                                setIsTableDropdownOpen(false);
+                              }}
+                              className="px-2 py-1 text-[11px] font-semibold text-slate-700 bg-slate-50 hover:bg-indigo-50 hover:text-[#4318FF] rounded-md border border-slate-200 transition cursor-pointer text-center"
+                            >
+                              + Above
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleInsertRow("below");
+                                setIsTableDropdownOpen(false);
+                              }}
+                              className="px-2 py-1 text-[11px] font-semibold text-slate-700 bg-slate-50 hover:bg-indigo-50 hover:text-[#4318FF] rounded-md border border-slate-200 transition cursor-pointer text-center"
+                            >
+                              + Below
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleDeleteRow();
+                                setIsTableDropdownOpen(false);
+                              }}
+                              className="px-1.5 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50/60 hover:bg-rose-100 rounded-md border border-rose-200 transition cursor-pointer text-center"
+                            >
+                              Del Row
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">
+                            Columns
+                          </span>
+                          <div className="grid grid-cols-3 gap-1">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleInsertColumn("before");
+                                setIsTableDropdownOpen(false);
+                              }}
+                              className="px-2 py-1 text-[11px] font-semibold text-slate-700 bg-slate-50 hover:bg-indigo-50 hover:text-[#4318FF] rounded-md border border-slate-200 transition cursor-pointer text-center"
+                            >
+                              + Left
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleInsertColumn("after");
+                                setIsTableDropdownOpen(false);
+                              }}
+                              className="px-2 py-1 text-[11px] font-semibold text-slate-700 bg-slate-50 hover:bg-indigo-50 hover:text-[#4318FF] rounded-md border border-slate-200 transition cursor-pointer text-center"
+                            >
+                              + Right
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                handleDeleteColumn();
+                                setIsTableDropdownOpen(false);
+                              }}
+                              className="px-1.5 py-1 text-[11px] font-semibold text-rose-700 bg-rose-50/60 hover:bg-rose-100 rounded-md border border-rose-200 transition cursor-pointer text-center"
+                            >
+                              Del Col
+                            </button>
+                          </div>
+                        </div>
+                        <div className="pt-1.5 border-t border-slate-100">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleAddAttachmentColumn();
+                              setIsTableDropdownOpen(false);
+                            }}
+                            className="w-full py-1.5 px-2 text-xs font-semibold text-[#4318FF] bg-indigo-50/70 hover:bg-indigo-100/90 rounded-md border border-indigo-200 transition cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                          >
+                            <Paperclip className="w-3.5 h-3.5 text-[#4318FF]" />
+                            <span>+ Attachment Column</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  }
+                >
+                  <button
+                    type="button"
+                    className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-lg transition cursor-pointer ${
+                      isTableDropdownOpen
+                        ? "bg-indigo-50 text-[#4318FF]"
+                        : "text-slate-800 hover:text-[#4318FF] hover:bg-slate-100"
+                    }`}
+                    title="Insert Table"
+                  >
+                    <TableIcon className="w-4 h-4" />
+                  </button>
+                </Popover>
+
+                <Popover
+                  trigger="click"
+                  placement="bottom"
+                  content={
+                    <div className="p-3 w-64 select-none space-y-3">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                        <span className="text-xs font-bold text-slate-700">Table Shading</span>
+                        <button
+                          type="button"
+                          onClick={() => handleApplyFillColor("none", fillMode)}
+                          className="text-[11px] text-slate-500 hover:text-rose-600 hover:underline font-semibold cursor-pointer transition"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Color Target:
+                        </span>
+                        <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-100 rounded-lg">
+                          <button
+                            type="button"
+                            onClick={() => setFillMode("bg")}
+                            className={`py-1 text-center text-xs font-semibold rounded-md transition cursor-pointer ${
+                              fillMode === "bg"
+                                ? "bg-white text-slate-800 shadow-xs"
+                                : "text-slate-500 hover:text-slate-800"
+                            }`}
+                          >
+                            Background
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFillMode("text")}
+                            className={`py-1 text-center text-xs font-semibold rounded-md transition cursor-pointer ${
+                              fillMode === "text"
+                                ? "bg-white text-slate-800 shadow-xs"
+                                : "text-slate-500 hover:text-slate-800"
+                            }`}
+                          >
+                            Text Color
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                          Bold & Dark Colors
+                        </span>
+                        <div className="grid grid-cols-5 gap-1.5 pt-0.5">
+                          {BOLD_DARK_COLORS.map((c) => (
+                            <button
+                              key={`tbl-dark-${c.color}`}
+                              type="button"
+                              onClick={() => handleApplyFillColor(c.color, fillMode)}
+                              className="w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 transition cursor-pointer"
+                              style={{ backgroundColor: c.color }}
+                              title={c.label}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1 pt-1 border-t border-slate-100">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Light Shading Tints
+                        </span>
+                        <div className="grid grid-cols-5 gap-1.5 pt-0.5">
+                          {LIGHT_SHADING_COLORS.map((c) => (
+                            <button
+                              key={`tbl-light-${c.color}`}
+                              type="button"
+                              onClick={() => handleApplyFillColor(c.color, fillMode)}
+                              className="w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 transition cursor-pointer"
+                              style={{ backgroundColor: c.color }}
+                              title={c.label}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  }
+                >
+                  <button
+                    type="button"
+                    className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+                    title="Table Shading / Fill Color (Cell, Row, Column)"
+                  >
+                    <PaintBucket className="w-4 h-4" />
+                  </button>
+                </Popover>
+
+                <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
+
+                {/* Text Color Palette */}
+                <Popover
+                  trigger="click"
+                  placement="bottom"
+                  content={
+                    <div className="p-2 space-y-2.5 w-56 select-none">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                          Text Color
+                        </span>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            runToolbarCommand("foreColor", "#1B2559");
+                            setTextColor("none");
+                          }}
+                          className="text-[11px] text-[#4318FF] hover:underline font-semibold cursor-pointer"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-6 gap-1.5">
+                        {TEXT_COLORS.map((c) => (
+                          <button
+                            key={`tx-c-${c.color}`}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              if (c.color === "none") {
+                                runToolbarCommand("foreColor", "#1B2559");
+                                setTextColor("none");
+                              } else {
+                                runToolbarCommand("foreColor", c.color);
+                                setTextColor(c.color);
+                              }
+                            }}
+                            className={`w-7 h-7 rounded-lg border flex items-center justify-center transition cursor-pointer ${
+                              textColor === c.color
+                                ? "ring-2 ring-[#4318FF] scale-110 border-white shadow-xs"
+                                : "border-slate-200 hover:scale-105"
+                            }`}
+                            style={{
+                              backgroundColor: c.color === "none" ? "#FFFFFF" : c.color,
+                            }}
+                            title={c.label}
+                          >
+                            {c.color === "none" && (
+                              <span className="text-[10px] font-bold text-slate-400">∅</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  }
+                >
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                    title="Font Color"
+                  >
+                    <Palette className="w-4 h-4 text-slate-700" />
+                  </button>
+                </Popover>
+
+                {/* Text Highlighter Palette */}
+                <Popover
+                  trigger="click"
+                  placement="bottom"
+                  content={
+                    <div className="p-2 space-y-2.5 w-56 select-none">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+                          Highlight Color
+                        </span>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            runToolbarCommand("hiliteColor", "transparent");
+                            setHighlightColor("transparent");
+                          }}
+                          className="text-[11px] text-[#4318FF] hover:underline font-semibold cursor-pointer"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-7 gap-1.5">
+                        {HIGHLIGHT_COLORS.map((c) => (
+                          <button
+                            key={`hl-c-${c.color}`}
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              runToolbarCommand("hiliteColor", c.color);
+                              setHighlightColor(c.color);
+                            }}
+                            className={`w-6 h-6 rounded-md border flex items-center justify-center transition cursor-pointer ${
+                              highlightColor === c.color
+                                ? "ring-2 ring-[#4318FF] scale-110 border-white shadow-xs"
+                                : "border-slate-200 hover:scale-105"
+                            }`}
+                            style={{
+                              backgroundColor: c.color === "transparent" ? "#FFFFFF" : c.color,
+                            }}
+                            title={c.label}
+                          >
+                            {c.color === "transparent" && (
+                              <span className="text-[10px] font-bold text-slate-400">∅</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  }
+                >
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
+                    title="Text Highlighter"
+                  >
+                    <Highlighter className="w-4 h-4 text-slate-700" />
+                  </button>
+                </Popover>
+
+                <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
+
+                {/* Docling JSON / Document Import Button */}
+                <input
+                  type="file"
+                  ref={doclingJsonInputRef}
+                  onChange={onDoclingUpload}
+                  accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.json"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => doclingJsonInputRef.current?.click()}
+                  disabled={isImportingDocling || isExtractingExcel}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-[#4318FF] bg-[#4318FF]/10 hover:bg-[#4318FF]/20 transition cursor-pointer disabled:opacity-50"
+                  title={isImportingDocling ? "Parsing PDF..." : "Import PDF / Docx"}
+                >
+                  {isImportingDocling ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileCode className="w-4 h-4" />
+                  )}
+                </button>
+
+                <input
+                  type="file"
+                  ref={excelExtractInputRef}
+                  onChange={onExcelExtract}
+                  accept=".xlsx,.xls,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => excelExtractInputRef?.current?.click()}
+                  disabled={isImportingDocling || isExtractingExcel}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer disabled:opacity-50"
+                  title={isExtractingExcel ? "Extracting Excel..." : "Extract Excel"}
+                >
+                  {isExtractingExcel ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileSpreadsheet className="w-4 h-4" />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => {
+                    const nextLandscape = !isLandscape;
+                    requestAnimationFrame(() => {
+                      if (editorRef.current) {
+                        applyLandscapeToPages(editorRef.current, nextLandscape);
                       }
-                    }}
-                    data-placeholder="Write your notes, key updates, documentation, or action items here..."
-                    className="notes-rich-editor outline-none w-full text-slate-800 leading-relaxed"
-                    style={{
-                      fontSize: "14px",
-                      minHeight: orientation === "landscape" ? "170mm" : "257mm",
+                      setFormData((prev) => ({
+                        ...prev,
+                        rotation: nextLandscape ? 90 : 0,
+                        description: editorRef.current?.innerHTML || prev.description,
+                      }));
+                    });
+                  }}
+                  className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-lg transition cursor-pointer ${
+                    isLandscape
+                      ? "text-white bg-[#4318FF] hover:bg-[#320fe0]"
+                      : "text-slate-700 bg-slate-100 hover:bg-slate-200"
+                  }`}
+                  title="Switch to landscape: wide A4 page with normal text"
+                >
+                  <RectangleHorizontal className="w-4 h-4" />
+                </button>
+
+                <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
+
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleUndo}
+                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-[#4318FF] transition cursor-pointer"
+                  title="Undo last change (Ctrl+Z)"
+                >
+                  <Undo2 className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleClearPage}
+                  disabled={!hasContent}
+                  className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border transition ${
+                    !hasContent
+                      ? "bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-60"
+                      : "bg-rose-50/70 text-rose-700 border-rose-200 hover:bg-rose-100 cursor-pointer"
+                  }`}
+                  title={!hasContent ? "Sheet is already empty" : "Clear entire sheet"}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleCopyAll}
+                  disabled={!hasContent}
+                  className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border transition ${
+                    !hasContent
+                      ? "bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-60"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 cursor-pointer"
+                  }`}
+                  title={isCopied ? "Copied" : "Copy all sheet content"}
+                >
+                  {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {/* A4 Workspace or inline Excel viewer */}
+              {formData.excelWorkbook ? (
+                <div className="w-full overflow-auto bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 min-h-[720px]">
+                  <ExcelSpreadsheetView
+                    embedded
+                    workbook={formData.excelWorkbook}
+                    onWorkbookChange={(next) => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        excelWorkbook: next,
+                        description: descriptionFromExcelWorkbook(next),
+                      }));
                     }}
                   />
                 </div>
+              ) : (
+              <div className={`a4-page-workspace w-full flex justify-center items-start overflow-auto bg-slate-100/80 p-4 sm:p-8 min-h-[720px]${isLandscape ? " is-landscape" : ""}`}>
+                <div className="a4-page-rotator">
+                  <div className="a4-page doc-pages">
+                    <div
+                      ref={editorRef}
+                      contentEditable
+                      onInput={handleEditorInputWrapper}
+                      data-placeholder="Write your notes, key updates, documentation, or action items here..."
+                      className={`notes-rich-editor doc-pages-editor outline-none text-slate-800 text-sm sm:text-base leading-relaxed${isLandscape ? " is-landscape" : ""}`}
+                    />
+                  </div>
+                </div>
               </div>
+              )}
             </div>
           </div>
 

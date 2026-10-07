@@ -37,6 +37,7 @@ export interface Note {
   updatedAt: string;
   createdBy?: string;
   updatedBy?: string;
+  rotation?: number;
 }
 
 export interface CreateNotePayload {
@@ -55,6 +56,7 @@ export interface CreateNotePayload {
   }>;
   files?: File[];
   attachmentKeys?: string[];
+  rotation?: number;
 }
 
 export interface UpdateNotePayload {
@@ -71,6 +73,7 @@ export interface UpdateNotePayload {
   isVertical?: boolean;
   orderIndex?: number;
   parentId?: number | null;
+  rotation?: number;
 }
 
 export interface CreateSubNotePayload {
@@ -81,6 +84,7 @@ export interface CreateSubNotePayload {
   orderIndex?: number;
   files?: File[];
   attachmentKeys?: string[];
+  rotation?: number;
 }
 
 export interface ReorderNotesPayload {

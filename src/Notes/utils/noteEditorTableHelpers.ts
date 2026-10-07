@@ -156,3 +156,51 @@ export const updateTableHeadersAndSl = (table: HTMLTableElement) => {
     });
   }
 };
+
+const isFormattableCell = (cell: HTMLTableCellElement) =>
+  document.contains(cell) &&
+  !cell.classList.contains("excel-sl-col") &&
+  !cell.classList.contains("excel-attachment-cell") &&
+  cell.getAttribute("contenteditable") !== "false";
+
+export const getSelectedTableCells = (
+  selectedCells: HTMLTableCellElement[]
+): HTMLTableCellElement[] =>
+  selectedCells.filter(
+    (cell) => cell.classList.contains("excel-cell-selected") && isFormattableCell(cell)
+  );
+
+export const applyToolbarCommandToCells = (
+  cells: HTMLTableCellElement[],
+  command: string,
+  value = ""
+): boolean => {
+  const targets = cells.filter(isFormattableCell);
+  if (!targets.length) return false;
+
+  const selection = window.getSelection();
+  document.execCommand("styleWithCSS", false, "true");
+
+  targets.forEach((cell) => {
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    if (command === "formatBlock") {
+      const ok = document.execCommand("formatBlock", false, value);
+      if (!ok) document.execCommand("formatBlock", false, value.replace(/[<>]/g, ""));
+    } else if (command === "hiliteColor") {
+      const ok = document.execCommand("hiliteColor", false, value);
+      if (!ok) document.execCommand("backColor", false, value);
+    } else if (command === "foreColor") {
+      document.execCommand("foreColor", false, value);
+      cell.style.color = value;
+    } else {
+      document.execCommand(command, false, value || undefined);
+    }
+  });
+
+  selection?.removeAllRanges();
+  return true;
+};

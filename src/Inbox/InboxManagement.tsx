@@ -191,14 +191,17 @@ export const InboxManagement: React.FC = () => {
           highlightColor={notesMgr.highlightColor}
           setHighlightColor={notesMgr.setHighlightColor}
           isImportingDocling={notesMgr.isImportingDocling}
+          isExtractingExcel={notesMgr.isExtractingExcel}
           totalAttachmentsCount={notesMgr.totalAttachmentsCount}
           editorRef={notesMgr.editorRef}
           fileInputRef={notesMgr.fileInputRef}
           doclingJsonInputRef={notesMgr.doclingJsonInputRef}
+          excelExtractInputRef={notesMgr.excelExtractInputRef}
           onEditorInput={notesMgr.handleEditorInput}
           onExecuteCommand={notesMgr.executeEditorCommand}
           onInsertLink={notesMgr.handleInsertLink}
           onDoclingUpload={notesMgr.handleDoclingJsonUpload}
+          onExcelExtract={notesMgr.handleExcelExtract}
           onFileChange={notesMgr.handleFileChange}
           onProcessDropFiles={notesMgr.handleProcessUploadFiles}
           onRemoveAttachment={notesMgr.handleRemoveSelectedFile}
@@ -243,6 +246,7 @@ export const InboxManagement: React.FC = () => {
       <div className="w-full min-h-full">
         <NoteView
           activeNote={notesMgr.activeNote}
+          excelWorkbook={notesMgr.formData.excelWorkbook}
           canEdit={canEditNote(selectedInboxItem?.permission)}
           onStartEdit={notesMgr.handleStartEdit}
           onBack={() => {

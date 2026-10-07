@@ -369,9 +369,194 @@ input[type="password"]::-webkit-password-reveal-button {
   display: block;
 }
 
-.notes-rich-editor {
-  min-height: 480px;
-  outline: none;
+.excel-workbook-store {
+  display: none !important;
+}
+
+/* Extracted document pages: <div class="page"> at the PDF point size */
+.a4-page.doc-pages {
+  width: max-content;
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.notes-rich-editor.doc-pages-editor,
+.notes-content-view.doc-pages-editor {
+  display: block;
+  min-height: 0;
+  width: 210mm;
+  max-width: 210mm;
+  background: transparent;
+}
+
+.notes-rich-editor.is-landscape,
+.notes-content-view.is-landscape {
+  width: 297mm;
+  max-width: 297mm;
+}
+
+.notes-rich-editor .page,
+.notes-content-view .page {
+  width: 210mm;
+  min-width: 210mm;
+  max-width: 210mm;
+  min-height: 297mm;
+  height: auto;
+  flex-shrink: 0;
+  margin: 0 0 28px;
+  padding: 20mm 18mm;
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  border-radius: 2px;
+  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.06);
+  box-sizing: border-box;
+  position: relative;
+  overflow-x: hidden;
+  overflow-y: visible;
+  word-wrap: break-word;
+  overflow-wrap: anywhere;
+}
+
+.notes-rich-editor .page *,
+.notes-content-view .page * {
+  position: static !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  float: none !important;
+}
+
+.notes-rich-editor .page h1,
+.notes-content-view .page h1 {
+  font-size: 1.35rem !important;
+  margin: 0 0 0.45rem !important;
+  line-height: 1.3 !important;
+}
+
+.notes-rich-editor .page h2,
+.notes-content-view .page h2 {
+  font-size: 1.1rem !important;
+  margin: 0.85rem 0 0.35rem !important;
+  line-height: 1.35 !important;
+}
+
+.notes-rich-editor .page p,
+.notes-content-view .page p {
+  margin-bottom: 0.4rem !important;
+  line-height: 1.55 !important;
+}
+
+.notes-rich-editor .page li,
+.notes-content-view .page li {
+  margin-bottom: 0.2rem !important;
+  line-height: 1.5 !important;
+}
+
+.notes-rich-editor .page .doc-flow,
+.notes-content-view .page .doc-flow {
+  padding: 0;
+}
+
+.notes-rich-editor.is-justified .page,
+.notes-content-view.is-justified .page,
+.notes-rich-editor .page.is-justified,
+.notes-content-view .page.is-justified,
+.notes-rich-editor.is-justified .page p,
+.notes-content-view.is-justified .page p,
+.notes-rich-editor .page.is-justified p,
+.notes-content-view .page.is-justified p,
+.notes-rich-editor.is-justified .page li,
+.notes-content-view.is-justified .page li,
+.notes-rich-editor.is-justified .page td,
+.notes-content-view.is-justified .page td {
+  text-align: justify !important;
+  text-justify: inter-word;
+  hyphens: auto;
+  white-space: normal !important;
+  letter-spacing: normal !important;
+  word-spacing: normal !important;
+  text-align-last: left;
+  line-height: 1.6 !important;
+}
+
+.notes-rich-editor.is-justified .page h1,
+.notes-content-view.is-justified .page h1,
+.notes-rich-editor.is-justified .page h2,
+.notes-content-view.is-justified .page h2,
+.notes-rich-editor .page.is-justified h1,
+.notes-content-view .page.is-justified h1,
+.notes-rich-editor .page.is-justified h2,
+.notes-content-view .page.is-justified h2 {
+  text-align: left !important;
+}
+
+.notes-rich-editor .page:last-child,
+.notes-content-view .page:last-child {
+  margin-bottom: 0;
+}
+
+/* A4 landscape: 297mm wide, at least 210mm tall. Extra content goes to the next sheet. */
+.notes-rich-editor.is-landscape .page,
+.notes-content-view.is-landscape .page,
+.notes-rich-editor .page.is-landscape,
+.notes-content-view .page.is-landscape {
+  width: 297mm;
+  min-width: 297mm;
+  max-width: 297mm;
+  min-height: 210mm;
+  height: auto;
+  max-height: none;
+  overflow-x: hidden;
+}
+
+.notes-rich-editor .page table,
+.notes-content-view .page table,
+.notes-rich-editor.is-landscape .page table,
+.notes-content-view.is-landscape .page table,
+.notes-rich-editor .page.is-landscape table,
+.notes-content-view .page.is-landscape table {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
+}
+
+.notes-rich-editor .page th,
+.notes-rich-editor .page td,
+.notes-content-view .page th,
+.notes-content-view .page td {
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  vertical-align: top !important;
+}
+
+.notes-rich-editor table td,
+.notes-content-view table td,
+.notes-rich-editor table tr,
+.notes-content-view table tr {
+  height: auto !important;
+}
+
+.notes-rich-editor .page:empty::before {
+  content: "Write your notes, key updates, documentation, or action items here...";
+  color: #94a3b8;
+  pointer-events: none;
+  display: block;
+}
+
+.notes-rich-editor .page img.docling-page-image,
+.notes-content-view .page img.docling-page-image {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  display: block;
 }
 
 .notes-rich-editor,
@@ -488,6 +673,9 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-rich-editor table,
 .notes-content-view table {
   width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
   border-collapse: collapse !important;
   margin: 1rem 0 !important;
 }
@@ -499,6 +687,9 @@ input[type="password"]::-webkit-password-reveal-button {
   border: 1px solid #E2E8F0 !important;
   padding: 8px 12px !important;
   text-align: left !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
 }
 
 .notes-rich-editor th,
@@ -506,6 +697,26 @@ input[type="password"]::-webkit-password-reveal-button {
   background-color: #F8FAFC !important;
   font-weight: 600 !important;
   color: #1B2559 !important;
+}
+
+.notes-rich-editor table th.excel-sl-col,
+.notes-rich-editor table td.excel-sl-col,
+.notes-content-view table th.excel-sl-col,
+.notes-content-view table td.excel-sl-col {
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  padding: 6px 4px !important;
+  text-align: center !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  vertical-align: middle !important;
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  font-weight: 500;
+  font-size: 12px;
+  user-select: none;
+  cursor: pointer;
 }
 
 /* =========================================================
@@ -519,12 +730,52 @@ input[type="password"]::-webkit-password-reveal-button {
 
 .a4-page-workspace {
   background-color: #f1f5f9;
-  padding: 2rem 1rem;
+  padding: 3rem 1.5rem;
+  display: flex;
+  justify-content: safe center;
+  align-items: flex-start;
+  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 140px);
+  min-height: 720px;
+  width: 100%;
+}
+
+.a4-page-workspace.is-landscape {
+  justify-content: flex-start;
+}
+
+.a4-page-rotator {
   display: flex;
   justify-content: flex-start;
   align-items: flex-start;
-  overflow-x: auto;
-  min-height: 640px;
+  flex-shrink: 0;
+  width: max-content;
+  margin: 10mm auto;
+}
+
+.a4-page-workspace.is-landscape .a4-page-rotator {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.a4-page-rotator.rot-0,
+.a4-page-rotator.rot-180 {
+  width: max-content;
+  min-height: 0;
+  margin: 10mm auto;
+}
+
+/* Sideways rotation keeps the portrait layout box unless the rotator
+   is sized to the visual box (297mm x 210mm) and the sheet is centered in it. */
+.a4-page-rotator.rot-90,
+.a4-page-rotator.rot-270 {
+  position: relative;
+  width: 297mm;
+  height: 210mm;
+  min-height: 210mm;
+  margin: 10mm auto;
 }
 
 .a4-page {
@@ -534,115 +785,43 @@ input[type="password"]::-webkit-password-reveal-button {
   min-height: 297mm;
   height: auto;
   background-color: #ffffff;
-  margin: 10mm auto;
   padding: 20mm 18mm;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
   border: 1px solid #e2e8f0;
   border-radius: 4px;
   box-sizing: border-box;
   position: relative;
-  font-size: 14px;
-  overflow: visible !important;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+  transform-origin: center center;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.a4-page.landscape {
-  min-width: 337mm;
-  width: max-content;
-  max-width: none !important;
-  min-height: 210mm;
-  padding: 18mm 20mm;
+/* Rotation Angles */
+.a4-page.rot-0 {
+  transform: rotate(0deg);
 }
 
-.notes-rich-editor,
-.notes-content-view {
-  font-size: 14px;
-  line-height: 1.6;
-  width: 100%;
-  box-sizing: border-box;
-  overflow-wrap: anywhere !important;
-  word-break: break-word !important;
+.a4-page.rot-90,
+.a4-page.rot-270 {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transition: none;
 }
 
-.notes-rich-editor table,
-.notes-content-view table {
-  width: max-content !important;
-  max-width: none !important;
-  border-collapse: collapse !important;
-  margin: 1rem 0 !important;
-  font-size: 13px !important;
-  border: 1px solid #64748b !important;
+.a4-page.rot-90 {
+  transform: translate(-50%, -50%) rotate(90deg);
 }
 
-.notes-rich-editor table th,
-.notes-content-view table th {
-  min-width: 120px;
-  padding: 8px 14px;
-  border: 1px solid #64748b !important;
-  background-color: #f1f5f9 !important;
-  font-weight: 600;
-  text-align: center;
-  color: #334155;
-  user-select: none;
-  cursor: pointer;
+.a4-page.rot-180 {
+  transform: rotate(180deg);
 }
 
-.notes-rich-editor table td,
-.notes-content-view table td {
-  min-width: 120px;
-  height: 34px;
-  padding: 8px 14px;
-  border: 1px solid #64748b !important;
-  color: #1e293b;
-  text-align: left;
+.a4-page.rot-270 {
+  transform: translate(-50%, -50%) rotate(270deg);
 }
 
-/* SL Column (First Column) in Excel-style Tables */
-.notes-rich-editor table th.excel-sl-col,
-.notes-rich-editor table td.excel-sl-col,
-.notes-content-view table th.excel-sl-col,
-.notes-content-view table td.excel-sl-col {
-  min-width: 50px !important;
-  max-width: 60px !important;
-  width: 50px !important;
-  padding: 8px 12px !important;
-  text-align: center !important;
-  background-color: #f1f5f9 !important;
-  color: #475569 !important;
-  border: 1px solid #64748b !important;
-  font-weight: 500;
-  font-size: 12px;
-  user-select: none;
-  cursor: pointer;
-}
-
-.notes-rich-editor table th.excel-sl-col.excel-cell-selected,
-.notes-rich-editor table td.excel-sl-col.excel-cell-selected {
-  outline: none !important;
-  border: 1px solid #64748b !important;
-  background-color: #f1f5f9 !important;
-}
-
-.notes-rich-editor img,
-.notes-content-view img,
-.notes-rich-editor pre,
-.notes-content-view pre,
-.notes-rich-editor blockquote,
-.notes-content-view blockquote,
-.notes-rich-editor video,
-.notes-content-view video {
-  max-width: 100% !important;
-  height: auto !important;
-  overflow-wrap: anywhere !important;
-  word-break: break-word !important;
-  white-space: pre-wrap !important;
-}
-
-.notes-rich-editor p {
-  margin: 0 0 0.5rem 0;
-  overflow-wrap: anywhere;
-  word-break: break-word;
+.a4-page table {
+  max-width: 100%;
 }
 
 @media print {
@@ -659,6 +838,17 @@ input[type="password"]::-webkit-password-reveal-button {
     overflow: visible !important;
   }
 
+  .a4-page-rotator,
+  .a4-page-rotator.rot-90,
+  .a4-page-rotator.rot-270 {
+    position: static !important;
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
   .a4-page {
     width: 210mm !important;
     min-height: 297mm !important;
@@ -669,10 +859,55 @@ input[type="password"]::-webkit-password-reveal-button {
     page-break-after: always;
   }
 
-  .a4-page.landscape {
-    width: 337mm !important;
+  .a4-page.rot-0 {
+    transform: none !important;
+  }
+
+  .a4-page.rot-90,
+  .a4-page.rot-270 {
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+  }
+
+  .a4-page.rot-90 {
+    transform: rotate(90deg) !important;
+  }
+
+  .a4-page.rot-180 {
+    transform: rotate(180deg) !important;
+  }
+
+  .a4-page.rot-270 {
+    transform: rotate(270deg) !important;
+  }
+
+  .a4-page.doc-pages {
+    width: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .notes-rich-editor .page,
+  .notes-content-view .page {
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    page-break-after: always;
+  }
+
+  .notes-rich-editor.is-landscape .page,
+  .notes-content-view.is-landscape .page,
+  .notes-rich-editor .page.is-landscape,
+  .notes-content-view .page.is-landscape {
+    width: 297mm !important;
+    min-width: 297mm !important;
+    max-width: 297mm !important;
     min-height: 210mm !important;
-    padding: 15mm 20mm !important;
+    height: auto !important;
   }
 }
 
@@ -840,10 +1075,32 @@ button[class*="bg-tbl-"]:active {
 }
 
 /* Attachment Column & Row Interactive Cells */
+.notes-rich-editor table th {
+  position: relative;
+}
+
+.notes-rich-editor table th::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 4;
+}
+
+.notes-rich-editor.notes-col-resize-hover,
+.notes-rich-editor.notes-col-resize-hover *,
+.notes-rich-editor.notes-col-resizing,
+.notes-rich-editor.notes-col-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
 .notes-rich-editor table th.excel-attachment-col,
 .notes-content-view table th.excel-attachment-col {
   min-width: 140px !important;
-  width: 155px !important;
   text-align: center !important;
   background-color: #f1f5f9 !important;
   color: #334155 !important;
@@ -864,7 +1121,6 @@ button[class*="bg-tbl-"]:active {
 .notes-rich-editor table td.excel-attachment-cell,
 .notes-content-view table td.excel-attachment-cell {
   min-width: 140px !important;
-  width: 155px !important;
   padding: 6px 8px !important;
   text-align: center !important;
   vertical-align: middle !important;
@@ -1032,4 +1288,31 @@ button[class*="bg-tbl-"]:active {
 
 .notes-content-view .table-file-btn.remove {
   display: none !important;
+}
+
+.notes-excel-fill-handle {
+  position: fixed;
+  z-index: 80;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  margin-top: -8px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1.5px solid #2563eb;
+  background: #ffffff;
+  color: #2563eb;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: crosshair;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
+  user-select: none;
+}
+
+.notes-excel-fill-handle.is-visible {
+  display: flex;
 }
