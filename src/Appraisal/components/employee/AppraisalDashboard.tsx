@@ -12,16 +12,24 @@ import {
   RotateCcw,
   CalendarClock,
   ChevronRight,
+  KeyRound,
 } from "lucide-react";
 import {
   QuarterlyReviewAssignment,
   ManagerQuarterlyReviewRecord,
+  AccessRequest,
 } from "../../types/appraisal.types";
+import {
+  mockQuarterlyReviewAssignments,
+  initialMockAccessRequests,
+} from "../../mockData/quarterlyReview.mock";
 import { useEmployeeAppraisal } from "../../hooks/useEmployeeAppraisal";
 import QuarterlyReviewStepper from "./QuarterlyReviewStepper";
 import EvaluationPanel from "../manager/EvaluationPanel";
 import RatingVerificationModal from "./RatingVerificationModal";
 import AnnualRatingView from "./AnnualRatingView";
+import AccessRequestModal from "./AccessRequestModal";
+import { message } from "antd";
 import {
   Card,
   CardTitle,
@@ -152,6 +160,92 @@ export const AppraisalDashboard: React.FC = () => {
     setIsRatingAuthModalOpen(false);
     setIsAnnualRatingOpen(true);
     setTimeout(scrollToPageTop, 50);
+  };
+
+  // Access Request Modal & State
+  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>(initialMockAccessRequests);
+  const [isAccessModalOpen, setIsAccessModalOpen] = useState<boolean>(false);
+  const [selectedAccessAssignment, setSelectedAccessAssignment] = useState<QuarterlyReviewAssignment | null>(null);
+  const [selectedAccessRemainingHours, setSelectedAccessRemainingHours] = useState<number>(24);
+
+  // 1-Day Eligibility check helper:
+  // - Enabled ONLY when review is submitted (submitted, completed, reviewed)
+  // - Enabled strictly for 1 day (24 hours) after review submission
+  // - Otherwise disabled with informative tooltip
+  const checkAccessEligibility = (assignment: QuarterlyReviewAssignment) => {
+    const isAlreadyRequested = accessRequests.some(
+      (req) => req.assignmentId === assignment.id || (req.quarter === assignment.quarter && req.financialYear === assignment.financialYear)
+    );
+    if (isAlreadyRequested) {
+      return {
+        eligible: false,
+        alreadyRequested: true,
+        remainingHours: 0,
+        tooltip: `Access request already sent to ${assignment.assignedBy}. Status: Pending Approval.`,
+      };
+    }
+
+    const isSubmitted =
+      assignment.status === "submitted" ||
+      assignment.status === "reviewed";
+
+    if (!isSubmitted) {
+      return {
+        eligible: false,
+        alreadyRequested: false,
+        remainingHours: 0,
+        tooltip: "Access Request is enabled only after submitting your review.",
+      };
+    }
+
+    const oneDayMs = 24 * 60 * 60 * 1000;
+    if (!assignment.submittedAt) {
+      return {
+        eligible: true,
+        alreadyRequested: false,
+        remainingHours: 24,
+        tooltip: `Request edit access from ${assignment.assignedBy} (~24h remaining in 1-day window).`,
+      };
+    }
+
+    const submittedTime = new Date(assignment.submittedAt).getTime();
+    const timeDiff = Date.now() - submittedTime;
+
+    if (timeDiff > oneDayMs) {
+      return {
+        eligible: false,
+        alreadyRequested: false,
+        remainingHours: 0,
+        tooltip: "Access request window expired (only enabled for 1 day / 24 hours post-submission).",
+      };
+    }
+
+    const remainingHours = Math.max(1, Math.round((oneDayMs - timeDiff) / (3600 * 1000)));
+    return {
+      eligible: true,
+      alreadyRequested: false,
+      remainingHours,
+      tooltip: `Request edit access from ${assignment.assignedBy} (~${remainingHours}h remaining in 1-day window).`,
+    };
+  };
+
+  const handleOpenAccessRequest = (assignment: QuarterlyReviewAssignment, remainingHours: number) => {
+    setSelectedAccessAssignment(assignment);
+    setSelectedAccessRemainingHours(remainingHours);
+    setIsAccessModalOpen(true);
+  };
+
+  const handleCloseAccessRequest = () => {
+    setIsAccessModalOpen(false);
+    setSelectedAccessAssignment(null);
+  };
+
+  const handleSubmitAccessRequest = (newRequest: AccessRequest) => {
+    setAccessRequests((prev) => [newRequest, ...prev]);
+    message.success(
+      `Access request for ${newRequest.quarter} successfully routed to ${newRequest.recipientRole}!`,
+      2.5
+    );
   };
 
   // Ensure scroll to top whenever entering view or edit screen
@@ -542,16 +636,11 @@ export const AppraisalDashboard: React.FC = () => {
                             <th className="text-center min-w-[130px]">Assigned By</th>
                             <th className="text-center min-w-[140px]">Deadline</th>
                             <th className="text-center min-w-[130px]">Status</th>
-                            <th className="text-center min-w-[110px] qr-sticky-action-th">Action</th>
+                            <th className="text-center min-w-[140px] qr-sticky-action-th">Action</th>
                           </tr>
                         </thead>
                         <tbody>
                           {paginatedAssignments.map((assignment) => {
-                            const isSubmittedOrReviewed =
-                              assignment.status === "submitted" ||
-                              assignment.status === "completed" ||
-                              assignment.status === "reviewed";
-
                             return (
                               <tr key={assignment.id}>
                                 {/* 1. Quarter with Dedicated Color */}
@@ -613,6 +702,36 @@ export const AppraisalDashboard: React.FC = () => {
                                     >
                                       <Pencil className="w-4 h-4" />
                                     </button>
+
+                                    {/* Access Request Icon Button (Text Removed) */}
+                                    {(() => {
+                                      const elig = checkAccessEligibility(assignment);
+                                      return (
+                                        <button
+                                          type="button"
+                                          disabled={!elig.eligible}
+                                          onClick={() =>
+                                            elig.eligible &&
+                                            handleOpenAccessRequest(assignment, elig.remainingHours)
+                                          }
+                                          className={`qr-action-icon-btn qr-action-btn-access ${
+                                            elig.alreadyRequested
+                                              ? "qr-action-btn-access-requested"
+                                              : elig.eligible
+                                              ? "qr-action-btn-access-enabled"
+                                              : "qr-action-btn-access-disabled"
+                                          }`}
+                                          title={elig.tooltip}
+                                          aria-label={
+                                            elig.alreadyRequested
+                                              ? `Access requested for ${assignment.quarter}`
+                                              : `Request access for ${assignment.quarter}`
+                                          }
+                                        >
+                                          <KeyRound className="w-4 h-4" />
+                                        </button>
+                                      );
+                                    })()}
                                   </div>
                                 </td>
                               </tr>
@@ -649,11 +768,6 @@ export const AppraisalDashboard: React.FC = () => {
                 {/* Mobile Card Layout for Table Rows */}
                 <div className="sm:hidden space-y-3">
                   {paginatedAssignments.map((assignment) => {
-                    const isSubmittedOrReviewed =
-                      assignment.status === "submitted" ||
-                      assignment.status === "completed" ||
-                      assignment.status === "reviewed";
-
                     return (
                       <Card
                         key={assignment.id}
@@ -712,6 +826,35 @@ export const AppraisalDashboard: React.FC = () => {
                             <Pencil className="w-3.5 h-3.5" />
                             Edit
                           </button>
+
+                          {(() => {
+                            const elig = checkAccessEligibility(assignment);
+                            return (
+                              <button
+                                type="button"
+                                disabled={!elig.eligible}
+                                onClick={() =>
+                                  elig.eligible &&
+                                  handleOpenAccessRequest(assignment, elig.remainingHours)
+                                }
+                                className={`qr-action-icon-btn qr-action-btn-access !h-8 !w-8 justify-center shrink-0 ${
+                                  elig.alreadyRequested
+                                    ? "qr-action-btn-access-requested"
+                                    : elig.eligible
+                                    ? "qr-action-btn-access-enabled"
+                                    : "qr-action-btn-access-disabled"
+                                }`}
+                                title={elig.tooltip}
+                                aria-label={
+                                  elig.alreadyRequested
+                                    ? `Access requested for ${assignment.quarter}`
+                                    : `Request access for ${assignment.quarter}`
+                                }
+                              >
+                                <KeyRound className="w-3.5 h-3.5" />
+                              </button>
+                            );
+                          })()}
                         </div>
                       </Card>
                     );
@@ -719,56 +862,9 @@ export const AppraisalDashboard: React.FC = () => {
                 </div>
               </div>
             ) : (
-              /* STATE 1: Empty state matching reference image illustration */
+              /* STATE 1: Empty state matching reference image illustration (Rendered via CSS) */
               <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
-                {/* Clean illustration vector matching reference */}
-                <div className="w-64 sm:w-72 max-w-full mb-6">
-                  <svg
-                    viewBox="0 0 240 180"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="w-full h-auto drop-shadow-sm mx-auto"
-                  >
-                    <ellipse cx="120" cy="150" rx="90" ry="18" fill="#FAF6F4" />
-                    <rect
-                      x="50"
-                      y="30"
-                      width="140"
-                      height="100"
-                      rx="16"
-                      fill="#FFFFFF"
-                      stroke="#E2E8F0"
-                      strokeWidth="2"
-                    />
-                    <path
-                      d="M70 45 L170 45"
-                      stroke="#A36361"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M70 70 L150 70"
-                      stroke="#CBD5E1"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                    <path
-                      d="M70 90 L130 90"
-                      stroke="#E2E8F0"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                    <circle cx="155" cy="95" r="16" fill="#FAF5F2" stroke="#A36361" strokeWidth="2" />
-                    <path
-                      d="M150 95 L154 99 L162 91"
-                      stroke="#A36361"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-
+                <div className="appraisal-empty-illustration mb-6" aria-hidden="true" />
                 <h3 className="text-xl font-bold text-[#0F172A]">
                   No reviews available
                 </h3>
@@ -787,6 +883,16 @@ export const AppraisalDashboard: React.FC = () => {
         onClose={() => setIsRatingAuthModalOpen(false)}
         onSuccess={handleVerificationSuccess}
       />
+
+      {/* ACCESS REQUEST MODAL */}
+      <AccessRequestModal
+        isOpen={isAccessModalOpen}
+        onClose={handleCloseAccessRequest}
+        assignment={selectedAccessAssignment}
+        remainingHours={selectedAccessRemainingHours}
+        onSubmit={handleSubmitAccessRequest}
+      />
+
     </div>
   );
 };

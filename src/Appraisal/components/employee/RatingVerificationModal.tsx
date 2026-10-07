@@ -241,7 +241,11 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
                       if (emailError) setEmailError("");
                     }}
                     placeholder="employee@worksphere.com"
-                    className="w-full px-4 py-3 pl-10 rounded-2xl bg-[#FFFDFB] border border-[#E2E8F0] text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-[#A36361] focus:ring-2 focus:ring-[#A36361]/15 transition-all"
+                    className={`w-full px-4 py-3 pl-10 rounded-2xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none transition-all ${
+                      emailError
+                        ? "bg-[#FEF2F2] border border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                        : "bg-[#FFFDFB] border border-[#E2E8F0] focus:border-[#A36361] focus:ring-2 focus:ring-[#A36361]/15"
+                    }`}
                     autoFocus
                   />
                   <Mail className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />

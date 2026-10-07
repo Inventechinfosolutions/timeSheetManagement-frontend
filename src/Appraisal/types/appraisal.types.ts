@@ -48,6 +48,20 @@ export interface QuarterlyReviewAssignment {
   deadline: string;
   status: ReviewStatus;
   description?: string;
+  submittedAt?: string;
+}
+
+export interface AccessRequest {
+  id: string;
+  assignmentId: string;
+  quarter: string;
+  financialYear: string;
+  recipientRole: "Manager" | "Admin" | string;
+  recipientName?: string;
+  description: string;
+  reasonCategory?: string;
+  requestedAt: string;
+  status: "pending" | "approved" | "rejected";
 }
 
 export interface ReviewFormData {

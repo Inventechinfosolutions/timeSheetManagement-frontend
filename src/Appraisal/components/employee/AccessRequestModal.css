@@ -1,0 +1,258 @@
+/* ==========================================================================
+   Access Request Modal Styling & Micro-Interactions
+   Matches CreateReviewAssignmentModal Flow & Palette: #9EABA2, #BDD1C5, #EECC8C, #E8B298, #D3A29D, #A36361
+   ========================================================================== */
+
+@import "../manager/CreateReviewAssignmentModal.css";
+
+/* Blur and subtly dim header, sidebar, and footer when modal is open */
+body.modal-open-active header,
+body.modal-open-active .header,
+body.modal-open-active aside,
+body.modal-open-active footer,
+body.modal-open-active .footer,
+body.modal-open-active .sidebar-footer {
+  filter: blur(2.5px) brightness(0.92) !important;
+  opacity: 0.72 !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+/* Compact Modal Dialog Card */
+.access-modal-dialog {
+  max-width: 485px !important;
+  padding: 1.15rem 1.25rem !important;
+  border-radius: 1.5rem !important;
+}
+
+/* Tighten header and footer spacing in Modal */
+.access-modal-dialog > div:first-child {
+  padding-bottom: 0.35rem !important;
+  margin-bottom: 0.65rem !important;
+  border-bottom: none !important;
+}
+
+.access-modal-dialog > div:last-child {
+  padding-top: 0.35rem !important;
+  margin-top: 0.65rem !important;
+  border-top: none !important;
+}
+
+/* Compact header elements */
+.access-modal-dialog .create-modal-header-icon {
+  width: 2.25rem !important;
+  height: 2.25rem !important;
+  border-radius: 0.75rem !important;
+}
+
+.access-modal-dialog .create-modal-close-btn {
+  width: 2rem !important;
+  height: 2rem !important;
+  border-radius: 0.65rem !important;
+}
+
+.access-modal-dialog .create-modal-title {
+  font-size: 1.05rem !important;
+  line-height: 1.2 !important;
+}
+
+.access-modal-dialog .create-modal-subtitle {
+  font-size: 0.75rem !important;
+  margin-top: 0.15rem !important;
+}
+
+/* Target Recipient Banner */
+.access-target-banner {
+  background: linear-gradient(135deg, #FAF2EE 0%, #FFF9EE 100%);
+  border: 1px solid rgba(211, 162, 157, 0.45);
+  border-radius: 0.75rem;
+  padding: 0.45rem 0.75rem;
+}
+
+/* Buttons */
+.access-modal-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #64748B;
+  background: #FAF5F2;
+  border: 1px solid #E8B298;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 35px;
+}
+
+.access-modal-cancel-btn:hover:not(:disabled) {
+  background: #FAF2EE;
+  color: #0F172A;
+  border-color: #D3A29D;
+  transform: translateY(-1px);
+}
+
+.access-modal-cancel-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.access-modal-submit-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0.45rem 1.25rem !important;
+  border-radius: 0.75rem !important;
+  font-size: 0.8125rem !important;
+  font-weight: 700 !important;
+  min-height: 35px !important;
+  position: relative !important;
+  overflow: hidden !important;
+  cursor: pointer !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.access-modal-submit-btn.is-active {
+  background: linear-gradient(135deg, #A36361 0%, #8D4E4D 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 4px 14px rgba(163, 99, 97, 0.3) !important;
+}
+
+.access-modal-submit-btn.is-active:hover {
+  transform: translateY(-1px) scale(1.01) !important;
+  box-shadow: 0 8px 20px rgba(163, 99, 97, 0.38) !important;
+}
+
+.access-modal-submit-btn.is-active:active {
+  transform: translateY(1px) scale(0.97) !important;
+}
+
+.access-modal-submit-btn.is-disabled {
+  background: #FAF2EE !important;
+  color: #94A3B8 !important;
+  border: 1px solid rgba(232, 178, 152, 0.35) !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 0.85;
+}
+
+/* Time Remaining Badge */
+.access-window-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background: #FAF2EE;
+  color: #A36361;
+  border: 1px solid #D3A29D;
+  animation: accessBadgePulse 3s ease-in-out infinite;
+}
+
+@keyframes accessBadgePulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(163, 99, 97, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(163, 99, 97, 0.1);
+  }
+}
+
+/* Description Textarea */
+.access-textarea-field {
+  width: 100%;
+  border: 1.5px solid #E2E8F0;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: #0F172A;
+  background: #FFFFFF;
+  line-height: 1.45;
+  transition: all 0.22s ease;
+  resize: none;
+  min-height: 64px;
+  max-height: 72px;
+}
+
+.access-textarea-field:hover {
+  border-color: #CBD5E1;
+}
+
+.access-textarea-field:focus {
+  outline: none;
+  border-color: #A36361;
+  box-shadow: 0 0 0 3px rgba(163, 99, 97, 0.12);
+  background: #FAF2EE;
+}
+
+/* Error State: Bright Red Border & Subtle Red Focus Ring for Clear Differentiation */
+.access-textarea-field.is-error {
+  border-color: #EF4444 !important;
+  background: #FEF2F2 !important;
+}
+
+.access-textarea-field.is-error:focus {
+  outline: none !important;
+  border-color: #DC2626 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18) !important;
+  background: #FFFFFF !important;
+}
+
+/* Launching Paper Plane Animation */
+.access-icon-launching {
+  animation: accessPlaneLaunch 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes accessPlaneLaunch {
+  0% {
+    transform: translate(0, 0) rotate(-12deg) scale(1);
+    opacity: 1;
+  }
+  45% {
+    transform: translate(14px, -14px) rotate(18deg) scale(1.15);
+    opacity: 0.85;
+  }
+  100% {
+    transform: translate(40px, -36px) rotate(32deg) scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* Pop-in Checkmark */
+.access-icon-check {
+  animation: accessCheckPop 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes accessCheckPop {
+  0% {
+    transform: scale(0) rotate(-45deg);
+    opacity: 0;
+  }
+  70% {
+    transform: scale(1.25) rotate(5deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+}
+
+/* Success Card Modal Transformation */
+.access-success-box {
+  animation: accessSuccessFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes accessSuccessFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

@@ -63,7 +63,11 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
 
   const submitReview = (assignmentId: string) => {
     setAssignments((prev) =>
-      prev.map((a) => (a.id === assignmentId ? { ...a, status: "submitted" } : a))
+      prev.map((a) =>
+        a.id === assignmentId
+          ? { ...a, status: "submitted", submittedAt: new Date().toISOString() }
+          : a
+      )
     );
     setActiveAssignment(null);
   };

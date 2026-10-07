@@ -2,6 +2,7 @@ import {
   QuarterlyReviewAssignment,
   ReviewFormData,
   ManagerQuarterlyReviewRecord,
+  AccessRequest,
 } from "../types/appraisal.types";
 
 export const initialMockQuarterlyReviewTableData: ManagerQuarterlyReviewRecord[] = [
@@ -301,7 +302,8 @@ export const mockQuarterlyReviewAssignments: QuarterlyReviewAssignment[] = [
     assignedBy: "Manager",
     assignedDate: "01-Apr-2026",
     deadline: "15-Apr-2026",
-    status: "assigned",
+    status: "submitted",
+    submittedAt: new Date(Date.now() - 4 * 3600 * 1000).toISOString(), // Submitted 4h ago - within 1-day window (ENABLED)
     description: "Complete your Q1 performance review focusing on deliverables, project milestones, and personal development goals.",
   },
   {
@@ -311,7 +313,7 @@ export const mockQuarterlyReviewAssignments: QuarterlyReviewAssignment[] = [
     assignedBy: "Admin",
     assignedDate: "01-Jul-2026",
     deadline: "15-Jul-2026",
-    status: "in_progress",
+    status: "in_progress", // In progress - not submitted (DISABLED)
     description: "Quarterly review for Q2 product delivery and sprint milestones.",
   },
   {
@@ -322,6 +324,7 @@ export const mockQuarterlyReviewAssignments: QuarterlyReviewAssignment[] = [
     assignedDate: "01-Jan-2026",
     deadline: "15-Jan-2026",
     status: "reviewed",
+    submittedAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(), // Submitted 48h ago - expired 1-day window (DISABLED)
     description: "Annual cycle closing review for Q4 deliverables.",
   },
   {
@@ -332,6 +335,7 @@ export const mockQuarterlyReviewAssignments: QuarterlyReviewAssignment[] = [
     assignedDate: "01-Oct-2025",
     deadline: "15-Oct-2025",
     status: "reviewed",
+    submittedAt: new Date(Date.now() - 120 * 3600 * 1000).toISOString(),
     description: "Mid-year review for Q3 achievements and engineering goals.",
   },
   {
@@ -342,6 +346,7 @@ export const mockQuarterlyReviewAssignments: QuarterlyReviewAssignment[] = [
     assignedDate: "01-Jul-2025",
     deadline: "15-Jul-2025",
     status: "reviewed",
+    submittedAt: new Date(Date.now() - 210 * 3600 * 1000).toISOString(),
     description: "Q2 performance appraisal evaluation.",
   },
   {
@@ -352,9 +357,12 @@ export const mockQuarterlyReviewAssignments: QuarterlyReviewAssignment[] = [
     assignedDate: "01-Apr-2025",
     deadline: "15-Apr-2025",
     status: "reviewed",
+    submittedAt: new Date(Date.now() - 300 * 3600 * 1000).toISOString(),
     description: "Q1 initial onboarding review and project alignment.",
   },
 ];
+
+export const initialMockAccessRequests: AccessRequest[] = [];
 
 export const initialReviewFormData: ReviewFormData = {
   // Step 1: Overview
