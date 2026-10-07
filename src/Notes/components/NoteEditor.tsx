@@ -308,7 +308,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         setFormData((prev) => ({ ...prev, description: editorRef.current?.innerHTML || "" }));
         onEditorInput();
         setHasContent(checkHasContent());
-        message.info("Undid last action");
+        message.info("Undo last action");
       }
       isHistoryNavigatingRef.current = false;
       return;
