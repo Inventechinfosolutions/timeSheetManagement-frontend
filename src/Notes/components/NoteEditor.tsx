@@ -9,7 +9,7 @@ import {
   Loader2,
   Check,
   User,
-  FileText,
+  FileType2,
   RectangleHorizontal,
   FileSpreadsheet,
   AlignJustify,
@@ -22,7 +22,6 @@ import {
   Link as LinkIcon,
   Palette,
   Highlighter,
-  FileCode,
   Heading1,
   Heading2,
   Type,
@@ -1119,7 +1118,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 
                 <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
 
-                {/* Docling JSON / Document Import Button */}
+                {/* Import PDF / Word */}
                 <input
                   type="file"
                   ref={doclingJsonInputRef}
@@ -1132,16 +1131,20 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => doclingJsonInputRef.current?.click()}
                   disabled={isImportingDocling || isExtractingExcel}
-                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-[#4318FF] bg-[#4318FF]/10 hover:bg-[#4318FF]/20 transition cursor-pointer disabled:opacity-50"
-                  title={isImportingDocling ? "Parsing PDF..." : "Import PDF / Docx"}
+                  className="h-8 px-2 shrink-0 flex items-center gap-1 rounded-lg text-xs font-semibold text-[#4318FF] bg-[#4318FF]/10 hover:bg-[#4318FF]/20 transition cursor-pointer disabled:opacity-50"
+                  title="Import PDF or Word (.docx) into this note"
                 >
                   {isImportingDocling ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <FileCode className="w-4 h-4" />
+                    <FileType2 className="w-3.5 h-3.5" />
                   )}
+                  <span className="whitespace-nowrap">
+                    {isImportingDocling ? "Importing..." : "PDF / Doc"}
+                  </span>
                 </button>
 
+                {/* Import Excel */}
                 <input
                   type="file"
                   ref={excelExtractInputRef}
@@ -1154,16 +1157,20 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => excelExtractInputRef?.current?.click()}
                   disabled={isImportingDocling || isExtractingExcel}
-                  className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer disabled:opacity-50"
-                  title={isExtractingExcel ? "Extracting Excel..." : "Extract Excel"}
+                  className="h-8 px-2 shrink-0 flex items-center gap-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer disabled:opacity-50"
+                  title="Import Excel spreadsheet (.xlsx, .xls, .csv)"
                 >
                   {isExtractingExcel ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <FileSpreadsheet className="w-4 h-4" />
+                    <FileSpreadsheet className="w-3.5 h-3.5" />
                   )}
+                  <span className="whitespace-nowrap">
+                    {isExtractingExcel ? "Importing..." : "Excel"}
+                  </span>
                 </button>
 
+                {/* Landscape / Portrait page */}
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
@@ -1180,14 +1187,21 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                       }));
                     });
                   }}
-                  className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-lg transition cursor-pointer ${
+                  className={`h-8 px-2 shrink-0 flex items-center gap-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
                     isLandscape
                       ? "text-white bg-[#4318FF] hover:bg-[#320fe0]"
                       : "text-slate-700 bg-slate-100 hover:bg-slate-200"
                   }`}
-                  title="Switch to landscape: wide A4 page with normal text"
+                  title={
+                    isLandscape
+                      ? "Page is Landscape — click for Portrait"
+                      : "Page is Portrait — click for Landscape (wide A4)"
+                  }
                 >
-                  <RectangleHorizontal className="w-4 h-4" />
+                  <RectangleHorizontal className="w-3.5 h-3.5" />
+                  <span className="whitespace-nowrap">
+                    {isLandscape ? "Landscape" : "Portrait"}
+                  </span>
                 </button>
 
                 <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />

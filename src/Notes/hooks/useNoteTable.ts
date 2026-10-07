@@ -46,9 +46,8 @@ export const useNoteTable = ({
   const [fillMode, setFillMode] = useState<"bg" | "text">("bg");
   const lastActiveCellRef = useRef<HTMLTableCellElement | null>(null);
   const selectedCellsRef = useRef<HTMLTableCellElement[]>([]);
-  const skipColumnClickRef = useRef(false);
-  const selectionKindRef = useRef<"row" | "column" | null>(null);
-  const fillHandleSyncRef = useRef<() => void>(() => {});
+  const selectionKindRef = useRef<"row" | "column" | "cell" | null>(null);
+  const syncExpandHandleRef = useRef<() => void>(() => {});
 
   // Helper to get active table
   const getTargetTable = (): HTMLTableElement | null => {
@@ -66,6 +65,13 @@ export const useNoteTable = ({
 
   const clearSelectionVisuals = (table?: HTMLElement | null) => {
     clearTableSelectionVisuals(table, getTargetTable() || editorRef.current);
+  };
+
+  const clearTableSelection = (table?: HTMLElement | null) => {
+    clearSelectionVisuals(table);
+    selectedCellsRef.current = [];
+    selectionKindRef.current = null;
+    syncExpandHandleRef.current();
   };
 
   // Track active table cell & multi-cell selection on selection change
@@ -110,7 +116,6 @@ export const useNoteTable = ({
     if (!editor) return;
 
     const handleTableClick = (e: MouseEvent) => {
-      if (skipColumnClickRef.current) return;
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
@@ -215,20 +220,38 @@ export const useNoteTable = ({
       }
 
       const cell = target.closest("td, th") as HTMLTableCellElement | null;
-      if (!cell || !editor.contains(cell)) return;
+
+      // Click empty space (outside cells) -> remove blue selection + hide expand handle
+      if (!cell || !editor.contains(cell)) {
+        clearTableSelection(getTargetTable() || editor);
+        return;
+      }
 
       const table = cell.closest("table");
-      if (!table) return;
+      if (!table) {
+        clearTableSelection(editor);
+        return;
+      }
 
       const isFirstColSl = table.rows[0]?.cells[0]?.textContent?.trim() === "SL";
+      const alreadySelectedCol =
+        selectionKindRef.current === "column" &&
+        selectedCellsRef.current.some(
+          (c) => document.contains(c) && c.closest("table") === table && c.cellIndex === cell.cellIndex
+        );
+      const alreadySelectedCell =
+        selectionKindRef.current === "cell" &&
+        selectedCellsRef.current.length === 1 &&
+        selectedCellsRef.current[0] === cell;
 
-      // Click on TH (column header) -> select only body cells down the column
+      // Click on TH (column header) -> select column, or click again to turn expand mode off
       if (cell.tagName === "TH") {
         if (isFirstColSl && cell.cellIndex === 0) {
-          clearSelectionVisuals(table);
-          selectedCellsRef.current = [];
-          selectionKindRef.current = null;
-          fillHandleSyncRef.current();
+          clearTableSelection(table);
+          return;
+        }
+        if (alreadySelectedCol) {
+          clearTableSelection(table);
           return;
         }
         clearSelectionVisuals(table);
@@ -244,11 +267,15 @@ export const useNoteTable = ({
           selectedCellsRef.current = colCells;
           applySelectionVisuals(colCells, "column");
           selectionKindRef.current = "column";
-          fillHandleSyncRef.current();
+          syncExpandHandleRef.current();
         }
       }
       // Click on SL cell (1st col TD) -> select entire row's BODY cells only
       else if (cell.cellIndex === 0 && isFirstColSl) {
+        if (selectionKindRef.current === "row") {
+          clearTableSelection(table);
+          return;
+        }
         clearSelectionVisuals(table);
         const tr = cell.closest("tr");
         if (tr) {
@@ -260,17 +287,22 @@ export const useNoteTable = ({
             selectedCellsRef.current = bodyCells;
             applySelectionVisuals(bodyCells, "row");
             selectionKindRef.current = "row";
-            fillHandleSyncRef.current();
+            syncExpandHandleRef.current();
           }
         }
       }
-      // Click on normal cell -> clear visual selection outlines
+      // Click on normal cell -> select that cell; click same cell again to clear
       else {
+        if (alreadySelectedCell) {
+          clearTableSelection(table);
+          return;
+        }
         clearSelectionVisuals(table);
         lastActiveCellRef.current = cell;
         selectedCellsRef.current = [cell];
-        selectionKindRef.current = null;
-        fillHandleSyncRef.current();
+        applySelectionVisuals([cell], "cells");
+        selectionKindRef.current = "cell";
+        syncExpandHandleRef.current();
       }
     };
 
@@ -280,224 +312,228 @@ export const useNoteTable = ({
     };
   }, [editorRef, onDownloadAttachment, onPreviewAttachment]);
 
+  // Excel-style + handle: hand cursor, drag/click expands only the selected cell's column
   useEffect(() => {
-    const editor = editorRef.current;
-    if (!editor) return;
+    const handle = document.createElement("button");
+    handle.type = "button";
+    handle.className = "notes-excel-fill-handle";
+    handle.textContent = "+";
+    handle.title = "Drag to expand column · Click to close selection";
+    handle.contentEditable = "false";
+    document.body.appendChild(handle);
 
-    const EDGE = 10;
-    let drag: {
-      table: HTMLTableElement;
-      colIndex: number;
-      startX: number;
-      startWidth: number;
-      moved: boolean;
-    } | null = null;
+    const isSl = (cell?: Element | null) => Boolean(cell?.classList.contains("excel-sl-col"));
+    const MIN = 48;
 
-    const ensureColgroup = (table: HTMLTableElement) => {
-      const colCount = table.rows[0]?.cells.length || 0;
-      let colgroup = table.querySelector("colgroup");
-      if (!colgroup) {
-        colgroup = document.createElement("colgroup");
-        table.insertBefore(colgroup, table.firstChild);
-      }
-      while (colgroup.children.length < colCount) {
-        colgroup.appendChild(document.createElement("col"));
-      }
-      while (colgroup.children.length > colCount) {
-        colgroup.lastElementChild?.remove();
-      }
-      return colgroup;
-    };
-
-    const getPageInnerWidth = (table: HTMLTableElement) => {
-      const page = table.closest(".page") as HTMLElement | null;
-      if (page) {
-        const styles = window.getComputedStyle(page);
-        return (
-          page.clientWidth -
-          (parseFloat(styles.paddingLeft) || 0) -
-          (parseFloat(styles.paddingRight) || 0)
-        );
-      }
-      return table.parentElement?.clientWidth || table.getBoundingClientRect().width;
-    };
-
-    const isLockedCol = (cell?: HTMLTableCellElement) =>
-      Boolean(cell?.classList.contains("excel-sl-col"));
-
-    const minWidthFor = (cell?: HTMLTableCellElement) => {
-      if (!cell) return 48;
-      if (cell.classList.contains("excel-sl-col")) return 44;
-      if (cell.classList.contains("excel-attachment-col") || cell.classList.contains("excel-attachment-cell")) {
-        return 120;
-      }
-      return 48;
-    };
+    const readWidths = (table: HTMLTableElement) =>
+      Array.from(table.rows[0]?.cells || []).map((c) =>
+        Math.round((c as HTMLTableCellElement).getBoundingClientRect().width)
+      );
 
     const applyWidths = (table: HTMLTableElement, widths: number[]) => {
-      const colgroup = ensureColgroup(table);
-      const maxTableWidth = Math.max(120, Math.round(getPageInnerWidth(table)));
-      const next = widths.map((w, i) =>
-        Math.max(minWidthFor(table.rows[0]?.cells[i] as HTMLTableCellElement), Math.round(w))
-      );
-      next.forEach((width, index) => {
-        const col = colgroup.children[index] as HTMLTableColElement | undefined;
-        if (col) col.style.width = `${width}px`;
-        Array.from(table.rows).forEach((row) => {
-          const cell = row.cells[index] as HTMLTableCellElement | undefined;
+      Array.from(table.rows).forEach((row) => {
+        widths.forEach((w, i) => {
+          const cell = row.cells[i] as HTMLTableCellElement | undefined;
           if (!cell) return;
-          cell.style.setProperty("width", `${width}px`, "important");
-          if (isLockedCol(cell)) {
-            cell.style.setProperty("min-width", `${width}px`, "important");
-            cell.style.setProperty("max-width", `${width}px`, "important");
-          } else {
-            cell.style.setProperty("min-width", "0", "important");
-            cell.style.removeProperty("max-width");
+          if (isSl(cell)) {
+            cell.style.setProperty("width", "44px", "important");
+            cell.style.setProperty("min-width", "44px", "important");
+            cell.style.setProperty("max-width", "44px", "important");
+            return;
           }
+          cell.style.setProperty("width", `${w}px`, "important");
+          cell.style.setProperty("min-width", "0", "important");
+          cell.style.removeProperty("max-width");
         });
       });
-      const total = next.reduce((sum, w) => sum + w, 0);
-      table.style.setProperty("width", `${Math.min(total, maxTableWidth)}px`, "important");
+      table.style.setProperty("width", "100%", "important");
       table.style.setProperty("max-width", "100%", "important");
       table.style.setProperty("table-layout", "fixed", "important");
     };
 
-    const currentWidths = (table: HTMLTableElement) =>
-      Array.from(table.rows[0]?.cells || []).map((cell) =>
-        Math.round((cell as HTMLTableCellElement).getBoundingClientRect().width)
-      );
+    /** Resize only selected column; take/give space from neighbors so table stays on page. */
+    const setSelectedColWidth = (
+      table: HTMLTableElement,
+      colIndex: number,
+      startWidths: number[],
+      targetWidth: number
+    ) => {
+      const header = table.rows[0]?.cells[colIndex];
+      if (!header || isSl(header)) return;
+      const widths = startWidths.map((w) => Math.round(w));
+      const desired = Math.max(MIN, Math.round(targetWidth));
+      let delta = desired - widths[colIndex];
+      if (delta === 0) return;
 
-    const setColumnWidth = (table: HTMLTableElement, colIndex: number, width: number) => {
-      const headerCell = table.rows[0]?.cells[colIndex] as HTMLTableCellElement | undefined;
-      if (!headerCell || isLockedCol(headerCell)) return;
-      const widths = currentWidths(table);
-      const maxTableWidth = Math.max(120, Math.round(getPageInnerWidth(table)));
-      const others = widths.reduce((sum, w, i) => (i === colIndex ? sum : sum + w), 0);
-      const maxThis = Math.max(minWidthFor(headerCell), maxTableWidth - others);
-      widths[colIndex] = Math.min(Math.max(minWidthFor(headerCell), Math.round(width)), maxThis);
+      if (delta > 0) {
+        for (let i = colIndex + 1; i < widths.length && delta > 0; i++) {
+          if (isSl(table.rows[0]?.cells[i])) continue;
+          const take = Math.min(delta, widths[i] - MIN);
+          if (take > 0) {
+            widths[i] -= take;
+            widths[colIndex] += take;
+            delta -= take;
+          }
+        }
+        for (let i = colIndex - 1; i >= 0 && delta > 0; i--) {
+          if (isSl(table.rows[0]?.cells[i])) continue;
+          const take = Math.min(delta, widths[i] - MIN);
+          if (take > 0) {
+            widths[i] -= take;
+            widths[colIndex] += take;
+            delta -= take;
+          }
+        }
+      } else {
+        let give = -delta;
+        widths[colIndex] = Math.max(MIN, widths[colIndex] - give);
+        give = startWidths[colIndex] - widths[colIndex];
+        const next = colIndex + 1;
+        if (next < widths.length && !isSl(table.rows[0]?.cells[next])) {
+          widths[next] += give;
+        }
+      }
       applyWidths(table, widths);
     };
 
-    const snapshotColumnWidths = (table: HTMLTableElement) => {
-      applyWidths(table, currentWidths(table));
-    };
-
-    const autoFitColumn = (table: HTMLTableElement, colIndex: number) => {
-      const headerCell = table.rows[0]?.cells[colIndex];
-      if (!headerCell || isLockedCol(headerCell)) return;
-      let fitWidth = minWidthFor(headerCell);
-      Array.from(table.rows).forEach((row) => {
-        const cell = row.cells[colIndex] as HTMLTableCellElement | undefined;
-        if (!cell) return;
-        const probe = cell.cloneNode(true) as HTMLElement;
-        probe.style.cssText =
-          "position:absolute;visibility:hidden;height:auto;width:auto;min-width:0;max-width:none;white-space:normal;overflow-wrap:anywhere;";
-        document.body.appendChild(probe);
-        fitWidth = Math.max(fitWidth, Math.ceil(probe.getBoundingClientRect().width) + 16);
-        probe.remove();
-      });
-      const maxTableWidth = getPageInnerWidth(table);
-      const others = currentWidths(table).reduce(
-        (sum, w, i) => (i === colIndex ? sum : sum + w),
-        0
+    const getExpandTarget = () => {
+      const kind = selectionKindRef.current;
+      const cells = selectedCellsRef.current.filter(
+        (c) => document.contains(c) && c.classList.contains("excel-cell-selected")
       );
-      setColumnWidth(table, colIndex, Math.min(fitWidth, Math.max(48, maxTableWidth - others)));
+      const table = cells[0]?.closest("table") as HTMLTableElement | null;
+      if (!table || !cells.length) return null;
+      if (kind === "row") return null;
+      const colIndex = cells[0].cellIndex;
+      const header = table.rows[0]?.cells[colIndex];
+      if (!header || isSl(header) || isSl(cells[0])) return null;
+      const anchor =
+        kind === "column"
+          ? (header as HTMLTableCellElement)
+          : cells[0];
+      return { table, colIndex, anchor, kind: kind || "cell" };
     };
 
-    const getResizeColumn = (e: MouseEvent) => {
-      const cell = (e.target as HTMLElement | null)?.closest("th, td") as HTMLTableCellElement | null;
-      if (!cell || !editor.contains(cell)) return null;
-      const table = cell.closest("table");
-      if (!table) return null;
-      const headerRow = table.rows[0];
-      const inHeader = cell.tagName === "TH" || cell.parentElement === headerRow;
-      if (!inHeader) return null;
-      const rect = cell.getBoundingClientRect();
-      let colIndex = -1;
-      if (rect.right - e.clientX <= EDGE) colIndex = cell.cellIndex;
-      else if (e.clientX - rect.left <= EDGE) colIndex = cell.cellIndex - 1;
-      if (colIndex < 0) return null;
-      const headerCell = headerRow?.cells[colIndex];
-      if (!headerCell || headerCell.classList.contains("excel-sl-col")) return null;
-      return { table, colIndex };
-    };
-
-    const onMouseDown = (e: MouseEvent) => {
-      if (e.button !== 0) return;
-      const target = getResizeColumn(e);
-      if (!target) return;
-      e.preventDefault();
-      e.stopPropagation();
-      snapshotColumnWidths(target.table);
-      drag = {
-        ...target,
-        startX: e.clientX,
-        startWidth: Math.round(
-          (target.table.rows[0]?.cells[target.colIndex] as HTMLTableCellElement).getBoundingClientRect().width
-        ),
-        moved: false,
-      };
-      skipColumnClickRef.current = true;
-      editor.classList.add("notes-col-resizing");
-      saveUndoSnapshot();
-    };
-
-    const onMouseMove = (e: MouseEvent) => {
-      if (drag) {
-        const delta = e.clientX - drag.startX;
-        if (!drag.moved && Math.abs(delta) < 4) return;
-        drag.moved = true;
-        setColumnWidth(drag.table, drag.colIndex, drag.startWidth + delta);
+    const syncHandle = () => {
+      const target = getExpandTarget();
+      if (!target) {
+        handle.classList.remove("is-visible");
         return;
       }
-      editor.classList.toggle("notes-col-resize-hover", Boolean(getResizeColumn(e)));
+      const rect = target.anchor.getBoundingClientRect();
+      handle.style.left = `${rect.right}px`;
+      handle.style.top = `${rect.top + (target.kind === "column" ? 0 : rect.height / 2)}px`;
+      handle.classList.add("is-visible");
     };
+    syncExpandHandleRef.current = syncHandle;
 
-    const finishDrag = (e?: MouseEvent) => {
-      if (!drag) return;
-      const current = drag;
-      drag = null;
-      editor.classList.remove("notes-col-resizing");
-      if (!current.moved) {
-        autoFitColumn(current.table, current.colIndex);
-      }
-      handleEditorInputWrapper();
-      window.setTimeout(() => {
-        skipColumnClickRef.current = false;
-      }, 0);
+    type DragState = {
+      table: HTMLTableElement;
+      colIndex: number;
+      startX: number;
+      startWidths: number[];
+      moved: boolean;
+      pointerId: number;
     };
+    let drag: DragState | null = null;
 
-    const onMouseUp = (e: MouseEvent) => finishDrag(e);
-
-    const onDoubleClick = (e: MouseEvent) => {
-      const target = getResizeColumn(e);
-      if (!target) return;
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.button !== 0) return;
       e.preventDefault();
       e.stopPropagation();
-      skipColumnClickRef.current = true;
-      snapshotColumnWidths(target.table);
+      const target = getExpandTarget();
+      if (!target) return;
+      handle.setPointerCapture(e.pointerId);
+      handle.classList.add("is-dragging");
       saveUndoSnapshot();
-      autoFitColumn(target.table, target.colIndex);
-      handleEditorInputWrapper();
-      window.setTimeout(() => {
-        skipColumnClickRef.current = false;
-      }, 0);
+      drag = {
+        table: target.table,
+        colIndex: target.colIndex,
+        startX: e.clientX,
+        startWidths: readWidths(target.table),
+        moved: false,
+        pointerId: e.pointerId,
+      };
     };
 
-    editor.addEventListener("mousedown", onMouseDown, true);
-    editor.addEventListener("mousemove", onMouseMove);
-    editor.addEventListener("dblclick", onDoubleClick, true);
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    return () => {
-      editor.removeEventListener("mousedown", onMouseDown, true);
-      editor.removeEventListener("mousemove", onMouseMove);
-      editor.removeEventListener("dblclick", onDoubleClick, true);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
-      editor.classList.remove("notes-col-resizing", "notes-col-resize-hover");
+    const onPointerMove = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.pointerId) return;
+      const dx = e.clientX - drag.startX;
+      if (!drag.moved && Math.abs(dx) < 2) return;
+      drag.moved = true;
+      setSelectedColWidth(
+        drag.table,
+        drag.colIndex,
+        drag.startWidths,
+        drag.startWidths[drag.colIndex] + dx
+      );
+      syncHandle();
     };
-  }, [editorRef]);
+
+    const clearExpandMode = () => {
+      const table = getExpandTarget()?.table || getTargetTable();
+      clearSelectionVisuals(table);
+      selectedCellsRef.current = [];
+      selectionKindRef.current = null;
+      handle.classList.remove("is-visible", "is-dragging");
+    };
+
+    const endDrag = (e: PointerEvent) => {
+      if (!drag || e.pointerId !== drag.pointerId) return;
+      const current = drag;
+      drag = null;
+      handle.classList.remove("is-dragging");
+      try {
+        handle.releasePointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      if (!current.moved) {
+        // Click + again: turn off expand mode (remove blue column line)
+        clearExpandMode();
+        return;
+      }
+      handleEditorInputWrapper();
+      requestAnimationFrame(syncHandle);
+    };
+
+    // Click outside editor/table: clear blue selection
+    const onDocPointerDown = (e: PointerEvent) => {
+      const t = e.target as Node | null;
+      if (!t) return;
+      if (handle.contains(t)) return;
+      const editor = editorRef.current;
+      if (editor && editor.contains(t)) {
+        const el = t as HTMLElement;
+        if (!el.closest?.("td, th, table")) {
+          clearExpandMode();
+        }
+        return;
+      }
+      if (selectionKindRef.current) {
+        clearExpandMode();
+      }
+    };
+
+    handle.addEventListener("pointerdown", onPointerDown);
+    handle.addEventListener("pointermove", onPointerMove);
+    handle.addEventListener("pointerup", endDrag);
+    handle.addEventListener("pointercancel", endDrag);
+    document.addEventListener("pointerdown", onDocPointerDown, true);
+    window.addEventListener("scroll", syncHandle, true);
+    window.addEventListener("resize", syncHandle);
+
+    return () => {
+      handle.removeEventListener("pointerdown", onPointerDown);
+      handle.removeEventListener("pointermove", onPointerMove);
+      handle.removeEventListener("pointerup", endDrag);
+      handle.removeEventListener("pointercancel", endDrag);
+      document.removeEventListener("pointerdown", onDocPointerDown, true);
+      window.removeEventListener("scroll", syncHandle, true);
+      window.removeEventListener("resize", syncHandle);
+      handle.remove();
+    };
+  }, [saveUndoSnapshot, handleEditorInputWrapper, editorRef]);
 
   // Insert standard table with Excel headers: SL, A, B, C...
   const handleInsertTable = (numRows: number, numCols: number) => {
@@ -510,7 +546,7 @@ export const useNoteTable = ({
       const colName = getColLabel(c, numCols);
       tableHtml += `<th contenteditable="false" class="${
         isSlCol ? "excel-sl-col" : ""
-      }" style="${isSlCol ? "width:44px;min-width:44px;max-width:44px;" : ""}" title="Column ${colName} (Click to select column)">${colName}</th>`;
+      }" title="Column ${colName} (Click to select column)">${colName}</th>`;
     }
     tableHtml += `</tr></thead><tbody>`;
 
@@ -903,214 +939,6 @@ export const useNoteTable = ({
 
     handleEditorInputWrapper();
   };
-
-  useEffect(() => {
-    const handle = document.createElement("button");
-    handle.type = "button";
-    handle.className = "notes-excel-fill-handle";
-    handle.textContent = "+";
-    handle.title = "Click or drag to expand this column";
-    handle.contentEditable = "false";
-    document.body.appendChild(handle);
-
-    const isSl = (cell?: Element | null) => Boolean(cell?.classList.contains("excel-sl-col"));
-
-    const colWidths = (table: HTMLTableElement) =>
-      Array.from(table.rows[0]?.cells || []).map((cell) =>
-        Math.round((cell as HTMLTableCellElement).getBoundingClientRect().width)
-      );
-
-    const minDataWidth = 48;
-
-    const applyAllWidths = (table: HTMLTableElement, widths: number[]) => {
-      Array.from(table.rows).forEach((row) => {
-        widths.forEach((width, index) => {
-          const cell = row.cells[index] as HTMLTableCellElement | undefined;
-          if (!cell) return;
-          if (isSl(cell)) {
-            cell.style.setProperty("width", "44px", "important");
-            cell.style.setProperty("min-width", "44px", "important");
-            cell.style.setProperty("max-width", "44px", "important");
-            return;
-          }
-          cell.style.setProperty("width", `${width}px`, "important");
-          cell.style.setProperty("min-width", "0", "important");
-          cell.style.removeProperty("max-width");
-        });
-      });
-      table.style.setProperty("width", "100%", "important");
-      table.style.setProperty("max-width", "100%", "important");
-      table.style.setProperty("table-layout", "fixed", "important");
-    };
-
-    const growColumn = (table: HTMLTableElement, colIndex: number, extra: number) => {
-      const header = table.rows[0]?.cells[colIndex] as HTMLTableCellElement | undefined;
-      if (!header || isSl(header) || extra === 0) return;
-      const widths = colWidths(table);
-      let need = Math.abs(extra);
-      const growing = extra > 0;
-      const order: number[] = [];
-      for (let i = colIndex + 1; i < widths.length; i++) order.push(i);
-      for (let i = colIndex - 1; i >= 0; i--) order.push(i);
-      for (const i of order) {
-        if (need <= 0) break;
-        const cell = table.rows[0]?.cells[i] as HTMLTableCellElement | undefined;
-        if (!cell || isSl(cell)) continue;
-        if (growing) {
-          const take = Math.min(need, widths[i] - minDataWidth);
-          if (take > 0) {
-            widths[i] -= take;
-            widths[colIndex] += take;
-            need -= take;
-          }
-        } else {
-          const take = Math.min(need, widths[colIndex] - minDataWidth);
-          if (take > 0) {
-            widths[colIndex] -= take;
-            widths[i] += take;
-            need -= take;
-          }
-        }
-      }
-      applyAllWidths(table, widths);
-    };
-
-    const applyColWidth = (table: HTMLTableElement, colIndex: number, width: number) => {
-      const current = colWidths(table)[colIndex] || 0;
-      growColumn(table, colIndex, Math.round(width) - current);
-    };
-
-    const applyRowHeight = (row: HTMLTableRowElement, height: number) => {
-      const next = Math.max(28, Math.round(height));
-      Array.from(row.cells).forEach((cell) => {
-        if (isSl(cell)) return;
-        (cell as HTMLTableCellElement).style.setProperty("height", `${next}px`, "important");
-      });
-    };
-
-    const syncFillHandle = () => {
-      const kind = selectionKindRef.current;
-      const cells = selectedCellsRef.current.filter(
-        (cell) => document.contains(cell) && cell.classList.contains("excel-cell-selected")
-      );
-      const table = cells[0]?.closest("table");
-      if (!kind || !table || !cells.length) {
-        handle.classList.remove("is-visible");
-        return;
-      }
-      if (kind === "column") {
-        const header = table.rows[0]?.cells[cells[0].cellIndex] as HTMLTableCellElement | undefined;
-        if (!header || isSl(header)) {
-          handle.classList.remove("is-visible");
-          return;
-        }
-        const rect = header.getBoundingClientRect();
-        handle.style.left = `${rect.right}px`;
-        handle.style.top = `${rect.top}px`;
-        handle.classList.add("is-visible");
-        return;
-      }
-      const first = cells[0].getBoundingClientRect();
-      const last = cells[cells.length - 1].getBoundingClientRect();
-      handle.style.left = `${(first.left + last.right) / 2}px`;
-      handle.style.top = `${first.top}px`;
-      handle.classList.add("is-visible");
-    };
-
-    fillHandleSyncRef.current = syncFillHandle;
-
-    let sizeDrag: {
-      kind: "row" | "column";
-      table: HTMLTableElement;
-      colIndex: number;
-      row: HTMLTableRowElement | null;
-      startX: number;
-      startY: number;
-      startSize: number;
-      moved: boolean;
-    } | null = null;
-
-    const onHandleMouseDown = (e: MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const cells = selectedCellsRef.current.filter((c) => document.contains(c));
-      const table = cells[0]?.closest("table");
-      const kind = selectionKindRef.current;
-      if (!table || !kind) return;
-      const header = table.rows[0]?.cells[cells[0].cellIndex];
-      if (kind === "column" && isSl(header)) return;
-      skipColumnClickRef.current = true;
-      saveUndoSnapshot();
-      const row = cells[0].closest("tr");
-      sizeDrag = {
-        kind,
-        table,
-        colIndex: cells[0].cellIndex,
-        row,
-        startX: e.clientX,
-        startY: e.clientY,
-        startSize:
-          kind === "column"
-            ? header?.getBoundingClientRect().width || 80
-            : row?.getBoundingClientRect().height || 32,
-        moved: false,
-      };
-    };
-
-    const onSizeMove = (e: MouseEvent) => {
-      if (!sizeDrag) return;
-      const dx = e.clientX - sizeDrag.startX;
-      const dy = e.clientY - sizeDrag.startY;
-      if (!sizeDrag.moved && Math.abs(dx) < 3 && Math.abs(dy) < 3) return;
-      sizeDrag.moved = true;
-      if (sizeDrag.kind === "column") {
-        applyColWidth(sizeDrag.table, sizeDrag.colIndex, sizeDrag.startSize + dx);
-      } else if (sizeDrag.row) {
-        applyRowHeight(sizeDrag.row, sizeDrag.startSize + dy);
-      }
-      syncFillHandle();
-    };
-
-    const onSizeUp = () => {
-      if (!sizeDrag) return;
-      const current = sizeDrag;
-      sizeDrag = null;
-      if (!current.moved) {
-        if (current.kind === "column") {
-          growColumn(current.table, current.colIndex, 72);
-        } else if (current.row) {
-          applyRowHeight(current.row, current.startSize + 28);
-        }
-      }
-      handleEditorInputWrapper();
-      requestAnimationFrame(syncFillHandle);
-      window.setTimeout(() => {
-        skipColumnClickRef.current = false;
-      }, 0);
-    };
-
-    const onHandleClick = (e: MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-    };
-
-    handle.addEventListener("mousedown", onHandleMouseDown);
-    handle.addEventListener("click", onHandleClick);
-    window.addEventListener("mousemove", onSizeMove);
-    window.addEventListener("mouseup", onSizeUp);
-    window.addEventListener("scroll", syncFillHandle, true);
-    window.addEventListener("resize", syncFillHandle);
-
-    return () => {
-      handle.removeEventListener("mousedown", onHandleMouseDown);
-      handle.removeEventListener("click", onHandleClick);
-      window.removeEventListener("mousemove", onSizeMove);
-      window.removeEventListener("mouseup", onSizeUp);
-      window.removeEventListener("scroll", syncFillHandle, true);
-      window.removeEventListener("resize", syncFillHandle);
-      handle.remove();
-    };
-  }, []);
 
   return {
     isTableDropdownOpen,
