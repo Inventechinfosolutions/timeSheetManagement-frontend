@@ -35,7 +35,7 @@ import { Note, NotesFormData, NoteDocumentItem, AutoSaveStatus } from "../types/
 import { NoteAttachmentChip } from "./NoteAttachmentChip";
 import { TEXT_COLORS, HIGHLIGHT_COLORS, justifyImportedContent } from "../utils/notesHelpers";
 import { FONT_SIZES, BOLD_DARK_COLORS, LIGHT_SHADING_COLORS } from "../utils/noteEditorConstants";
-import { applyLandscapeToPages, isLandscapeRotation } from "../utils/documentLayout";
+import { applyLandscapeToPages } from "../utils/documentLayout";
 import { descriptionFromExcelWorkbook } from "../utils/excelExtract";
 import { ExcelSpreadsheetView } from "../../components/ExcelSpreadsheetView";
 import { useNoteTable } from "../hooks";

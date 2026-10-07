@@ -312,13 +312,12 @@ export const useNoteTable = ({
     };
   }, [editorRef, onDownloadAttachment, onPreviewAttachment]);
 
-  // Excel-style + handle: hand cursor, drag/click expands only the selected cell's column
   useEffect(() => {
     const handle = document.createElement("button");
     handle.type = "button";
     handle.className = "notes-excel-fill-handle";
     handle.textContent = "+";
-    handle.title = "Drag to expand column · Click to close selection";
+    handle.title = "Drag to resize column · Click to close selection";
     handle.contentEditable = "false";
     document.body.appendChild(handle);
 
@@ -396,22 +395,18 @@ export const useNoteTable = ({
       applyWidths(table, widths);
     };
 
+    /** + expand only for a selected vertical column (header click) — never for single cell / row */
     const getExpandTarget = () => {
-      const kind = selectionKindRef.current;
+      if (selectionKindRef.current !== "column") return null;
       const cells = selectedCellsRef.current.filter(
         (c) => document.contains(c) && c.classList.contains("excel-cell-selected")
       );
       const table = cells[0]?.closest("table") as HTMLTableElement | null;
       if (!table || !cells.length) return null;
-      if (kind === "row") return null;
       const colIndex = cells[0].cellIndex;
-      const header = table.rows[0]?.cells[colIndex];
+      const header = table.rows[0]?.cells[colIndex] as HTMLTableCellElement | undefined;
       if (!header || isSl(header) || isSl(cells[0])) return null;
-      const anchor =
-        kind === "column"
-          ? (header as HTMLTableCellElement)
-          : cells[0];
-      return { table, colIndex, anchor, kind: kind || "cell" };
+      return { table, colIndex, anchor: header };
     };
 
     const syncHandle = () => {
@@ -421,8 +416,9 @@ export const useNoteTable = ({
         return;
       }
       const rect = target.anchor.getBoundingClientRect();
+      // Top of the column header — vertical column select only
       handle.style.left = `${rect.right}px`;
-      handle.style.top = `${rect.top + (target.kind === "column" ? 0 : rect.height / 2)}px`;
+      handle.style.top = `${rect.top}px`;
       handle.classList.add("is-visible");
     };
     syncExpandHandleRef.current = syncHandle;

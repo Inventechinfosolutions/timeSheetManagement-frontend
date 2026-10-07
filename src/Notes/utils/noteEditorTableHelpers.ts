@@ -45,7 +45,7 @@ export const applySelectionVisuals = (
   const table = cells[0].closest("table");
   clearSelectionVisuals(table);
 
-  const borderColor = "#2563eb"; // Excel selection blue
+  const borderColor = "#60a5fa"; // Soft selection blue (not full dark fill)
 
   if (type === "row") {
     // ONLY outer border: Top and bottom across the row, left on first cell, right on last cell. NO vertical lines in-between!
