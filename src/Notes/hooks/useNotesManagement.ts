@@ -34,15 +34,25 @@ import {
   PreviewImageModalState,
   ExcelViewerModalState,
 } from "../types/notes.types";
-import { openExcelInNewTab } from "../../utils/excelViewer";
 import { useNoteDragDrop } from "./useNoteDragDrop";
-import { buildDocumentPagesHtml, isLandscapeRotation, paginateToA4Sheets } from "../utils/documentLayout";
+import {
+  buildDocumentPagesHtml,
+  isNoteLandscape,
+  orientationFromLandscape,
+  paginateToA4Sheets,
+  removeEmptyPages,
+} from "../utils/documentLayout";
+import { refreshAttachmentBadges } from "../utils/noteEditorAttachmentHelpers";
+import { justifyImportedContent } from "../utils/notesHelpers";
 import {
   parseExcelFile,
-  descriptionFromExcelWorkbook,
   parseExcelWorkbookFromHtml,
-  findExcelAttachment,
+  isExcelFileName,
   workbookDataToFile,
+  embedExcelWorkbookInHtml,
+  stripExcelWorkbookStore,
+  htmlHasVisibleNoteContent,
+  mergeExcelWorkbooks,
   type ExcelWorkbookData,
 } from "../utils/excelExtract";
 
@@ -121,6 +131,8 @@ export const useNotesManagement = () => {
     files: [],
     isPinned: false,
     isAutoSave: false,
+    isVertical: true,
+    rotation: 0,
   });
 
   const [autoSaveStatus, setAutoSaveStatus] = useState<AutoSaveStatus>("idle");
@@ -131,12 +143,14 @@ export const useNotesManagement = () => {
     description: string;
     projectName: string;
     isPinned: boolean;
+    isVertical: boolean;
     rotation: number;
   }>({
     title: "",
     description: "",
     projectName: "",
     isPinned: false,
+    isVertical: true,
     rotation: 0,
   });
 
@@ -201,6 +215,97 @@ export const useNotesManagement = () => {
     setCurrentPage(1);
   };
 
+  /** Keep caret inside a real block in .page so formatBlock never turns the sheet into H1/H2 */
+  const ensureEditableBlockInPage = () => {
+    const editor = editorRef.current;
+    if (!editor) return null;
+
+    let page = editor.querySelector(":scope > .page") as HTMLElement | null;
+    if (!page) {
+      page = document.createElement("div");
+      page.className = "page";
+      page.setAttribute("data-page", "1");
+      while (editor.firstChild) page.appendChild(editor.firstChild);
+      editor.appendChild(page);
+    }
+
+    const sel = window.getSelection();
+    const anchor =
+      sel?.anchorNode?.nodeType === Node.ELEMENT_NODE
+        ? (sel.anchorNode as HTMLElement)
+        : sel?.anchorNode?.parentElement || null;
+
+    // If caret is on the page/editor itself, put it in a paragraph first
+    const onSheet =
+      !anchor ||
+      anchor === editor ||
+      anchor === page ||
+      (anchor.classList?.contains("page") && page.contains(anchor) && anchor.tagName === "DIV");
+
+    let block = anchor?.closest?.("p, h1, h2, h3, h4, h5, h6, li, blockquote, pre") as HTMLElement | null;
+    if (!block || !page.contains(block) || onSheet) {
+      block = page.querySelector("p, h1, h2, h3, h4, h5, h6") as HTMLElement | null;
+      if (!block) {
+        block = document.createElement("p");
+        block.innerHTML = "<br>";
+        page.appendChild(block);
+      }
+      const range = document.createRange();
+      range.selectNodeContents(block);
+      range.collapse(true);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+    return block;
+  };
+
+  /** After H1/H2, repair if the browser converted .page into a heading (causes double sheet) */
+  const repairPageAfterFormatBlock = () => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    // Heading that stole the .page class / replaced the sheet
+    Array.from(editor.querySelectorAll("h1.page, h2.page, h3.page, p.page")).forEach((bad) => {
+      const page = document.createElement("div");
+      page.className = "page";
+      page.setAttribute("data-page", "1");
+      bad.classList.remove("page");
+      bad.removeAttribute("data-page");
+      bad.parentNode?.insertBefore(page, bad);
+      page.appendChild(bad);
+    });
+
+    // Headings sitting directly under the editor (outside any .page)
+    const looseBlocks = Array.from(editor.children).filter(
+      (el) => !el.classList.contains("page")
+    ) as HTMLElement[];
+    if (looseBlocks.length > 0) {
+      let page = editor.querySelector(":scope > .page") as HTMLElement | null;
+      if (!page) {
+        page = document.createElement("div");
+        page.className = "page";
+        page.setAttribute("data-page", "1");
+        editor.appendChild(page);
+      }
+      looseBlocks.forEach((el) => page!.appendChild(el));
+    }
+
+    removeEmptyPages(editor);
+    const landscape =
+      editor.classList.contains("is-landscape") || isNoteLandscape(formData);
+    // Collapse accidental extra sheets from formatBlock without full reflow thrash
+    const pages = Array.from(editor.querySelectorAll(":scope > .page")) as HTMLElement[];
+    if (pages.length > 1) {
+      const first = pages[0];
+      pages.slice(1).forEach((p) => {
+        while (p.firstChild) first.appendChild(p.firstChild);
+        p.remove();
+      });
+      paginateToA4Sheets(editor, landscape, true);
+      removeEmptyPages(editor);
+    }
+  };
+
   // Rich Text Editor Commands
   const executeEditorCommand = (command: string, value: string = "") => {
     if (editorRef.current) {
@@ -208,10 +313,12 @@ export const useNotesManagement = () => {
     }
     try {
       if (command === "formatBlock") {
+        ensureEditableBlockInPage();
         const success = document.execCommand("formatBlock", false, value);
         if (!success) {
           document.execCommand("formatBlock", false, value.replace(/[<>]/g, ""));
         }
+        repairPageAfterFormatBlock();
       } else if (command === "hiliteColor") {
         const success = document.execCommand("hiliteColor", false, value);
         if (!success) {
@@ -238,7 +345,7 @@ export const useNotesManagement = () => {
     const editor = editorRef.current;
     if (!editor) return;
     const landscape =
-      editor.classList.contains("is-landscape") || isLandscapeRotation(formData.rotation);
+      editor.classList.contains("is-landscape") || isNoteLandscape(formData);
     paginateToA4Sheets(editor, landscape, reflow);
     setFormData((prev) => ({
       ...prev,
@@ -279,19 +386,56 @@ export const useNotesManagement = () => {
       setIsExtractingExcel(true);
       message.loading({ content: "Loading spreadsheet...", key: "excel-extract", duration: 0 });
       const parsed = await parseExcelFile(file, file.name);
+
+      // Already in spreadsheet mode — merge sheets, keep previous
+      if (formData.excelWorkbook) {
+        const merged = mergeExcelWorkbooks(formData.excelWorkbook, parsed);
+        const saved = await persistExcelToMinio(merged);
+        const existingHtml =
+          editorRef.current?.innerHTML ||
+          stripExcelWorkbookStore(formData.description) ||
+          "";
+        setFormData((prev) => ({
+          ...prev,
+          excelWorkbook: saved,
+          description: embedExcelWorkbookInHtml(existingHtml, saved),
+          title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
+          attachmentKeys:
+            saved.fileKey && !prev.attachmentKeys.includes(saved.fileKey)
+              ? [...prev.attachmentKeys, saved.fileKey]
+              : prev.attachmentKeys,
+        }));
+        message.success({
+          content: "Excel sheets added to the existing spreadsheet",
+          key: "excel-extract",
+        });
+        return;
+      }
+
+      // Keep existing A4/description content; open Excel grid viewer alongside it
+      const existingHtml = (
+        editorRef.current?.innerHTML ||
+        stripExcelWorkbookStore(formData.description) ||
+        ""
+      ).trim();
+      const hadContent = htmlHasVisibleNoteContent(existingHtml);
       const saved = await persistExcelToMinio(parsed);
+
       setFormData((prev) => ({
         ...prev,
         excelWorkbook: saved,
-        description: descriptionFromExcelWorkbook(saved),
+        description: embedExcelWorkbookInHtml(existingHtml, saved),
         title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
         attachmentKeys:
           saved.fileKey && !prev.attachmentKeys.includes(saved.fileKey)
             ? [...prev.attachmentKeys, saved.fileKey]
             : prev.attachmentKeys,
       }));
+
       message.success({
-        content: "Excel opened in the spreadsheet viewer",
+        content: hadContent
+          ? "Excel added below your existing description (spreadsheet viewer)"
+          : "Excel opened in the spreadsheet viewer",
         key: "excel-extract",
       });
     } catch (err: any) {
@@ -309,18 +453,31 @@ export const useNotesManagement = () => {
   const handleXlsImport = handleExcelExtract;
 
   const hydrateExcelWorkbook = async (note: Note): Promise<ExcelWorkbookData | null> => {
+    // Only show Excel in Description when the note was saved as an Excel document
+    // (hidden workbook store in description). A normal .xlsx under Files must NOT
+    // replace the description with the spreadsheet viewer.
     const stored = parseExcelWorkbookFromHtml(note.description);
-    const attachment = findExcelAttachment(note.attachments);
-    const fileKey = stored?.fileKey || attachment?.key || attachment?.fileKey;
-    const fileName =
-      stored?.fileName || attachment?.fileName || attachment?.name || "Spreadsheet.xlsx";
+    if (!stored) return null;
 
-    if (stored?.sheetNames?.length && stored.sheetsData && Object.keys(stored.sheetsData).length) {
+    const matchedAtt =
+      note.attachments?.find(
+        (a) => (a.key || a.fileKey) && (a.key || a.fileKey) === stored.fileKey
+      ) ||
+      note.attachments?.find(
+        (a) => (a.fileName || a.name) === stored.fileName && isExcelFileName(a.fileName || a.name)
+      );
+    const fileKey = stored.fileKey || matchedAtt?.key || matchedAtt?.fileKey;
+    const fileName =
+      stored.fileName || matchedAtt?.fileName || matchedAtt?.name || "Spreadsheet.xlsx";
+
+    if (stored.sheetNames?.length && stored.sheetsData && Object.keys(stored.sheetsData).length) {
       return { ...stored, fileKey, fileName };
     }
-    if (!fileKey) return stored?.fileName ? stored : null;
+    if (!fileKey) return null;
 
-    const response = await dispatch(previewNoteAttachment(fileKey)).unwrap();
+    const response = await dispatch(
+      previewNoteAttachment({ key: fileKey, fileName })
+    ).unwrap();
     const blob = new Blob([response.data]);
     const parsed = await parseExcelFile(blob, fileName);
     parsed.fileKey = fileKey;
@@ -328,37 +485,51 @@ export const useNotesManagement = () => {
   };
 
   const resolveDescriptionForSave = async () => {
+    const richHtml =
+      editorRef.current?.innerHTML ||
+      stripExcelWorkbookStore(formData.description) ||
+      "";
     if (!formData.excelWorkbook) {
-      return editorRef.current?.innerHTML || formData.description || "";
+      return richHtml || formData.description || "";
     }
     const saved = await persistExcelToMinio(formData.excelWorkbook);
+    const merged = embedExcelWorkbookInHtml(richHtml, saved);
     setFormData((prev) => ({
       ...prev,
       excelWorkbook: saved,
-      description: descriptionFromExcelWorkbook(saved),
+      description: merged,
       attachmentKeys:
         saved.fileKey && !prev.attachmentKeys.includes(saved.fileKey)
           ? [...prev.attachmentKeys, saved.fileKey]
           : prev.attachmentKeys,
     }));
-    return descriptionFromExcelWorkbook(saved);
+    return merged;
   };
 
   const getSavedDescription = () => {
+    const richHtml =
+      editorRef.current?.innerHTML ||
+      stripExcelWorkbookStore(formData.description) ||
+      "";
     if (formData.excelWorkbook) {
-      return descriptionFromExcelWorkbook(formData.excelWorkbook);
+      return embedExcelWorkbookInHtml(richHtml, formData.excelWorkbook);
     }
-    return editorRef.current?.innerHTML || formData.description || "";
+    return richHtml || formData.description || "";
   };
 
-  const handleEditorInput = () => {
+  const handleEditorInput = (opts?: { skipPagination?: boolean }) => {
     if (editorRef.current) {
       setFormData((prev) => ({
         ...prev,
         description: editorRef.current?.innerHTML || "",
       }));
     }
-    if (paginateTimerRef.current) clearTimeout(paginateTimerRef.current);
+    if (paginateTimerRef.current) {
+      clearTimeout(paginateTimerRef.current);
+      paginateTimerRef.current = null;
+    }
+    // Undo/redo restores exact HTML — re-paginating would wipe the undo result
+    if (opts?.skipPagination) return;
     paginateTimerRef.current = setTimeout(() => runA4Pagination(false), 400);
   };
 
@@ -414,6 +585,8 @@ export const useNotesManagement = () => {
       files: [],
       isPinned: false,
       isAutoSave: false,
+      isVertical: true,
+      rotation: 0,
     });
     if (editorRef.current) {
       editorRef.current.innerHTML = "";
@@ -423,6 +596,7 @@ export const useNotesManagement = () => {
       description: "",
       projectName: initialProject,
       isPinned: false,
+      isVertical: true,
       rotation: 0,
     };
     setAutoSaveStatus("idle");
@@ -448,6 +622,8 @@ export const useNotesManagement = () => {
       files: [],
       isPinned: false,
       isAutoSave: false,
+      isVertical: true,
+      rotation: 0,
     });
     if (editorRef.current) {
       editorRef.current.innerHTML = "";
@@ -457,6 +633,7 @@ export const useNotesManagement = () => {
       description: "",
       projectName: initialProject,
       isPinned: false,
+      isVertical: true,
       rotation: 0,
     };
     setAutoSaveStatus("idle");
@@ -472,6 +649,7 @@ export const useNotesManagement = () => {
     setActiveNote(note);
     setParentNoteContext(null);
     const initialWorkbook = parseExcelWorkbookFromHtml(note.description);
+    const noteOrient = orientationFromLandscape(isNoteLandscape(note));
     setFormData({
       title: note.title,
       description: note.description || "",
@@ -482,13 +660,16 @@ export const useNotesManagement = () => {
       files: [],
       isPinned: note.isPinned || false,
       isAutoSave: !!note.isAutoSave,
+      isVertical: noteOrient.isVertical,
+      rotation: noteOrient.rotation,
     });
     lastSavedRef.current = {
       title: note.title,
       description: note.description || "",
       projectName: note.projectName || "",
       isPinned: note.isPinned || false,
-      rotation: note.rotation || 0,
+      isVertical: noteOrient.isVertical,
+      rotation: noteOrient.rotation,
     };
     setAutoSaveStatus("idle");
     setPageMode("edit");
@@ -500,6 +681,7 @@ export const useNotesManagement = () => {
       if (detailedNote) {
         setActiveNote(detailedNote);
         const workbook = await hydrateExcelWorkbook(detailedNote);
+        const detailOrient = orientationFromLandscape(isNoteLandscape(detailedNote));
         setFormData({
           title: detailedNote.title,
           description: detailedNote.description || "",
@@ -510,6 +692,8 @@ export const useNotesManagement = () => {
           files: [],
           isPinned: detailedNote.isPinned || false,
           isAutoSave: !!detailedNote.isAutoSave,
+          isVertical: detailOrient.isVertical,
+          rotation: detailOrient.rotation,
           excelWorkbook: workbook,
         });
         lastSavedRef.current = {
@@ -517,10 +701,14 @@ export const useNotesManagement = () => {
           description: detailedNote.description || "",
           projectName: detailedNote.projectName || "",
           isPinned: detailedNote.isPinned || false,
-          rotation: detailedNote.rotation || 0,
+          isVertical: detailOrient.isVertical,
+          rotation: detailOrient.rotation,
         };
-        if (editorRef.current && !workbook) {
-          editorRef.current.innerHTML = detailedNote.description || "";
+        if (editorRef.current) {
+          // Keep visible HTML even when an Excel workbook is also attached
+          editorRef.current.innerHTML =
+            stripExcelWorkbookStore(detailedNote.description) ||
+            (workbook ? "" : detailedNote.description || "");
         }
       }
     } catch (err) {
@@ -617,36 +805,53 @@ export const useNotesManagement = () => {
         response.data?.json,
         response.data?.markdown,
         response.data?.pages,
-        isLandscapeRotation(formData.rotation)
+        isNoteLandscape(formData)
       );
       const hasContent = /<(p|h1|h2|h3|li|td|img|table)\b/i.test(generatedHtml) &&
         /<(p|h1|h2|h3|li|td|img)\b[^>]*>[\s\S]*?<\/\1>|<img\b[^>]*\/?>/i.test(generatedHtml);
 
+      // Keep existing A4 content AND any Excel workbook — never wipe either
+      const existingWorkbook = formData.excelWorkbook;
+      const existingVisible = stripExcelWorkbookStore(
+        editorRef.current?.innerHTML || formData.description || ""
+      ).trim();
+      const existingHasContent = htmlHasVisibleNoteContent(existingVisible);
+      const mergedVisible = existingHasContent
+        ? `${existingVisible}${generatedHtml}`
+        : generatedHtml;
+      const withWorkbook = (html: string) =>
+        existingWorkbook ? embedExcelWorkbookInHtml(html, existingWorkbook) : html;
+
       if (editorRef.current) {
-        editorRef.current.innerHTML = generatedHtml;
+        editorRef.current.innerHTML = mergedVisible;
         requestAnimationFrame(() => {
           if (!editorRef.current) return;
-          paginateToA4Sheets(
-            editorRef.current,
-            isLandscapeRotation(formData.rotation),
-            true
-          );
+          const landscape = isNoteLandscape(formData);
+          justifyImportedContent(editorRef.current, {
+            landscape,
+            reflowPages: true,
+          });
+          removeEmptyPages(editorRef.current);
+          paginateToA4Sheets(editorRef.current, landscape, true);
+          removeEmptyPages(editorRef.current);
+          const finalVisible = editorRef.current.innerHTML || mergedVisible;
           setFormData((prev) => ({
             ...prev,
-            description: editorRef.current?.innerHTML || generatedHtml,
+            description: withWorkbook(finalVisible),
             title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
             rotation: prev.rotation || 0,
-            excelWorkbook: null,
+            // Preserve spreadsheet if user already imported Excel
+            excelWorkbook: prev.excelWorkbook ?? existingWorkbook,
           }));
         });
       }
 
       setFormData((prev) => ({
         ...prev,
-        description: generatedHtml,
+        description: withWorkbook(mergedVisible),
         title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
         rotation: prev.rotation || 0,
-        excelWorkbook: null,
+        excelWorkbook: prev.excelWorkbook ?? existingWorkbook,
       }));
 
       if (!hasContent) {
@@ -658,8 +863,55 @@ export const useNotesManagement = () => {
         return;
       }
 
+      // Also keep the original PDF/Doc under Files & Attachments (not only inside Description)
+      let attachedOriginal = false;
+      if (fileExt !== ".json") {
+        try {
+          const attachRes = await dispatch(
+            uploadDirectNoteFiles({
+              noteId: activeNote?.id,
+              files: [file],
+            })
+          ).unwrap();
+          const uploaded = attachRes.uploaded?.[0];
+          const key = uploaded?.key || uploaded?.fileKey;
+          if (key) {
+            attachedOriginal = true;
+            setFormData((prev) => ({
+              ...prev,
+              attachmentKeys: prev.attachmentKeys.includes(key)
+                ? prev.attachmentKeys
+                : [...prev.attachmentKeys, key],
+              attachments: [
+                ...prev.attachments,
+                {
+                  id: uploaded?.id,
+                  key,
+                  fileKey: key,
+                  name: uploaded?.fileName || uploaded?.name || file.name,
+                  size: uploaded?.fileSize || uploaded?.size || file.size,
+                  file,
+                },
+              ],
+            }));
+          }
+        } catch {
+          /* best-effort — extract already succeeded */
+        }
+      }
+
       message.success({
-        content: "Document extracted into Description box! You can now edit it directly.",
+        content: existingWorkbook
+          ? attachedOriginal
+            ? "Document added; existing Excel spreadsheet kept. Original file also saved under Files."
+            : "Document added; existing Excel spreadsheet kept."
+          : existingHasContent
+            ? attachedOriginal
+              ? "Document added below your existing description. Original file also saved under Files."
+              : "Document added below your existing description."
+            : attachedOriginal
+              ? "Document extracted into Description. Original file also saved under Files."
+              : "Document extracted into Description box! You can now edit it directly.",
         key: "docling-import",
       });
     } catch (err: any) {
@@ -776,7 +1028,8 @@ export const useNotesManagement = () => {
       currentDescription !== lastSavedRef.current.description ||
       formData.projectName.trim() !== lastSavedRef.current.projectName ||
       !!formData.isPinned !== !!lastSavedRef.current.isPinned ||
-      (formData.rotation || 0) !== (lastSavedRef.current.rotation || 0);
+      (formData.rotation || 0) !== (lastSavedRef.current.rotation || 0) ||
+      !!formData.isVertical !== !!lastSavedRef.current.isVertical;
 
     if (!hasChanged) {
       return;
@@ -806,6 +1059,7 @@ export const useNotesManagement = () => {
               description: currentDescription,
               projectName: formData.projectName.trim(),
               isPinned: !!formData.isPinned,
+              isVertical: formData.isVertical !== false,
               rotation: formData.rotation || 0,
             };
             setActiveNote(createdSub);
@@ -824,6 +1078,8 @@ export const useNotesManagement = () => {
               color: "#4318FF",
               isPinned: formData.isPinned,
               isAutoSave: formData.isAutoSave,
+              isVertical: formData.isVertical !== false,
+              rotation: formData.rotation || 0,
               attachmentKeys: formData.attachmentKeys,
               files: formData.files.length > 0 ? formData.files : undefined,
             })
@@ -835,6 +1091,7 @@ export const useNotesManagement = () => {
               description: currentDescription,
               projectName: formData.type === "PROJECT" ? formData.projectName.trim() : "",
               isPinned: !!formData.isPinned,
+              isVertical: formData.isVertical !== false,
               rotation: formData.rotation || 0,
             };
             setActiveNote(created);
@@ -854,6 +1111,8 @@ export const useNotesManagement = () => {
             projectName: formData.type === "PROJECT" ? formData.projectName.trim() : undefined,
             isPinned: formData.isPinned,
             autoSave: formData.isAutoSave,
+            isVertical: formData.isVertical !== false,
+            rotation: formData.rotation || 0,
           })
         ).unwrap();
 
@@ -863,6 +1122,7 @@ export const useNotesManagement = () => {
             description: currentDescription,
             projectName: formData.type === "PROJECT" ? formData.projectName.trim() : "",
             isPinned: !!formData.isPinned,
+            isVertical: formData.isVertical !== false,
             rotation: formData.rotation || 0,
           };
           setActiveNote(updated);
@@ -906,7 +1166,8 @@ export const useNotesManagement = () => {
       currentDesc !== lastSavedRef.current.description ||
       formData.projectName.trim() !== lastSavedRef.current.projectName ||
       !!formData.isPinned !== !!lastSavedRef.current.isPinned ||
-      (formData.rotation || 0) !== (lastSavedRef.current.rotation || 0);
+      (formData.rotation || 0) !== (lastSavedRef.current.rotation || 0) ||
+      !!formData.isVertical !== !!lastSavedRef.current.isVertical;
 
     if (!hasChanged) {
       return;
@@ -934,6 +1195,7 @@ export const useNotesManagement = () => {
     formData.isPinned,
     formData.isAutoSave,
     formData.rotation,
+    formData.isVertical,
     pageMode,
     activeNote?.id,
   ]);
@@ -1005,6 +1267,8 @@ export const useNotesManagement = () => {
               color: "#4318FF",
               isPinned: formData.isPinned,
               isAutoSave: formData.isAutoSave,
+              isVertical: formData.isVertical !== false,
+              rotation: formData.rotation || 0,
               attachmentKeys: formData.attachmentKeys,
               files: formData.files.length > 0 ? formData.files : undefined,
             })
@@ -1020,6 +1284,8 @@ export const useNotesManagement = () => {
             projectName: formData.type === "PROJECT" ? formData.projectName.trim() : undefined,
             isPinned: formData.isPinned,
             autoSave: formData.isAutoSave,
+            isVertical: formData.isVertical !== false,
+            rotation: formData.rotation || 0,
           })
         ).unwrap();
 
@@ -1042,6 +1308,7 @@ export const useNotesManagement = () => {
         description: currentDescription,
         projectName: formData.type === "PROJECT" ? formData.projectName.trim() : "",
         isPinned: !!formData.isPinned,
+        isVertical: formData.isVertical !== false,
         rotation: formData.rotation || 0,
       };
       setAutoSaveStatus("saved");
@@ -1124,16 +1391,21 @@ export const useNotesManagement = () => {
     }
   };
 
-  // Preview Attachment
+  // Preview Attachment — keep Excel inside the app (modal), same as PDF/images
   const handlePreviewAttachment = async (item: NoteDocumentItem) => {
     const displayName = item.name || item.fileName || "document";
     const ext = displayName.split(".").pop()?.toLowerCase() || "";
-    const isImg = ["png", "jpg", "jpeg", "webp", "gif", "svg", "bmp"].includes(ext);
     const isExcel = ["xlsx", "xls", "csv"].includes(ext);
 
     if (item.file) {
       if (isExcel) {
-        await openExcelInNewTab(item.file, displayName);
+        setExcelViewerModal({
+          open: true,
+          fileName: displayName,
+          file: item.file,
+          blob: null,
+          onDownload: () => handleDownloadAttachment(item),
+        });
       } else {
         const localUrl = URL.createObjectURL(item.file);
         setPreviewImageModal({ open: true, url: localUrl, title: displayName });
@@ -1149,13 +1421,21 @@ export const useNotesManagement = () => {
 
     const hide = message.loading(`Opening ${displayName}...`, 0);
     try {
-      const response = await dispatch(previewNoteAttachment(key)).unwrap();
+      const response = await dispatch(
+        previewNoteAttachment({ key, fileName: displayName })
+      ).unwrap();
       hide();
       const contentType = response.headers?.["content-type"] || "application/octet-stream";
       const blob = new Blob([response.data], { type: contentType });
 
       if (isExcel) {
-        await openExcelInNewTab(blob, displayName);
+        setExcelViewerModal({
+          open: true,
+          fileName: displayName,
+          blob,
+          file: null,
+          onDownload: () => handleDownloadAttachment(item),
+        });
         return;
       }
 
@@ -1229,31 +1509,41 @@ export const useNotesManagement = () => {
   // Total Attachments count
   const totalAttachmentsCount = formData.attachments.length + (activeNote?.attachments?.length || 0);
 
-  // Set editor innerHTML on initial edit/create load
+  // Hydrate editor only when switching note / mode — NOT on every activeNote
+  // object refresh (auto-save), or live edits + undo history get wiped.
   useEffect(() => {
-    if (formData.excelWorkbook) return;
+    // Pure Excel notes: no A4 editor. Mixed notes: still hydrate visible HTML.
+    if (
+      formData.excelWorkbook &&
+      !htmlHasVisibleNoteContent(formData.description)
+    ) {
+      return;
+    }
     if ((pageMode === "create" || pageMode === "edit") && editorRef.current) {
       const nextHtml = buildDocumentPagesHtml(
-        formData.description || "",
+        stripExcelWorkbookStore(formData.description) || "",
         undefined,
         undefined,
         undefined,
-        isLandscapeRotation(formData.rotation)
+        isNoteLandscape(formData)
       );
       if (editorRef.current.innerHTML !== nextHtml) {
         editorRef.current.innerHTML = nextHtml;
       }
+      refreshAttachmentBadges(editorRef.current);
       requestAnimationFrame(() => {
         if (editorRef.current) {
           paginateToA4Sheets(
             editorRef.current,
-            isLandscapeRotation(formData.rotation),
+            isNoteLandscape(formData),
             true
           );
+          refreshAttachmentBadges(editorRef.current);
         }
       });
     }
-  }, [pageMode, activeNote]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only on note id / mode change
+  }, [pageMode, activeNote?.id]);
 
   return {
     notes,

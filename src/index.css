@@ -373,14 +373,18 @@ input[type="password"]::-webkit-password-reveal-button {
   display: none !important;
 }
 
-/* Extracted document pages: <div class="page"> at the PDF point size */
+/* Outer shell only — real paper is always the inner .page (never a second sheet) */
 .a4-page.doc-pages {
-  width: max-content;
-  min-height: 0;
-  padding: 0;
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  width: max-content !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  padding: 0 !important;
+  margin: 0 auto !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
 .notes-rich-editor.doc-pages-editor,
@@ -432,6 +436,39 @@ input[type="password"]::-webkit-password-reveal-button {
   float: none !important;
 }
 
+.notes-rich-editor .page table,
+.notes-content-view .page table,
+.notes-rich-editor table,
+.notes-content-view table {
+  display: table !important;
+}
+
+.notes-rich-editor .page thead,
+.notes-content-view .page thead {
+  display: table-header-group !important;
+}
+
+.notes-rich-editor .page tbody,
+.notes-content-view .page tbody {
+  display: table-row-group !important;
+}
+
+.notes-rich-editor .page tr,
+.notes-content-view .page tr {
+  display: table-row !important;
+}
+
+.notes-rich-editor .page th,
+.notes-rich-editor .page td,
+.notes-content-view .page th,
+.notes-content-view .page td,
+.notes-rich-editor th,
+.notes-rich-editor td,
+.notes-content-view th,
+.notes-content-view td {
+  display: table-cell !important;
+}
+
 .notes-rich-editor .page h1,
 .notes-content-view .page h1 {
   font-size: 1.35rem !important;
@@ -463,18 +500,29 @@ input[type="password"]::-webkit-password-reveal-button {
   padding: 0;
 }
 
+/* Justify like PDF/DOCX: even edges, no preserved import spaces */
+.notes-rich-editor.is-justified,
+.notes-content-view.is-justified,
 .notes-rich-editor.is-justified .page,
 .notes-content-view.is-justified .page,
 .notes-rich-editor .page.is-justified,
 .notes-content-view .page.is-justified,
+.notes-rich-editor.is-justified p,
+.notes-content-view.is-justified p,
 .notes-rich-editor.is-justified .page p,
 .notes-content-view.is-justified .page p,
 .notes-rich-editor .page.is-justified p,
 .notes-content-view .page.is-justified p,
+.notes-rich-editor.is-justified li,
+.notes-content-view.is-justified li,
 .notes-rich-editor.is-justified .page li,
 .notes-content-view.is-justified .page li,
+.notes-rich-editor.is-justified td,
+.notes-content-view.is-justified td,
 .notes-rich-editor.is-justified .page td,
-.notes-content-view.is-justified .page td {
+.notes-content-view.is-justified .page td,
+.notes-rich-editor.is-justified div:not(.a4-page-workspace):not(.a4-page-rotator),
+.notes-content-view.is-justified div:not(.a4-page-workspace):not(.a4-page-rotator) {
   text-align: justify !important;
   text-justify: inter-word;
   hyphens: auto;
@@ -482,9 +530,13 @@ input[type="password"]::-webkit-password-reveal-button {
   letter-spacing: normal !important;
   word-spacing: normal !important;
   text-align-last: left;
-  line-height: 1.6 !important;
+  line-height: 1.55 !important;
 }
 
+.notes-rich-editor.is-justified h1,
+.notes-content-view.is-justified h1,
+.notes-rich-editor.is-justified h2,
+.notes-content-view.is-justified h2,
 .notes-rich-editor.is-justified .page h1,
 .notes-content-view.is-justified .page h1,
 .notes-rich-editor.is-justified .page h2,
@@ -494,6 +546,14 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-rich-editor .page.is-justified h2,
 .notes-content-view .page.is-justified h2 {
   text-align: left !important;
+}
+
+.notes-rich-editor.is-justified p,
+.notes-content-view.is-justified p,
+.notes-rich-editor.is-justified .page p,
+.notes-content-view.is-justified .page p {
+  margin-top: 0.35em !important;
+  margin-bottom: 0.35em !important;
 }
 
 .notes-rich-editor .page:last-child,
@@ -616,16 +676,39 @@ input[type="password"]::-webkit-password-reveal-button {
   line-height: 1.7 !important;
 }
 
+/* Inline quote: background + bar only around the text (e.g. "yyy"), never full page */
+.notes-rich-editor .notes-inline-quote,
+.notes-content-view .notes-inline-quote,
 .notes-rich-editor blockquote,
 .notes-content-view blockquote {
-  border-left: 4px solid #4318FF !important;
-  padding: 0.5rem 1rem !important;
-  margin-top: 0.75rem !important;
-  margin-bottom: 0.75rem !important;
+  display: inline !important;
+  width: auto !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  border-left: 3px solid #4318FF !important;
+  padding: 0.05em 0.45em 0.05em 0.4em !important;
+  margin: 0 0.1em !important;
   color: #475569 !important;
   font-style: italic !important;
-  background: rgba(67, 24, 255, 0.04) !important;
-  border-radius: 0 8px 8px 0 !important;
+  background: rgba(67, 24, 255, 0.1) !important;
+  border-radius: 0 4px 4px 0 !important;
+  height: auto !important;
+  min-height: 0 !important;
+  line-height: inherit !important;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  white-space: normal !important;
+}
+
+.notes-rich-editor blockquote p,
+.notes-content-view blockquote p,
+.notes-rich-editor .notes-inline-quote p,
+.notes-content-view .notes-inline-quote p {
+  margin: 0 !important;
+  display: inline !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
 }
 
 .notes-rich-editor a,
@@ -772,10 +855,11 @@ input[type="password"]::-webkit-password-reveal-button {
   display: flex;
   justify-content: safe center;
   align-items: flex-start;
-  overflow: auto;
+  /* Let the layout <main> scroll — nested max-height/overflow breaks
+     ScrollNavigator + sticky toolbar */
   overflow-x: auto;
-  overflow-y: auto;
-  max-height: calc(100vh - 140px);
+  overflow-y: visible;
+  max-height: none;
   min-height: 720px;
   width: 100%;
 }
@@ -1110,8 +1194,8 @@ button[class*="bg-tbl-"]:active {
 /* Attachment Column & Row Interactive Cells */
 .notes-rich-editor table th.excel-attachment-col,
 .notes-content-view table th.excel-attachment-col {
-  min-width: 140px !important;
-  width: 155px !important;
+  min-width: 240px !important;
+  width: 260px !important;
   text-align: center !important;
   background-color: #f1f5f9 !important;
   color: #334155 !important;
@@ -1131,11 +1215,13 @@ button[class*="bg-tbl-"]:active {
 
 .notes-rich-editor table td.excel-attachment-cell,
 .notes-content-view table td.excel-attachment-cell {
-  min-width: 140px !important;
-  width: 155px !important;
-  padding: 6px 8px !important;
+  min-width: 240px !important;
+  width: 260px !important;
+  padding: 8px !important;
   text-align: center !important;
   vertical-align: middle !important;
+  overflow: visible !important;
+  height: auto !important;
 }
 
 /* Row Attachment Upload Button - Modern Clean Pill */
@@ -1152,7 +1238,7 @@ button[class*="bg-tbl-"]:active {
   border: 1px solid #cbd5e1;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
   white-space: nowrap;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
@@ -1161,7 +1247,6 @@ button[class*="bg-tbl-"]:active {
   color: #4318ff;
   background-color: #eef2ff;
   border-color: #a5b4fc;
-  transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(67, 24, 255, 0.08);
 }
 
@@ -1174,13 +1259,16 @@ button[class*="bg-tbl-"]:active {
   color: #4318ff;
 }
 
-/* Row Attachment Container for multiple files */
+/* Stack badges + add button so they never overlap the dashed control */
 .row-attach-container {
-  display: inline-flex;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   justify-content: center;
-  flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   vertical-align: middle;
 }
 
@@ -1191,12 +1279,17 @@ button[class*="bg-tbl-"]:active {
   width: 22px;
   height: 22px;
   padding: 0;
+  margin: 0 auto;
   border-radius: 6px;
   border: 1px dashed #cbd5e1;
   background-color: #f8fafc;
   color: #475569;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow: none;
+  line-height: 0;
   cursor: pointer;
-  transition: all 0.15s ease-in-out;
+  transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, color 0.15s ease-in-out;
   flex-shrink: 0;
 }
 
@@ -1205,23 +1298,25 @@ button[class*="bg-tbl-"]:active {
   border-color: #4318ff;
   border-style: solid;
   color: #4318ff;
-  transform: scale(1.08);
 }
 
-/* Row Attachment Badge */
+/* Row Attachment Badge — full filename visible (wrap, no vertical clip) */
 .table-file-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  max-width: 150px;
-  padding: 3px 6px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 11px;
   color: #1e293b;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  overflow: visible;
 }
 
 .table-file-badge:hover {
@@ -1230,12 +1325,17 @@ button[class*="bg-tbl-"]:active {
 }
 
 .table-file-name {
-  max-width: 80px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  overflow: visible;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
   font-weight: 500;
   cursor: default;
+  text-align: left;
 }
 
 .table-file-btn {
@@ -1244,12 +1344,37 @@ button[class*="bg-tbl-"]:active {
   justify-content: center;
   width: 18px;
   height: 18px;
+  margin-top: 1px;
   padding: 0;
   border-radius: 4px;
   border: none;
   background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  box-shadow: none;
+  line-height: 0;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.notes-rich-editor .table-file-btn svg,
+.notes-content-view .table-file-btn svg,
+.notes-rich-editor .row-attach-add-btn svg,
+.notes-content-view .row-attach-add-btn svg,
+.table-file-badge > svg {
+  display: block;
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  min-height: 12px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.table-file-badge > svg {
+  flex-shrink: 0;
+  margin-top: 1px;
 }
 
 .table-file-btn.preview {
@@ -1285,13 +1410,19 @@ button[class*="bg-tbl-"]:active {
   animation: pulse 1.5s infinite;
 }
 
-/* In View mode: Clean empty attachment indicator instead of edit button, hide add/remove buttons */
+/* View mode: show file badges like Edit; hide only add/remove/upload controls */
+.notes-content-view .table-file-badge {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.notes-content-view .table-file-btn {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 .notes-content-view .row-attach-upload-btn {
-  opacity: 0.35;
-  pointer-events: none;
-  background-color: transparent;
-  border-color: transparent;
-  box-shadow: none;
+  display: none !important;
 }
 
 .notes-content-view .row-attach-add-btn {

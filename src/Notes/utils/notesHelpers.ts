@@ -3,6 +3,7 @@ import jsPDF from "jspdf";
 import { message } from "antd";
 import axios from "axios";
 import { Note, ColorOption } from "../types/notes.types";
+import { paginateToA4Sheets } from "./documentLayout";
 
 export const TEXT_COLORS: ColorOption[] = [
   { label: "None / Default", color: "none" },
@@ -37,7 +38,25 @@ export const formatFileSize = (bytes?: number): string => {
 };
 
 const SKIP_JUSTIFY_TAGS = new Set(["SCRIPT", "STYLE", "PRE", "CODE", "TEXTAREA"]);
+const NO_JUSTIFY_ALIGN_TAGS = new Set([
+  "H1",
+  "H2",
+  "H3",
+  "H4",
+  "H5",
+  "H6",
+  "IMG",
+  "TABLE",
+  "THEAD",
+  "TBODY",
+  "TR",
+  "TH",
+  "BUTTON",
+  "INPUT",
+  "SVG",
+]);
 
+/** Collapse OCR / PDF "l e t t e r   s p a c e d" words back into normal words. */
 const collapseLetterSpacedWords = (text: string): string => {
   const tokens = text.split(" ").filter((token) => token.length > 0);
   if (tokens.length < 4) return text.replace(/ {2,}/g, " ").trim();
@@ -56,19 +75,39 @@ const collapseLetterSpacedWords = (text: string): string => {
   return rebuilt.replace(/ {2,}/g, " ").trim();
 };
 
+/** Strip NBSP, zero-width, tabs, multi-spaces — PDF/DOCX import cleanup. */
 const normalizeImportedText = (raw: string): string => {
   const flattened = raw
-    .replace(/\u00a0/g, " ")
-    .replace(/[\u2000-\u200B\u202F\u205F\u3000]/g, " ")
-    .replace(/[\r\n\t]+/g, " ")
+    .replace(/\u00a0/g, " ") // nbsp
+    .replace(/\u00ad/g, "") // soft hyphen
+    .replace(/[\u2000-\u200B\u200C\u200D\u202F\u205F\u3000\uFEFF]/g, " ")
+    .replace(/[\r\n\t\f\v]+/g, " ")
     .replace(/ {2,}/g, " ");
   return collapseLetterSpacedWords(flattened);
 };
 
+const isVisuallyEmptyBlock = (el: HTMLElement): boolean => {
+  const text = (el.textContent || "")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (text.length > 0) return false;
+  if (el.querySelector("img, table, video, canvas, svg, iframe, input, button")) return false;
+  return true;
+};
+
 /**
- * Clean extra imported spaces and justify text like a PDF/DOCX.
+ * Clean extra imported spaces / vertical gaps and justify like an original PDF.
+ * Also merges A4 pages and reflows so content packs to the top (no mid-page holes).
  */
-export const justifyImportedContent = (root: HTMLElement) => {
+export const justifyImportedContent = (
+  root: HTMLElement,
+  options?: { landscape?: boolean; reflowPages?: boolean }
+) => {
+  const landscape = Boolean(options?.landscape);
+  const reflowPages = options?.reflowPages !== false;
+
+  // 1) Normalize every text node (remove NBSP, double spaces, letter-spacing OCR junk)
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
   const textNodes: Text[] = [];
   while (walker.nextNode()) textNodes.push(walker.currentNode as Text);
@@ -79,19 +118,211 @@ export const justifyImportedContent = (root: HTMLElement) => {
     node.textContent = normalizeImportedText(node.textContent || "");
   });
 
+  // 2) Strip forced heights / padding that create empty bands (Docling/PDF leftovers)
   root.querySelectorAll<HTMLElement>("*").forEach((el) => {
+    if (el.classList.contains("page")) return;
     if (SKIP_JUSTIFY_TAGS.has(el.tagName)) return;
+    if (el.closest("table, th, td, .excel-sl-col, .excel-attachment-cell")) return;
+
+    el.style.removeProperty("min-height");
+    el.style.removeProperty("height");
+    el.style.removeProperty("max-height");
+    const padTop = parseFloat(el.style.paddingTop || "0");
+    const padBottom = parseFloat(el.style.paddingBottom || "0");
+    if (padTop > 8) el.style.paddingTop = "0";
+    if (padBottom > 8) el.style.paddingBottom = "0";
+    el.style.marginTop = "0";
+    el.style.marginBottom = "0.35em";
     el.style.whiteSpace = "normal";
     el.style.letterSpacing = "normal";
     el.style.wordSpacing = "normal";
+  });
+
+  // 3) Remove empty spacer blocks (&nbsp;, <br>-only, empty p/div/li/span)
+  const removeEmptySpacers = () => {
+    const candidates = Array.from(
+      root.querySelectorAll<HTMLElement>("p, div, span, li, h1, h2, h3, h4, h5, h6, section, article")
+    );
+    let removed = 0;
+    candidates.forEach((el) => {
+      if (SKIP_JUSTIFY_TAGS.has(el.tagName)) return;
+      if (el.classList.contains("page") || el.classList.contains("doc-flow")) return;
+      if (el.closest("table, th, td, .excel-sl-col, .excel-attachment-cell")) return;
+      if (el.querySelector(".page")) return;
+
+      // Collapse consecutive <br>
+      el.querySelectorAll("br").forEach((br) => {
+        if (br.previousSibling && br.previousSibling.nodeName === "BR") br.remove();
+      });
+
+      if (!isVisuallyEmptyBlock(el)) return;
+
+      // Keep real list structure only if it has nested content later — empty li goes
+      if (["P", "DIV", "SPAN", "LI", "SECTION", "ARTICLE"].includes(el.tagName)) {
+        el.remove();
+        removed += 1;
+      }
+    });
+    return removed;
+  };
+  // Pass twice so nested empty wrappers clear after children are gone
+  removeEmptySpacers();
+  removeEmptySpacers();
+
+  // 4) Apply justify alignment
+  root.querySelectorAll<HTMLElement>("*").forEach((el) => {
+    if (SKIP_JUSTIFY_TAGS.has(el.tagName)) return;
+    if (el.classList.contains("excel-sl-col") || el.classList.contains("excel-attachment-cell")) return;
+    if (el.classList.contains("page")) return;
+
     el.style.textAlignLast = "left";
-    if (!["H1", "H2", "H3", "H4", "H5", "H6", "IMG", "TABLE", "THEAD", "TBODY", "TR"].includes(el.tagName)) {
+    el.style.wordBreak = "normal";
+    el.style.overflowWrap = "break-word";
+    el.style.lineHeight = "1.55";
+
+    if (!NO_JUSTIFY_ALIGN_TAGS.has(el.tagName)) {
       el.style.textAlign = "justify";
+      el.style.textJustify = "inter-word";
+      el.style.hyphens = "auto";
+    } else if (el.tagName.startsWith("H")) {
+      el.style.textAlign = "left";
+      el.style.marginBottom = "0.5em";
     }
   });
 
   root.classList.add("is-justified");
-  root.querySelectorAll(".page").forEach((page) => page.classList.add("is-justified"));
+  root.style.textAlign = "justify";
+  root.style.textJustify = "inter-word";
+  root.style.whiteSpace = "normal";
+  root.style.letterSpacing = "normal";
+  root.style.wordSpacing = "normal";
+
+  // 5) Merge all A4 sheets into one flow, then re-paginate so content packs to the top
+  //    (fixes huge empty bands left from PDF page imports)
+  if (reflowPages) {
+    const pages = Array.from(root.querySelectorAll(":scope > .page")) as HTMLElement[];
+    if (pages.length > 0) {
+      const first = pages[0];
+      pages.slice(1).forEach((page) => {
+        while (page.firstChild) first.appendChild(page.firstChild);
+        page.remove();
+      });
+      // Drop leading empty nodes inside the merged page
+      while (first.firstChild) {
+        const node = first.firstChild;
+        if (node.nodeType === Node.TEXT_NODE && !(node.textContent || "").trim()) {
+          first.removeChild(node);
+          continue;
+        }
+        if (node.nodeType === Node.ELEMENT_NODE && isVisuallyEmptyBlock(node as HTMLElement)) {
+          first.removeChild(node);
+          continue;
+        }
+        break;
+      }
+      first.classList.add("is-justified");
+      paginateToA4Sheets(root, landscape, true);
+    } else {
+      // No page wrappers yet — still mark justified
+      paginateToA4Sheets(root, landscape, true);
+    }
+  }
+
+  root.querySelectorAll(".page").forEach((page) => {
+    (page as HTMLElement).classList.add("is-justified");
+    (page as HTMLElement).style.textAlign = "justify";
+  });
+};
+
+/**
+ * PDF Attachment badges — full filename visible (wrap), no vertical clip.
+ * [file icon] [full name] [eye] [download]
+ */
+const prepareAttachmentBadgesForPdfExport = (root: HTMLElement): void => {
+  root
+    .querySelectorAll(
+      ".row-attach-add-btn, .row-attach-upload-btn, .row-attach-loading, .table-file-btn.remove"
+    )
+    .forEach((el) => el.remove());
+
+  root.querySelectorAll<HTMLElement>("th.excel-attachment-col, td.excel-attachment-cell").forEach((cell) => {
+    cell.style.setProperty("width", "280px", "important");
+    cell.style.setProperty("min-width", "260px", "important");
+    cell.style.setProperty("max-width", "320px", "important");
+    cell.style.setProperty("word-break", "break-word", "important");
+    cell.style.setProperty("overflow-wrap", "anywhere", "important");
+    cell.style.setProperty("white-space", "normal", "important");
+    cell.style.setProperty("overflow", "visible", "important");
+    cell.style.setProperty("vertical-align", "middle", "important");
+    cell.style.setProperty("padding", "8px", "important");
+  });
+
+  root.querySelectorAll<HTMLElement>(".table-file-badge").forEach((badge) => {
+    badge.style.cssText = [
+      "display:flex",
+      "flex-direction:row",
+      "flex-wrap:nowrap",
+      "align-items:flex-start",
+      "gap:6px",
+      "width:100%",
+      "max-width:100%",
+      "box-sizing:border-box",
+      "padding:6px 8px",
+      "background:#ffffff",
+      "border:1px solid #e2e8f0",
+      "border-radius:6px",
+      "overflow:visible",
+      "text-align:left",
+      "font-size:11px",
+      "line-height:1.45",
+      "color:#1e293b",
+    ].join(";");
+
+    const nameEl = badge.querySelector<HTMLElement>(".table-file-name");
+    if (nameEl) {
+      const full =
+        badge.getAttribute("data-file-name") ||
+        nameEl.getAttribute("title") ||
+        nameEl.textContent ||
+        "Attachment";
+      // Full name — do not truncate for PDF
+      nameEl.textContent = full;
+      nameEl.setAttribute("title", full);
+      nameEl.style.cssText = [
+        "flex:1 1 auto",
+        "min-width:0",
+        "max-width:none",
+        "overflow:visible",
+        "white-space:normal",
+        "word-break:break-word",
+        "overflow-wrap:anywhere",
+        "font-weight:500",
+        "font-size:11px",
+        "line-height:1.45",
+        "text-align:left",
+        "display:block",
+      ].join(";");
+    }
+
+    const fileIcon = badge.querySelector<SVGElement>(":scope > svg");
+    if (fileIcon) {
+      fileIcon.style.flexShrink = "0";
+      fileIcon.style.width = "14px";
+      fileIcon.style.height = "14px";
+      fileIcon.style.marginTop = "1px";
+    }
+
+    badge.querySelectorAll<HTMLElement>(".table-file-btn").forEach((btn) => {
+      btn.style.cssText =
+        "display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-top:1px;padding:0;border:none;background:transparent;flex-shrink:0;";
+      const svg = btn.querySelector("svg") as SVGElement | null;
+      if (svg) {
+        svg.style.width = "12px";
+        svg.style.height = "12px";
+        svg.style.display = "block";
+      }
+    });
+  });
 };
 
 /**
@@ -110,14 +341,21 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
       });
     }
 
-    const isHorizontal = note.isVertical === false;
-    const baseWidthPx = isHorizontal ? 1123 : 794;
-
-    // 1. Create temporary container placed at top-left behind UI for accurate html2canvas bounding boxes
-    const isLandscape = note.rotation === 90 || note.rotation === 270;
+    const firstRowMatch = (note.description || "").match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
+    const colCount = firstRowMatch
+      ? (firstRowMatch[1].match(/<t[dh][^>]*>/gi) || []).length
+      : 0;
+    const isLandscape =
+      note.isVertical === false ||
+      note.rotation === 90 ||
+      note.rotation === 270 ||
+      colCount > 6;
+    const baseWidthPx = isLandscape ? 1123 : 794;
     const pdfWidth = isLandscape ? 297 : 210;
     const pdfHeight = isLandscape ? 210 : 297;
 
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-pdf-export-root", "true");
     wrapper.style.position = "absolute";
     wrapper.style.left = "0px";
     wrapper.style.top = "0px";
@@ -142,10 +380,13 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
           -webkit-box-decoration-break: clone;
         }
         .pdf-export-body blockquote {
-          border-left: 4px solid #4318FF !important;
-          background-color: rgba(67, 24, 255, 0.04) !important;
-          padding: 8px 14px !important;
-          margin: 10px 0 !important;
+          display: inline-block !important;
+          width: fit-content !important;
+          max-width: 100% !important;
+          border-left: 3px solid #4318FF !important;
+          background-color: rgba(67, 24, 255, 0.06) !important;
+          padding: 2px 10px !important;
+          margin: 4px 0 !important;
           font-style: italic !important;
           color: #475569 !important;
           border-radius: 0 6px 6px 0 !important;
@@ -175,24 +416,114 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
           color: #F8FAFC !important;
           padding: 0 !important;
         }
+        .pdf-export-body .page {
+          width: 100% !important;
+          min-width: 0 !important;
+          max-width: 100% !important;
+          min-height: 0 !important;
+          height: auto !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          box-shadow: none !important;
+          overflow: visible !important;
+        }
         .pdf-export-body table {
-          min-width: 100% !important;
-          width: max-content !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+          table-layout: fixed !important;
           border-collapse: collapse !important;
-          margin: 12px 0 !important;
+          margin: 0 !important;
           border: 1px solid #CBD5E1 !important;
         }
         .pdf-export-body table th,
         .pdf-export-body table td {
           border: 1px solid #CBD5E1 !important;
-          padding: 7px 10px !important;
-          text-align: left !important;
-          font-size: 12px !important;
+          padding: 6px 4px !important;
+          text-align: center !important;
+          vertical-align: middle !important;
+          font-size: 11px !important;
+          word-break: break-word !important;
+          overflow-wrap: anywhere !important;
+          white-space: normal !important;
         }
         .pdf-export-body table th {
           background-color: #F8FAFC !important;
           font-weight: 700 !important;
           color: #1E293B !important;
+        }
+        .pdf-export-body th.excel-attachment-col,
+        .pdf-export-body td.excel-attachment-cell {
+          width: 280px !important;
+          min-width: 260px !important;
+          max-width: 320px !important;
+          text-align: left !important;
+          vertical-align: middle !important;
+          overflow: visible !important;
+          word-break: break-word !important;
+          overflow-wrap: anywhere !important;
+          white-space: normal !important;
+          padding: 8px !important;
+        }
+        .pdf-export-body .row-attach-container {
+          display: flex !important;
+          flex-direction: column !important;
+          align-items: stretch !important;
+          gap: 6px !important;
+          width: 100% !important;
+          max-width: 100% !important;
+        }
+        .pdf-export-body .table-file-badge {
+          display: flex !important;
+          flex-direction: row !important;
+          flex-wrap: nowrap !important;
+          align-items: flex-start !important;
+          gap: 6px !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          box-sizing: border-box !important;
+          padding: 6px 8px !important;
+          background: #ffffff !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 6px !important;
+          text-align: left !important;
+          overflow: visible !important;
+          line-height: 1.45 !important;
+        }
+        .pdf-export-body .table-file-name {
+          flex: 1 1 auto !important;
+          min-width: 0 !important;
+          max-width: none !important;
+          overflow: visible !important;
+          text-overflow: clip !important;
+          white-space: normal !important;
+          word-break: break-word !important;
+          overflow-wrap: anywhere !important;
+          text-align: left !important;
+          display: block !important;
+          font-size: 11px !important;
+          line-height: 1.45 !important;
+        }
+        .pdf-export-body .table-file-btn {
+          display: inline-flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 18px !important;
+          height: 18px !important;
+          flex-shrink: 0 !important;
+          border: none !important;
+          background: transparent !important;
+          padding: 0 !important;
+        }
+        .pdf-export-body .table-file-btn svg {
+          width: 12px !important;
+          height: 12px !important;
+          display: block !important;
+        }
+        .pdf-export-body .row-attach-add-btn,
+        .pdf-export-body .row-attach-upload-btn,
+        .pdf-export-body .table-file-btn.remove {
+          display: none !important;
         }
         .pdf-export-body ul, .pdf-export-body ol {
           padding-left: 20px !important;
@@ -209,7 +540,7 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
         .pdf-export-body h2 { font-size: 16px !important; font-weight: 700 !important; margin: 10px 0 5px 0 !important; color: #1E293B !important; }
         .pdf-export-body h3 { font-size: 14px !important; font-weight: 600 !important; margin: 8px 0 4px 0 !important; color: #1E293B !important; }
       </style>
-      <div style="padding: 36px 40px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1E293B; background-color: #FFFFFF; line-height: 1.6; box-sizing: border-box; min-width: ${baseWidthPx}px; width: max-content;">
+      <div style="padding: 28px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1E293B; background-color: #FFFFFF; line-height: 1.6; box-sizing: border-box; width: ${baseWidthPx}px;">
         <!-- Structured Note Card: Project & Title -->
         <div style="background-color: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 18px 22px; margin-bottom: 22px; width: 100%; box-sizing: border-box;">
           <!-- Project Row: Rendered via table for 100% pixel-perfect html2canvas alignment -->
@@ -263,18 +594,17 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
 
     document.body.appendChild(wrapper);
 
-    // Measure full content width, ensuring it takes full width if tables expand horizontally
-    const actualWidthPx = Math.max(baseWidthPx, wrapper.scrollWidth, wrapper.offsetWidth);
-    wrapper.style.width = `${actualWidthPx}px`;
+    wrapper.style.width = `${baseWidthPx}px`;
+    // Force editor-like truncated names — CSS ellipsis alone is unreliable in html2canvas
+    prepareAttachmentBadgesForPdfExport(wrapper);
 
-    // Capture using html2canvas with scale: 2 for crisp vector-like text
     const canvas = await html2canvas(wrapper, {
       scale: 2,
       useCORS: true,
       logging: false,
       backgroundColor: "#FFFFFF",
-      width: isLandscape ? 1122 : 794,
-      windowWidth: isLandscape ? 1122 : 794,
+      width: baseWidthPx,
+      windowWidth: baseWidthPx,
     });
 
     document.body.removeChild(wrapper);
@@ -388,6 +718,7 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
     hideLoading();
     message.success("PDF downloaded directly successfully");
   } catch (err: any) {
+    document.querySelectorAll("[data-pdf-export-root]").forEach((node) => node.remove());
     hideLoading();
     console.error("PDF download error:", err);
     message.error("Failed to generate PDF download");
@@ -518,10 +849,13 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
             border-radius: 2pt;
           }
           blockquote {
-            border-left: 3.5pt solid #4318FF;
-            background-color: #F8FAFC;
-            padding: 8pt 14pt;
-            margin: 10pt 0;
+            display: inline-block;
+            width: fit-content;
+            max-width: 100%;
+            border-left: 3pt solid #4318FF;
+            background-color: #F4F1FF;
+            padding: 2pt 8pt;
+            margin: 4pt 0;
             font-style: italic;
             color: #475569;
           }
@@ -536,12 +870,14 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
             width: 100%;
             border-collapse: collapse;
             margin: 12pt 0;
-            mso-table-layout-alt: auto;
+            table-layout: fixed;
+            mso-table-layout-alt: fixed;
           }
           table th, table td {
             border: 1pt solid #CBD5E1;
-            padding: 7pt 10pt;
-            text-align: left;
+            padding: 6pt 4pt;
+            text-align: center;
+            vertical-align: middle;
             font-size: 10pt;
             word-break: break-word;
           }
@@ -550,17 +886,36 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
             font-weight: bold;
             color: #1E293B;
           }
+          th.excel-attachment-col, td.excel-attachment-cell {
+            width: 260px;
+            min-width: 220px;
+            white-space: normal;
+            word-break: break-word;
+          }
           .table-file-badge {
-            display: inline-block;
+            display: block;
             background-color: #F1F5F9;
             border: 1pt solid #CBD5E1;
-            padding: 3pt 6pt;
+            padding: 4pt 6pt;
             border-radius: 4pt;
             font-size: 9pt;
             color: #334155;
             margin: 2pt 0;
+            width: 100%;
+            box-sizing: border-box;
+            overflow: visible;
+            white-space: normal;
+            word-break: break-word;
           }
-          .table-file-btn {
+          .table-file-name {
+            white-space: normal !important;
+            overflow: visible !important;
+            word-break: break-word !important;
+            line-height: 1.4;
+          }
+          .table-file-btn.remove,
+          .row-attach-add-btn,
+          .row-attach-upload-btn {
             display: none !important;
           }
         </style>
@@ -608,6 +963,34 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
   }
 };
 
+/**
+ * Flatten copied/pasted note HTML so we don't paste nested A4 .page shells
+ * (that creates the double-page layout).
+ */
+export const sanitizeNoteHtmlForClipboard = (html?: string): string => {
+  if (!html || !html.trim()) return "";
+  const parsed = new DOMParser().parseFromString(html, "text/html");
+  parsed
+    .querySelectorAll(
+      ".a4-page-workspace, .a4-page-rotator, .a4-page, .excel-workbook-store"
+    )
+    .forEach((el) => {
+      const parent = el.parentNode;
+      if (!parent) return;
+      while (el.firstChild) parent.insertBefore(el.firstChild, el);
+      el.remove();
+    });
+
+  const pages = Array.from(parsed.body.querySelectorAll(".page"));
+  if (pages.length > 0) {
+    return pages
+      .map((page) => page.innerHTML.trim())
+      .filter(Boolean)
+      .join("");
+  }
+  return parsed.body.innerHTML.trim();
+};
+
 export const copyNoteContentToClipboard = async (
   htmlContent?: string
 ): Promise<void> => {
@@ -617,7 +1000,8 @@ export const copyNoteContentToClipboard = async (
   }
 
   try {
-    const fullHtml = htmlContent;
+    // Copy inner content only — not outer .page / A4 wrappers
+    const fullHtml = sanitizeNoteHtmlForClipboard(htmlContent);
 
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = fullHtml;
@@ -639,7 +1023,7 @@ export const copyNoteContentToClipboard = async (
   } catch (err) {
     // Fallback
     const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = htmlContent;
+    tempDiv.innerHTML = sanitizeNoteHtmlForClipboard(htmlContent);
     const textContent = tempDiv.innerText || tempDiv.textContent || "";
     navigator.clipboard.writeText(textContent);
     message.success("Page copied to clipboard!");
@@ -647,12 +1031,34 @@ export const copyNoteContentToClipboard = async (
 };
 
 /**
- * Extract clean readable plain-text snippet from HTML description for table columns.
+ * Remove edit-only attach controls from note HTML.
+ * Keeps file badges (name + preview/download) so View mode matches Edit.
+ */
+export const stripAttachmentUiFromHtml = (html?: string): string => {
+  if (!html || !html.trim()) return "";
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = html;
+  tempDiv
+    .querySelectorAll(
+      ".row-attach-upload-btn, .row-attach-add-btn, .row-attach-loading, .table-file-btn.remove"
+    )
+    .forEach((el) => el.remove());
+  return tempDiv.innerHTML;
+};
+
+/**
+ * Plain-text snippet for lists/send preview — exclude attachment chip labels
+ * so file names are not mistaken for the note description.
  */
 export const getCleanDescriptionSnippet = (html?: string, maxLength: number = 75): string => {
   if (!html || !html.trim()) return "";
   const tempDiv = document.createElement("div");
   tempDiv.innerHTML = html;
+  tempDiv
+    .querySelectorAll(
+      ".table-file-badge, .row-attach-upload-btn, .row-attach-add-btn, .row-attach-loading, .row-attach-container"
+    )
+    .forEach((el) => el.remove());
   const text = (tempDiv.innerText || tempDiv.textContent || "").replace(/\s+/g, " ").trim();
   if (!text) return "";
   if (text.length <= maxLength) return text;
@@ -676,6 +1082,10 @@ export interface SendNotePayload {
   canView?: boolean;
   canEdit?: boolean;
   canDelete?: boolean;
+  /** Deliver into Worksphere Inbox (application) */
+  sendToInbox?: boolean;
+  /** Also send email notification */
+  sendToEmail?: boolean;
 }
 
 /**
@@ -708,6 +1118,8 @@ export const sendNoteContent = async (payload: SendNotePayload): Promise<boolean
       includeFiles: hasDoc,
       includeDescription: hasDesc,
       attachmentKeys: payload.selectedAttachmentKeys || payload.attachmentKeys || [],
+      sendToInbox: payload.sendToInbox !== false,
+      sendToEmail: payload.sendToEmail !== false,
     };
     await axios.post(`/api/notes/${payload.noteId}/send`, body);
     return true;

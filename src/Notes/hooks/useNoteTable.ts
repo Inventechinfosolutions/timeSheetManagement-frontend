@@ -46,7 +46,7 @@ export const useNoteTable = ({
   const [fillMode, setFillMode] = useState<"bg" | "text">("bg");
   const lastActiveCellRef = useRef<HTMLTableCellElement | null>(null);
   const selectedCellsRef = useRef<HTMLTableCellElement[]>([]);
-  const selectionKindRef = useRef<"row" | "column" | "cell" | null>(null);
+  const selectionKindRef = useRef<"row" | "column" | "cell" | "table" | null>(null);
   const syncExpandHandleRef = useRef<() => void>(() => {});
 
   // Helper to get active table
@@ -74,9 +74,76 @@ export const useNoteTable = ({
     syncExpandHandleRef.current();
   };
 
+  const focusEditableCell = (cell: HTMLTableCellElement | null) => {
+    if (!cell || !document.contains(cell)) return;
+    const row = cell.closest("tr");
+    const editable =
+      cell.getAttribute("contenteditable") === "true"
+        ? cell
+        : ((row?.querySelector(
+            'td[contenteditable="true"]:not(.excel-sl-col):not(.excel-attachment-cell)'
+          ) as HTMLTableCellElement | null) ||
+          (cell.getAttribute("contenteditable") !== "false" ? cell : null));
+    const target = editable || cell;
+    editorRef.current?.focus();
+    try {
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.selectNodeContents(target);
+      range.collapse(true);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    } catch {
+      /* ignore */
+    }
+    lastActiveCellRef.current = target;
+  };
+
+  const selectTableRow = (tr: HTMLTableRowElement) => {
+    const table = tr.closest("table") as HTMLTableElement | null;
+    if (!table) return;
+    const rowCells = Array.from(tr.cells) as HTMLTableCellElement[];
+    if (!rowCells.length) return;
+    clearSelectionVisuals(table);
+    lastActiveCellRef.current = rowCells[0];
+    selectedCellsRef.current = rowCells;
+    applySelectionVisuals(rowCells, "row");
+    selectionKindRef.current = "row";
+    syncExpandHandleRef.current();
+    focusEditableCell(rowCells.find((c) => c.getAttribute("contenteditable") === "true") || rowCells[0]);
+  };
+
+  const selectTableColumn = (table: HTMLTableElement, colIndex: number) => {
+    if (colIndex < 0) return;
+    const colCells: HTMLTableCellElement[] = [];
+    Array.from(table.rows).forEach((row) => {
+      if (row.cells[colIndex]) colCells.push(row.cells[colIndex] as HTMLTableCellElement);
+    });
+    if (!colCells.length) return;
+    clearSelectionVisuals(table);
+    lastActiveCellRef.current = colCells[0];
+    selectedCellsRef.current = colCells;
+    applySelectionVisuals(colCells, "column");
+    selectionKindRef.current = "column";
+    syncExpandHandleRef.current();
+    const editable =
+      colCells.find(
+        (c) => c.tagName === "TD" && c.getAttribute("contenteditable") === "true"
+      ) || colCells[0];
+    focusEditableCell(editable);
+  };
+
   // Track active table cell & multi-cell selection on selection change
   useEffect(() => {
     const handleSelectionChange = () => {
+      // Do not clobber Excel row/column/table selections when caret moves (e.g. toolbar click)
+      if (
+        selectionKindRef.current === "row" ||
+        selectionKindRef.current === "column" ||
+        selectionKindRef.current === "table"
+      ) {
+        return;
+      }
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) return;
       const node = sel.anchorNode;
@@ -233,7 +300,9 @@ export const useNoteTable = ({
         return;
       }
 
-      const isFirstColSl = table.rows[0]?.cells[0]?.textContent?.trim() === "SL";
+      const isFirstColSl =
+        table.rows[0]?.cells[0]?.textContent?.trim() === "SL" ||
+        table.rows[0]?.cells[0]?.classList.contains("excel-sl-col");
       const alreadySelectedCol =
         selectionKindRef.current === "column" &&
         selectedCellsRef.current.some(
@@ -244,52 +313,57 @@ export const useNoteTable = ({
         selectedCellsRef.current.length === 1 &&
         selectedCellsRef.current[0] === cell;
 
-      // Click on TH (column header) -> select column, or click again to turn expand mode off
-      if (cell.tagName === "TH") {
-        if (isFirstColSl && cell.cellIndex === 0) {
+      const isSlHeader = isFirstColSl && cell.tagName === "TH" && cell.cellIndex === 0;
+      const isSlRowNumber = isFirstColSl && cell.tagName === "TD" && cell.cellIndex === 0;
+
+      // Click SL header only -> select entire table
+      if (isSlHeader) {
+        e.preventDefault();
+        const alreadySelectedTable =
+          selectionKindRef.current === "table" &&
+          selectedCellsRef.current.some((c) => document.contains(c) && c.closest("table") === table);
+        if (alreadySelectedTable) {
           clearTableSelection(table);
           return;
         }
+        clearSelectionVisuals(table);
+        const allCells: HTMLTableCellElement[] = [];
+        Array.from(table.rows).forEach((row) => {
+          Array.from(row.cells).forEach((c) => {
+            allCells.push(c as HTMLTableCellElement);
+          });
+        });
+        if (allCells.length > 0) {
+          lastActiveCellRef.current = allCells[0];
+          selectedCellsRef.current = allCells;
+          applySelectionVisuals(allCells, "table");
+          selectionKindRef.current = "table";
+          syncExpandHandleRef.current();
+        }
+      }
+      // Click row number (1, 2, 3…) -> select that row only
+      else if (isSlRowNumber) {
+        e.preventDefault();
+        const tr = cell.closest("tr") as HTMLTableRowElement | null;
+        const alreadySelectedRow =
+          selectionKindRef.current === "row" &&
+          selectedCellsRef.current.some(
+            (c) => document.contains(c) && c.closest("tr") === tr
+          );
+        if (alreadySelectedRow) {
+          clearTableSelection(table);
+          return;
+        }
+        if (tr) selectTableRow(tr);
+      }
+      // Click on TH (A/B/C… header) -> select that column
+      else if (cell.tagName === "TH") {
+        e.preventDefault();
         if (alreadySelectedCol) {
           clearTableSelection(table);
           return;
         }
-        clearSelectionVisuals(table);
-        const colIdx = cell.cellIndex;
-        const colCells: HTMLTableCellElement[] = [];
-        Array.from(table.rows).forEach((row) => {
-          if (row.cells[colIdx]) {
-            colCells.push(row.cells[colIdx] as HTMLTableCellElement);
-          }
-        });
-        if (colCells.length > 0) {
-          lastActiveCellRef.current = colCells[0];
-          selectedCellsRef.current = colCells;
-          applySelectionVisuals(colCells, "column");
-          selectionKindRef.current = "column";
-          syncExpandHandleRef.current();
-        }
-      }
-      // Click on SL cell (1st col TD) -> select entire row's BODY cells only
-      else if (cell.cellIndex === 0 && isFirstColSl) {
-        if (selectionKindRef.current === "row") {
-          clearTableSelection(table);
-          return;
-        }
-        clearSelectionVisuals(table);
-        const tr = cell.closest("tr");
-        if (tr) {
-          const bodyCells = (Array.from(tr.cells) as HTMLTableCellElement[]).filter(
-            (c) => c.cellIndex !== 0
-          );
-          if (bodyCells.length > 0) {
-            lastActiveCellRef.current = bodyCells[0];
-            selectedCellsRef.current = bodyCells;
-            applySelectionVisuals(bodyCells, "row");
-            selectionKindRef.current = "row";
-            syncExpandHandleRef.current();
-          }
-        }
+        selectTableColumn(table as HTMLTableElement, cell.cellIndex);
       }
       // Click on normal cell -> select that cell; click same cell again to clear
       else {
@@ -303,6 +377,7 @@ export const useNoteTable = ({
         applySelectionVisuals([cell], "cells");
         selectionKindRef.current = "cell";
         syncExpandHandleRef.current();
+        focusEditableCell(cell);
       }
     };
 
@@ -397,7 +472,9 @@ export const useNoteTable = ({
 
     /** + expand only for a selected vertical column (header click) — never for single cell / row */
     const getExpandTarget = () => {
-      if (selectionKindRef.current !== "column") return null;
+      const kind = selectionKindRef.current;
+      // + only for a selected data column (A/B/C…), not whole-table / row / cell
+      if (kind !== "column") return null;
       const cells = selectedCellsRef.current.filter(
         (c) => document.contains(c) && c.classList.contains("excel-cell-selected")
       );
@@ -406,7 +483,7 @@ export const useNoteTable = ({
       const colIndex = cells[0].cellIndex;
       const header = table.rows[0]?.cells[colIndex] as HTMLTableCellElement | undefined;
       if (!header || isSl(header) || isSl(cells[0])) return null;
-      return { table, colIndex, anchor: header };
+      return { table, colIndex, anchor: header, kind: "column" as const };
     };
 
     const syncHandle = () => {
@@ -493,14 +570,21 @@ export const useNoteTable = ({
       requestAnimationFrame(syncHandle);
     };
 
-    // Click outside editor/table: clear blue selection
+    // Click outside editor/table: clear blue selection — but keep it for toolbar / Insert Table
     const onDocPointerDown = (e: PointerEvent) => {
       const t = e.target as Node | null;
       if (!t) return;
       if (handle.contains(t)) return;
+      const el = t as HTMLElement;
+      if (
+        el.closest?.(
+          "[data-notes-toolbar], .ant-popover, .ant-popover-content, .ant-popover-inner, .ant-message, .notes-excel-fill-handle"
+        )
+      ) {
+        return;
+      }
       const editor = editorRef.current;
       if (editor && editor.contains(t)) {
-        const el = t as HTMLElement;
         if (!el.closest?.("td, th, table")) {
           clearExpandMode();
         }
@@ -542,7 +626,9 @@ export const useNoteTable = ({
       const colName = getColLabel(c, numCols);
       tableHtml += `<th contenteditable="false" class="${
         isSlCol ? "excel-sl-col" : ""
-      }" title="Column ${colName} (Click to select column)">${colName}</th>`;
+      }" title="${
+        isSlCol ? "Click to select entire table" : `Column ${colName} (Click to select column)`
+      }">${colName}</th>`;
     }
     tableHtml += `</tr></thead><tbody>`;
 
@@ -551,9 +637,9 @@ export const useNoteTable = ({
       for (let c = 0; c < numCols; c++) {
         const isSlCol = numCols > 1 && c === 0;
         if (isSlCol) {
-          tableHtml += `<td contenteditable="false" class="excel-sl-col" title="Row ${
+          tableHtml += `<td contenteditable="false" class="excel-sl-col" title="Click to select this row">${
             r + 1
-          } (Click to select row)">${r + 1}</td>`;
+          }</td>`;
         } else {
           tableHtml += `<td contenteditable="true">&nbsp;</td>`;
         }
@@ -568,6 +654,35 @@ export const useNoteTable = ({
     message.success(`Inserted ${numRows}×${numCols} table (Excel style)`);
   };
 
+  /** Resolve row target from selection (row/cell) or last active cell */
+  const getSelectedRowTr = (table: HTMLTableElement): HTMLTableRowElement | null => {
+    const fromSelection =
+      selectedCellsRef.current.find((c) => document.contains(c) && c.closest("table") === table) ||
+      null;
+    if (fromSelection) {
+      const tr = fromSelection.closest("tr");
+      if (tr && tr.parentElement?.tagName !== "THEAD") return tr as HTMLTableRowElement;
+    }
+    const currentCell = lastActiveCellRef.current;
+    if (currentCell && currentCell.closest("table") === table) {
+      const tr = currentCell.closest("tr");
+      if (tr && tr.parentElement?.tagName !== "THEAD") return tr as HTMLTableRowElement;
+    }
+    return null;
+  };
+
+  /** Resolve column index from selection (column/cell) or last active cell */
+  const getSelectedColIndex = (table: HTMLTableElement): number => {
+    const fromSelection =
+      selectedCellsRef.current.find((c) => document.contains(c) && c.closest("table") === table) ||
+      null;
+    if (fromSelection) return fromSelection.cellIndex;
+    const currentCell = lastActiveCellRef.current;
+    if (currentCell && currentCell.closest("table") === table) return currentCell.cellIndex;
+    const firstRow = table.rows[0];
+    return firstRow && firstRow.cells.length > 0 ? firstRow.cells.length - 1 : -1;
+  };
+
   // Table Row & Column Manipulation Actions (Exact Excel/Word: Above, Below, Before, After)
   const handleInsertRow = (position: "above" | "below" = "below") => {
     saveUndoSnapshot();
@@ -576,8 +691,7 @@ export const useNoteTable = ({
       message.warning("Click inside a table first to add a row");
       return;
     }
-    const currentCell = lastActiveCellRef.current;
-    const targetTr = currentCell && currentCell.closest("table") === table ? currentCell.closest("tr") : null;
+    const targetTr = getSelectedRowTr(table);
     const tbody = table.querySelector("tbody") || table;
     const colsCount = table.rows[0]?.cells.length || 1;
     const isFirstColSl = table.rows[0]?.cells[0]?.textContent?.trim() === "SL";
@@ -596,7 +710,7 @@ export const useNoteTable = ({
       if (i === 0 && isFirstColSl) {
         td.setAttribute("contenteditable", "false");
         td.className = "excel-sl-col";
-        td.setAttribute("title", `Row ${nextRowNumber} (Click to select row)`);
+        td.setAttribute("title", "Click to select this row");
         td.textContent = `${nextRowNumber}`;
       } else if (isAttachmentCol) {
         td.setAttribute("contenteditable", "false");
@@ -621,7 +735,7 @@ export const useNoteTable = ({
     }
 
     updateTableHeadersAndSl(table);
-    clearSelectionVisuals(table);
+    selectTableRow(newRow);
     handleEditorInputWrapper();
     message.success(position === "above" ? "Row inserted above" : "Row inserted below");
   };
@@ -630,42 +744,30 @@ export const useNoteTable = ({
     saveUndoSnapshot();
     const table = getTargetTable();
     if (!table) {
-      message.warning("Click inside a table first to delete a row");
+      message.warning("Select a row (click SL number) first to delete it");
       return;
     }
     const headerRow = (table.querySelector("thead tr") as HTMLTableRowElement | null) || table.rows[0];
-    const cellForDelete =
-      selectedCellsRef.current.length > 0 && selectedCellsRef.current[0]?.closest("table") === table
-        ? selectedCellsRef.current[0]
-        : lastActiveCellRef.current;
+    const tr = getSelectedRowTr(table);
 
-    if (cellForDelete && cellForDelete.closest("table") === table) {
-      const tr = cellForDelete.closest("tr");
-      if (tr && tr !== headerRow && tr.parentElement?.tagName !== "THEAD") {
-        tr.remove();
-        updateTableHeadersAndSl(table);
-        clearSelectionVisuals(table);
-        selectedCellsRef.current = [];
-        lastActiveCellRef.current = null;
-        handleEditorInputWrapper();
-        message.success("Row deleted");
-        return;
-      }
-    }
-
-    const tbody = table.querySelector("tbody") || table;
-    const rows = Array.from(tbody.querySelectorAll("tr")).filter(
-      (r) => r.parentElement?.tagName !== "THEAD" && r !== headerRow
-    );
-    if (rows.length > 0) {
-      rows[rows.length - 1].remove();
+    if (tr && tr !== headerRow) {
+      const fallback =
+        (tr.nextElementSibling as HTMLTableRowElement | null) ||
+        (tr.previousElementSibling as HTMLTableRowElement | null);
+      tr.remove();
       updateTableHeadersAndSl(table);
-      clearSelectionVisuals(table);
-      selectedCellsRef.current = [];
-      lastActiveCellRef.current = null;
+      if (fallback && fallback !== headerRow && document.contains(fallback)) {
+        selectTableRow(fallback);
+      } else {
+        clearTableSelection(table);
+        lastActiveCellRef.current = null;
+      }
       handleEditorInputWrapper();
-      message.success("Last row deleted");
+      message.success("Selected row deleted");
+      return;
     }
+
+    message.warning("Select a data row first (click its SL number), then Del Row");
   };
 
   const handleInsertColumn = (position: "before" | "after" = "after") => {
@@ -675,16 +777,7 @@ export const useNoteTable = ({
       message.warning("Click inside a table first to add a column");
       return;
     }
-    const currentCell = lastActiveCellRef.current;
-    let targetIndex = -1;
-    if (currentCell && currentCell.closest("table") === table) {
-      targetIndex = currentCell.cellIndex;
-    } else {
-      const firstRow = table.rows[0];
-      if (firstRow && firstRow.cells.length > 0) {
-        targetIndex = firstRow.cells.length - 1;
-      }
-    }
+    const targetIndex = getSelectedColIndex(table);
 
     const rows = Array.from(table.rows);
     const totalCols = rows[0]?.cells.length || 0;
@@ -718,7 +811,7 @@ export const useNoteTable = ({
     });
 
     updateTableHeadersAndSl(table);
-    clearSelectionVisuals(table);
+    selectTableColumn(table, Math.min(insertIndex, (table.rows[0]?.cells.length || 1) - 1));
     handleEditorInputWrapper();
     message.success(position === "before" ? "Column inserted before" : "Column inserted after");
   };
@@ -727,19 +820,15 @@ export const useNoteTable = ({
     saveUndoSnapshot();
     const table = getTargetTable();
     if (!table) {
-      message.warning("Click inside a table first to delete a column");
+      message.warning("Select a column (click header) first to delete it");
       return;
     }
     const isFirstColSl = table.rows[0]?.cells[0]?.textContent?.trim() === "SL";
-    const currentCell = lastActiveCellRef.current;
-    let targetIndex = -1;
-    if (currentCell && currentCell.closest("table") === table) {
-      targetIndex = currentCell.cellIndex;
-    } else {
-      const firstRow = table.rows[0];
-      if (firstRow && firstRow.cells.length > 0) {
-        targetIndex = firstRow.cells.length - 1;
-      }
+    const targetIndex = getSelectedColIndex(table);
+
+    if (targetIndex < 0) {
+      message.warning("Select a column first (click A/B/C… header), then Del Col");
+      return;
     }
 
     if (isFirstColSl && targetIndex === 0) {
@@ -747,20 +836,25 @@ export const useNoteTable = ({
       return;
     }
 
-    if (targetIndex >= 0) {
-      const rows = Array.from(table.rows);
-      rows.forEach((row) => {
-        if (row.cells[targetIndex]) {
-          row.deleteCell(targetIndex);
-        }
-      });
-      updateTableHeadersAndSl(table);
-      clearSelectionVisuals(table);
-      selectedCellsRef.current = [];
+    const rows = Array.from(table.rows);
+    rows.forEach((row) => {
+      if (row.cells[targetIndex]) {
+        row.deleteCell(targetIndex);
+      }
+    });
+    updateTableHeadersAndSl(table);
+    const nextCol = Math.min(
+      targetIndex,
+      (table.rows[0]?.cells.length || 1) - 1
+    );
+    if (nextCol >= 0 && !(isFirstColSl && nextCol === 0 && table.rows[0]?.cells.length === 1)) {
+      selectTableColumn(table, nextCol === 0 && isFirstColSl ? 1 : nextCol);
+    } else {
+      clearTableSelection(table);
       lastActiveCellRef.current = null;
-      handleEditorInputWrapper();
-      message.success("Column deleted");
     }
+    handleEditorInputWrapper();
+    message.success("Selected column deleted");
   };
 
   const handleAddAttachmentColumn = () => {

@@ -51,9 +51,20 @@ const setupAxiosInterceptors = (
     const user = Storage.session.get("user");  
     const existingContentType =
       config.headers?.["Content-Type"] || config.headers?.["content-type"];
+    const isFormData =
+      typeof FormData !== "undefined" && config.data instanceof FormData;
    
     config.headers.Accept = "application/json";
-    if (!existingContentType) {
+    if (isFormData) {
+      // Axios must set multipart/form-data itself so the boundary is included.
+      if (typeof config.headers.delete === "function") {
+        config.headers.delete("Content-Type");
+        config.headers.delete("content-type");
+      } else {
+        delete config.headers["Content-Type"];
+        delete config.headers["content-type"];
+      }
+    } else if (!existingContentType) {
         config.headers["Content-Type"] = "application/json";
     }
  

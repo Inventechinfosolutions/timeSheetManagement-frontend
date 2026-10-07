@@ -114,7 +114,9 @@ export const createNote = createAsyncThunk(
         formData.append("isAutoSave", String(payload.isAutoSave));
         formData.append("autoSave", String(payload.isAutoSave));
       }
-      if (payload.rotation !== undefined) formData.append("rotation", String(payload.rotation));
+      if (payload.isVertical !== undefined) {
+        formData.append("isVertical", String(payload.isVertical));
+      }
 
       if (payload.subNotes && payload.subNotes.length > 0) {
         formData.append("subNotes", JSON.stringify(payload.subNotes));
@@ -130,9 +132,7 @@ export const createNote = createAsyncThunk(
         });
       }
 
-      const response = await axios.post(API_BASE, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await axios.post(API_BASE, formData);
       return response.data as Note;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Failed to create note");
@@ -160,7 +160,6 @@ export const updateNote = createAsyncThunk(
       }
       if (data.isVertical !== undefined) sanitized.isVertical = data.isVertical;
       if (data.orderIndex !== undefined) sanitized.orderIndex = data.orderIndex;
-      if (data.rotation !== undefined) sanitized.rotation = data.rotation;
 
       const response = await axios.patch(`${API_BASE}/${id}`, sanitized);
       return response.data as Note;
@@ -276,7 +275,6 @@ export const createSubNote = createAsyncThunk(
       if (payload.description) formData.append("description", payload.description);
       if (payload.color) formData.append("color", payload.color);
       if (payload.orderIndex !== undefined) formData.append("orderIndex", String(payload.orderIndex));
-      if (payload.rotation !== undefined) formData.append("rotation", String(payload.rotation));
       if (payload.attachmentKeys && payload.attachmentKeys.length > 0) {
         formData.append("attachmentKeys", JSON.stringify(payload.attachmentKeys));
       }
@@ -287,9 +285,7 @@ export const createSubNote = createAsyncThunk(
         });
       }
 
-      const response = await axios.post(`${API_BASE}/${payload.parentId}/sub-notes`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await axios.post(`${API_BASE}/${payload.parentId}/sub-notes`, formData);
       return { parentId: payload.parentId, subNote: response.data as Note };
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Failed to create sub-note");
@@ -309,9 +305,7 @@ export const uploadDirectNoteFiles = createAsyncThunk(
         formData.append("files", file);
       });
 
-      const response = await axios.post(`${API_BASE}/upload`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await axios.post(`${API_BASE}/upload`, formData);
       return { noteId, uploaded: response.data };
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Failed to upload files");
@@ -328,9 +322,7 @@ export const extractNoteFileText = createAsyncThunk(
       files.forEach((file) => {
         formData.append("files", file);
       });
-      const response = await axios.post(`${API_BASE}/extract`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await axios.post(`${API_BASE}/extract`, formData);
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Failed to extract text from file");
@@ -348,9 +340,7 @@ export const uploadNoteAttachments = createAsyncThunk(
         formData.append("files", file);
       });
 
-      const response = await axios.post(`${API_BASE}/${noteId}/attachments`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await axios.post(`${API_BASE}/${noteId}/attachments`, formData);
       return { noteId, attachments: response.data };
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Failed to upload attachments");
@@ -374,9 +364,12 @@ export const deleteNoteAttachment = createAsyncThunk(
 // Preview Attachment (Fetches blob via API with authorization headers)
 export const previewNoteAttachment = createAsyncThunk(
   "notes/previewAttachment",
-  async (key: string, { rejectWithValue }) => {
+  async (payload: string | { key: string; fileName?: string }, { rejectWithValue }) => {
+    const key = typeof payload === "string" ? payload : payload.key;
+    const fileName = typeof payload === "string" ? undefined : payload.fileName;
     try {
       const response = await axios.get(`${API_BASE}/attachments/${key}/view`, {
+        params: fileName ? { name: fileName } : undefined,
         responseType: "blob",
       });
       return {
@@ -396,6 +389,7 @@ export const downloadNoteAttachment = createAsyncThunk(
   async ({ key, fileName }: { key: string; fileName?: string }, { rejectWithValue }) => {
     try {
       const response = await axios.get(`${API_BASE}/attachments/${key}/download`, {
+        params: fileName ? { name: fileName } : undefined,
         responseType: "blob",
       });
       const contentType = response.headers?.["content-type"] || "application/octet-stream";
