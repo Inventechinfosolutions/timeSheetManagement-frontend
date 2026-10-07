@@ -67,6 +67,13 @@ export const useNoteTable = ({
     clearTableSelectionVisuals(table, getTargetTable() || editorRef.current);
   };
 
+  const clearTableSelection = (table?: HTMLElement | null) => {
+    clearSelectionVisuals(table);
+    selectedCellsRef.current = [];
+    selectionKindRef.current = null;
+    syncExpandHandleRef.current();
+  };
+
   // Track active table cell & multi-cell selection on selection change
   useEffect(() => {
     const handleSelectionChange = () => {
@@ -213,20 +220,38 @@ export const useNoteTable = ({
       }
 
       const cell = target.closest("td, th") as HTMLTableCellElement | null;
-      if (!cell || !editor.contains(cell)) return;
+
+      // Click empty space (outside cells) -> remove blue selection + hide expand handle
+      if (!cell || !editor.contains(cell)) {
+        clearTableSelection(getTargetTable() || editor);
+        return;
+      }
 
       const table = cell.closest("table");
-      if (!table) return;
+      if (!table) {
+        clearTableSelection(editor);
+        return;
+      }
 
       const isFirstColSl = table.rows[0]?.cells[0]?.textContent?.trim() === "SL";
+      const alreadySelectedCol =
+        selectionKindRef.current === "column" &&
+        selectedCellsRef.current.some(
+          (c) => document.contains(c) && c.closest("table") === table && c.cellIndex === cell.cellIndex
+        );
+      const alreadySelectedCell =
+        selectionKindRef.current === "cell" &&
+        selectedCellsRef.current.length === 1 &&
+        selectedCellsRef.current[0] === cell;
 
-      // Click on TH (column header) -> select only body cells down the column
+      // Click on TH (column header) -> select column, or click again to turn expand mode off
       if (cell.tagName === "TH") {
         if (isFirstColSl && cell.cellIndex === 0) {
-          clearSelectionVisuals(table);
-          selectedCellsRef.current = [];
-          selectionKindRef.current = null;
-          syncExpandHandleRef.current();
+          clearTableSelection(table);
+          return;
+        }
+        if (alreadySelectedCol) {
+          clearTableSelection(table);
           return;
         }
         clearSelectionVisuals(table);
@@ -247,6 +272,10 @@ export const useNoteTable = ({
       }
       // Click on SL cell (1st col TD) -> select entire row's BODY cells only
       else if (cell.cellIndex === 0 && isFirstColSl) {
+        if (selectionKindRef.current === "row") {
+          clearTableSelection(table);
+          return;
+        }
         clearSelectionVisuals(table);
         const tr = cell.closest("tr");
         if (tr) {
@@ -262,8 +291,12 @@ export const useNoteTable = ({
           }
         }
       }
-      // Click on normal cell -> select that cell only (expandable)
+      // Click on normal cell -> select that cell; click same cell again to clear
       else {
+        if (alreadySelectedCell) {
+          clearTableSelection(table);
+          return;
+        }
         clearSelectionVisuals(table);
         lastActiveCellRef.current = cell;
         selectedCellsRef.current = [cell];
@@ -285,7 +318,7 @@ export const useNoteTable = ({
     handle.type = "button";
     handle.className = "notes-excel-fill-handle";
     handle.textContent = "+";
-    handle.title = "Drag with hand cursor to expand this column";
+    handle.title = "Drag to expand column · Click to close selection";
     handle.contentEditable = "false";
     document.body.appendChild(handle);
 
@@ -437,6 +470,14 @@ export const useNoteTable = ({
       syncHandle();
     };
 
+    const clearExpandMode = () => {
+      const table = getExpandTarget()?.table || getTargetTable();
+      clearSelectionVisuals(table);
+      selectedCellsRef.current = [];
+      selectionKindRef.current = null;
+      handle.classList.remove("is-visible", "is-dragging");
+    };
+
     const endDrag = (e: PointerEvent) => {
       if (!drag || e.pointerId !== drag.pointerId) return;
       const current = drag;
@@ -448,22 +489,37 @@ export const useNoteTable = ({
         /* ignore */
       }
       if (!current.moved) {
-        // Click +: expand selected column a bit
-        setSelectedColWidth(
-          current.table,
-          current.colIndex,
-          current.startWidths,
-          current.startWidths[current.colIndex] + Math.max(80, Math.round(current.startWidths[current.colIndex] * 0.4))
-        );
+        // Click + again: turn off expand mode (remove blue column line)
+        clearExpandMode();
+        return;
       }
       handleEditorInputWrapper();
       requestAnimationFrame(syncHandle);
+    };
+
+    // Click outside editor/table: clear blue selection
+    const onDocPointerDown = (e: PointerEvent) => {
+      const t = e.target as Node | null;
+      if (!t) return;
+      if (handle.contains(t)) return;
+      const editor = editorRef.current;
+      if (editor && editor.contains(t)) {
+        const el = t as HTMLElement;
+        if (!el.closest?.("td, th, table")) {
+          clearExpandMode();
+        }
+        return;
+      }
+      if (selectionKindRef.current) {
+        clearExpandMode();
+      }
     };
 
     handle.addEventListener("pointerdown", onPointerDown);
     handle.addEventListener("pointermove", onPointerMove);
     handle.addEventListener("pointerup", endDrag);
     handle.addEventListener("pointercancel", endDrag);
+    document.addEventListener("pointerdown", onDocPointerDown, true);
     window.addEventListener("scroll", syncHandle, true);
     window.addEventListener("resize", syncHandle);
 
@@ -472,11 +528,12 @@ export const useNoteTable = ({
       handle.removeEventListener("pointermove", onPointerMove);
       handle.removeEventListener("pointerup", endDrag);
       handle.removeEventListener("pointercancel", endDrag);
+      document.removeEventListener("pointerdown", onDocPointerDown, true);
       window.removeEventListener("scroll", syncHandle, true);
       window.removeEventListener("resize", syncHandle);
       handle.remove();
     };
-  }, [saveUndoSnapshot, handleEditorInputWrapper]);
+  }, [saveUndoSnapshot, handleEditorInputWrapper, editorRef]);
 
   // Insert standard table with Excel headers: SL, A, B, C...
   const handleInsertTable = (numRows: number, numCols: number) => {
