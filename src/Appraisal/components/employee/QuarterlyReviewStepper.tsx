@@ -367,36 +367,40 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               size="sm"
               onClick={handleSaveAndExit}
               leftIcon={<ArrowLeft className="w-4 h-4" />}
-              className="text-[#6D5284] hover:text-[#4A355E] !p-2 rounded-xl"
+              className="text-[#A36361] hover:text-[#8D4E4D] !p-2 rounded-xl cursor-pointer"
               title="Back to history"
             />
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-xl sm:text-2xl font-bold text-[#0F172A]">
-                  {assignment.quarter} Performance Review
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight w-fit">
+                  <span className="manager-review-title-anim">
+                    {assignment.quarter} Performance Review
+                  </span>
                 </h1>
               </div>
-              <p className="text-xs text-[#64748B] mt-0.5">
-                {assignment.financialYear} • Deadline:{" "}
-                <span className="font-semibold text-[#0F172A]">{assignment.deadline}</span> •
-                Assigned by {assignment.assignedBy}
+              <p className="text-xs mt-0.5 font-normal w-fit">
+                <span className="manager-review-subtitle-anim">
+                  {assignment.financialYear} • Deadline:{" "}
+                  <strong className="font-semibold text-[#0F172A]">{assignment.deadline}</strong> •
+                  {" "}Assigned by {assignment.assignedBy}
+                </span>
               </p>
             </div>
           </div>
 
           <div className="text-right hidden sm:block">
-            <span className="text-xs text-[#94A3B8] block">Progress</span>
-            <span className="text-sm font-bold text-[#6D5284]">Step {currentStep} of 6</span>
+            <span className="text-xs text-[#9EABA2] block">Progress</span>
+            <span className="text-sm font-bold text-[#A36361]">Step {currentStep} of 6</span>
           </div>
         </div>
 
         {/* Numbered Stepper with Title Below and Click Navigation */}
-        <div className="mt-7 pt-6 border-t border-[#D7B6C7]/40 overflow-x-auto no-scrollbar pb-2">
+        <div className="mt-7 pt-6 border-t border-[#D3A29D]/30 overflow-x-auto no-scrollbar pb-2">
           <div className="relative flex items-center justify-between min-w-[620px] px-6">
             {/* Background connecting progress line */}
-            <div className="absolute top-5 -translate-y-1/2 left-[44px] right-[44px] h-[3px] bg-[#C5B0A0] rounded-full z-0">
+            <div className="absolute top-5 -translate-y-1/2 left-[44px] right-[44px] h-[3px] bg-[#E8B298]/40 rounded-full z-0">
               <div
-                className="h-full bg-[#8D73A8] rounded-full transition-all duration-500 ease-out shadow-xs"
+                className="h-full bg-gradient-to-r from-[#D3A29D] to-[#A36361] rounded-full transition-all duration-500 ease-out shadow-xs"
                 style={{
                   width: `${((currentStep - 1) / (STEP_DEFINITIONS.length - 1)) * 100}%`,
                 }}
@@ -420,10 +424,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   <div
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ease-out ${
                       isActive
-                        ? "bg-[#6D5284] text-white ring-4 ring-teal-100 shadow-lg shadow-teal-300 scale-110 stepper-circle-active"
+                        ? "bg-[#A36361] text-white ring-4 ring-[#D3A29D]/30 shadow-lg shadow-[#A36361]/25 scale-110 stepper-circle-active"
                         : isCompleted
-                        ? "bg-[#8D73A8] text-white shadow-xs hover:scale-105 border-2 border-[#8D73A8]"
-                        : "bg-white text-[#64748B] border-2 border-[#C5B0A0] hover:border-[#6D5284] hover:text-[#6D5284] hover:scale-105"
+                        ? "bg-[#D3A29D] text-white shadow-xs hover:scale-105 border-2 border-[#D3A29D]"
+                        : "bg-white text-[#64748B] border-2 border-[#E8B298]/60 hover:border-[#A36361] hover:text-[#A36361] hover:scale-105"
                     }`}
                   >
                     {isCompleted ? (
@@ -437,7 +441,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   <span
                     className={`mt-2 text-xs font-semibold text-center whitespace-nowrap transition-all duration-300 ${
                       isActive
-                        ? "text-[#6D5284] font-extrabold scale-105"
+                        ? "text-[#A36361] font-extrabold scale-105"
                         : isCompleted
                         ? "text-[#0F172A] font-semibold"
                         : "text-[#64748B] group-hover:text-[#0F172A]"
@@ -456,7 +460,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       <Card className="rounded-3xl p-6 sm:p-8 manager-review-glass-card">
         {submitted ? (
           <div className="py-16 text-center animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 rounded-full bg-[#F7EEF2] text-[#6D5284] mx-auto flex items-center justify-center mb-4 shadow-sm">
+            <div className="w-16 h-16 rounded-full bg-[#FAF2EE] text-[#A36361] mx-auto flex items-center justify-center mb-4 shadow-sm border border-[#D3A29D]/40">
               <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
             </div>
             <h3 className="text-xl font-bold text-[#0F172A]">Quarterly Review Submitted!</h3>
@@ -494,14 +498,14 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             </div>
 
             {/* Stepper Navigation Footer */}
-            <div className="flex items-center justify-between pt-6 mt-8 border-t border-[#D7B6C7]/40">
+            <div className="flex items-center justify-between pt-6 mt-8 border-t border-[#D3A29D]/30">
               {currentStep === 1 ? (
                 <Button
                   variant="outline"
                   size="md"
                   onClick={handleSaveAndExit}
                   leftIcon={<ArrowLeft className="w-4 h-4" />}
-                  className="px-5 py-2.5 rounded-xl border-[#D7B6C7] bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl border-[#D3A29D]/50 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-[#A36361]"
                 >
                   Back
                 </Button>
@@ -510,7 +514,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   variant="outline"
                   size="md"
                   onClick={handlePrev}
-                  className="px-5 py-2.5 rounded-xl border-[#D7B6C7] bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer"
+                  className="px-5 py-2.5 rounded-xl border-[#D3A29D]/50 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-[#A36361]"
                 >
                   Previous
                 </Button>
@@ -532,7 +536,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     size="md"
                     onClick={handleNext}
                     rightIcon={<ChevronRight className="w-4 h-4" />}
-                    className="px-6 py-2.5 rounded-xl font-bold !bg-gradient-to-r !from-[#6D5284] !to-[#4A355E] hover:!opacity-95 !text-white shadow-md shadow-[#6D5284]/25 border-0"
+                    className="px-6 py-2.5 rounded-xl font-bold !bg-gradient-to-r !from-[#A36361] !to-[#8D4E4D] hover:!from-[#8D4E4D] hover:!to-[#7A3F3D] !text-white shadow-md shadow-[#A36361]/25 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all"
                   >
                     Next Step
                   </Button>
@@ -542,7 +546,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     size="md"
                     onClick={handleSubmit}
                     leftIcon={<Send className="w-4 h-4 fill-white -rotate-12" />}
-                    className="px-7 py-2.5 rounded-xl font-bold !bg-gradient-to-r !from-[#6D5284] !to-[#4A355E] hover:!from-[#5C4570] hover:!to-[#3E2B52] !text-white shadow-md shadow-[#6D5284]/30 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+                    className="px-7 py-2.5 rounded-xl font-bold !bg-gradient-to-r !from-[#A36361] !to-[#8D4E4D] hover:!from-[#8D4E4D] hover:!to-[#7A3F3D] !text-white shadow-md shadow-[#A36361]/30 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                   >
                     Submit Review
                   </Button>

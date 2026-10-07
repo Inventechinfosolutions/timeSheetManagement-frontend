@@ -15,15 +15,14 @@ interface QuarterlyReviewTableProps {
   headerTheme?: "indigo" | "navy" | "purple" | "teal";
 }
 
-// Harmonious colorful avatar palettes for varied visual appeal
+// Harmonious colorful avatar palettes derived strictly from 6-color swatch palette
 const AVATAR_PALETTES = [
-  { bg: "linear-gradient(135deg, #F7EEF2 0%, #EBCED6 100%)", text: "#6D5284", border: "#B39CCB" }, // Holst Plum
-  { bg: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)", text: "#059669", border: "#A7F3D0" }, // Emerald
-  { bg: "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)", text: "#2563EB", border: "#BFDBFE" }, // Blue
-  { bg: "linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)", text: "#D97706", border: "#FDE68A" }, // Amber
-  { bg: "linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 100%)", text: "#7C3AED", border: "#E9D5FF" }, // Purple
-  { bg: "linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 100%)", text: "#E11D48", border: "#FECDD3" }, // Rose
-  { bg: "linear-gradient(135deg, #ECFEFF 0%, #CFFAFE 100%)", text: "#0891B2", border: "#A5F3FC" }, // Cyan
+  { bg: "linear-gradient(135deg, #FAF2EE 0%, #F5E8E2 100%)", text: "#A36361", border: "#D3A29D" }, // Deep Terracotta Wine (#A36361)
+  { bg: "linear-gradient(135deg, #FAF0EB 0%, #F5E5DC 100%)", text: "#8D4E4D", border: "#E8B298" }, // Dusty Rose Mauve (#D3A29D)
+  { bg: "linear-gradient(135deg, #FFF9EE 0%, #FDF1DB 100%)", text: "#B47B1E", border: "#EECC8C" }, // Warm Amber (#EECC8C)
+  { bg: "linear-gradient(135deg, #FDF3EE 0%, #FBE5DC 100%)", text: "#A85A38", border: "#E8B298" }, // Soft Peach Terracotta (#E8B298)
+  { bg: "linear-gradient(135deg, #F0F5F2 0%, #E2ECE5 100%)", text: "#415A4D", border: "#BDD1C5" }, // Soft Celadon Mist (#BDD1C5)
+  { bg: "linear-gradient(135deg, #F4F6F5 0%, #E7ECE8 100%)", text: "#4E5C53", border: "#9EABA2" }, // Mineral Slate Sage (#9EABA2)
 ];
 
 export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
@@ -345,7 +344,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               pageSize={pageSize}
               onPageChange={setCurrentPage}
               showTotal={false}
-              activeClassName="!bg-[#6D5284] !text-white shadow-xs font-black shadow-[#6D5284]/25"
+              activeClassName="!bg-[#A36361] !text-white shadow-xs font-black shadow-[#A36361]/25"
             />
           </div>
         </div>

@@ -457,7 +457,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   onClick={handleClearFilters}
-                  className="manager-review-clear-btn shrink-0 p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-xs font-medium flex items-center gap-1 border border-[#B39CCB]/60 bg-white/90 text-[#4A355E] hover:text-[#4A355E] hover:bg-[#F7EEF2]/80 shadow-xs"
+                  className="manager-review-clear-btn shrink-0 p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-xs font-medium flex items-center gap-1 border border-[#D3A29D]/60 bg-white/90 text-[#A36361] hover:text-[#8D4E4D] hover:bg-[#FAF2EE]/80 shadow-xs"
                   title="Clear all filters"
                 >
                   <RotateCcw size={13} className="filter-clear-icon shrink-0" />

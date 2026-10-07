@@ -399,7 +399,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-6">
       {/* Step Header */}
-      <div className="border-b border-[#D7B6C7]/40 pb-3">
+      <div className="border-b border-[#D3A29D]/30 pb-3">
         <h3 className="text-base sm:text-lg font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 5: Company & Work Environment</span>{" "}
           <span className="text-red-500">*</span>
@@ -521,12 +521,12 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
                 Rate the Company Environment <span className="text-red-500">*</span>
               </label>
               {selectedRating ? (
-                <span className="text-[11px] font-bold text-[#6D5284] flex items-center gap-1 animate-in fade-in duration-200">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#6D5284]" />
+                <span className="text-[11px] font-bold text-[#A36361] flex items-center gap-1 animate-in fade-in duration-200">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#A36361]" />
                   Selected: {RATING_OPTIONS.find((r) => r.id === selectedRating)?.label} ({selectedRating}/5)
                 </span>
               ) : (
-                <span className="text-[11px] font-semibold text-[#8D73A8]">
+                <span className="text-[11px] font-semibold text-[#9EABA2]">
                   Select 1 to 5
                 </span>
               )}
@@ -549,9 +549,9 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
                     onMouseEnter={() => setHoveredRating(item.id)}
                     className={`group relative flex flex-col items-center justify-center py-2.5 sm:py-3 px-1 rounded-xl border-2 transition-all duration-200 cursor-pointer focus:outline-none select-none ${
                       isSelected
-                        ? "bg-white border-[#6D5284] shadow-md shadow-[#6D5284]/20 ring-2 ring-[#6D5284]/20 scale-[1.03] z-10"
+                        ? "bg-white border-[#A36361] shadow-md shadow-[#A36361]/20 ring-2 ring-[#A36361]/20 scale-[1.03] z-10"
                         : isHovered
-                        ? "bg-white border-[#D7B6C7] shadow-xs -translate-y-0.5"
+                        ? "bg-white border-[#D3A29D] shadow-xs -translate-y-0.5"
                         : ratingError
                         ? "bg-white/80 border-red-300 hover:border-red-400"
                         : "bg-white/60 border-[#E2E8F0] hover:border-[#CBD5E1]"
@@ -559,7 +559,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
                   >
                     {/* Selected Checkmark Badge on Top Right */}
                     {isSelected && (
-                      <span className="absolute -top-1.5 -right-1 w-4 h-4 rounded-full bg-[#6D5284] text-white flex items-center justify-center shadow-xs animate-in zoom-in-75 duration-200">
+                      <span className="absolute -top-1.5 -right-1 w-4 h-4 rounded-full bg-[#A36361] text-white flex items-center justify-center shadow-xs animate-in zoom-in-75 duration-200">
                         <Check className="w-2.5 h-2.5 stroke-[3]" />
                       </span>
                     )}
@@ -581,7 +581,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
                     <span
                       className={`mt-1.5 text-[10px] sm:text-[11px] font-bold transition-all tracking-tight whitespace-nowrap text-center ${
                         isSelected
-                          ? "text-[#6D5284] font-extrabold scale-105"
+                          ? "text-[#A36361] font-extrabold scale-105"
                           : "text-[#64748B] group-hover:text-[#0F172A]"
                       }`}
                     >
@@ -591,7 +591,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
                     {/* Selected Indicator Pill */}
                     <div
                       className={`mt-1 h-0.5 rounded-full transition-all duration-300 ${
-                        isSelected ? "w-6 bg-[#6D5284]" : "w-0 bg-transparent"
+                        isSelected ? "w-6 bg-[#A36361]" : "w-0 bg-transparent"
                       }`}
                     />
                   </button>

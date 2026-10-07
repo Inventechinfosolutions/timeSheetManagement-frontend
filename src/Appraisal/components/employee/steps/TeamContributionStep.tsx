@@ -141,7 +141,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-4">
       {/* Header with Progress Counter */}
-      <div className="border-b border-[#D7B6C7]/40 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="border-b border-[#D3A29D]/30 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-base sm:text-lg font-bold text-[#0F172A]">
             <span className="eval-title-anim">Step 3: Teamwork & Collaboration</span>{" "}
@@ -155,9 +155,9 @@ export const TeamContributionStep: React.FC<StepProps> = ({
 
         <div className="flex items-center gap-2">
           <div
-            className={`px-3 py-1.5 rounded-2xl bg-gradient-to-r from-amber-50/90 via-white to-purple-50/80 border shadow-xs flex items-center gap-2.5 shrink-0 eval-subtitle-anim transition-all duration-300 relative overflow-visible ${ratedCount === 6
-                ? "border-emerald-300/80 shadow-emerald-100"
-                : "border-[#D7B6C7]/60"
+            className={`px-3 py-1.5 rounded-2xl bg-gradient-to-r from-[#FAF2EE] via-white to-[#F8EFEA] border shadow-xs flex items-center gap-2.5 shrink-0 eval-subtitle-anim transition-all duration-300 relative overflow-visible ${ratedCount === 6
+                ? "border-[#A36361]/70 shadow-[#A36361]/15"
+                : "border-[#D3A29D]/40"
               }`}
           >
             {/* The Default Star: Receives transfer on increase, or emits breaking star on decrease (2 sec) */}
@@ -170,13 +170,13 @@ export const TeamContributionStep: React.FC<StepProps> = ({
               >
                 <defs>
                   <linearGradient id="avgStarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FEF08A" />
-                    <stop offset="45%" stopColor="#FBBF24" />
-                    <stop offset="100%" stopColor="#F59E0B" />
+                    <stop offset="0%" stopColor="#FFF2D6" />
+                    <stop offset="50%" stopColor="#EECC8C" />
+                    <stop offset="100%" stopColor="#E2B666" />
                   </linearGradient>
                   <radialGradient id="avgGlowGrad" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="#FDE68A" stopOpacity="0.8" />
-                    <stop offset="100%" stopColor="#F59E0B" stopOpacity="0" />
+                    <stop offset="0%" stopColor="#EECC8C" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="#E8B298" stopOpacity="0" />
                   </radialGradient>
                 </defs>
 
@@ -187,7 +187,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                 <polygon
                   points="16,2 20.3,11.2 30.5,12.5 23,19.6 24.9,29.8 16,24.8 7.1,29.8 9,19.6 1.5,12.5 11.7,11.2"
                   fill="url(#avgStarGrad)"
-                  stroke="#D97706"
+                  stroke="#E2B666"
                   strokeWidth="1.2"
                   strokeLinejoin="round"
                   className="anim-avg-star-pulse"
@@ -197,8 +197,8 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                 <g className="anim-avg-sparkle-1">
                   <polygon
                     points="27,3 28,6 31,7 28,8 27,11 26,8 23,7 26,6"
-                    fill="#FEF08A"
-                    stroke="#F59E0B"
+                    fill="#FFF2D6"
+                    stroke="#EECC8C"
                     strokeWidth="0.5"
                   />
                 </g>
@@ -208,7 +208,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                   <polygon
                     points="5,23 6,25 8,26 6,27 5,29 4,27 2,26 4,25"
                     fill="#FFFFFF"
-                    stroke="#FBBF24"
+                    stroke="#EECC8C"
                     strokeWidth="0.4"
                   />
                 </g>
@@ -294,15 +294,15 @@ export const TeamContributionStep: React.FC<StepProps> = ({
               className={`eval-step-card !py-3 !px-4 flex flex-col justify-between transition-all duration-300 ${criterionError
                   ? "eval-field-has-error"
                   : isSelected
-                    ? "!border-[#8D73A8]/50 shadow-sm"
-                    : "!border-[#D7B6C7]/50"
+                    ? "!border-[#A36361]/50 shadow-sm"
+                    : "!border-[#D3A29D]/40"
                 }`}
             >
               <div className="flex items-center justify-between gap-2">
                 {/* Criterion Title */}
                 <div className="flex items-center gap-1.5 min-w-0 pr-2">
                   {isSelected && (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-[#A36361] shrink-0" />
                   )}
                   <span className="text-xs sm:text-sm font-semibold text-[#0F172A] truncate">
                     {criterion.title} <span className="text-red-500">*</span>
@@ -349,8 +349,8 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                           {/* Base Star: Smooth transition into unselected gray state */}
                           <Star
                             className={`w-5 h-5 sm:w-6 sm:h-6 transition-all duration-300 ease-out ${isFilled && !isShattering
-                                ? "fill-amber-400 text-amber-400 drop-shadow-[0_2px_8px_rgba(251,191,36,0.75)]"
-                                : "text-gray-300 fill-transparent hover:text-amber-300"
+                                ? "fill-[#EECC8C] text-[#EECC8C] drop-shadow-[0_2px_8px_rgba(238,204,140,0.85)]"
+                                : "text-gray-300 fill-transparent hover:text-[#EECC8C]"
                               }`}
                           />
 
@@ -359,12 +359,12 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-visible">
                               {/* Left Cracked Half */}
                               <div className="absolute inset-0 flex items-center justify-center anim-star-crack-left">
-                                <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-amber-400 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.9)]" />
+                                <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-[#EECC8C] text-[#E2B666] drop-shadow-[0_0_6px_rgba(238,204,140,0.9)]" />
                               </div>
 
                               {/* Right Cracked Half */}
                               <div className="absolute inset-0 flex items-center justify-center anim-star-crack-right">
-                                <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-amber-400 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.9)]" />
+                                <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-[#EECC8C] text-[#E2B666] drop-shadow-[0_0_6px_rgba(238,204,140,0.9)]" />
                               </div>
 
                               {/* Electric Crack Flash Line */}

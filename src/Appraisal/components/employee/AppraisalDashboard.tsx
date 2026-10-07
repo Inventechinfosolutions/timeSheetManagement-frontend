@@ -234,8 +234,8 @@ export const AppraisalDashboard: React.FC = () => {
       finalRating: "4.0",
       status:
         viewingAssignment.status === "submitted" ||
-        viewingAssignment.status === "completed" ||
-        viewingAssignment.status === "reviewed"
+          viewingAssignment.status === "completed" ||
+          viewingAssignment.status === "reviewed"
           ? "COMPLETED"
           : "IN_PROGRESS",
     };
@@ -364,20 +364,18 @@ export const AppraisalDashboard: React.FC = () => {
                   handleOpenEdit(deadlineInfo.assignment);
                 }
               }}
-              className={`manager-review-glass-card employee-header-stat-card ${
-                deadlineInfo ? "cursor-pointer" : "cursor-default"
-              }`}
+              className={`manager-review-glass-card employee-header-stat-card ${deadlineInfo ? "cursor-pointer" : "cursor-default"
+                }`}
               title={deadlineInfo ? "Click to open review assignment" : undefined}
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`employee-header-stat-icon-wrap ${
-                    deadlineInfo && deadlineInfo.days < 0
+                  className={`employee-header-stat-icon-wrap ${deadlineInfo && deadlineInfo.days < 0
                       ? "bg-[#FEF2F2] border border-red-200 text-[#DC2626]"
                       : deadlineInfo && deadlineInfo.days <= 3
-                      ? "bg-[#FFFBEB] border border-amber-200 text-[#D97706]"
-                      : "bg-white/90 border border-white/90 text-[#0F172A]"
-                  }`}
+                        ? "bg-[#FFFBEB] border border-amber-200 text-[#D97706]"
+                        : "bg-white/90 border border-white/90 text-[#0F172A]"
+                    }`}
                 >
                   <CalendarClock className="w-5 h-5 stroke-[2.2]" />
                 </div>
@@ -397,8 +395,8 @@ export const AppraisalDashboard: React.FC = () => {
                           deadlineInfo.days < 0
                             ? "text-[#DC2626]"
                             : deadlineInfo.days <= 3
-                            ? "text-[#D97706]"
-                            : "text-[#0F172A]"
+                              ? "text-[#D97706]"
+                              : "text-[#0F172A]"
                         }
                       >
                         {deadlineInfo.assignment.deadline}
@@ -407,8 +405,8 @@ export const AppraisalDashboard: React.FC = () => {
                         {" "}· {deadlineInfo.days < 0
                           ? `Overdue by ${Math.abs(deadlineInfo.days)}d`
                           : deadlineInfo.days === 0
-                          ? "Due today"
-                          : `${deadlineInfo.days}d left`}
+                            ? "Due today"
+                            : `${deadlineInfo.days}d left`}
                       </span>
                     </div>
                   ) : (
@@ -429,18 +427,18 @@ export const AppraisalDashboard: React.FC = () => {
               title="Click to view Financial Rating breakdown & calculation"
             >
               <div className="flex items-center gap-3">
-                <div className="employee-header-stat-icon-wrap bg-white/90 border border-white/90 text-[#6D5284] group-hover:bg-[#6D5284] group-hover:text-white transition-colors duration-200 shadow-2xs">
+                <div className="employee-header-stat-icon-wrap bg-white/90 border border-white/90 text-[#A36361] group-hover:bg-[#A36361] group-hover:text-white transition-colors duration-200 shadow-2xs">
                   <Award className="w-5 h-5 stroke-[2.2]" />
                 </div>
 
                 <div className="flex flex-col justify-center">
-                  <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug group-hover:text-[#6D5284] transition-colors">
+                  <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug group-hover:text-[#A36361] transition-colors">
                     Financial Rating
                   </span>
                 </div>
               </div>
 
-              <ChevronRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#6D5284] group-hover:translate-x-0.5 transition-all shrink-0 ml-1.5" />
+              <ChevronRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#A36361] group-hover:translate-x-0.5 transition-all shrink-0 ml-1.5" />
             </div>
           </div>
         </div>
@@ -450,7 +448,7 @@ export const AppraisalDashboard: React.FC = () => {
           {/* Card Header & Filters */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[#F7EEF2] text-[#6D5284] flex items-center justify-center shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-[#FAF2EE] text-[#A36361] flex items-center justify-center shrink-0 border border-[#D3A29D]/40">
                 <BarChart3 className="w-4 h-4" />
               </div>
               <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title">
@@ -474,7 +472,7 @@ export const AppraisalDashboard: React.FC = () => {
                 value={financialYear}
                 onChange={setFinancialYear}
                 maxLabelWidth="max-w-[105px]"
-                buttonClassName="bg-white border border-[#EBCED6] hover:border-gray-300 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[140px] shadow-none"
+                buttonClassName="bg-white border border-[#D3A29D]/50 hover:border-[#A36361]/60 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[140px] shadow-none"
               />
 
               {/* Quarter Dropdown */}
@@ -493,7 +491,7 @@ export const AppraisalDashboard: React.FC = () => {
                 value={quarter}
                 onChange={setQuarter}
                 maxLabelWidth="max-w-[95px]"
-                buttonClassName="bg-white border border-[#EBCED6] hover:border-gray-300 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[120px] shadow-none"
+                buttonClassName="bg-white border border-[#D3A29D]/50 hover:border-[#A36361]/60 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[120px] shadow-none"
               />
 
               {/* Status Dropdown */}
@@ -511,7 +509,7 @@ export const AppraisalDashboard: React.FC = () => {
                 value={statusFilter}
                 onChange={setStatusFilter}
                 maxLabelWidth="max-w-[95px]"
-                buttonClassName="bg-white border border-[#EBCED6] hover:border-gray-300 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[120px] shadow-none"
+                buttonClassName="bg-white border border-[#D3A29D]/50 hover:border-[#A36361]/60 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[120px] shadow-none"
               />
 
               {/* Clear Button */}
@@ -567,11 +565,10 @@ export const AppraisalDashboard: React.FC = () => {
                                 {/* 3. Assigned By */}
                                 <td className="text-center">
                                   <span
-                                    className={`qr-assigned-by-pill ${
-                                      assignment.assignedBy.toLowerCase() === "admin"
+                                    className={`qr-assigned-by-pill ${assignment.assignedBy.toLowerCase() === "admin"
                                         ? "qr-assigned-by-admin"
                                         : ""
-                                    }`}
+                                      }`}
                                   >
                                     {assignment.assignedBy.toLowerCase() === "admin" ? (
                                       <ShieldCheck className="w-3.5 h-3.5" />
@@ -585,7 +582,7 @@ export const AppraisalDashboard: React.FC = () => {
                                 {/* 4. Deadline */}
                                 <td className="text-center">
                                   <span className="qr-date-chip">
-                                    <Calendar className="w-3.5 h-3.5 text-[#6D5284] mr-1.5 inline" />
+                                    <Calendar className="w-3.5 h-3.5 text-[#A36361] mr-1.5 inline" />
                                     {assignment.deadline}
                                   </span>
                                 </td>
@@ -641,7 +638,7 @@ export const AppraisalDashboard: React.FC = () => {
                             pageSize={pageSize}
                             onPageChange={setCurrentPage}
                             showTotal={false}
-                            activeClassName="!bg-[#6D5284] !text-white shadow-xs font-black shadow-[#6D5284]/25"
+                            activeClassName="!bg-[#A36361] !text-white shadow-xs font-black shadow-[#A36361]/25"
                           />
                         </div>
                       </div>
@@ -660,7 +657,7 @@ export const AppraisalDashboard: React.FC = () => {
                     return (
                       <Card
                         key={assignment.id}
-                        className="p-4 rounded-2xl border border-[#EBCED6] bg-white shadow-xs space-y-3"
+                        className="p-4 rounded-2xl border border-[#E8B298]/40 bg-white shadow-xs space-y-3"
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -676,11 +673,10 @@ export const AppraisalDashboard: React.FC = () => {
                           <div className="flex items-center justify-between">
                             <span>Assigned by:</span>
                             <span
-                              className={`qr-assigned-by-pill ${
-                                assignment.assignedBy.toLowerCase() === "admin"
+                              className={`qr-assigned-by-pill ${assignment.assignedBy.toLowerCase() === "admin"
                                   ? "qr-assigned-by-admin"
                                   : ""
-                              }`}
+                                }`}
                             >
                               {assignment.assignedBy.toLowerCase() === "admin" ? (
                                 <ShieldCheck className="w-3 h-3" />
@@ -693,7 +689,7 @@ export const AppraisalDashboard: React.FC = () => {
                           <div className="flex items-center justify-between">
                             <span>Deadline:</span>
                             <span className="qr-date-chip">
-                              <Calendar className="w-3 h-3 text-[#6D5284] mr-1 inline" />
+                              <Calendar className="w-3 h-3 text-[#A36361] mr-1 inline" />
                               {assignment.deadline}
                             </span>
                           </div>
@@ -733,7 +729,7 @@ export const AppraisalDashboard: React.FC = () => {
                     xmlns="http://www.w3.org/2000/svg"
                     className="w-full h-auto drop-shadow-sm mx-auto"
                   >
-                    <ellipse cx="120" cy="150" rx="90" ry="18" fill="#FAF6F8" />
+                    <ellipse cx="120" cy="150" rx="90" ry="18" fill="#FAF6F4" />
                     <rect
                       x="50"
                       y="30"
@@ -746,7 +742,7 @@ export const AppraisalDashboard: React.FC = () => {
                     />
                     <path
                       d="M70 45 L170 45"
-                      stroke="#6D5284"
+                      stroke="#A36361"
                       strokeWidth="3"
                       strokeLinecap="round"
                     />
@@ -762,10 +758,10 @@ export const AppraisalDashboard: React.FC = () => {
                       strokeWidth="2.5"
                       strokeLinecap="round"
                     />
-                    <circle cx="155" cy="95" r="16" fill="#FAF6F8" stroke="#6D5284" strokeWidth="2" />
+                    <circle cx="155" cy="95" r="16" fill="#FAF5F2" stroke="#A36361" strokeWidth="2" />
                     <path
                       d="M150 95 L154 99 L162 91"
-                      stroke="#6D5284"
+                      stroke="#A36361"
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"

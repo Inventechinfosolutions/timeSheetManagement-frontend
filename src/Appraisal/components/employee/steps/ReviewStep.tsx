@@ -86,7 +86,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
   return (
     <div className="space-y-6">
       {/* Step Header */}
-      <div className="border-b border-[#D7B6C7]/40 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="border-b border-[#D3A29D]/30 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-bold text-[#0F172A]">
             <span className="eval-title-anim">Step 6: Review & Final Submission</span>
@@ -103,9 +103,9 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             STEP 1: ROLE & QUARTER OVERVIEW
            =================================================================== */}
         <div className="eval-step-card eval-reveal-card space-y-3">
-          <div className="flex items-center justify-between border-b border-[#D7B6C7]/30 pb-2.5">
+          <div className="flex items-center justify-between border-b border-[#D3A29D]/30 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
+              <span className="w-5 h-5 rounded-full bg-[#A36361] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 1
               </span>
               <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider eval-stagger-item eval-stagger-2">
@@ -118,7 +118,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             <label className="text-xs font-bold text-[#64748B] block mb-1.5 uppercase tracking-wider">
               Overview
             </label>
-            <div className="p-3.5 bg-gray-50/70 border border-[#EBCED6] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+            <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
               {formData.overview || formData.roleSummary || "No overview provided."}
             </div>
           </div>
@@ -128,9 +128,9 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             STEP 2: KEY ACHIEVEMENTS & PROJECTS
            =================================================================== */}
         <div className="eval-step-card eval-reveal-card space-y-3.5">
-          <div className="flex items-center justify-between border-b border-[#D7B6C7]/30 pb-2.5">
+          <div className="flex items-center justify-between border-b border-[#D3A29D]/30 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
+              <span className="w-5 h-5 rounded-full bg-[#A36361] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 2
               </span>
               <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider eval-stagger-item eval-stagger-2">
@@ -144,7 +144,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
               Project Title
             </label>
-            <div className="p-3 bg-gray-50/70 border border-[#EBCED6] rounded-xl text-sm font-bold text-[#0F172A]">
+            <div className="p-3 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm font-bold text-[#0F172A]">
               {formData.projectTitle || formData.majorAchievements || "No title provided"}
             </div>
           </div>
@@ -156,11 +156,11 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
               <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
                 Project Description
               </label>
-              <div className="p-3.5 bg-gray-50/70 border border-[#EBCED6] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium flex-1">
+              <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium flex-1">
                 {formData.projectDescription || formData.kpisMet || "No description provided."}
                 {formData.projectAttachmentName && (
-                  <div className="mt-3 pt-2.5 border-t border-[#D7B6C7]/30 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-[#8D73A8] shrink-0" />
+                  <div className="mt-3 pt-2.5 border-t border-[#D3A29D]/30 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[#A36361] shrink-0" />
                     <span className="text-xs font-bold text-[#0F172A]">
                       Attached: {formData.projectAttachmentName}
                     </span>
@@ -179,7 +179,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
               <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
                 Challenge Overcome
               </label>
-              <div className="p-3.5 bg-gray-50/70 border border-[#EBCED6] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium flex-1">
+              <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium flex-1">
                 {formData.projectChallenge || formData.challengesOvercome || "No challenge specified."}
               </div>
             </div>
@@ -190,9 +190,9 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             STEP 3: TEAMWORK & COLLABORATION
            =================================================================== */}
         <div className="eval-step-card eval-reveal-card space-y-3.5">
-          <div className="flex items-center justify-between border-b border-[#D7B6C7]/30 pb-2.5">
+          <div className="flex items-center justify-between border-b border-[#D3A29D]/30 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
+              <span className="w-5 h-5 rounded-full bg-[#A36361] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 3
               </span>
               <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider eval-stagger-item eval-stagger-2">
@@ -200,8 +200,8 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
               </h4>
             </div>
             {avgTeamScore ? (
-              <span className="text-xs font-bold text-[#8D73A8] px-2.5 py-0.5 rounded-full bg-[#8D73A8]/10 flex items-center gap-1 eval-stagger-item eval-stagger-2">
-                <Star className="w-3.5 h-3.5 fill-current" />
+              <span className="text-xs font-bold text-[#A36361] px-2.5 py-0.5 rounded-full bg-[#A36361]/10 flex items-center gap-1 eval-stagger-item eval-stagger-2">
+                <Star className="w-3.5 h-3.5 fill-[#EECC8C] text-[#EECC8C]" />
                 Avg Score: {avgTeamScore}/5.0
               </span>
             ) : null}
@@ -219,7 +219,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
                 return (
                   <div
                     key={criterion.key}
-                    className="p-2.5 bg-gray-50/70 border border-[#EBCED6] rounded-xl flex items-center justify-between gap-2"
+                    className="p-2.5 bg-white/80 border border-[#E8B298]/40 rounded-xl flex items-center justify-between gap-2"
                   >
                     <span className="text-xs font-semibold text-[#0F172A] truncate">
                       {criterion.title}
@@ -230,7 +230,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
                           key={s}
                           className={`w-3.5 h-3.5 ${
                             s <= score
-                              ? "fill-amber-400 text-amber-400"
+                              ? "fill-[#EECC8C] text-[#EECC8C]"
                               : "fill-transparent text-gray-300"
                           }`}
                         />
@@ -247,9 +247,9 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             STEP 4: CONTINUOUS LEARNING & GOALS
            =================================================================== */}
         <div className="eval-step-card eval-reveal-card space-y-3">
-          <div className="flex items-center justify-between border-b border-[#D7B6C7]/30 pb-2.5">
+          <div className="flex items-center justify-between border-b border-[#D3A29D]/30 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
+              <span className="w-5 h-5 rounded-full bg-[#A36361] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 4
               </span>
               <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider eval-stagger-item eval-stagger-2">
@@ -262,7 +262,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             <label className="text-xs font-bold text-[#64748B] block mb-1.5 uppercase tracking-wider">
               Learning Goals
             </label>
-            <div className="p-3.5 bg-gray-50/70 border border-[#EBCED6] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+            <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
               {formData.learningGoals ||
                 formData.nextQuarterLearningGoals ||
                 formData.skillsAcquired ||
@@ -275,9 +275,9 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             STEP 5: COMPANY ENVIRONMENT
            =================================================================== */}
         <div className="eval-step-card eval-reveal-card space-y-3.5">
-          <div className="flex items-center justify-between border-b border-[#D7B6C7]/30 pb-2.5">
+          <div className="flex items-center justify-between border-b border-[#D3A29D]/30 pb-2.5">
             <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-[#8D73A8] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
+              <span className="w-5 h-5 rounded-full bg-[#A36361] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 5
               </span>
               <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider eval-stagger-item eval-stagger-2">
@@ -285,7 +285,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
               </h4>
             </div>
             {envRating > 0 && envRatingInfo ? (
-              <span className="text-xs font-bold text-[#6D5284] px-3 py-1 rounded-full bg-[#6D5284]/10 flex items-center gap-2 eval-stagger-item eval-stagger-2">
+              <span className="text-xs font-bold text-[#A36361] px-3 py-1 rounded-full bg-[#A36361]/10 flex items-center gap-2 eval-stagger-item eval-stagger-2">
                 <span className="w-5 h-5 flex items-center justify-center shrink-0">
                   {renderAnimatedEmojiIcon(envRating, false)}
                 </span>
@@ -299,7 +299,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
               Feedback on Work Culture
             </label>
-            <div className="p-3.5 bg-gray-50/70 border border-[#EBCED6] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+            <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
               {formData.workCultureFeedback || "No feedback on work culture provided."}
             </div>
           </div>
@@ -309,7 +309,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
               Work Life Balance
             </label>
-            <div className="p-3.5 bg-gray-50/70 border border-[#EBCED6] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+            <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
               {formData.workLifeBalance || "No work life balance feedback provided."}
             </div>
           </div>
@@ -319,7 +319,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
               Suggestions for Improvement
             </label>
-            <div className="p-3.5 bg-gray-50/70 border border-[#EBCED6] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+            <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
               {formData.suggestionsForImprovement || formData.toolingAndResources || "No suggestions provided."}
             </div>
           </div>

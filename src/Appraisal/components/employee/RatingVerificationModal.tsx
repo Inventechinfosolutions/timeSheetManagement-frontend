@@ -215,7 +215,7 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
         {modalStage === "email" && (
           <div className="relative z-10 space-y-5 animate-in fade-in duration-200">
             <div className="text-center space-y-1.5">
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-[#6D5284] to-[#B39CCB] flex items-center justify-center text-white shadow-lg shadow-[#6D5284]/25 mb-3">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-[#A36361] to-[#D3A29D] flex items-center justify-center text-white shadow-lg shadow-[#A36361]/25 mb-3">
                 <ShieldCheck className="w-6 h-6" />
               </div>
               <h3 className="text-xl font-bold tracking-tight text-[#0F172A]">
@@ -241,7 +241,7 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
                       if (emailError) setEmailError("");
                     }}
                     placeholder="employee@worksphere.com"
-                    className="w-full px-4 py-3 pl-10 rounded-2xl bg-[#FAFFFE] border border-[#E2E8F0] text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-[#6D5284] focus:ring-2 focus:ring-[#6D5284]/15 transition-all"
+                    className="w-full px-4 py-3 pl-10 rounded-2xl bg-[#FFFDFB] border border-[#E2E8F0] text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-[#A36361] focus:ring-2 focus:ring-[#A36361]/15 transition-all"
                     autoFocus
                   />
                   <Mail className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -264,7 +264,7 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#6D5284] to-[#4A355E] hover:from-[#5C4570] hover:to-[#3E2B52] text-white text-xs font-bold shadow-lg shadow-[#6D5284]/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                  className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#A36361] to-[#8D4E4D] hover:from-[#8D4E4D] hover:to-[#7A3F3D] text-white text-xs font-bold shadow-lg shadow-[#A36361]/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
                 >
                   <span>Continue</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -332,13 +332,13 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
               <span className="text-[#64748B]">Didn't get the code?</span>
               {resendTimer > 0 ? (
                 <span className="text-[#64748B]">
-                  Resend in <span className="text-[#6D5284] font-semibold">{resendTimer}s</span>
+                  Resend in <span className="text-[#A36361] font-semibold">{resendTimer}s</span>
                 </span>
               ) : (
                 <button
                   type="button"
                   onClick={handleResendCode}
-                  className="text-[#6D5284] hover:text-[#4A355E] font-bold flex items-center gap-1 hover:underline cursor-pointer"
+                  className="text-[#A36361] hover:text-[#8D4E4D] font-bold flex items-center gap-1 hover:underline cursor-pointer"
                 >
                   <RefreshCw className="w-3 h-3" />
                   <span>Resend Code</span>
@@ -379,7 +379,7 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
                   onSuccess();
                   onClose();
                 }}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#6D5284] to-[#4A355E] hover:from-[#5C4570] hover:to-[#3E2B52] text-white text-xs font-bold transition-all shadow-md active:scale-[0.98] cursor-pointer"
+                className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#A36361] to-[#8D4E4D] hover:from-[#8D4E4D] hover:to-[#7A3F3D] text-white text-xs font-bold transition-all shadow-md active:scale-[0.98] cursor-pointer"
               >
                 View Annual Ratings
               </button>

@@ -175,7 +175,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
                     setSelectedEmployee(employeeOptions[0].value);
                   }
                 }}
-                className="!p-0 text-xs font-semibold text-[#6D5284] hover:bg-transparent hover:underline !shadow-none assign-select-all-btn"
+                className="!p-0 text-xs font-semibold text-[#A36361] hover:bg-transparent hover:underline !shadow-none assign-select-all-btn"
               >
                 Select All ({employeeOptions.length})
               </Button>
@@ -199,16 +199,16 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             onChange={setSelectedEmployee}
             className="w-full"
             menuClassName="w-full !w-full left-0 right-0 min-w-full shadow-2xl"
-            buttonClassName="w-full justify-between bg-white border border-[#6D5284] ring-2 ring-[#6D5284]/15 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] shadow-none assign-input-control assign-input-dropdown"
+            buttonClassName="w-full justify-between bg-white border border-[#A36361] ring-2 ring-[#A36361]/15 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] shadow-none assign-input-control assign-input-dropdown"
           />
 
           {/* Info / Warning Box */}
           {assignmentType === "all" ? (
-            <div className="assign-modal-warning-box mt-1.5 py-1.5 px-3 rounded-xl border border-[#A7F3D0] bg-[#ECFDF5] text-[#065F46] text-[11px] leading-relaxed font-medium">
+            <div className="assign-modal-warning-box mt-1.5 py-1.5 px-3 rounded-xl border border-[#BDD1C5] bg-[#F0F5F2] text-[#3B5244] text-[11px] leading-relaxed font-medium">
               Review access will be granted to all reporting team members in your department.
             </div>
           ) : employeeOptions.length === 0 ? (
-            <div className="assign-modal-warning-box mt-1.5 py-1.5 px-3 rounded-xl border border-[#FDE68A] bg-[#FFFBEB] text-[#B45309] text-[11px] leading-relaxed font-normal">
+            <div className="assign-modal-warning-box mt-1.5 py-1.5 px-3 rounded-xl border border-[#EECC8C] bg-[#FFF9EE] text-[#B47B1E] text-[11px] leading-relaxed font-normal">
               No mapped team members found for your manager account. Please contact an Administrator to map employees.
             </div>
           ) : null}
@@ -234,7 +234,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               value={selectedFinancialYear}
               onChange={setSelectedFinancialYear}
               className="w-full"
-              buttonClassName="w-full justify-between bg-white border border-[#EBCED6] hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown"
+              buttonClassName="w-full justify-between bg-white border border-[#D3A29D]/50 hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown"
             />
           </div>
 
@@ -256,7 +256,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               value={selectedQuarter}
               onChange={handleQuarterChange}
               className="w-full"
-              buttonClassName="w-full justify-between bg-white border border-[#EBCED6] hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown"
+              buttonClassName="w-full justify-between bg-white border border-[#D3A29D]/50 hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown"
             />
           </div>
         </div>
@@ -274,8 +274,8 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               placeholder="dd-mm-yyyy"
               variant="outlined"
               inputSize="lg"
-              suffixIcon={<Calendar className="w-4 h-4 text-[#64748B]" />}
-              containerClassName="rounded-xl border-[#EBCED6] transition-colors bg-white assign-input-control assign-input-field"
+              suffixIcon={<Calendar className="w-4 h-4 text-[#A36361]" />}
+              containerClassName="rounded-xl border-[#D3A29D]/50 transition-colors bg-white assign-input-control assign-input-field"
               className="placeholder:text-[#64748B] font-mono text-sm"
             />
           </div>
@@ -291,8 +291,8 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               placeholder="dd-mm-yyyy"
               variant="outlined"
               inputSize="lg"
-              suffixIcon={<Calendar className="w-4 h-4 text-[#64748B]" />}
-              containerClassName="rounded-xl border-[#EBCED6] transition-colors bg-white assign-input-control assign-input-field"
+              suffixIcon={<Calendar className="w-4 h-4 text-[#A36361]" />}
+              containerClassName="rounded-xl border-[#D3A29D]/50 transition-colors bg-white assign-input-control assign-input-field"
               className="placeholder:text-[#64748B] font-mono text-sm"
             />
           </div>
@@ -308,7 +308,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Add instructions, focus areas, or deadline remarks for the employee(s)..."
-            className="w-full px-3.5 py-2 bg-white border border-[#EBCED6] rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[64px] assign-input-control assign-input-textarea"
+            className="w-full px-3.5 py-2 bg-white border border-[#D3A29D]/50 rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[64px] assign-input-control assign-input-textarea"
           />
         </div>
       </div>

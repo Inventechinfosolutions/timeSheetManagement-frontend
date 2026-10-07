@@ -31,18 +31,18 @@
 }
 
 .quarterly-review-table-scroll::-webkit-scrollbar-track {
-  background: #FAF6F8;
+  background: #FAF2EE;
   border-radius: 8px;
 }
 
 .quarterly-review-table-scroll::-webkit-scrollbar-thumb {
-  background: #D7B6C7;
+  background: #D3A29D;
   border-radius: 8px;
   transition: background 0.2s ease;
 }
 
 .quarterly-review-table-scroll::-webkit-scrollbar-thumb:hover {
-  background: #B39CCB;
+  background: #A36361;
 }
 
 /* Table element */
@@ -55,11 +55,11 @@
   min-width: 1180px;
 }
 
-/* Table Header - Modern Vibrant Holst Plum */
+/* Table Header - Modern Vibrant Rose Terracotta Gradient */
 .quarterly-review-table thead tr {
-  background: linear-gradient(135deg, #4A355E 0%, #6D5284 50%, #8D73A8 100%);
-  border-bottom: 2px solid #372348;
-  box-shadow: 0 4px 14px rgba(74, 53, 94, 0.22);
+  background: linear-gradient(135deg, #7A3F3D 0%, #A36361 50%, #D3A29D 100%);
+  border-bottom: 2px solid #5C2D2B;
+  box-shadow: 0 4px 14px rgba(163, 99, 97, 0.25);
 }
 
 .quarterly-review-table th {
@@ -71,7 +71,7 @@
   color: #FFFFFF;
   white-space: nowrap;
   user-select: none;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.20);
   border-right: none;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
@@ -84,52 +84,52 @@
 .qr-sticky-action-th {
   position: sticky;
   right: 0;
-  background: #4A355E !important;
+  background: #7A3F3D !important;
   color: #FFFFFF !important;
   z-index: 10;
-  box-shadow: -5px 0 14px rgba(74, 53, 94, 0.32);
+  box-shadow: -5px 0 14px rgba(122, 63, 61, 0.32);
   border-left: none;
 }
 
-/* Theme Variant 1: Holst Plum */
+/* Theme Variant 1: Rose Terracotta */
 .qr-header-indigo thead tr {
-  background: linear-gradient(135deg, #4A355E 0%, #6D5284 50%, #8D73A8 100%) !important;
-  border-bottom: 2px solid #372348 !important;
+  background: linear-gradient(135deg, #7A3F3D 0%, #A36361 50%, #D3A29D 100%) !important;
+  border-bottom: 2px solid #5C2D2B !important;
 }
 .qr-header-indigo .qr-sticky-action-th {
-  background: #4A355E !important;
+  background: #7A3F3D !important;
 }
 
-/* Theme Variant 2: Classic Executive Navy */
+/* Theme Variant 2: Deep Clay */
 .qr-header-navy thead tr {
-  background: linear-gradient(135deg, #0F172A 0%, #4A355E 55%, #6D5284 100%) !important;
-  border-bottom: 2px solid rgba(109, 82, 132, 0.4) !important;
+  background: linear-gradient(135deg, #2D1A19 0%, #7A3F3D 55%, #A36361 100%) !important;
+  border-bottom: 2px solid rgba(163, 99, 97, 0.4) !important;
 }
 .qr-header-navy .qr-sticky-action-th {
-  background: #0F172A !important;
+  background: #2D1A19 !important;
 }
 
-/* Theme Variant 3: Royal Purple */
+/* Theme Variant 3: Dusty Rose */
 .qr-header-purple thead tr {
-  background: linear-gradient(135deg, #4A355E 0%, #6D5284 50%, #8D73A8 100%) !important;
-  border-bottom: 2px solid #372348 !important;
+  background: linear-gradient(135deg, #7A3F3D 0%, #A36361 50%, #D3A29D 100%) !important;
+  border-bottom: 2px solid #5C2D2B !important;
 }
 .qr-header-purple .qr-sticky-action-th {
-  background: #4A355E !important;
+  background: #7A3F3D !important;
 }
 
-/* Theme Variant 4: Emerald / Teal mapped to Holst */
+/* Theme Variant 4: Terracotta mapped */
 .qr-header-teal thead tr {
-  background: linear-gradient(135deg, #4A355E 0%, #6D5284 50%, #8D73A8 100%) !important;
-  border-bottom: 2px solid #372348 !important;
+  background: linear-gradient(135deg, #7A3F3D 0%, #A36361 50%, #D3A29D 100%) !important;
+  border-bottom: 2px solid #5C2D2B !important;
 }
 .qr-header-teal .qr-sticky-action-th {
-  background: #4A355E !important;
+  background: #7A3F3D !important;
 }
 
-/* Table Body Rows - Subtle Zebra Striping & Smooth Transitions */
+/* Table Body Rows - Subtle Warm Zebra Striping & Smooth Transitions */
 .quarterly-review-table tbody tr:nth-child(even) {
-  background: #FAF6F8;
+  background: #FAF5F2;
 }
 
 .quarterly-review-table tbody tr:nth-child(odd) {
@@ -142,13 +142,13 @@
 }
 
 .quarterly-review-table tbody tr:hover {
-  background: #F7EEF2 !important;
-  box-shadow: inset 4px 0 0 #6D5284;
+  background: #FAF2EE !important;
+  box-shadow: inset 4px 0 0 #A36361;
 }
 
 .quarterly-review-table td {
   padding: 0.92rem 0.875rem;
-  color: #4A355E;
+  color: #0F172A;
   vertical-align: middle;
   border-bottom: 1px solid #EDF2F7;
   border-right: none;
@@ -200,12 +200,12 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.72rem;
   font-weight: 700;
-  color: #4A355E;
-  background: #F7EEF2;
-  border: 1px solid #D7B6C7;
+  color: #A36361;
+  background: #FAF2EE;
+  border: 1px solid #E8B298;
   padding: 0.22rem 0.6rem;
   border-radius: 0.5rem;
-  box-shadow: 0 1px 2px rgba(109, 82, 132, 0.05);
+  box-shadow: 0 1px 2px rgba(163, 99, 97, 0.05);
 }
 
 /* Role text */
@@ -228,27 +228,27 @@
 }
 
 .qr-quarter-q1 {
-  background: #F7EEF2;
-  color: #6D5284;
-  border: 1px solid #D7B6C7;
+  background: #FAF2EE;
+  color: #A36361;
+  border: 1px solid #D3A29D;
 }
 
 .qr-quarter-q2 {
-  background: #EEF2FF;
-  color: #4F46E5;
-  border: 1px solid #C7D2FE;
+  background: #F0F5F2;
+  color: #4B6355;
+  border: 1px solid #BDD1C5;
 }
 
 .qr-quarter-q3 {
-  background: #FFFBEB;
-  color: #D97706;
-  border: 1px solid #FDE68A;
+  background: #FFF9EE;
+  color: #B47B1E;
+  border: 1px solid #EECC8C;
 }
 
 .qr-quarter-q4 {
-  background: #FAF5FF;
-  color: #7C3AED;
-  border: 1px solid #DDD6FE;
+  background: #FDF3EE;
+  color: #A85A38;
+  border: 1px solid #E8B298;
 }
 
 /* Financial Year pill */
@@ -287,15 +287,15 @@
   font-size: 0.75rem;
   padding: 0.2rem 0.6rem;
   border-radius: 0.5rem;
-  background: #F7EEF2;
-  color: #6D5284;
-  border: 1px solid #EBCED6;
+  background: #FAF2EE;
+  color: #A36361;
+  border: 1px solid #E8B298;
 }
 
 .qr-assigned-by-admin {
-  background: #FAF5FF;
-  color: #7E22CE;
-  border-color: #F3E8FF;
+  background: #F0F5F2;
+  color: #4B6355;
+  border-color: #BDD1C5;
 }
 
 /* Final Rating Pill */
@@ -307,10 +307,10 @@
   border-radius: 9999px;
   font-weight: 800;
   font-size: 0.78rem;
-  background: #FFFBEB;
-  color: #B45309;
-  border: 1px solid #FDE68A;
-  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.1);
+  background: #FFF9EE;
+  color: #B47B1E;
+  border: 1px solid #EECC8C;
+  box-shadow: 0 1px 3px rgba(238, 204, 140, 0.25);
 }
 
 .qr-rating-empty {
@@ -343,48 +343,48 @@
 /* 1. Not Started / Pending */
 .qr-status-not-started,
 .qr-status-pending {
-  background: #FFFBEB;
-  color: #B45309;
-  border: 1px solid #FDE68A;
+  background: #FFF9EE;
+  color: #946714;
+  border: 1px solid #EECC8C;
 }
 .qr-status-not-started .qr-status-dot,
 .qr-status-pending .qr-status-dot {
-  background: #F59E0B;
+  background: #EECC8C;
 }
 
 /* 2. In Progress / Awaiting Review */
 .qr-status-in-progress,
 .qr-status-awaiting-review {
-  background: #EFF6FF;
-  color: #1D4ED8;
-  border: 1px solid #BFDBFE;
+  background: #FDF6F2;
+  color: #995232;
+  border: 1px solid #E8B298;
 }
 .qr-status-in-progress .qr-status-dot,
 .qr-status-awaiting-review .qr-status-dot {
-  background: #3B82F6;
+  background: #E8B298;
   animation: qrDotPulse 2s infinite ease-in-out;
 }
 
 /* 3. Submitted */
 .qr-status-submitted {
-  background: #FAF5FF;
-  color: #7E22CE;
-  border: 1px solid #E9D5FF;
+  background: #FAF2EE;
+  color: #A36361;
+  border: 1px solid #D3A29D;
 }
 .qr-status-submitted .qr-status-dot {
-  background: #A855F7;
+  background: #A36361;
 }
 
-/* 4. Completed / Reviewed */
+/* 4. Completed / Reviewed (Soft Celadon Mist #BDD1C5) */
 .qr-status-completed,
 .qr-status-reviewed {
-  background: #ECFDF5;
-  color: #047857;
-  border: 1px solid #A7F3D0;
+  background: #F0F5F2;
+  color: #415A4D;
+  border: 1px solid #BDD1C5;
 }
 .qr-status-completed .qr-status-dot,
 .qr-status-reviewed .qr-status-dot {
-  background: #10B981;
+  background: #9EABA2;
 }
 
 @keyframes qrDotPulse {
@@ -419,18 +419,18 @@
 }
 
 .qr-action-btn-edit {
-  background: #F7EEF2;
-  color: #6D5284;
-  border: 1px solid #D7B6C7;
-  box-shadow: 0 1px 2px rgba(109, 82, 132, 0.08);
+  background: #FAF2EE;
+  color: #A36361;
+  border: 1px solid #D3A29D;
+  box-shadow: 0 1px 2px rgba(163, 99, 97, 0.08);
 }
 
 .qr-action-btn-edit:hover {
-  background: #6D5284;
+  background: #A36361;
   color: #FFFFFF;
-  border-color: #6D5284;
+  border-color: #A36361;
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(109, 82, 132, 0.28);
+  box-shadow: 0 4px 14px rgba(163, 99, 97, 0.28);
 }
 
 .qr-action-btn-edit:active {
@@ -438,18 +438,18 @@
 }
 
 .qr-action-btn-view {
-  background: #FAF6F8;
-  color: #8D73A8;
-  border: 1px solid #B39CCB;
-  box-shadow: 0 1px 2px rgba(141, 115, 168, 0.08);
+  background: #FAF5F2;
+  color: #8D4E4D;
+  border: 1px solid #E8B298;
+  box-shadow: 0 1px 2px rgba(163, 99, 97, 0.08);
 }
 
 .qr-action-btn-view:hover {
-  background: #8D73A8;
+  background: #8D4E4D;
   color: #FFFFFF;
-  border-color: #8D73A8;
+  border-color: #8D4E4D;
   transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(141, 115, 168, 0.28);
+  box-shadow: 0 4px 14px rgba(141, 78, 77, 0.28);
 }
 
 .qr-action-btn-view:active {
@@ -466,7 +466,7 @@
 }
 
 .quarterly-review-table tbody tr:nth-child(even) .qr-sticky-action-td {
-  background: #FAF6F8 !important;
+  background: #FAF5F2 !important;
 }
 
 .quarterly-review-table tbody tr:nth-child(odd) .qr-sticky-action-td {
@@ -474,7 +474,7 @@
 }
 
 .quarterly-review-table tbody tr:hover .qr-sticky-action-td {
-  background: #F7EEF2 !important;
+  background: #FAF2EE !important;
 }
 
 /* ==========================================================================
@@ -500,14 +500,14 @@
 
 .quarterly-review-pagination-bar button[class*="bg-[#4318FF]"],
 .quarterly-review-pagination-bar button.bg-\[\#4318FF\] {
-  background-color: #6D5284 !important;
+  background-color: #A36361 !important;
   color: #FFFFFF !important;
-  box-shadow: 0 4px 12px rgba(109, 82, 132, 0.35) !important;
+  box-shadow: 0 4px 12px rgba(163, 99, 97, 0.35) !important;
 }
 
 .quarterly-review-pagination-bar button:hover:not(:disabled) {
-  border-color: #6D5284 !important;
-  color: #6D5284 !important;
+  border-color: #A36361 !important;
+  color: #A36361 !important;
 }
 
 /* ==========================================================================
@@ -521,22 +521,22 @@
 
 @keyframes qrRowGlowHighlight {
   0% {
-    background-color: rgba(109, 82, 132, 0.18) !important;
+    background-color: rgba(163, 99, 97, 0.18) !important;
     box-shadow:
-      inset 4px 0 0 #6D5284,
-      0 4px 20px rgba(109, 82, 132, 0.22) !important;
+      inset 4px 0 0 #A36361,
+      0 4px 20px rgba(163, 99, 97, 0.22) !important;
   }
   30% {
-    background-color: rgba(109, 82, 132, 0.14) !important;
+    background-color: rgba(163, 99, 97, 0.14) !important;
     box-shadow:
-      inset 4px 0 0 #6D5284,
-      0 6px 24px rgba(109, 82, 132, 0.25) !important;
+      inset 4px 0 0 #A36361,
+      0 6px 24px rgba(163, 99, 97, 0.25) !important;
   }
   65% {
-    background-color: rgba(109, 82, 132, 0.07) !important;
+    background-color: rgba(163, 99, 97, 0.07) !important;
     box-shadow:
-      inset 2px 0 0 rgba(109, 82, 132, 0.5),
-      0 3px 12px rgba(109, 82, 132, 0.12) !important;
+      inset 2px 0 0 rgba(163, 99, 97, 0.5),
+      0 3px 12px rgba(163, 99, 97, 0.12) !important;
   }
   100% {
     background-color: inherit;
@@ -556,15 +556,15 @@
 }
 
 .quarterly-review-table tbody tr.quarterly-review-row-highlighted .qr-avatar-badge {
-  box-shadow: 0 0 14px rgba(109, 82, 132, 0.4) !important;
+  box-shadow: 0 0 14px rgba(163, 99, 97, 0.4) !important;
   transform: scale(1.08);
   transition: all 0.35s ease;
 }
 
 .quarterly-review-table tbody tr.quarterly-review-row-highlighted .qr-id-chip {
-  background: #EBCED6 !important;
-  color: #4A355E !important;
-  border-color: #B39CCB !important;
-  box-shadow: 0 0 10px rgba(109, 82, 132, 0.25) !important;
+  background: #FAF2EE !important;
+  color: #A36361 !important;
+  border-color: #D3A29D !important;
+  box-shadow: 0 0 10px rgba(163, 99, 97, 0.25) !important;
   transition: all 0.35s ease;
 }

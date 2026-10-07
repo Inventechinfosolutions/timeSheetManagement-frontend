@@ -69,11 +69,17 @@
   }
 }
 
-/* Container & Layer Utility Classes (Holst Luxury Palette) */
+/* /* Container & Layer Utility Classes (6-Color Sunset to Sage Gradient Palette) */
 .manager-review-bg-container {
-  background: linear-gradient(135deg, #FFFFFF 0%, #F7EEF2 35%, #EBCED6 70%, #D7B6C7 100%);
+  background: linear-gradient(180deg,
+      #D3A29D 0%,
+      #E8B298 22%,
+      #EECC8C 48%,
+      #BDD1C5 75%,
+      #9EABA2 100%);
   position: relative;
   overflow: hidden;
+  min-height: 100vh;
 }
 
 .manager-review-canvas {
@@ -88,9 +94,9 @@
 .manager-review-dot-grid {
   position: absolute;
   inset: 0;
-  opacity: 0.35;
+  opacity: 0.28;
   pointer-events: none;
-  background-image: radial-gradient(rgba(74, 53, 94, 0.24) 1.2px, transparent 1.2px);
+  background-image: radial-gradient(rgba(163, 99, 97, 0.28) 1.2px, transparent 1.2px);
   background-size: 28px 28px;
   mask-image: radial-gradient(ellipse at 50% 30%, black 40%, transparent 80%);
   -webkit-mask-image: radial-gradient(ellipse at 50% 30%, black 40%, transparent 80%);
@@ -103,9 +109,9 @@
   width: 600px;
   height: 550px;
   filter: blur(100px);
-  opacity: 0.38;
+  opacity: 0.45;
   pointer-events: none;
-  background: linear-gradient(135deg, rgba(141, 115, 168, 0.48) 0%, rgba(215, 182, 199, 0.28) 50%, rgba(247, 238, 242, 0) 80%);
+  background: linear-gradient(135deg, rgba(163, 99, 97, 0.6) 0%, rgba(211, 162, 157, 0.4) 50%, rgba(232, 178, 152, 0) 80%);
   animation: auroraMorph1 14s ease-in-out infinite;
 }
 
@@ -116,9 +122,9 @@
   width: 480px;
   height: 480px;
   filter: blur(90px);
-  opacity: 0.28;
+  opacity: 0.38;
   pointer-events: none;
-  background: radial-gradient(circle, rgba(179, 156, 203, 0.42) 0%, rgba(109, 82, 132, 0.18) 50%, transparent 75%);
+  background: radial-gradient(circle, rgba(238, 204, 140, 0.5) 0%, rgba(232, 178, 152, 0.3) 50%, transparent 75%);
   animation: auroraMorph2 16s ease-in-out infinite;
 }
 
@@ -129,9 +135,9 @@
   width: 520px;
   height: 520px;
   filter: blur(110px);
-  opacity: 0.25;
+  opacity: 0.35;
   pointer-events: none;
-  background: radial-gradient(circle, rgba(235, 206, 214, 0.45) 0%, rgba(141, 115, 168, 0.2) 50%, transparent 70%);
+  background: radial-gradient(circle, rgba(189, 209, 197, 0.55) 0%, rgba(158, 171, 162, 0.3) 50%, transparent 70%);
 }
 
 .manager-review-aurora-bl {
@@ -141,13 +147,13 @@
   width: 560px;
   height: 520px;
   filter: blur(100px);
-  opacity: 0.32;
+  opacity: 0.40;
   pointer-events: none;
-  background: linear-gradient(315deg, rgba(109, 82, 132, 0.38) 0%, rgba(215, 182, 199, 0.24) 50%, transparent 80%);
+  background: linear-gradient(315deg, rgba(211, 162, 157, 0.5) 0%, rgba(163, 99, 97, 0.3) 50%, transparent 80%);
   animation: auroraMorph1 16s ease-in-out 2s infinite;
 }
 
-/* TOP WAVES (Rendered with Holst Plum & Rose gradient animated SVG via pure CSS Data URI) */
+/* TOP WAVES (Rendered with Terracotta, Rose, Amber & White SVG via pure CSS Data URI) */
 .manager-review-wave-top {
   position: absolute;
   top: 0;
@@ -157,14 +163,14 @@
   height: 340px;
   pointer-events: none;
   opacity: 0.85;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 320' width='100%25' height='100%25' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='100%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23B39CCB' stop-opacity='0.65'/%3E%3Cstop offset='45%25' stop-color='%23B39CCB' stop-opacity='0.4'/%3E%3Cstop offset='80%25' stop-color='%236D5284' stop-opacity='0.18'/%3E%3Cstop offset='100%25' stop-color='%23B39CCB' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='g2' x1='100%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%236D5284' stop-opacity='0.55'/%3E%3Cstop offset='50%25' stop-color='%238D73A8' stop-opacity='0.3'/%3E%3Cstop offset='90%25' stop-color='%23D7B6C7' stop-opacity='0.1'/%3E%3Cstop offset='100%25' stop-color='%236D5284' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='gc' x1='100%25' y1='0%25' x2='0%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF' stop-opacity='0.8'/%3E%3Cstop offset='40%25' stop-color='%23FFFFFF' stop-opacity='0.45'/%3E%3Cstop offset='80%25' stop-color='%23FFFFFF' stop-opacity='0.1'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cfilter id='f' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='4' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg%3E%3Cpath d='M 1200 45 C 960 45, 800 115, 580 90 C 380 65, 200 145, 0 115' stroke='url(%23g1)' stroke-width='4' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3Cpath d='M 1200 45 C 960 45, 800 115, 580 90 C 380 65, 200 145, 0 115' stroke='url(%23gc)' stroke-width='1.6' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 1200 90 C 940 90, 770 160, 540 135 C 320 110, 160 190, 0 160' stroke='url(%23g2)' stroke-width='3.5' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3Cpath d='M 1200 90 C 940 90, 770 160, 540 135 C 320 110, 160 190, 0 160' stroke='url(%23gc)' stroke-width='1.4' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 1200 140 C 910 140, 730 210, 490 185 C 270 160, 110 235, 0 210' stroke='url(%23g1)' stroke-width='2.8' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3Cpath d='M 1200 140 C 910 140, 730 210, 490 185 C 270 160, 110 235, 0 210' stroke='url(%23gc)' stroke-width='1.2' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 320' width='100%25' height='100%25' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='100%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23E8B298' stop-opacity='0.75'/%3E%3Cstop offset='45%25' stop-color='%23D3A29D' stop-opacity='0.5'/%3E%3Cstop offset='80%25' stop-color='%23A36361' stop-opacity='0.22'/%3E%3Cstop offset='100%25' stop-color='%23EECC8C' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='g2' x1='100%25' y1='0%25' x2='0%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23A36361' stop-opacity='0.65'/%3E%3Cstop offset='50%25' stop-color='%23D3A29D' stop-opacity='0.4'/%3E%3Cstop offset='90%25' stop-color='%23EECC8C' stop-opacity='0.2'/%3E%3Cstop offset='100%25' stop-color='%23A36361' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='gc' x1='100%25' y1='0%25' x2='0%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF' stop-opacity='0.85'/%3E%3Cstop offset='40%25' stop-color='%23FFFFFF' stop-opacity='0.5'/%3E%3Cstop offset='80%25' stop-color='%23FFFFFF' stop-opacity='0.15'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cfilter id='f' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='4' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg%3E%3Cpath d='M 1200 45 C 960 45, 800 115, 580 90 C 380 65, 200 145, 0 115' stroke='url(%23g1)' stroke-width='4' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3Cpath d='M 1200 45 C 960 45, 800 115, 580 90 C 380 65, 200 145, 0 115' stroke='url(%23gc)' stroke-width='1.6' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 1200 90 C 940 90, 770 160, 540 135 C 320 110, 160 190, 0 160' stroke='url(%23g2)' stroke-width='3.5' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3Cpath d='M 1200 90 C 940 90, 770 160, 540 135 C 320 110, 160 190, 0 160' stroke='url(%23gc)' stroke-width='1.4' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 1200 140 C 910 140, 730 210, 490 185 C 270 160, 110 235, 0 210' stroke='url(%23g1)' stroke-width='2.8' stroke-linecap='round' filter='url(%23f)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3Cpath d='M 1200 140 C 910 140, 730 210, 490 185 C 270 160, 110 235, 0 210' stroke='url(%23gc)' stroke-width='1.2' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='100;0;0;100;100' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0;0.95;0.95;0;0' keyTimes='0;0.22;0.62;0.86;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
   background-size: 100% 100%;
   background-position: right top;
   background-repeat: no-repeat;
   animation: silkWaveFlow 10s ease-in-out infinite;
 }
 
-/* BOTTOM WAVES (Rendered with Holst Plum & Rose gradient animated SVG via pure CSS Data URI) */
+/* BOTTOM WAVES (Rendered with Celadon, Sage & Amber SVG via pure CSS Data URI) */
 .manager-review-wave-bottom {
   position: absolute;
   bottom: 0;
@@ -174,14 +180,14 @@
   height: 340px;
   pointer-events: none;
   opacity: 0.85;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 320' width='100%25' height='100%25' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='bg1' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23B39CCB' stop-opacity='0.65'/%3E%3Cstop offset='45%25' stop-color='%23B39CCB' stop-opacity='0.4'/%3E%3Cstop offset='80%25' stop-color='%236D5284' stop-opacity='0.18'/%3E%3Cstop offset='100%25' stop-color='%23B39CCB' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='bg2' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%236D5284' stop-opacity='0.55'/%3E%3Cstop offset='50%25' stop-color='%238D73A8' stop-opacity='0.3'/%3E%3Cstop offset='90%25' stop-color='%23D7B6C7' stop-opacity='0.1'/%3E%3Cstop offset='100%25' stop-color='%236D5284' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='bgc' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF' stop-opacity='0.8'/%3E%3Cstop offset='40%25' stop-color='%23FFFFFF' stop-opacity='0.45'/%3E%3Cstop offset='80%25' stop-color='%23FFFFFF' stop-opacity='0.1'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cfilter id='bf' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='4' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg%3E%3Cpath d='M 0 275 C 240 275, 400 205, 620 230 C 820 255, 1000 175, 1200 205' stroke='url(%23bg1)' stroke-width='4' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3Cpath d='M 0 275 C 240 275, 400 205, 620 230 C 820 255, 1000 175, 1200 205' stroke='url(%23bgc)' stroke-width='1.6' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 0 230 C 260 230, 430 160, 660 185 C 880 210, 1040 130, 1200 160' stroke='url(%23bg2)' stroke-width='3.5' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3Cpath d='M 0 230 C 260 230, 430 160, 660 185 C 880 210, 1040 130, 1200 160' stroke='url(%23bgc)' stroke-width='1.4' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 0 180 C 290 180, 470 110, 710 135 C 930 160, 1090 85, 1200 110' stroke='url(%23bg1)' stroke-width='2.8' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3Cpath d='M 0 180 C 290 180, 470 110, 710 135 C 930 160, 1090 85, 1200 110' stroke='url(%23bgc)' stroke-width='1.2' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 320' width='100%25' height='100%25' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='bg1' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23BDD1C5' stop-opacity='0.75'/%3E%3Cstop offset='45%25' stop-color='%239EABA2' stop-opacity='0.5'/%3E%3Cstop offset='80%25' stop-color='%23EECC8C' stop-opacity='0.22'/%3E%3Cstop offset='100%25' stop-color='%23BDD1C5' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='bg2' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%239EABA2' stop-opacity='0.65'/%3E%3Cstop offset='50%25' stop-color='%23BDD1C5' stop-opacity='0.4'/%3E%3Cstop offset='90%25' stop-color='%23EECC8C' stop-opacity='0.2'/%3E%3Cstop offset='100%25' stop-color='%239EABA2' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='bgc' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF' stop-opacity='0.85'/%3E%3Cstop offset='40%25' stop-color='%23FFFFFF' stop-opacity='0.5'/%3E%3Cstop offset='80%25' stop-color='%23FFFFFF' stop-opacity='0.15'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cfilter id='bf' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='4' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg%3E%3Cpath d='M 0 275 C 240 275, 400 205, 620 230 C 820 255, 1000 175, 1200 205' stroke='url(%23bg1)' stroke-width='4' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3Cpath d='M 0 275 C 240 275, 400 205, 620 230 C 820 255, 1000 175, 1200 205' stroke='url(%23bgc)' stroke-width='1.6' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='0s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 0 230 C 260 230, 430 160, 660 185 C 880 210, 1040 130, 1200 160' stroke='url(%23bg2)' stroke-width='3.5' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3Cpath d='M 0 230 C 260 230, 430 160, 660 185 C 880 210, 1040 130, 1200 160' stroke='url(%23bgc)' stroke-width='1.4' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='1.8s'/%3E%3C/path%3E%3C/g%3E%3Cg%3E%3Cpath d='M 0 180 C 290 180, 470 110, 710 135 C 930 160, 1090 85, 1200 110' stroke='url(%23bg1)' stroke-width='2.8' stroke-linecap='round' filter='url(%23bf)' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3Cpath d='M 0 180 C 290 180, 470 110, 710 135 C 930 160, 1090 85, 1200 110' stroke='url(%23bgc)' stroke-width='1.2' stroke-linecap='round' pathLength='100'%3E%3Canimate attributeName='stroke-dashoffset' values='0;100;100;0;0' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s' calcMode='spline' keySplines='0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1; 0.4 0 0.2 1'/%3E%3Canimate attributeName='opacity' values='0.95;0;0;0.95;0.95' keyTimes='0;0.24;0.50;0.74;1' dur='18s' repeatCount='indefinite' begin='3.6s'/%3E%3C/path%3E%3C/g%3E%3C/svg%3E");
   background-size: 100% 100%;
   background-position: left bottom;
   background-repeat: no-repeat;
   animation: silkWaveFlowBottom 11s ease-in-out infinite;
 }
 
-/* Twinkling Starlight Sparks (Holst Rose & Lavender) */
+/* Twinkling Starlight Sparks (Warm Amber #EECC8C) */
 .manager-review-star-1,
 .manager-review-star-2,
 .manager-review-star-3,
@@ -189,7 +195,7 @@
 .manager-review-star-5 {
   position: absolute;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23D7B6C7'%3E%3Cpath d='M12 0L14.5 9.5L24 12L14.5 14.5L12 24L9.5 14.5L0 12L9.5 9.5L12 0Z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23EECC8C'%3E%3Cpath d='M12 0L14.5 9.5L24 12L14.5 14.5L12 24L9.5 14.5L0 12L9.5 9.5L12 0Z'/%3E%3C/svg%3E");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -237,24 +243,22 @@
   animation: starGlimmer 5.5s ease-in-out 2.2s infinite;
 }
 
-/* Glassmorphic luxury card with Holst Porcelain & Mauve-Blush Watercolor gradient and SVG texture */
+/* Glassmorphic luxury card with Rose & Peach Watercolor gradient and SVG texture */
 .manager-review-glass-card {
-  background: 
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 600' width='100%25' height='100%25' preserveAspectRatio='none'%3E%3Cpath d='M-50 80 C 200 40, 420 120, 680 70 C 850 40, 950 110, 1050 75 L 1050 220 C 850 260, 650 190, 400 240 C 200 270, 80 200, -50 230 Z' fill='%23D7B6C7' opacity='0.20'/%3E%3Cpath d='M-50 190 C 220 240, 480 180, 720 230 C 890 260, 980 210, 1050 240 L 1050 390 C 840 430, 600 370, 360 410 C 180 435, 70 380, -50 400 Z' fill='%23EBCED6' opacity='0.30'/%3E%3Cpath d='M-50 360 C 200 420, 460 360, 700 410 C 870 440, 960 390, 1050 420 L 1050 620 L -50 620 Z' fill='%23F7EEF2' opacity='0.35'/%3E%3C/svg%3E"),
-    linear-gradient(
-      135deg,
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 600' width='100%25' height='100%25' preserveAspectRatio='none'%3E%3Cpath d='M-50 80 C 200 40, 420 120, 680 70 C 850 40, 950 110, 1050 75 L 1050 220 C 850 260, 650 190, 400 240 C 200 270, 80 200, -50 230 Z' fill='%23D3A29D' opacity='0.16'/%3E%3Cpath d='M-50 190 C 220 240, 480 180, 720 230 C 890 260, 980 210, 1050 240 L 1050 390 C 840 430, 600 370, 360 410 C 180 435, 70 380, -50 400 Z' fill='%23E8B298' opacity='0.22'/%3E%3Cpath d='M-50 360 C 200 420, 460 360, 700 410 C 870 440, 960 390, 1050 420 L 1050 620 L -50 620 Z' fill='%23FAF0EB' opacity='0.30'/%3E%3C/svg%3E"),
+    linear-gradient(135deg,
       #FFFFFF 0%,
-      #FAF6F8 20%,
-      #F7EEF2 45%,
-      #F0E5EC 75%,
-      #EBCED6 100%
-    ) !important;
+      #FAF6F4 20%,
+      #F8EFEA 45%,
+      #F3E4DC 75%,
+      rgba(232, 178, 152, 0.4) 100%) !important;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1.5px solid rgba(179, 156, 203, 0.45) !important;
+  border: 1.5px solid rgba(211, 162, 157, 0.45) !important;
   box-shadow:
-    0 24px 60px rgba(74, 53, 94, 0.12),
-    0 4px 18px rgba(109, 82, 132, 0.14),
+    0 24px 60px rgba(163, 99, 97, 0.09),
+    0 4px 18px rgba(163, 99, 97, 0.11),
     inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
   border-radius: 1.5rem;
   animation: cardFadeIn 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.25s backwards;
@@ -272,7 +276,7 @@
   }
 }
 
-/* /* Card Header Title: Kinetic Letter-Tracking Settle & Holst Plum Sheen */
+/* /* Card Header Title: Kinetic Letter-Tracking Settle & Terracotta Sheen */
 .manager-review-card-title {
   letter-spacing: -0.015em;
   position: relative;
@@ -281,10 +285,10 @@
   padding-bottom: 6px;
   background: linear-gradient(110deg,
       #0F172A 0%,
-      #4A355E 30%,
-      #6D5284 46%,
-      #B39CCB 54%,
-      #4A355E 68%,
+      #7A3F3D 30%,
+      #A36361 46%,
+      #D3A29D 54%,
+      #7A3F3D 68%,
       #0F172A 100%);
   background-size: 240% 100%;
   -webkit-background-clip: text;
@@ -337,8 +341,8 @@
   height: 3px;
   width: 0;
   border-radius: 9999px;
-  background: linear-gradient(90deg, #6D5284 0%, #B39CCB 65%, rgba(235, 206, 214, 0.6) 100%);
-  box-shadow: 0 2px 8px rgba(109, 82, 132, 0.22);
+  background: linear-gradient(90deg, #A36361 0%, #D3A29D 50%, #EECC8C 100%);
+  box-shadow: 0 2px 8px rgba(163, 99, 97, 0.25);
   animation: cardTitleBarExpand 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards;
   transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
 }
@@ -357,18 +361,18 @@
 
 .manager-review-card-title:hover::after {
   width: 100%;
-  box-shadow: 0 3px 12px rgba(109, 82, 132, 0.35), 0 1px 4px rgba(215, 182, 199, 0.4);
+  box-shadow: 0 3px 12px rgba(163, 99, 97, 0.35), 0 1px 4px rgba(232, 178, 152, 0.4);
 }
 
 /* Create Button: Entrance Animation, Luxury Shimmer Sweep, Glow Pulse & Micro-interactions */
 .manager-review-create-btn {
   position: relative !important;
   overflow: hidden !important;
-  background: linear-gradient(135deg, #6D5284 0%, #4A355E 55%, #372348 100%) !important;
+  background: linear-gradient(135deg, #A36361 0%, #8D4E4D 55%, #7A3F3D 100%) !important;
   color: #FFFFFF !important;
   border: 1px solid rgba(255, 255, 255, 0.28) !important;
-  box-shadow: 0 4px 16px rgba(109, 82, 132, 0.35), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
-  animation: 
+  box-shadow: 0 4px 16px rgba(163, 99, 97, 0.35), 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+  animation:
     createBtnSlideIn 0.75s cubic-bezier(0.16, 1, 0.3, 1) 0.35s backwards,
     createBtnPulseGlow 3.5s ease-in-out infinite !important;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.25s ease !important;
@@ -384,38 +388,43 @@
   left: -120%;
   width: 60%;
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%);
   transform: skewX(-25deg);
   animation: createBtnShimmer 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
 }
 
 @keyframes createBtnShimmer {
-  0%, 25% {
+
+  0%,
+  25% {
     left: -120%;
   }
-  55%, 100% {
+
+  55%,
+  100% {
     left: 220%;
   }
 }
 
 @keyframes createBtnPulseGlow {
-  0%, 100% {
-    box-shadow: 0 4px 16px rgba(109, 82, 132, 0.35), 0 0 0 0 rgba(179, 156, 203, 0.4);
+
+  0%,
+  100% {
+    box-shadow: 0 4px 16px rgba(163, 99, 97, 0.35), 0 0 0 0 rgba(211, 162, 157, 0.4);
   }
+
   50% {
-    box-shadow: 0 6px 22px rgba(109, 82, 132, 0.55), 0 0 0 4px rgba(179, 156, 203, 0.2);
+    box-shadow: 0 6px 22px rgba(163, 99, 97, 0.55), 0 0 0 4px rgba(211, 162, 157, 0.2);
   }
 }
 
 .manager-review-create-btn:hover {
-  background: linear-gradient(135deg, #593e6f 0%, #4A355E 50%, #2f1d3e 100%) !important;
-  box-shadow: 0 8px 24px rgba(109, 82, 132, 0.6), 0 0 16px rgba(179, 156, 203, 0.35) !important;
+  background: linear-gradient(135deg, #8D4E4D 0%, #7A3F3D 50%, #633231 100%) !important;
+  box-shadow: 0 8px 24px rgba(163, 99, 97, 0.6), 0 0 16px rgba(211, 162, 157, 0.35) !important;
   transform: translateY(-2px) scale(1.03);
 }
 
@@ -427,6 +436,7 @@
   0% {
     left: -120%;
   }
+
   100% {
     left: 220%;
   }
@@ -476,6 +486,7 @@
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -538,14 +549,14 @@
 }
 
 .manager-review-search-box:hover {
-  border-color: rgba(109, 82, 132, 0.45) !important;
+  border-color: rgba(163, 99, 97, 0.45) !important;
   transform: translateY(-1.5px);
-  box-shadow: 0 8px 20px rgba(109, 82, 132, 0.1), 0 2px 6px rgba(215, 182, 199, 0.15) !important;
+  box-shadow: 0 8px 20px rgba(163, 99, 97, 0.1), 0 2px 6px rgba(211, 162, 157, 0.15) !important;
 }
 
 .manager-review-search-box:focus-within {
-  border-color: #6D5284 !important;
-  box-shadow: 0 0 0 3px rgba(109, 82, 132, 0.15), 0 8px 22px rgba(109, 82, 132, 0.14) !important;
+  border-color: #A36361 !important;
+  box-shadow: 0 0 0 3px rgba(163, 99, 97, 0.15), 0 8px 22px rgba(163, 99, 97, 0.14) !important;
   transform: translateY(-1.5px);
 }
 
@@ -567,72 +578,72 @@
 
 .manager-review-filter-btn {
   background: rgba(255, 255, 255, 0.94) !important;
-  border: 1.5px solid rgba(224, 229, 242, 0.95) !important;
-  color: #4A355E !important;
-  box-shadow: 0 2px 8px rgba(74, 53, 94, 0.08) !important;
+  border: 1.5px solid rgba(211, 162, 157, 0.4) !important;
+  color: #0F172A !important;
+  box-shadow: 0 2px 8px rgba(163, 99, 97, 0.08) !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   cursor: pointer;
 }
 
 .manager-review-filter-btn:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 0 8px 20px rgba(74, 53, 94, 0.15), 0 2px 6px rgba(215, 182, 199, 0.15) !important;
+  box-shadow: 0 8px 20px rgba(163, 99, 97, 0.15), 0 2px 6px rgba(211, 162, 157, 0.15) !important;
 }
 
 /* Distinct Filter Colors & Micro-animations */
-/* Financial Year (Holst Plum) */
+/* Financial Year (Terracotta #A36361) */
 .filter-icon-fy {
-  color: #6D5284;
+  color: #A36361;
   transition: transform 0.25s ease;
 }
 
 .filter-btn-fy:hover {
-  border-color: rgba(109, 82, 132, 0.5) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(247, 238, 242, 0.85)) !important;
+  border-color: rgba(163, 99, 97, 0.5) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(250, 242, 238, 0.85)) !important;
 }
 
 .filter-btn-fy:hover .filter-icon-fy {
   transform: scale(1.18) rotate(-6deg);
 }
 
-/* Quarters (Sky Cyan) */
+/* Quarters (Soft Celadon Mist #BDD1C5) */
 .filter-icon-quarters {
-  color: #0284C7;
+  color: #4A6355;
   transition: transform 0.25s ease;
 }
 
 .filter-btn-quarters:hover {
-  border-color: rgba(2, 132, 199, 0.5) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 249, 255, 0.75)) !important;
+  border-color: rgba(189, 209, 197, 0.8) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 245, 242, 0.75)) !important;
 }
 
 .filter-btn-quarters:hover .filter-icon-quarters {
   transform: scale(1.18) rotate(25deg);
 }
 
-/* All Members (Holst Lavender) */
+/* All Members (Dusty Rose #D3A29D) */
 .filter-icon-members {
-  color: #8D73A8;
+  color: #A36361;
   transition: transform 0.25s ease;
 }
 
 .filter-btn-members:hover {
-  border-color: rgba(141, 115, 168, 0.5) !important;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(247, 238, 242, 0.75)) !important;
+  border-color: rgba(211, 162, 157, 0.6) !important;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(250, 242, 238, 0.75)) !important;
 }
 
 .filter-btn-members:hover .filter-icon-members {
   transform: scale(1.18);
 }
 
-/* All Status (Amber Gold) */
+/* All Status (Amber Gold #EECC8C) */
 .filter-icon-status {
-  color: #D97706;
+  color: #B47B1E;
   transition: transform 0.25s ease;
 }
 
 .filter-btn-status:hover {
-  border-color: rgba(217, 119, 6, 0.5) !important;
+  border-color: rgba(238, 204, 140, 0.6) !important;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(255, 251, 235, 0.75)) !important;
 }
 
@@ -647,8 +658,8 @@
 }
 
 .manager-review-clear-btn:hover {
-  color: #6D5284 !important;
-  background: rgba(109, 82, 132, 0.08) !important;
+  color: #A36361 !important;
+  background: rgba(163, 99, 97, 0.08) !important;
   transform: translateY(-1px);
 }
 
@@ -658,14 +669,14 @@
 
 .manager-review-clear-btn:hover .filter-clear-icon {
   transform: rotate(-180deg);
-  color: #6D5284;
+  color: #A36361;
 }
 
 /* Empty State Illustration & Glow (Rendered 100% via CSS) */
 .manager-review-empty-glow {
   position: absolute;
   inset: -1.5rem;
-  background: radial-gradient(circle, rgba(215, 182, 199, 0.35) 0%, rgba(247, 238, 242, 0.45) 45%, rgba(247, 238, 242, 0) 70%);
+  background: radial-gradient(circle, rgba(211, 162, 157, 0.35) 0%, rgba(250, 242, 238, 0.45) 45%, rgba(250, 242, 238, 0) 70%);
   border-radius: 9999px;
   filter: blur(24px);
   animation: pulseGlow 3.5s ease-in-out infinite;
@@ -677,12 +688,12 @@
   z-index: 10;
   width: 9.5rem;
   height: 9.5rem;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='fbg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='60%25' stop-color='%23EBCED6'/%3E%3Cstop offset='100%25' stop-color='%23B39CCB'/%3E%3C/linearGradient%3E%3ClinearGradient id='dg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF'/%3E%3C/linearGradient%3E%3ClinearGradient id='hg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%236D5284'/%3E%3Cstop offset='50%25' stop-color='%238D73A8'/%3E%3Cstop offset='100%25' stop-color='%23B39CCB'/%3E%3C/linearGradient%3E%3ClinearGradient id='gbg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23B39CCB'/%3E%3Cstop offset='100%25' stop-color='%23D7B6C7'/%3E%3C/linearGradient%3E%3ClinearGradient id='bg' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%238D73A8'/%3E%3Cstop offset='100%25' stop-color='%234A355E'/%3E%3C/linearGradient%3E%3Cfilter id='ds' x='-10%25' y='-10%25' width='130%25' height='130%25'%3E%3CfeDropShadow dx='0' dy='8' stdDeviation='8' flood-color='%234A355E' flood-opacity='0.12'/%3E%3C/filter%3E%3C/defs%3E%3Cg transform='rotate(-6 80 80)'%3E%3Crect x='35' y='36' width='86' height='98' rx='14' fill='url(%23fbg)' stroke='%23B39CCB' stroke-width='1.5'/%3E%3Crect x='48' y='52' width='38' height='4' rx='2' fill='%23B39CCB' opacity='0.6'/%3E%3Crect x='48' y='62' width='56' height='4' rx='2' fill='%23B39CCB' opacity='0.4'/%3E%3C/g%3E%3Cg filter='url(%23ds)'%3E%3Crect x='42' y='26' width='84' height='104' rx='14' fill='url(%23dg)' stroke='%23B39CCB' stroke-width='1.2'/%3E%3Cpath d='M42 40 C42 32.268 48.268 26 56 26 H112 C119.732 26 126 32.268 126 40 V48 H42 V40 Z' fill='url(%23hg)'/%3E%3Ccircle cx='56' cy='37' r='3' fill='%23FFFFFF' opacity='0.9'/%3E%3Ccircle cx='66' cy='37' r='2' fill='%23FFFFFF' opacity='0.6'/%3E%3Ccircle cx='74' cy='37' r='2' fill='%23FFFFFF' opacity='0.4'/%3E%3Ccircle cx='54' cy='62' r='4' fill='%23B39CCB'/%3E%3Crect x='64' y='60' width='46' height='4.5' rx='2.25' fill='%23E2E8F0'/%3E%3Ccircle cx='54' cy='76' r='4' fill='%23B39CCB'/%3E%3Crect x='64' y='74' width='38' height='4.5' rx='2.25' fill='%23EBCED6'/%3E%3Ccircle cx='54' cy='90' r='4' fill='%23B39CCB'/%3E%3Crect x='64' y='88' width='50' height='4.5' rx='2.25' fill='%23E2E8F0'/%3E%3Crect x='52' y='104' width='62' height='6' rx='3' fill='%23FFFFFF'/%3E%3Crect x='52' y='104' width='44' height='6' rx='3' fill='url(%23gbg)'/%3E%3C/g%3E%3Cg transform='translate(102, 94)'%3E%3Ccircle cx='16' cy='16' r='16' fill='url(%23bg)'/%3E%3Ccircle cx='16' cy='16' r='18' stroke='url(%23bg)' stroke-width='2' opacity='0.3'/%3E%3Cpath d='M10 16.5 L14 20.5 L22 12' stroke='%23FFFFFF' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3Cg fill='%23B39CCB'%3E%3Cpath d='M138 20 L140 26 L146 28 L140 30 L138 36 L136 30 L130 28 L136 26 Z' opacity='0.9'/%3E%3C/g%3E%3Cg fill='%23B39CCB'%3E%3Cpath d='M26 100 L27.5 104.5 L32 106 L27.5 107.5 L26 112 L24.5 107.5 L20 106 L24.5 104.5 Z' opacity='0.8'/%3E%3C/g%3E%3Ccircle cx='28' cy='44' r='3' fill='%23B39CCB' opacity='0.7'/%3E%3Ccircle cx='140' cy='80' r='2.5' fill='%236D5284' opacity='0.8'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='fbg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='60%25' stop-color='%23FAF0EB'/%3E%3Cstop offset='100%25' stop-color='%23D3A29D'/%3E%3C/linearGradient%3E%3ClinearGradient id='dg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF'/%3E%3C/linearGradient%3E%3ClinearGradient id='hg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23A36361'/%3E%3Cstop offset='50%25' stop-color='%23D3A29D'/%3E%3Cstop offset='100%25' stop-color='%23E8B298'/%3E%3C/linearGradient%3E%3ClinearGradient id='gbg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23E8B298'/%3E%3Cstop offset='100%25' stop-color='%23EECC8C'/%3E%3C/linearGradient%3E%3ClinearGradient id='bg' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23D3A29D'/%3E%3Cstop offset='100%25' stop-color='%23A36361'/%3E%3C/linearGradient%3E%3Cfilter id='ds' x='-10%25' y='-10%25' width='130%25' height='130%25'%3E%3CfeDropShadow dx='0' dy='8' stdDeviation='8' flood-color='%23A36361' flood-opacity='0.16'/%3E%3C/filter%3E%3C/defs%3E%3Cg transform='rotate(-6 80 80)'%3E%3Crect x='35' y='36' width='86' height='98' rx='14' fill='url(%23fbg)' stroke='%23D3A29D' stroke-width='1.5'/%3E%3Crect x='48' y='52' width='38' height='4' rx='2' fill='%23D3A29D' opacity='0.6'/%3E%3Crect x='48' y='62' width='56' height='4' rx='2' fill='%23D3A29D' opacity='0.4'/%3E%3C/g%3E%3Cg filter='url(%23ds)'%3E%3Crect x='42' y='26' width='84' height='104' rx='14' fill='url(%23dg)' stroke='%23D3A29D' stroke-width='1.2'/%3E%3Cpath d='M42 40 C42 32.268 48.268 26 56 26 H112 C119.732 26 126 32.268 126 40 V48 H42 V40 Z' fill='url(%23hg)'/%3E%3Ccircle cx='56' cy='37' r='3' fill='%23FFFFFF' opacity='0.9'/%3E%3Ccircle cx='66' cy='37' r='2' fill='%23FFFFFF' opacity='0.6'/%3E%3Ccircle cx='74' cy='37' r='2' fill='%23FFFFFF' opacity='0.4'/%3E%3Ccircle cx='54' cy='62' r='4' fill='%23E8B298'/%3E%3Crect x='64' y='60' width='46' height='4.5' rx='2.25' fill='%23E2E8F0'/%3E%3Ccircle cx='54' cy='76' r='4' fill='%23E8B298'/%3E%3Crect x='64' y='74' width='38' height='4.5' rx='2.25' fill='%23FAF0EB'/%3E%3Ccircle cx='54' cy='90' r='4' fill='%23E8B298'/%3E%3Crect x='64' y='88' width='50' height='4.5' rx='2.25' fill='%23E2E8F0'/%3E%3Crect x='52' y='104' width='62' height='6' rx='3' fill='%23FFFFFF'/%3E%3Crect x='52' y='104' width='44' height='6' rx='3' fill='url(%23gbg)'/%3E%3C/g%3E%3Cg transform='translate(102, 94)'%3E%3Ccircle cx='16' cy='16' r='16' fill='url(%23bg)'/%3E%3Ccircle cx='16' cy='16' r='18' stroke='url(%23bg)' stroke-width='2' opacity='0.3'/%3E%3Cpath d='M10 16.5 L14 20.5 L22 12' stroke='%23FFFFFF' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3Cg fill='%23EECC8C'%3E%3Cpath d='M138 20 L140 26 L146 28 L140 30 L138 36 L136 30 L130 28 L136 26 Z' opacity='0.9'/%3E%3C/g%3E%3Cg fill='%23EECC8C'%3E%3Cpath d='M26 100 L27.5 104.5 L32 106 L27.5 107.5 L26 112 L24.5 107.5 L20 106 L24.5 104.5 Z' opacity='0.8'/%3E%3C/g%3E%3Ccircle cx='28' cy='44' r='3' fill='%23EECC8C' opacity='0.7'/%3E%3Ccircle cx='140' cy='80' r='2.5' fill='%23A36361' opacity='0.8'/%3E%3C/svg%3E");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
   animation: floatIllustration 4s ease-in-out infinite;
-  filter: drop-shadow(0 14px 28px rgba(74, 53, 94, 0.15));
+  filter: drop-shadow(0 14px 28px rgba(163, 99, 97, 0.15));
 }
 
 @keyframes floatIllustration {
@@ -720,12 +731,12 @@
 .manager-review-title-typing {
   display: inline-block;
   background: linear-gradient(90deg,
-      #0F172A 0%,
-      #4A355E 35%,
-      #6D5284 55%,
-      #8D73A8 70%,
-      #0F172A 85%,
-      #0F172A 100%);
+      #1C1212 0%,
+      #7A3F3D 35%,
+      #A36361 55%,
+      #D3A29D 70%,
+      #1C1212 85%,
+      #1C1212 100%);
   background-size: 250% 100%;
   -webkit-background-clip: text;
   background-clip: text;

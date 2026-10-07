@@ -12,13 +12,13 @@ const AnimatedAttachIcon: React.FC<{ className?: string }> = ({ className = "w-4
   >
     <defs>
       <linearGradient id="attachClipGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stopColor="#7C3AED" />
-        <stop offset="50%" stopColor="#A855F7" />
-        <stop offset="100%" stopColor="#EC4899" />
+        <stop offset="0%" stopColor="#A36361" />
+        <stop offset="50%" stopColor="#D3A29D" />
+        <stop offset="100%" stopColor="#E8B298" />
       </linearGradient>
       <radialGradient id="attachAuraGrad" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#C084FC" stopOpacity="0.55" />
-        <stop offset="100%" stopColor="#A855F7" stopOpacity="0" />
+        <stop offset="0%" stopColor="#D3A29D" stopOpacity="0.55" />
+        <stop offset="100%" stopColor="#A36361" stopOpacity="0" />
       </radialGradient>
       <filter id="attachGlow" x="-20%" y="-20%" width="140%" height="140%">
         <feGaussianBlur stdDeviation="0.8" result="blur" />
@@ -50,14 +50,14 @@ const AnimatedAttachIcon: React.FC<{ className?: string }> = ({ className = "w-4
     {/* Animated Golden Sparkle 1 */}
     <path
       d="M19 2l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6L19 2z"
-      fill="#F59E0B"
+      fill="#EECC8C"
       className="anim-attach-sparkle-1"
     />
 
-    {/* Animated Pink Sparkle 2 */}
+    {/* Animated Peach Sparkle 2 */}
     <path
       d="M5 16l.4 1 1 .4-1 .4-.4 1-.4-1-1-.4 1-.4.4-1z"
-      fill="#EC4899"
+      fill="#E8B298"
       className="anim-attach-sparkle-2"
     />
   </svg>
@@ -136,7 +136,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="border-b border-[#D7B6C7]/40 pb-4">
+      <div className="border-b border-[#D3A29D]/30 pb-4">
         <h3 className="text-lg font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 2: Key Achievements & Projects</span>
           <span className="eval-title-accent-line" />
@@ -257,13 +257,13 @@ export const AchievementsStep: React.FC<StepProps> = ({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="btn-attach-document group inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#6D28D9] bg-gradient-to-r from-purple-50 via-white to-pink-50 hover:from-purple-100 hover:to-pink-100 border border-purple-200/90 hover:border-purple-400 rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+                className="btn-attach-document group inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#A36361] bg-gradient-to-r from-[#FAF2EE] via-white to-[#F8EFEA] hover:from-[#FAF0EB] hover:to-[#F5E8E2] border border-[#D3A29D]/50 hover:border-[#A36361] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-sm hover:scale-[1.02] active:scale-[0.98]"
               >
                 <AnimatedAttachIcon className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
                 <span className="tracking-wide">Attach Document</span>
               </button>
             ) : (
-              <div className="flex items-center gap-2.5 px-3 py-1.5 bg-gradient-to-r from-purple-50/90 to-pink-50/80 border border-[#8D73A8]/40 rounded-xl shadow-2xs max-w-full">
+              <div className="flex items-center gap-2.5 px-3 py-1.5 bg-gradient-to-r from-[#FAF2EE] to-[#F8EFEA] border border-[#D3A29D]/50 rounded-xl shadow-2xs max-w-full">
                 <AnimatedAttachIcon className="w-4 h-4 shrink-0" />
                 <div className="flex flex-col min-w-0">
                   <span className="text-xs font-bold text-[#0F172A] truncate max-w-[150px] sm:max-w-[190px]">
