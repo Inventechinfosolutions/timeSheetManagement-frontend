@@ -693,15 +693,15 @@ input[type="password"]::-webkit-password-reveal-button {
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1.5px solid #2563eb;
-  background: #2563eb;
-  color: #ffffff;
+  border: 1.5px solid #60a5fa;
+  background: #ffffff;
+  color: #3b82f6;
   border-radius: 3px;
   font-size: 14px;
   font-weight: 700;
   line-height: 1;
   cursor: grab;
-  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.25);
+  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.2);
   user-select: none;
   touch-action: none;
 }
@@ -711,14 +711,23 @@ input[type="password"]::-webkit-password-reveal-button {
 }
 
 .notes-excel-fill-handle:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #2563eb;
 }
 
 .notes-excel-fill-handle.is-dragging {
   cursor: grabbing;
-  background: #1e40af;
-  border-color: #1e40af;
+  background: #dbeafe;
+  border-color: #3b82f6;
+  color: #2563eb;
+}
+
+/* Soft selection outline — not a solid dark-blue fill */
+.excel-cell-selected {
+  position: relative;
+  z-index: 2;
+  background-color: transparent !important;
 }
 
 .notes-rich-editor th,
@@ -951,11 +960,6 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-rich-editor table th[contenteditable="false"],
 .notes-rich-editor table td[contenteditable="false"] {
   transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.excel-cell-selected {
-  position: relative;
-  z-index: 2;
 }
 
 /* Table Theme Colors & Palette Variables */
