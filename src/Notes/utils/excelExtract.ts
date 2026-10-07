@@ -86,6 +86,59 @@ export const embedExcelWorkbookInHtml = (html: string, workbook: ExcelWorkbookDa
 export const descriptionFromExcelWorkbook = (workbook: ExcelWorkbookData): string =>
   embedExcelWorkbookInHtml("", workbook);
 
+const WORKBOOK_STORE_RE =
+  /<div[^>]*class=["'][^"']*excel-workbook-store[^"']*["'][^>]*>[\s\S]*?<\/div>/gi;
+
+/** Remove hidden workbook store from HTML (keeps typed / imported A4 content). */
+export const stripExcelWorkbookStore = (html?: string | null): string =>
+  (html || "").replace(WORKBOOK_STORE_RE, "").trim();
+
+/** True when HTML has visible note content (ignores excel-workbook-store). */
+export const htmlHasVisibleNoteContent = (html?: string | null): boolean => {
+  const withoutStore = stripExcelWorkbookStore(html);
+  if (!withoutStore) return false;
+  return (
+    /<(img|table|video|canvas|svg|iframe)\b/i.test(withoutStore) ||
+    withoutStore.replace(/<[^>]*>/g, "").trim().length > 0
+  );
+};
+
+/** Unique sheet name within a set (Excel max 31 chars). */
+const uniqueSheetName = (base: string, used: Set<string>): string => {
+  const clipped = (base || "Sheet1").slice(0, 31);
+  if (!used.has(clipped)) return clipped;
+  for (let i = 2; i < 1000; i++) {
+    const suffix = ` (${i})`;
+    const name = `${clipped.slice(0, Math.max(1, 31 - suffix.length))}${suffix}`;
+    if (!used.has(name)) return name;
+  }
+  return `${clipped.slice(0, 24)}_${Date.now().toString(36)}`.slice(0, 31);
+};
+
+/** Merge incoming sheets into existing workbook; rename duplicates (Sheet1 (2)). */
+export const mergeExcelWorkbooks = (
+  existing: ExcelWorkbookData,
+  incoming: ExcelWorkbookData
+): ExcelWorkbookData => {
+  const used = new Set(existing.sheetNames.map((n) => n || "Sheet1"));
+  const sheetNames = [...existing.sheetNames];
+  const sheetsData: Record<string, any[][]> = { ...existing.sheetsData };
+
+  for (const name of incoming.sheetNames) {
+    const unique = uniqueSheetName(name || "Sheet1", used);
+    used.add(unique);
+    sheetNames.push(unique);
+    sheetsData[unique] = incoming.sheetsData[name] || [];
+  }
+
+  return {
+    fileName: existing.fileName || incoming.fileName || "Spreadsheet.xlsx",
+    sheetNames,
+    sheetsData,
+    fileKey: existing.fileKey || incoming.fileKey,
+  };
+};
+
 export async function parseExcelFile(file: File | Blob, fileName = "Spreadsheet.xlsx"): Promise<ExcelWorkbookData> {
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer, { type: "array", cellDates: true });

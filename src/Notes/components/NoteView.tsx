@@ -26,8 +26,13 @@ import {
   exportNoteToWord,
   copyNoteContentToClipboard,
 } from "../utils/notesHelpers";
-import { buildDocumentPagesHtml, isLandscapeRotation, paginateToA4Sheets } from "../utils/documentLayout";
-import { parseExcelWorkbookFromHtml } from "../utils/excelExtract";
+import { buildDocumentPagesHtml, isNoteLandscape, paginateToA4Sheets } from "../utils/documentLayout";
+import { refreshAttachmentBadges } from "../utils/noteEditorAttachmentHelpers";
+import {
+  htmlHasVisibleNoteContent,
+  parseExcelWorkbookFromHtml,
+  stripExcelWorkbookStore,
+} from "../utils/excelExtract";
 import { ExcelSpreadsheetView } from "../../components/ExcelSpreadsheetView";
 
 interface NoteViewProps {
@@ -60,16 +65,24 @@ export const NoteView: React.FC<NoteViewProps> = ({
   onDelete,
 }) => {
   const isProjectNote = activeNote.type === "PROJECT";
-  const isLandscape = isLandscapeRotation(activeNote.rotation);
+  const isLandscape = isNoteLandscape(activeNote);
+  // Excel viewer only when description is an Excel note (workbook store), not when .xlsx is just a file attachment
   const storedWorkbook = parseExcelWorkbookFromHtml(activeNote.description);
   const viewerWorkbook =
-    excelWorkbook?.sheetNames?.length ? excelWorkbook : storedWorkbook?.sheetNames?.length ? storedWorkbook : excelWorkbook || storedWorkbook;
+    storedWorkbook && excelWorkbook?.sheetNames?.length
+      ? excelWorkbook
+      : storedWorkbook?.sheetNames?.length
+        ? storedWorkbook
+        : null;
+  const visibleDescription = stripExcelWorkbookStore(activeNote.description);
+  const showA4Content = htmlHasVisibleNoteContent(visibleDescription);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (viewerWorkbook?.sheetNames?.length || !contentRef.current) return;
+    if (!showA4Content || !contentRef.current) return;
     paginateToA4Sheets(contentRef.current, isLandscape, true);
-  }, [activeNote.description, isLandscape, viewerWorkbook]);
+    refreshAttachmentBadges(contentRef.current);
+  }, [activeNote.description, isLandscape, showA4Content]);
 
   const getDownloadMenuItems = (note: Note): MenuProps["items"] => [
     {
@@ -342,51 +355,66 @@ export const NoteView: React.FC<NoteViewProps> = ({
             </div>
           </div>
 
-          {/* Excel viewer or A4 page */}
-          {viewerWorkbook?.sheetNames?.length ? (
-            <div className="w-full overflow-auto bg-white rounded-2xl p-4 sm:p-5 min-h-[720px] border border-slate-200/60">
-              <ExcelSpreadsheetView embedded workbook={viewerWorkbook} />
-            </div>
-          ) : (
-          <div className={`a4-page-workspace w-full rounded-2xl flex justify-center items-start overflow-auto bg-slate-100/80 p-4 sm:p-8 min-h-[720px] border border-slate-200/60${isLandscape ? " is-landscape" : ""}`}>
-            <div className="a4-page-rotator">
-              <div className="a4-page doc-pages">
-                {activeNote.description && activeNote.description.trim() ? (
-                  <div
-                    className={`notes-content-view doc-pages-editor text-slate-800 text-sm sm:text-base leading-relaxed break-words${isLandscape ? " is-landscape" : ""}`}
-                    ref={contentRef}
-                    dangerouslySetInnerHTML={{
-                      __html: buildDocumentPagesHtml(
-                        activeNote.description,
-                        undefined,
-                        undefined,
-                        undefined,
-                        isLandscape
-                      ),
-                    }}
-                  />
-                ) : (
-                  <div className="notes-content-view doc-pages-editor">
-                    <div className="page">
-                      <div className="flex flex-col items-center justify-center py-24 text-center text-slate-400 gap-3">
-                        <FileText className="w-12 h-12 text-slate-300 stroke-[1.5]" />
-                        <p className="text-sm font-medium text-slate-500">No description or notes have been added yet.</p>
-                        <button
-                          type="button"
-                          onClick={() => onStartEdit(activeNote)}
-                          className="mt-1 px-4 py-2 bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 font-semibold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                          <span>Add Description</span>
-                        </button>
+          {/* A4 description (kept) + Excel grid when present — Excel never replaces existing content */}
+          <div className="w-full flex flex-col gap-4">
+            {showA4Content ? (
+              <div
+                className={`a4-page-workspace w-full rounded-2xl flex justify-center items-start overflow-auto bg-slate-100/80 p-4 sm:p-8 min-h-[720px] border border-slate-200/60${isLandscape ? " is-landscape" : ""}`}
+              >
+                <div className="a4-page-rotator">
+                  <div className="a4-page doc-pages">
+                    <div
+                      className={`notes-content-view doc-pages-editor text-slate-800 text-sm sm:text-base leading-relaxed break-words${isLandscape ? " is-landscape" : ""}`}
+                      ref={contentRef}
+                      onClick={handleContentViewClick}
+                      dangerouslySetInnerHTML={{
+                        __html: buildDocumentPagesHtml(
+                          visibleDescription,
+                          undefined,
+                          undefined,
+                          undefined,
+                          isLandscape
+                        ),
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : !viewerWorkbook?.sheetNames?.length ? (
+              <div
+                className={`a4-page-workspace w-full rounded-2xl flex justify-center items-start overflow-auto bg-slate-100/80 p-4 sm:p-8 min-h-[720px] border border-slate-200/60${isLandscape ? " is-landscape" : ""}`}
+              >
+                <div className="a4-page-rotator">
+                  <div className="a4-page doc-pages">
+                    <div className="notes-content-view doc-pages-editor">
+                      <div className="page">
+                        <div className="flex flex-col items-center justify-center py-24 text-center text-slate-400 gap-3">
+                          <FileText className="w-12 h-12 text-slate-300 stroke-[1.5]" />
+                          <p className="text-sm font-medium text-slate-500">
+                            No description or notes have been added yet.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => onStartEdit(activeNote)}
+                            className="mt-1 px-4 py-2 bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 font-semibold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Add Description</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
-            </div>
+            ) : null}
+
+            {viewerWorkbook?.sheetNames?.length ? (
+              <div className="w-full overflow-auto bg-white rounded-2xl p-4 sm:p-5 min-h-[480px] border border-slate-200/60">
+                <ExcelSpreadsheetView embedded workbook={viewerWorkbook} />
+              </div>
+            ) : null}
           </div>
-          )}
       </div>
 
         {/* Files & Attachments */}

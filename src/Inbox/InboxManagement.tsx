@@ -109,18 +109,25 @@ export const InboxManagement: React.FC = () => {
       });
   };
 
+  /** Apply send-time flags so recipients only see description/files the sender included */
+  const noteForInboxAccess = (item: InboxItem, note: Note): Note => ({
+    ...note,
+    description: item.hasDescription !== false ? note.description || "" : "",
+    attachments: item.hasDocument ? note.attachments || [] : [],
+  });
+
   const handleOpenItem = async (item: InboxItem) => {
     setSelectedInboxItem(item);
     if (!item.isRead) {
       dispatch(markInboxAsRead(item.inboxId));
     }
     if (item.note) {
-      await notesMgr.handleStartView(item.note as Note);
+      await notesMgr.handleStartView(noteForInboxAccess(item, item.note as Note));
     } else if (item.notesId) {
       try {
         const note = await dispatch(fetchNoteById(item.notesId)).unwrap();
         if (note) {
-          await notesMgr.handleStartView(note);
+          await notesMgr.handleStartView(noteForInboxAccess(item, note));
         }
       } catch (err) {
         message.error('Failed to load note details');
@@ -135,12 +142,12 @@ export const InboxManagement: React.FC = () => {
       dispatch(markInboxAsRead(item.inboxId));
     }
     if (item.note) {
-      await notesMgr.handleStartEdit(item.note as Note);
+      await notesMgr.handleStartEdit(noteForInboxAccess(item, item.note as Note));
     } else if (item.notesId) {
       try {
         const note = await dispatch(fetchNoteById(item.notesId)).unwrap();
         if (note) {
-          await notesMgr.handleStartEdit(note);
+          await notesMgr.handleStartEdit(noteForInboxAccess(item, note));
         }
       } catch (err) {
         message.error('Failed to load note details for editing');

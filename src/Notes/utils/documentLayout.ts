@@ -9,6 +9,22 @@ const DEFAULT_PAGE_HEIGHT_PT = 842;
 export const isLandscapeRotation = (rotation?: number) =>
   rotation === 90 || rotation === 270;
 
+/** Portrait = isVertical true; Landscape = isVertical false (or legacy rotation 90/270). */
+export const isNoteLandscape = (note?: {
+  isVertical?: boolean;
+  rotation?: number;
+} | null) => {
+  if (!note) return false;
+  if (note.isVertical === false) return true;
+  if (note.isVertical === true) return false;
+  return isLandscapeRotation(note.rotation);
+};
+
+export const orientationFromLandscape = (landscape: boolean) => ({
+  isVertical: !landscape,
+  rotation: landscape ? 90 : 0,
+});
+
 export const orientPageSize = (
   _width: number,
   _height: number,
@@ -77,6 +93,40 @@ const applySheetBox = (el: HTMLElement, landscape: boolean, pageNo?: number) => 
 const pageLimitY = (page: HTMLElement, landscape: boolean) =>
   page.getBoundingClientRect().top + a4SheetHeightPx(landscape);
 
+/** Empty / break-only blocks from Enter — must stay on the current page, not open a new sheet */
+const isTrivialOverflowNode = (el: HTMLElement): boolean => {
+  if (el.tagName === "TABLE") return false;
+  if (el.querySelector("img, table, video, canvas, svg, iframe")) return false;
+  const text = (el.textContent || "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+  return text.length === 0;
+};
+
+/** Keep typed content inside .page sheets (Enter must not create orphans outside the page). */
+export const absorbOrphansIntoPages = (root: HTMLElement, landscape: boolean) => {
+  let pages = Array.from(root.querySelectorAll(":scope > .page")) as HTMLElement[];
+  if (pages.length === 0) {
+    const sheet = createSheet(1, landscape);
+    while (root.firstChild) sheet.appendChild(root.firstChild);
+    root.appendChild(sheet);
+    return;
+  }
+
+  const orphans = Array.from(root.childNodes).filter((node) => {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      return !(node as HTMLElement).classList.contains("page");
+    }
+    // Loose text nodes outside pages
+    return node.nodeType === Node.TEXT_NODE && (node.textContent || "").trim().length > 0;
+  });
+
+  if (orphans.length === 0) return;
+
+  const target = pages[pages.length - 1];
+  orphans.forEach((node) => {
+    target.appendChild(node);
+  });
+};
+
 const splitTableAcrossPage = (
   table: HTMLTableElement,
   page: HTMLElement,
@@ -107,7 +157,16 @@ const splitTableAcrossPage = (
 };
 
 const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElement | null => {
-  if (page.scrollHeight <= a4SheetHeightPx(landscape) + 2) return null;
+  // Use real content height, not min-height (empty Enter lines must not open a new sheet)
+  const contentHeight = Math.max(
+    page.scrollHeight,
+    ...Array.from(page.children).map((c) => {
+      const el = c as HTMLElement;
+      return el.offsetTop + el.offsetHeight;
+    }),
+    0
+  );
+  if (contentHeight <= a4SheetHeightPx(landscape) + 8) return null;
 
   const limitY = pageLimitY(page, landscape);
   const children = Array.from(page.children) as HTMLElement[];
@@ -115,6 +174,9 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
     (child) => child.getBoundingClientRect().bottom > limitY + 1
   );
   if (!overflowChild) return null;
+
+  // Enter / blank lines past the fold stay on this page — only real content starts a new sheet
+  if (isTrivialOverflowNode(overflowChild)) return null;
 
   const isFirst = overflowChild === children[0];
   if (overflowChild.tagName === "TABLE") {
@@ -129,9 +191,13 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
   }
   if (isFirst && children.length === 1) return null;
 
-  const next = createSheet(0, landscape);
+  // If everything from overflow onward is trivial (blank lines), do not create a page
   const startIndex = isFirst ? 1 : children.indexOf(overflowChild);
-  children.slice(Math.max(0, startIndex)).forEach((child) => next.appendChild(child));
+  const moving = children.slice(Math.max(0, startIndex));
+  if (moving.length > 0 && moving.every(isTrivialOverflowNode)) return null;
+
+  const next = createSheet(0, landscape);
+  moving.forEach((child) => next.appendChild(child));
   return next;
 };
 
@@ -139,6 +205,9 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
  * Keep A4 width fixed, wrap content, and add another sheet when height overflows.
  */
 export function paginateToA4Sheets(root: HTMLElement, landscape: boolean, reflow = true) {
+  // Pull any Enter-created nodes outside .page back into the sheet first
+  absorbOrphansIntoPages(root, landscape);
+
   let pages = Array.from(root.querySelectorAll(":scope > .page")) as HTMLElement[];
   if (pages.length === 0) {
     const sheet = createSheet(1, landscape);
@@ -179,6 +248,14 @@ export function paginateToA4Sheets(root: HTMLElement, landscape: boolean, reflow
     }
   }
 
+  // Drop blank sheets created by Docling/import (leading empty page)
+  const after = Array.from(root.querySelectorAll(":scope > .page")) as HTMLElement[];
+  after.forEach((page) => {
+    if (after.length > 1 && !hasVisibleContent(page.innerHTML)) {
+      page.remove();
+    }
+  });
+
   Array.from(root.querySelectorAll(":scope > .page")).forEach((page, index) => {
     applySheetBox(page as HTMLElement, landscape, index + 1);
   });
@@ -203,6 +280,34 @@ const hasVisibleContent = (html: string): boolean => {
   const text = (parsed.body.textContent || "").replace(/\u00a0/g, " ").trim();
   return Boolean(text || parsed.body.querySelector("img, table, svg, canvas"));
 };
+
+/** Drop blank A4 sheets (leading empty import pages) and renumber. */
+export const removeEmptyPages = (root: HTMLElement) => {
+  const pages = Array.from(root.querySelectorAll(":scope > .page")) as HTMLElement[];
+  if (pages.length === 0) return;
+
+  pages.forEach((page) => {
+    // Keep a single empty sheet so the editor still has a place to type
+    const remaining = root.querySelectorAll(":scope > .page").length;
+    if (remaining > 1 && !hasVisibleContent(page.innerHTML)) {
+      page.remove();
+    }
+  });
+
+  Array.from(root.querySelectorAll(":scope > .page")).forEach((page, index) => {
+    applySheetBox(
+      page as HTMLElement,
+      (page as HTMLElement).classList.contains("is-landscape"),
+      index + 1
+    );
+  });
+};
+
+const joinNonEmptyPages = (parts: string[]) =>
+  parts.filter((part) => {
+    const inner = part.replace(/^<div[^>]*>/, "").replace(/<\/div>\s*$/, "");
+    return hasVisibleContent(inner);
+  }).join("\n");
 
 const neutralizeOverlappingLayout = (root: ParentNode) => {
   root.querySelectorAll("*").forEach((node) => {
@@ -344,17 +449,26 @@ const splitBlocksAcrossPages = (
     buckets.set(pageNo, list);
   });
 
-  return Array.from({ length: pageCount }, (_, index) => {
+  const rendered = Array.from({ length: pageCount }, (_, index) => {
     const meta = pageMeta[index];
     const pageNo = meta?.page_no || index + 1;
+    const inner = (buckets.get(pageNo) || []).join("");
+    if (!hasVisibleContent(inner)) return "";
     return pageMarkup(
       pageNo,
       meta?.size?.width || DEFAULT_PAGE_WIDTH_PT,
       meta?.size?.height || DEFAULT_PAGE_HEIGHT_PT,
-      (buckets.get(pageNo) || []).join(""),
+      inner,
       landscape
     );
-  }).join("\n");
+  }).filter(Boolean);
+
+  // Renumber after dropping empty Docling pages so content starts on page 1
+  return rendered
+    .map((markup, index) =>
+      markup.replace(/data-page="\d+"/, `data-page="${index + 1}"`)
+    )
+    .join("\n");
 };
 
 /**
@@ -387,19 +501,20 @@ export function buildDocumentPagesHtml(
   const distinctExtract = new Set(extractInners.filter((inner) => hasVisibleContent(inner)));
 
   if (extractInners.length > 1 && distinctExtract.size > 1) {
-    return extractInners
-      .map((inner, index) => {
+    return joinNonEmptyPages(
+      extractInners.map((inner, index) => {
+        if (!hasVisibleContent(inner)) return "";
         const meta = extractPages?.[index];
         const jsonMeta = jsonPages[index];
         return pageMarkup(
-          meta?.page_no || jsonMeta?.page_no || index + 1,
+          index + 1,
           meta?.width_pt || jsonMeta?.size?.width || DEFAULT_PAGE_WIDTH_PT,
           meta?.height_pt || jsonMeta?.size?.height || DEFAULT_PAGE_HEIGHT_PT,
           inner,
           landscape
         );
       })
-      .join("\n");
+    );
   }
 
   const parsed = parseHtml(html);
@@ -408,18 +523,18 @@ export function buildDocumentPagesHtml(
   const htmlPagesWithContent = htmlPages.filter((page) => hasVisibleContent(page.innerHTML));
 
   if (htmlPagesWithContent.length > 1) {
-    const count = Math.max(htmlPages.length, jsonPages.length);
-    return Array.from({ length: count }, (_, index) => {
-      const source = htmlPages[index];
-      const jsonMeta = jsonPages[index];
-      return pageMarkup(
-        jsonMeta?.page_no || index + 1,
-        jsonMeta?.size?.width || DEFAULT_PAGE_WIDTH_PT,
-        jsonMeta?.size?.height || DEFAULT_PAGE_HEIGHT_PT,
-        source ? source.innerHTML.trim() : "",
-        landscape
-      );
-    }).join("\n");
+    // Only keep pages that actually have content (skip blank leading PDF pages)
+    return joinNonEmptyPages(
+      htmlPagesWithContent.map((source, index) =>
+        pageMarkup(
+          index + 1,
+          jsonPages[index]?.size?.width || DEFAULT_PAGE_WIDTH_PT,
+          jsonPages[index]?.size?.height || DEFAULT_PAGE_HEIGHT_PT,
+          source.innerHTML.trim(),
+          landscape
+        )
+      )
+    );
   }
 
   const blob =

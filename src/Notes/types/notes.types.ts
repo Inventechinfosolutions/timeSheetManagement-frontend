@@ -82,6 +82,8 @@ export interface NotesFormData {
   files: File[];
   isPinned?: boolean;
   isAutoSave?: boolean;
+  /** true = Portrait, false = Landscape (maps to DB is_vertical) */
+  isVertical?: boolean;
   rotation?: number;
   excelWorkbook?: ExcelWorkbookData | null;
 }

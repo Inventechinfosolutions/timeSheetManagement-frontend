@@ -55,19 +55,6 @@ const SidebarLayout = ({
     dispatch(fetchInboxUnreadCount());
   }, [dispatch]);
 
-  // Auto-unlock sidebar when note page orientation changes to maximize space
-  useEffect(() => {
-    const handleOrientationChange = () => {
-      setIsLocked(false);
-      setIsHovered(false);
-    };
-
-    window.addEventListener("note-orientation-change", handleOrientationChange);
-    return () => {
-      window.removeEventListener("note-orientation-change", handleOrientationChange);
-    };
-  }, []);
-
   // Ref for the main scrollable content area
   const mainContentRef = useRef<HTMLDivElement>(null);
 
@@ -553,7 +540,7 @@ const SidebarLayout = ({
             <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
           </div>
           <Footer className="sidebar-footer" />
-          {derivedActiveTab === "Notes" && (
+          {(derivedActiveTab === "Notes" || derivedActiveTab === "Inbox") && (
             <ScrollNavigator targetRef={mainContentRef} />
           )}
         </main>

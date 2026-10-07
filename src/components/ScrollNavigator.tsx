@@ -1,30 +1,50 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
 interface ScrollNavigatorProps {
   targetRef?: React.RefObject<HTMLElement | null>;
+  /** When false, never show (e.g. force-off from parent) */
+  enabled?: boolean;
 }
 
-export const ScrollNavigator: React.FC<ScrollNavigatorProps> = ({ targetRef }) => {
+export const ScrollNavigator: React.FC<ScrollNavigatorProps> = ({
+  targetRef,
+  enabled = true,
+}) => {
   const [isVisible, setIsVisible] = useState(false);
   const [canScrollUp, setCanScrollUp] = useState(false);
   const [canScrollDown, setCanScrollDown] = useState(false);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const boundElRef = useRef<HTMLElement | Window | null>(null);
 
-  // Helper to get active scroll element
+  /** Prefer nested note workspace if it still scrolls; otherwise use main / window. */
   const getScrollElement = useCallback((): HTMLElement | Window => {
-    if (targetRef?.current) return targetRef.current;
-    const mainEl =
-      (document.querySelector("main.custom-scrollbar") as HTMLElement) ||
-      (document.querySelector("main") as HTMLElement);
-    if (mainEl && mainEl.scrollHeight > mainEl.clientHeight) {
-      return mainEl;
+    const main =
+      targetRef?.current ||
+      (document.querySelector("main.custom-scrollbar") as HTMLElement | null) ||
+      (document.querySelector("main") as HTMLElement | null);
+
+    if (main) {
+      const nested = main.querySelector(".a4-page-workspace") as HTMLElement | null;
+      if (nested && nested.scrollHeight > nested.clientHeight + 40) {
+        return nested;
+      }
+      if (main.scrollHeight > main.clientHeight + 40) {
+        return main;
+      }
+      return main;
     }
     return window;
   }, [targetRef]);
 
   const updateScrollState = useCallback(() => {
+    if (!enabled) {
+      setIsVisible(false);
+      return;
+    }
+
     const el = getScrollElement();
+    boundElRef.current = el;
 
     let scrollTop = 0;
     let scrollHeight = 0;
@@ -47,47 +67,82 @@ export const ScrollNavigator: React.FC<ScrollNavigatorProps> = ({ targetRef }) =
     setCanScrollUp(scrollTop > 40);
     setCanScrollDown(scrollTop < maxScroll - 40);
 
-    const progress = maxScroll > 0 ? Math.min(100, Math.max(0, Math.round((scrollTop / maxScroll) * 100))) : 0;
+    const progress =
+      maxScroll > 0 ? Math.min(100, Math.max(0, Math.round((scrollTop / maxScroll) * 100))) : 0;
     setScrollProgress(progress);
-  }, [getScrollElement]);
+  }, [getScrollElement, enabled]);
 
   useEffect(() => {
-    const el = getScrollElement();
-
-    updateScrollState();
-
-    if (el instanceof Window) {
-      window.addEventListener("scroll", updateScrollState, { passive: true });
-      window.addEventListener("resize", updateScrollState);
-      return () => {
-        window.removeEventListener("scroll", updateScrollState);
-        window.removeEventListener("resize", updateScrollState);
-      };
-    } else {
-      el.addEventListener("scroll", updateScrollState, { passive: true });
-      window.addEventListener("resize", updateScrollState);
-
-      // Observe content size changes (e.g. dynamic loading of notes)
-      let observer: ResizeObserver | null = null;
-      if (typeof ResizeObserver !== "undefined") {
-        observer = new ResizeObserver(() => {
-          updateScrollState();
-        });
-        observer.observe(el);
-      }
-
-      return () => {
-        el.removeEventListener("scroll", updateScrollState);
-        window.removeEventListener("resize", updateScrollState);
-        if (observer) {
-          observer.disconnect();
-        }
-      };
+    if (!enabled) {
+      setIsVisible(false);
+      return;
     }
-  }, [getScrollElement, updateScrollState]);
+
+    let scrollEl: HTMLElement | Window = getScrollElement();
+    let observer: ResizeObserver | null = null;
+    let mutationObserver: MutationObserver | null = null;
+
+    const detach = () => {
+      if (scrollEl instanceof Window) {
+        window.removeEventListener("scroll", updateScrollState);
+      } else {
+        scrollEl.removeEventListener("scroll", updateScrollState);
+      }
+      window.removeEventListener("resize", updateScrollState);
+      observer?.disconnect();
+      observer = null;
+    };
+
+    const attach = (el: HTMLElement | Window) => {
+      detach();
+      scrollEl = el;
+      boundElRef.current = el;
+      if (el instanceof Window) {
+        window.addEventListener("scroll", updateScrollState, { passive: true });
+      } else {
+        el.addEventListener("scroll", updateScrollState, { passive: true });
+        if (typeof ResizeObserver !== "undefined") {
+          observer = new ResizeObserver(() => updateScrollState());
+          observer.observe(el);
+        }
+      }
+      window.addEventListener("resize", updateScrollState);
+      updateScrollState();
+    };
+
+    attach(scrollEl);
+
+    mutationObserver = new MutationObserver(() => {
+      const next = getScrollElement();
+      if (next !== scrollEl) {
+        attach(next);
+      } else {
+        updateScrollState();
+      }
+    });
+    const root =
+      targetRef?.current ||
+      document.querySelector("main.custom-scrollbar") ||
+      document.body;
+    if (root) {
+      mutationObserver.observe(root, { childList: true, subtree: true, characterData: true });
+    }
+
+    const poll = window.setInterval(() => {
+      const next = getScrollElement();
+      if (next !== scrollEl) attach(next);
+      else updateScrollState();
+    }, 800);
+
+    return () => {
+      detach();
+      mutationObserver?.disconnect();
+      window.clearInterval(poll);
+    };
+  }, [getScrollElement, updateScrollState, targetRef, enabled]);
 
   const scrollToTop = () => {
-    const el = getScrollElement();
+    const el = boundElRef.current || getScrollElement();
     if (el instanceof Window) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
@@ -96,7 +151,7 @@ export const ScrollNavigator: React.FC<ScrollNavigatorProps> = ({ targetRef }) =
   };
 
   const scrollToBottom = () => {
-    const el = getScrollElement();
+    const el = boundElRef.current || getScrollElement();
     if (el instanceof Window) {
       window.scrollTo({
         top: document.documentElement.scrollHeight,
@@ -107,7 +162,7 @@ export const ScrollNavigator: React.FC<ScrollNavigatorProps> = ({ targetRef }) =
     }
   };
 
-  if (!isVisible) return null;
+  if (!enabled || !isVisible) return null;
 
   return (
     <div
@@ -115,7 +170,6 @@ export const ScrollNavigator: React.FC<ScrollNavigatorProps> = ({ targetRef }) =
       role="navigation"
       aria-label="Scroll Navigator"
     >
-      {/* Scroll to Top Button */}
       <button
         type="button"
         onClick={scrollToTop}
@@ -134,7 +188,6 @@ export const ScrollNavigator: React.FC<ScrollNavigatorProps> = ({ targetRef }) =
         />
       </button>
 
-      {/* Progress Indicator */}
       <div
         className="text-[10px] font-bold text-slate-400 tracking-tighter px-1 py-0.5 select-none"
         title={`Page scroll: ${scrollProgress}%`}
@@ -142,7 +195,6 @@ export const ScrollNavigator: React.FC<ScrollNavigatorProps> = ({ targetRef }) =
         {scrollProgress}%
       </div>
 
-      {/* Scroll to Bottom Button */}
       <button
         type="button"
         onClick={scrollToBottom}
