@@ -97,28 +97,59 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
           </div>
 
           {(formData.projects || []).length === 0 ? (
-            <div className="p-3 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#64748B]">
+            <div className="p-3 bg-white/80 border border-blue-200/60 rounded-xl text-sm text-[#64748B]">
               No project added.
             </div>
           ) : (
-            (formData.projects || []).map((project, index) => (
-              <div key={`${project.title}-${index}`} className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-                <div className="p-3 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm font-bold text-[#0F172A]">
-                  {project.title}
+            <div className="space-y-3.5">
+              {(formData.projects || []).map((project, index) => (
+                <div key={`${project.title}-${index}`} className="space-y-2 p-3 bg-blue-50/20 border border-blue-100 rounded-2xl">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+                      Project {index + 1}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Project Title
+                      </label>
+                      <div className="p-3 bg-white border border-blue-200/60 rounded-xl text-sm font-bold text-[#0F172A]">
+                        {project.title || "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Project Description
+                      </label>
+                      <div className="p-3.5 bg-white border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line">
+                        {project.description || "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Challenge Overcome
+                      </label>
+                      <div className="p-3.5 bg-white border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line">
+                        {project.challenge || "—"}
+                        {(project.attachments || []).length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-blue-100/70 flex flex-wrap gap-1.5">
+                            {(project.attachments || []).map((file) => (
+                              <span
+                                key={file.objectKey || file.fileName}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md"
+                              >
+                                📎 {file.fileName}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] whitespace-pre-line">
-                  {project.description}
-                </div>
-                <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] whitespace-pre-line">
-                  {project.challenge}
-                  {(project.attachments || []).length > 0 && (
-                    <p className="text-[11px] text-[#64748B] mt-2">
-                      {(project.attachments || []).map((file) => file.fileName).join(", ")}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
 
@@ -136,10 +167,12 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
               </h4>
             </div>
             {avgTeamScore ? (
-              <span className="text-xs font-bold text-[#2563EB] px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200/60 flex items-center gap-1 eval-stagger-item eval-stagger-2">
-                <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />
-                Avg Score: {avgTeamScore}/5.0
-              </span>
+              <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
+                <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
+                <span className="text-[11px] font-semibold text-[#64748B]">Average:</span>
+                <span className="text-xs sm:text-sm font-extrabold text-[#0F172A]">{avgTeamScore}</span>
+                <span className="text-[10px] font-bold text-[#94A3B8]">/ 5.0</span>
+              </div>
             ) : null}
           </div>
 
@@ -199,17 +232,19 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
               Learning Goals
             </label>
             {(formData.learningGoalItems || []).length === 0 ? (
-              <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#64748B]">
+              <div className="p-3.5 bg-white/80 border border-blue-200/60 rounded-xl text-sm text-[#64748B]">
                 No learning goals provided.
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {(formData.learningGoalItems || []).map((goal, index) => (
-                  <div
-                    key={`${goal}-${index}`}
-                    className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
-                  >
-                    {goal}
+                  <div key={`${goal}-${index}`} className="space-y-1">
+                    <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+                      Goal {index + 1}
+                    </span>
+                    <div className="p-3.5 bg-white/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+                      {goal}
+                    </div>
                   </div>
                 ))}
               </div>
