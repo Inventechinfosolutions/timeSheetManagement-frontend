@@ -433,19 +433,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     otpInputRefs.current[0]?.focus();
   };
 
-  // Evaluation Scores: Start unrated (0) or initialized with record.finalRating if available
+  // Evaluation Scores: Start with saved score for each parameter or unrated (0)
   const [scores, setScores] = useState<Record<string, number>>(() => {
     const initial: Record<string, number> = {};
-    const parsedRating = parseFloat(record.finalRating);
-    const defaultScore =
-      !isNaN(parsedRating) && parsedRating > 0
-        ? Math.min(5, Math.max(1, Math.round(parsedRating)))
-        : isViewMode
-          ? 4
-          : 0;
     EVALUATION_PARAMETERS.forEach((p) => {
       const saved = savedManagerScore(p.key);
-      initial[p.key] = saved > 0 ? saved : managerEvaluation ? 0 : defaultScore;
+      initial[p.key] = saved > 0 ? saved : 0;
     });
     return initial;
   });
@@ -453,17 +446,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   // Track raw text input value
   const [rawInputValues, setRawInputValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
-    const parsedRating = parseFloat(record.finalRating);
-    const defaultScore =
-      !isNaN(parsedRating) && parsedRating > 0
-        ? Math.min(5, Math.max(1, Math.round(parsedRating)))
-        : isViewMode
-          ? 4
-          : 0;
     EVALUATION_PARAMETERS.forEach((p) => {
       const saved = savedManagerScore(p.key);
-      const score = saved > 0 ? saved : managerEvaluation ? 0 : defaultScore;
-      initial[p.key] = score > 0 ? String(score) : "";
+      initial[p.key] = saved > 0 ? String(saved) : "";
     });
     return initial;
   });

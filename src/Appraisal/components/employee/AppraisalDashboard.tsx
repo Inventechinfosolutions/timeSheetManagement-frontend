@@ -533,6 +533,7 @@ export const AppraisalDashboard: React.FC = () => {
 
         <div className="relative z-10">
           <EvaluationPanel
+            key={`employee-${viewRecord.reviewId || viewRecord.id}`}
             record={viewRecord}
             submissionData={viewingForm}
             managerEvaluation={viewingEvaluation}

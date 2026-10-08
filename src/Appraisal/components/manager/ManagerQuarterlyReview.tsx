@@ -149,6 +149,18 @@ export const ManagerQuarterlyReview: React.FC = () => {
             ...rec,
             status: QuarterlyReviewStatus.COMPLETED,
             finalRating: evaluation.averageScore.toFixed(1),
+            managerEvaluation: {
+              ...rec.managerEvaluation,
+              productivity: evaluation.scores.productivity,
+              qualityOfWork: evaluation.scores.qualityOfWork,
+              ownershipResponsibility: evaluation.scores.ownership,
+              communication: evaluation.scores.communication,
+              teamCollaboration: evaluation.scores.teamCollaboration,
+              innovationProblemSolving: evaluation.scores.innovation,
+              performanceStrengths: evaluation.strengths,
+              areasOfImprovement: evaluation.improvements,
+              additionalRemarks: evaluation.remarks,
+            },
           };
         }
         return rec;
@@ -365,8 +377,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
         
         <div className="relative z-10">
           <EvaluationPanel
+            key={`${evaluatingRecord.reviewId || evaluatingRecord.id}-${evaluationMode}`}
             record={evaluatingRecord}
             submissionData={evaluatingRecord.submission}
+            managerEvaluation={evaluatingRecord.managerEvaluation}
             mode={evaluationMode}
             onBack={handleBackToDashboard}
             onSubmitEvaluation={handleEvaluationSubmit}

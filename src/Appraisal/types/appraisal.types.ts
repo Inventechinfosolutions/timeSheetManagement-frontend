@@ -43,6 +43,17 @@ export interface ManagerQuarterlyReviewRecord {
   reviewStatus?: string;
   performanceStatus?: string;
   submission?: ReviewFormData;
+  managerEvaluation?: {
+    productivity?: number | string | null;
+    qualityOfWork?: number | string | null;
+    ownershipResponsibility?: number | string | null;
+    communication?: number | string | null;
+    teamCollaboration?: number | string | null;
+    innovationProblemSolving?: number | string | null;
+    performanceStrengths?: string | null;
+    areasOfImprovement?: string | null;
+    additionalRemarks?: string | null;
+  };
 }
 
 export interface QuarterlyReviewAssignment {

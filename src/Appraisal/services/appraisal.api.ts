@@ -143,6 +143,15 @@ export interface ManagerReviewApiRecord {
   description?: string | null;
   submittedDate?: string | null;
   performanceDetails?: EmployeePerformanceDetail | null;
+  productivity?: number | string | null;
+  qualityOfWork?: number | string | null;
+  ownershipResponsibility?: number | string | null;
+  communication?: number | string | null;
+  teamCollaboration?: number | string | null;
+  innovationProblemSolving?: number | string | null;
+  performanceStrengths?: string | null;
+  areasOfImprovement?: string | null;
+  additionalRemarks?: string | null;
 }
 
 export interface ManagerDashboardResponse {
@@ -228,7 +237,9 @@ export const formatAppraisalDisplayDate = (value: string | null | undefined): st
   return date.toLocaleDateString("en-GB").replace(/\//g, "-");
 };
 
-export const toManagerReviewRecord = (review: ManagerReviewApiRecord): ManagerQuarterlyReviewRecord => ({
+export const toManagerReviewRecord = (
+  review: ManagerReviewApiRecord | EmployeeReviewDetail,
+): ManagerQuarterlyReviewRecord => ({
   name: review.employeeName || review.employeeId,
   id: review.employeeId,
   role: review.designation || "",
@@ -237,7 +248,12 @@ export const toManagerReviewRecord = (review: ManagerReviewApiRecord): ManagerQu
   fromDate: formatAppraisalDisplayDate(review.assignedDate),
   toDate: formatAppraisalDisplayDate(review.deadlineDate),
   assignedOn: formatAppraisalDisplayDate(review.assignedDate),
-  assignedBy: review.assignerId,
+  assignedBy:
+    "assignerId" in review && review.assignerId
+      ? review.assignerId
+      : "managerName" in review && review.managerName
+        ? review.managerName
+        : "",
   finalRating: review.finalRating == null ? "" : String(review.finalRating),
   status: review.status,
   reviewId: review.id,
@@ -247,6 +263,17 @@ export const toManagerReviewRecord = (review: ManagerReviewApiRecord): ManagerQu
   ),
   reviewStatus: review.status,
   performanceStatus: review.performanceDetails?.status,
+  managerEvaluation: {
+    productivity: review.productivity,
+    qualityOfWork: review.qualityOfWork,
+    ownershipResponsibility: review.ownershipResponsibility,
+    communication: review.communication,
+    teamCollaboration: review.teamCollaboration,
+    innovationProblemSolving: review.innovationProblemSolving,
+    performanceStrengths: review.performanceStrengths,
+    areasOfImprovement: review.areasOfImprovement,
+    additionalRemarks: review.additionalRemarks,
+  },
 });
 
 export interface EmployeePerformanceDetail {
@@ -267,7 +294,7 @@ export interface EmployeePerformanceDetail {
   reliabilityAccountability: number | null;
   peerSupportTeamSpirit: number | null;
   adaptabilityInitiative: number | null;
-  learningGoals: string | null;
+  learningGoals: string[] | string | null;
   feedbackOnWorkCulture: string | null;
   workLifeBalance: string | null;
   suggestionsForImprovement: string | null;
@@ -337,7 +364,7 @@ const environmentScores: Record<string, number> = {
 
 export const reviewCanEdit = (review: EmployeeReviewDetail): boolean => {
   const performance = review.performanceDetails;
-  const employeeStatus = performance?.status as QuarterlyReviewStatus | undefined;
+  const employeeStatus = performance?.status as unknown as QuarterlyReviewStatus | undefined;
   if (!employeeStatus) {
     return false;
   }
@@ -401,18 +428,35 @@ const readProjectList = (
     }));
 };
 
-const readLearningGoalList = (value: string | null | undefined): string[] => {
-  if (!value?.trim()) {
+const readLearningGoalList = (
+  value: Array<{ goal?: string }> | string[] | string | null | undefined,
+): string[] => {
+  if (!value) {
     return [];
   }
-  const trimmed = value.trim();
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") return item.trim();
+        if (item && typeof item === "object" && "goal" in item) return String(item.goal || "").trim();
+        return "";
+      })
+      .filter(Boolean);
+  }
+  const trimmed = typeof value === "string" ? value.trim() : "";
+  if (!trimmed) {
+    return [];
+  }
   if (trimmed.startsWith("[")) {
     try {
       const parsed = JSON.parse(trimmed) as unknown;
       if (Array.isArray(parsed)) {
         return parsed
-          .filter((item): item is string => typeof item === "string")
-          .map((item) => item.trim())
+          .map((item) => {
+            if (typeof item === "string") return item.trim();
+            if (item && typeof item === "object" && "goal" in item) return String(item.goal || "").trim();
+            return "";
+          })
           .filter(Boolean);
       }
     } catch {
@@ -469,7 +513,7 @@ export interface PerformanceWritePayload {
   keyAccomplishments?: string;
   challengesFaced?: string;
   skillsAcquired?: string;
-  learningGoals?: string;
+  learningGoals?: string[];
   feedbackOnWorkCulture?: string;
   workLifeBalance?: string;
   suggestionsForImprovement?: string;
@@ -540,7 +584,7 @@ export const toPerformancePayload = (
     keyAccomplishments: projectTitle || undefined,
     challengesFaced: challenge || undefined,
     skillsAcquired: learning || undefined,
-    learningGoals: learningGoals.length ? JSON.stringify(learningGoals) : undefined,
+    learningGoals: learningGoals.length ? learningGoals : undefined,
     feedbackOnWorkCulture: workCulture || undefined,
     workLifeBalance: workLife || undefined,
     suggestionsForImprovement: suggestions || undefined,
@@ -557,7 +601,7 @@ export const toPerformancePayload = (
 };
 
 export const performanceCanEdit = (row: EmployeePerformanceDetail): boolean => {
-  const employeeStatus = row.status as QuarterlyReviewStatus | undefined;
+  const employeeStatus = row.status as unknown as QuarterlyReviewStatus | undefined;
   if (!employeeStatus) {
     return false;
   }
