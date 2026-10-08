@@ -375,7 +375,6 @@ export const initialReviewFormData: ReviewFormData = {
   projectDescription: "",
   projectChallenge: "",
   majorAchievements: "",
-  kpisMet: "",
   challengesOvercome: "",
   selfRatingAchievements: 0,
   // Step 3: Team Contribution
@@ -411,7 +410,6 @@ export const sampleCompletedReviewFormData: ReviewFormData = {
   projectDescription: "Spearheaded the component library unification, streamlined workflow interfaces, and achieved 99% on-time delivery across quarterly deliverables.",
   projectChallenge: "Adapted to rapid requirements changes and resolved complex state synchronization challenges without delaying deployment milestones.",
   majorAchievements: "Spearheaded the component library unification and improved loading performance by 35%.",
-  kpisMet: "Exceeded sprint velocity targets and achieved 99% on-time delivery across quarterly deliverables.",
   challengesOvercome: "Adapted to rapid requirements changes without delaying deployment milestones.",
   selfRatingAchievements: 4,
   // Step 3: Team Contribution

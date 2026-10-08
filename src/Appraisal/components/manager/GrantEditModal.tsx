@@ -51,7 +51,7 @@ export const GrantEditModal: React.FC<GrantEditModalProps> = ({ isOpen, onClose 
           return;
         }
         const pending = nextRecords.filter(
-          (record) => record.status === EmployeePerformanceStatus.EDIT_REQUESTED,
+          (record) => record.status === EmployeePerformanceStatus.REQUESTED_FOR_EDIT,
         );
         setRecords(pending);
         setOptions(

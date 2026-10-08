@@ -22,7 +22,14 @@ export const EditNoticePopup: React.FC = () => {
     }
     try {
       const records = await AppraisalApi.getEditRequests({ employeeId });
-      setNotice(records.find((record) => record.showEditPopup) ?? null);
+      setNotice(
+        records.find(
+          (record) =>
+            record.status === EmployeePerformanceStatus.APPROVED_FOR_EDITING ||
+            record.status === EmployeePerformanceStatus.ALLOWED_TO_EDIT ||
+            record.status === EmployeePerformanceStatus.EDIT_GRANTED,
+        ) ?? null,
+      );
     } catch (requestError) {
       setError(readApiError(requestError));
     }
@@ -39,7 +46,6 @@ export const EditNoticePopup: React.FC = () => {
     setSubmitting(true);
     setError("");
     try {
-      await AppraisalApi.acknowledgeEditPopup(notice.id, employeeId);
       setNotice(null);
     } catch (requestError) {
       setError(readApiError(requestError));

@@ -1,6 +1,5 @@
 import axios from "axios";
 import {
-  EditRequestStatus,
   EmployeePerformanceStatus,
   QuaterlyEnum,
   QuarterlyReviewStatus,
@@ -55,6 +54,7 @@ export interface RevealedRating {
   quarter: QuaterlyEnum;
   financialYear: string;
   finalRating: number;
+  averageScore: number;
   ratingDescription: string;
   productivity: number;
   qualityOfWork: number;
@@ -75,10 +75,8 @@ export interface EditRequestRecord {
   quarter: QuaterlyEnum;
   financialYear: string;
   status: EmployeePerformanceStatus;
-  editRequestStatus: EditRequestStatus;
   editRequestReason: string | null;
   editAllowedUntil: string | null;
-  showEditPopup: boolean;
 }
 
 export interface RespondEditPayload {
@@ -259,7 +257,6 @@ export interface EmployeePerformanceDetail {
   quarter?: QuaterlyEnum;
   financialYear?: string;
   status: EmployeePerformanceStatus;
-  editRequestStatus: EditRequestStatus;
   editAllowedUntil: string | null;
   submittedAt: string | null;
   createdAt?: string | null;
@@ -277,6 +274,9 @@ export interface EmployeePerformanceDetail {
   workLifeBalance: string | null;
   suggestionsForImprovement: string | null;
   rateCompanyEnvironment: string | null;
+  assignedBy?: string | null;
+  assignedDate?: string | null;
+  deadlineDate?: string | null;
   skillsAcquired: string | null;
   careerDevelopmentGoals: string | null;
   attachments?: Array<{
@@ -348,7 +348,8 @@ export const reviewCanEdit = (review: EmployeeReviewDetail): boolean => {
     return false;
   }
   const granted =
-    performance.editRequestStatus === EditRequestStatus.APPROVED ||
+    performance.status === EmployeePerformanceStatus.APPROVED_FOR_EDITING ||
+    performance.status === EmployeePerformanceStatus.ALLOWED_TO_EDIT ||
     performance.status === EmployeePerformanceStatus.EDIT_GRANTED;
   if (!granted) {
     return false;
@@ -555,6 +556,56 @@ export const toPerformancePayload = (
   };
 };
 
+export const performanceCanEdit = (row: EmployeePerformanceDetail): boolean => {
+  const employeeStatus = row.status as QuarterlyReviewStatus | undefined;
+  if (!employeeStatus) {
+    return false;
+  }
+  if (editableReviewStatuses.includes(employeeStatus)) {
+    return true;
+  }
+  const granted =
+    row.status === EmployeePerformanceStatus.APPROVED_FOR_EDITING ||
+    row.status === EmployeePerformanceStatus.ALLOWED_TO_EDIT ||
+    row.status === EmployeePerformanceStatus.EDIT_GRANTED;
+  if (!granted) {
+    return false;
+  }
+  if (!row.editAllowedUntil) {
+    return true;
+  }
+  return new Date(row.editAllowedUntil).getTime() > Date.now();
+};
+
+export interface EmployeePerformanceListItem extends EmployeePerformanceDetail {
+  employeeName?: string | null;
+  designation?: string | null;
+  assignedBy?: string | null;
+  assignedDate?: string | null;
+  deadlineDate?: string | null;
+}
+
+export const toPerformanceAssignment = (
+  row: EmployeePerformanceListItem,
+): QuarterlyReviewAssignment => ({
+  id: String(row.id),
+  employeeId: row.employeeId || "",
+  employeeName: row.employeeName || row.employeeId || "",
+  designation: row.designation || "",
+  quarter: row.quarter || "",
+  financialYear: row.financialYear || "",
+  assignedBy: row.assignedBy || "",
+  assignedDate: formatAppraisalDisplayDate(row.assignedDate),
+  deadline: formatAppraisalDisplayDate(row.deadlineDate),
+  performanceDate: formatAppraisalDisplayDate(row.submittedAt || row.lastModifiedDate || row.createdAt),
+  status: row.status,
+  reviewStatus: String(row.status).toUpperCase() === "COMPLETED" ? "COMPLETED" : undefined,
+  canEdit: performanceCanEdit(row),
+  performanceId: row.id,
+  submittedAt: row.submittedAt || undefined,
+  editAllowedUntil: row.editAllowedUntil || undefined,
+});
+
 export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyReviewAssignment => ({
   id: String(review.id),
   employeeId: review.employeeId,
@@ -571,10 +622,12 @@ export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyRev
       review.performanceDetails?.createdAt,
   ),
   status: review.performanceDetails?.status || review.status,
+  reviewStatus: review.status,
   canEdit: reviewCanEdit(review),
   performanceId: review.performanceDetails?.id,
   description: review.description || "",
   submittedAt: review.performanceDetails?.submittedAt || undefined,
+  editAllowedUntil: review.performanceDetails?.editAllowedUntil || undefined,
 });
 
 export const AppraisalApi = {
@@ -586,6 +639,50 @@ export const AppraisalApi = {
   },
 
   getEmployeeReviews: async (
+    employeeId: string,
+    filters?: {
+      financialYear?: string;
+      quarter?: string;
+      status?: string;
+      page?: number;
+      limit?: number;
+    },
+  ): Promise<{
+    data: EmployeePerformanceListItem[];
+    meta: {
+      totalItems: number;
+      itemCount: number;
+      itemsPerPage: number;
+      totalPages: number;
+      currentPage: number;
+    };
+  }> => {
+    const response = await axios.get<{
+      data: EmployeePerformanceListItem[];
+      meta: {
+        totalItems: number;
+        itemCount: number;
+        itemsPerPage: number;
+        totalPages: number;
+        currentPage: number;
+      };
+    }>(
+      employeePerformanceUrl,
+      {
+        params: {
+          employeeId,
+          ...(filters?.financialYear ? { financialYear: filters.financialYear } : {}),
+          ...(filters?.quarter ? { quarter: filters.quarter } : {}),
+          ...(filters?.status ? { status: filters.status } : {}),
+          ...(filters?.page ? { page: filters.page } : {}),
+          ...(filters?.limit ? { limit: filters.limit } : {}),
+        },
+      },
+    );
+    return response.data;
+  },
+
+  getManagerReviewList: async (
     employeeId: string,
     filters?: { financialYear?: string; quarter?: string },
   ): Promise<EmployeeReviewListResponse> => {
@@ -643,25 +740,6 @@ export const AppraisalApi = {
   savePerformanceDraft: async (payload: PerformanceWritePayload): Promise<EmployeePerformanceDetail> => {
     const response = await axios.post<EmployeePerformanceDetail>(`${employeePerformanceUrl}/draft`, payload);
     return response.data;
-  },
-
-  getPerformanceForAssignment: async (
-    employeeId: string,
-    quarter: string,
-    financialYear: string,
-    skipGlobalLoader = false,
-  ): Promise<EmployeePerformanceDetail | null> => {
-    const response = await axios.get<EmployeeReviewListResponse>(quarterlyReviewPerformanceUrl, {
-      params: { employeeId, quarter, financialYear },
-      skipGlobalLoader,
-    });
-    const match = (response.data?.data || []).find(
-      (row) =>
-        row.employeeId === employeeId &&
-        row.quarter === quarter &&
-        row.financialYear === financialYear,
-    );
-    return match?.performanceDetails ?? null;
   },
 
   getPerformanceById: async (performanceId: number): Promise<EmployeePerformanceDetail> => {
@@ -744,14 +822,6 @@ export const AppraisalApi = {
     return response.data;
   },
 
-  acknowledgeEditPopup: async (performanceId: number, employeeId: string): Promise<EditRequestRecord> => {
-    const response = await axios.post<EditRequestRecord>(
-      `${employeePerformanceUrl}/${performanceId}/ack-edit-popup`,
-      { employeeId },
-    );
-    return response.data;
-  },
-
   getMasterFinancialYears: async (): Promise<MasterFinancialYearOption[]> => {
     const response = await axios.get<MasterFinancialYearOption[]>(MASTER_FINANCIAL_YEAR_PATH, {
       skipGlobalLoader: true,
@@ -770,6 +840,7 @@ export const AppraisalApi = {
   getReviews: async (query: QuarterlyReviewListQuery): Promise<QuarterlyReviewSearchResponse> => {
     const response = await axios.get<QuarterlyReviewSearchResponse>(quarterlyReviewPerformanceUrl, {
       params: query,
+      skipGlobalLoader: true,
     });
     return response.data;
   },
@@ -777,6 +848,7 @@ export const AppraisalApi = {
   searchReviews: async (query: QuarterlyReviewSearchQuery): Promise<QuarterlyReviewSearchResponse> => {
     const response = await axios.get<QuarterlyReviewSearchResponse>(quarterlyReviewPerformanceUrl, {
       params: query,
+      skipGlobalLoader: true,
     });
     return response.data;
   },

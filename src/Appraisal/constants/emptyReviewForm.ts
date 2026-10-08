@@ -11,7 +11,6 @@ export const emptyReviewFormData: ReviewFormData = {
   projects: [],
   projectAttachments: [],
   majorAchievements: "",
-  kpisMet: "",
   challengesOvercome: "",
   selfRatingAchievements: 0,
   collaborationDetails: "",

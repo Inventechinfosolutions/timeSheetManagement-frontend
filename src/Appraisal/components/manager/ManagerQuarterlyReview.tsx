@@ -28,6 +28,7 @@ import { QuarterlyReviewTable } from "./QuarterlyReviewTable";
 import EvaluationPanel, { EvaluationData } from "./EvaluationPanel";
 import { QUARTERLY_REVIEW_TABLE_PAGE_SIZE } from "../../constants/appraisal.constants";
 import { loadAppraisalPeriod } from "../../utils/appraisalHelpers";
+import { WorksphereLogoLoader } from "../../../components/ApiLoadingSpinner";
 import {
   Button,
   Card,
@@ -50,12 +51,12 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const [masterYears, setMasterYears] = useState<MasterFinancialYearOption[]>([]);
   const [masterQuarters, setMasterQuarters] = useState<MasterQuarterRecord[]>([]);
   const [yearsLoading, setYearsLoading] = useState(false);
-  const [quartersLoading, setQuartersLoading] = useState(false);
   const [assignmentType, setAssignmentType] = useState<AssignmentType | null>(null);
 
   const [assignments, setAssignments] = useState<ManagerQuarterlyReviewRecord[]>([]);
   const [tablePage, setTablePage] = useState(1);
   const [tableTotal, setTableTotal] = useState(0);
+  const [tableLoading, setTableLoading] = useState(false);
 
   // Active record being evaluated/viewed in the Appraisal Review Evaluation Panel
   const [evaluatingRecord, setEvaluatingRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
@@ -170,21 +171,18 @@ export const ManagerQuarterlyReview: React.FC = () => {
   // Visual filter state
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [financialYear, setFinancialYear] = useState<string>("");
-  const [quarter, setQuarter] = useState<string>("");
+  const [quarter, setQuarter] = useState<string>(AppraisalFilterAll.ALL);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [defaultsReady, setDefaultsReady] = useState(false);
   const yearsLoaded = useRef(false);
-  const quartersLoaded = useRef(false);
   const yearChosen = useRef(false);
-  const quarterChosen = useRef(false);
   const defaultYear = useRef("");
-  const defaultQuarter = useRef("");
 
   const hasActiveFilters = Boolean(
     searchTerm.trim() ||
       statusFilter ||
-      (financialYear && financialYear !== defaultYear.current) ||
-      (quarter && quarter !== defaultQuarter.current)
+      (quarter && quarter !== AppraisalFilterAll.ALL) ||
+      (financialYear && financialYear !== defaultYear.current)
   );
 
   const handleOpenCreateModal = () => {
@@ -216,9 +214,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
     setSearchTerm("");
     setDebouncedSearch("");
     yearChosen.current = false;
-    quarterChosen.current = false;
     setFinancialYear(defaultYear.current);
-    setQuarter(defaultQuarter.current);
+    setQuarter(AppraisalFilterAll.ALL);
     setStatusFilter("");
   };
 
@@ -231,16 +228,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
         if (cancelled) return;
         setMasterYears(period.years);
         setMasterQuarters(period.quarters);
-        quartersLoaded.current = period.quarters.length > 0;
         const currentYear = period.current?.financialYear || "";
-        const currentQuarter = period.current?.quarter || "";
         defaultYear.current = currentYear;
-        defaultQuarter.current = currentQuarter;
         if (currentYear && !yearChosen.current) {
           setFinancialYear(currentYear);
-        }
-        if (currentQuarter && !quarterChosen.current) {
-          setQuarter(currentQuarter);
         }
         setDefaultsReady(true);
       })
@@ -271,23 +262,6 @@ export const ManagerQuarterlyReview: React.FC = () => {
       .finally(() => setYearsLoading(false));
   };
 
-  const loadQuarters = () => {
-    if (quartersLoaded.current) return;
-    if (masterYears.some((year) => (year.quarters?.length ?? 0) > 0)) {
-      quartersLoaded.current = true;
-      return;
-    }
-    quartersLoaded.current = true;
-    setQuartersLoading(true);
-    void AppraisalApi.getMasterQuarters()
-      .then(setMasterQuarters)
-      .catch(() => {
-        quartersLoaded.current = false;
-        setMasterQuarters([]);
-      })
-      .finally(() => setQuartersLoading(false));
-  };
-
   const tableFilters = `${debouncedSearch}|${financialYear}|${quarter}|${statusFilter}`;
   const [appliedTableFilters, setAppliedTableFilters] = useState(tableFilters);
   if (appliedTableFilters !== tableFilters) {
@@ -303,6 +277,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
       }
       return;
     }
+    let cancelled = false;
+    setTableLoading(true);
     const selectedYear =
       financialYear && financialYear !== AppraisalFilterAll.ALL ? financialYear : undefined;
     const selectedQuarter =
@@ -326,6 +302,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
     void request
       .then((result) => {
+        if (cancelled) return;
         setAssignments(
           (result.data || []).map((review) => ({
             ...toManagerReviewRecord(review),
@@ -337,9 +314,16 @@ export const ManagerQuarterlyReview: React.FC = () => {
         setTableTotal(result.total ?? 0);
       })
       .catch(() => {
+        if (cancelled) return;
         setAssignments([]);
         setTableTotal(0);
+      })
+      .finally(() => {
+        if (!cancelled) setTableLoading(false);
       });
+    return () => {
+      cancelled = true;
+    };
   }, [defaultsReady, managerId, debouncedSearch, financialYear, quarter, statusFilter, reloadKey, tablePage]);
 
   const financialYearOptions = masterYears.map((year) => ({
@@ -349,7 +333,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
   const quarterOptions = (() => {
     const seen = new Set<string>();
-    const options: { value: string; label: string }[] = [];
+    const options: { value: string; label: string }[] = [
+      { value: AppraisalFilterAll.ALL, label: "Quarter" },
+    ];
     masterYears.forEach((year) => {
       year.quarters?.forEach((item) => {
         if (!item.quarter || seen.has(item.quarter)) return;
@@ -547,17 +533,12 @@ export const ManagerQuarterlyReview: React.FC = () => {
               <Dropdown
                 className="shrink-0 filter-item-stagger-3"
                 placeholder="Quarters"
-                allowClear={true}
+                allowClear={false}
                 defaultValue=""
                 prefixIcon={<Clock size={14} className="filter-icon-quarters" />}
                 options={quarterOptions}
                 value={quarter}
-                onChange={(value) => {
-                  quarterChosen.current = true;
-                  setQuarter(value);
-                }}
-                onOpen={loadQuarters}
-                loading={quartersLoading && quarterOptions.length === 0}
+                onChange={(value) => setQuarter(value || AppraisalFilterAll.ALL)}
                 maxLabelWidth="max-w-[100px]"
                 buttonClassName="manager-review-filter-btn filter-btn-quarters rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[150px]"
               />
@@ -592,35 +573,39 @@ export const ManagerQuarterlyReview: React.FC = () => {
           </CardHeader>
 
           <CardContent className="p-0">
-
-            {/* Table populated state vs Empty state */}
-            {assignments.length > 0 ? (
-              <QuarterlyReviewTable
-                data={assignments}
-                highlightedId={highlightedRowId}
-                onEdit={handleEditRecord}
-                onView={handleViewRecord}
-                page={tablePage}
-                totalCount={tableTotal}
-                defaultPageSize={QUARTERLY_REVIEW_TABLE_PAGE_SIZE}
-                onPageChange={setTablePage}
-              />
-            ) : (
-              /* Empty State UI with Rich Colors and Animated SVG */
-              <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
-                <div className="relative mb-5">
-                  <div className="manager-review-empty-glow" />
-                  <div className="manager-review-empty-illustration" />
+            <div className="relative min-h-[16rem]">
+              {tableLoading ? (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-[2px]">
+                  <WorksphereLogoLoader />
                 </div>
+              ) : null}
+              {assignments.length > 0 ? (
+                <QuarterlyReviewTable
+                  data={assignments}
+                  highlightedId={highlightedRowId}
+                  onEdit={handleEditRecord}
+                  onView={handleViewRecord}
+                  page={tablePage}
+                  totalCount={tableTotal}
+                  defaultPageSize={QUARTERLY_REVIEW_TABLE_PAGE_SIZE}
+                  onPageChange={setTablePage}
+                />
+              ) : !tableLoading ? (
+                <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
+                  <div className="relative mb-5">
+                    <div className="manager-review-empty-glow" />
+                    <div className="manager-review-empty-illustration" />
+                  </div>
 
-                <h3 className="text-xl font-bold text-[#0F172A]">
-                  No submissions found
-                </h3>
-                <p className="text-sm text-[#64748B] max-w-sm mt-1.5 leading-relaxed font-normal">
-                  There are currently no employee quarterly review submissions matching your filters.
-                </p>
-              </div>
-            )}
+                  <h3 className="text-xl font-bold text-[#0F172A]">
+                    No submissions found
+                  </h3>
+                  <p className="text-sm text-[#64748B] max-w-sm mt-1.5 leading-relaxed font-normal">
+                    There are currently no employee quarterly review submissions matching your filters.
+                  </p>
+                </div>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
 

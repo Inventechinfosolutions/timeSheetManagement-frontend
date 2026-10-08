@@ -57,10 +57,13 @@ export interface QuarterlyReviewAssignment {
   deadline: string;
   performanceDate?: string;
   status: string;
+  reviewStatus?: string;
+  reviewId?: number;
   canEdit: boolean;
   performanceId?: number;
   description?: string;
   submittedAt?: string;
+  editAllowedUntil?: string;
 }
 
 export interface AccessRequest {
@@ -107,7 +110,6 @@ export interface ReviewFormData {
   projectAttachmentSize?: string;
   projectAttachments?: StoredPerformanceFile[];
   majorAchievements: string;
-  kpisMet: string;
   challengesOvercome: string;
   selfRatingAchievements: number;
   // Step 3: Team Contribution & Ratings

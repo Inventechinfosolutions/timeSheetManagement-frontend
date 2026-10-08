@@ -5,9 +5,10 @@ import {
   AppraisalApi,
   MasterFinancialYearOption,
   MasterQuarterRecord,
-  toEmployeeAssignment,
+  toPerformanceAssignment,
 } from "../services/appraisal.api";
 import { useAppSelector } from "../../hooks";
+import { AppraisalFilterAll } from "../enums/appraisal.enums";
 import { loadAppraisalPeriod } from "../utils/appraisalHelpers";
 
 export interface UseEmployeeAppraisalReturn {
@@ -25,6 +26,10 @@ export interface UseEmployeeAppraisalReturn {
   loadQuarters: () => void;
   showEmptyState: boolean;
   hasActiveFilters: boolean;
+  currentPage: number;
+  pageSize: number;
+  total: number;
+  setCurrentPage: (page: number) => void;
   setFinancialYear: (val: string) => void;
   setQuarter: (val: string) => void;
   setStatusFilter: (val: string) => void;
@@ -51,15 +56,16 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
   const yearsLoaded = useRef(false);
   const quartersLoaded = useRef(false);
   const yearChosen = useRef(false);
-  const quarterChosen = useRef(false);
   const defaultYear = useRef("");
-  const defaultQuarter = useRef("");
 
   const [financialYear, setFinancialYear] = useState<string>("");
-  const [quarter, setQuarter] = useState<string>("");
+  const [quarter, setQuarter] = useState<string>(AppraisalFilterAll.ALL);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showEmptyState, setShowEmptyState] = useState<boolean>(false);
   const [defaultsReady, setDefaultsReady] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const pageSize = 10;
 
   const reloadAssignments = useCallback(() => {
     setReloadKey((current) => current + 1);
@@ -70,13 +76,24 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
       if (!employeeId) setAssignments([]);
       return;
     }
+    const selectedQuarter =
+      quarter && quarter !== AppraisalFilterAll.ALL ? quarter : undefined;
     void AppraisalApi.getEmployeeReviews(employeeId, {
       financialYear: financialYear || undefined,
-      quarter: quarter || undefined,
+      quarter: selectedQuarter,
+      status: statusFilter || undefined,
+      page: currentPage,
+      limit: pageSize,
     })
-      .then((result) => setAssignments((result.data || []).map(toEmployeeAssignment)))
-      .catch(() => setAssignments([]));
-  }, [defaultsReady, employeeId, financialYear, quarter, reloadKey]);
+      .then((result) => {
+        setAssignments((result.data || []).map(toPerformanceAssignment));
+        setTotal(result.meta?.totalItems || 0);
+      })
+      .catch(() => {
+        setAssignments([]);
+        setTotal(0);
+      });
+  }, [defaultsReady, employeeId, financialYear, quarter, statusFilter, currentPage, reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,14 +106,9 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
         setMasterQuarters(period.quarters);
         quartersLoaded.current = period.quarters.length > 0;
         const currentYear = period.current?.financialYear || "";
-        const currentQuarter = period.current?.quarter || "";
         defaultYear.current = currentYear;
-        defaultQuarter.current = currentQuarter;
         if (currentYear && !yearChosen.current) {
           setFinancialYear(currentYear);
-        }
-        if (currentQuarter && !quarterChosen.current) {
-          setQuarter(currentQuarter);
         }
         setDefaultsReady(true);
       })
@@ -129,12 +141,18 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
 
   const chooseFinancialYear = useCallback((value: string) => {
     yearChosen.current = true;
+    setCurrentPage(1);
     setFinancialYear(value);
   }, []);
 
   const chooseQuarter = useCallback((value: string) => {
-    quarterChosen.current = true;
-    setQuarter(value);
+    setCurrentPage(1);
+    setQuarter(value || AppraisalFilterAll.ALL);
+  }, []);
+
+  const chooseStatus = useCallback((value: string) => {
+    setCurrentPage(1);
+    setStatusFilter(value);
   }, []);
 
   const loadQuarters = useCallback(() => {
@@ -165,7 +183,9 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
 
   const quarterOptions = useMemo(() => {
     const seen = new Set<string>();
-    const options: { value: string; label: string }[] = [];
+    const options: { value: string; label: string }[] = [
+      { value: AppraisalFilterAll.ALL, label: "Quarter" },
+    ];
     masterYears.forEach((year) => {
       year.quarters?.forEach((item) => {
         if (!item.quarter || seen.has(item.quarter)) return;
@@ -186,16 +206,16 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
       Boolean(
         statusFilter ||
           (financialYear && financialYear !== defaultYear.current) ||
-          (quarter && quarter !== defaultQuarter.current),
+          (quarter && quarter !== AppraisalFilterAll.ALL),
       ),
     [quarter, statusFilter, financialYear]
   );
 
   const handleClearFilters = () => {
     yearChosen.current = false;
-    quarterChosen.current = false;
+    setCurrentPage(1);
     setFinancialYear(defaultYear.current);
-    setQuarter(defaultQuarter.current);
+    setQuarter(AppraisalFilterAll.ALL);
     setStatusFilter("");
   };
 
@@ -220,15 +240,7 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
     setActiveAssignment(null);
   };
 
-  const filteredAssignments = useMemo(() => {
-    if (showEmptyState) return [];
-    return assignments.filter((item) => {
-      if (quarter && item.quarter !== quarter) return false;
-      if (statusFilter && item.status !== statusFilter) return false;
-      if (financialYear && item.financialYear !== financialYear) return false;
-      return true;
-    });
-  }, [assignments, showEmptyState, quarter, statusFilter, financialYear]);
+  const filteredAssignments = showEmptyState ? [] : assignments;
 
   return {
     assignments: filteredAssignments,
@@ -245,9 +257,13 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
     loadQuarters,
     showEmptyState,
     hasActiveFilters,
+    currentPage,
+    pageSize,
+    total,
+    setCurrentPage,
     setFinancialYear: chooseFinancialYear,
     setQuarter: chooseQuarter,
-    setStatusFilter,
+    setStatusFilter: chooseStatus,
     setShowEmptyState,
     handleClearFilters,
     openAssignment,

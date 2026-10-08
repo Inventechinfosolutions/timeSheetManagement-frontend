@@ -23,6 +23,7 @@ import "./AppraisalDashboard.css";
 interface QuarterlyReviewStepperProps {
   assignment: QuarterlyReviewAssignment;
   initialFormData?: ReviewFormData;
+  readOnly?: boolean;
   onBack: () => void;
   onSubmitSuccess?: () => void;
 }
@@ -51,6 +52,7 @@ const quarterValue = (value: string): QuaterlyEnum | null => {
 export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   assignment,
   initialFormData,
+  readOnly = false,
   onBack,
   onSubmitSuccess,
 }) => {
@@ -295,19 +297,16 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     setSaving(true);
     setSaveError("");
     try {
-      if (asDraft) {
-        const saved = await AppraisalApi.savePerformanceDraft(payload);
-        performanceIdRef.current = saved.id;
-        setPerformanceId(saved.id);
+      const existingId = performanceIdRef.current;
+      if (existingId) {
+        await AppraisalApi.updatePerformance(existingId, payload);
         return true;
       }
-      if (!performanceId) {
-        const created = await AppraisalApi.createPerformance(payload);
-        performanceIdRef.current = created.id;
-        setPerformanceId(created.id);
-        return true;
-      }
-      await AppraisalApi.updatePerformance(performanceId, payload);
+      const saved = asDraft
+        ? await AppraisalApi.savePerformanceDraft(payload)
+        : await AppraisalApi.createPerformance(payload);
+      performanceIdRef.current = saved.id;
+      setPerformanceId(saved.id);
       return true;
     } catch (error) {
       setSaveError(readApiError(error));
@@ -337,6 +336,13 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   };
 
   const handleNext = async () => {
+    if (readOnly) {
+      if (currentStep < 6) {
+        setErrors({});
+        goToStep(currentStep + 1, true);
+      }
+      return;
+    }
     if (currentStep >= 6 || saving) {
       return;
     }
@@ -359,6 +365,13 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   };
 
   const handlePrev = async () => {
+    if (readOnly) {
+      if (currentStep > 1) {
+        setErrors({});
+        goToStep(currentStep - 1, true);
+      }
+      return;
+    }
     if (currentStep <= 1 || saving) {
       return;
     }
@@ -375,6 +388,13 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   };
 
   const handleStepClick = async (targetStep: number) => {
+    if (readOnly) {
+      if (targetStep !== currentStep) {
+        setErrors({});
+        goToStep(targetStep, true);
+      }
+      return;
+    }
     if (targetStep === currentStep || saving) return;
 
     if (targetStep > currentStep) {
@@ -404,6 +424,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   };
 
   const handleSaveAndExit = async () => {
+    if (readOnly) {
+      onBack();
+      return;
+    }
     if (saving) {
       return;
     }
@@ -547,6 +571,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   {assignment.financialYear} • Deadline:{" "}
                   <strong className="font-semibold text-[#0F172A]">{assignment.deadline}</strong> •
                   {" "}Assigned by {assignment.assignedBy}
+                  {readOnly ? " • View only" : ""}
                 </span>
               </p>
             </div>
@@ -635,7 +660,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         ) : (
           <>
             {/* Animated Step Sliding Content Container */}
-            <div className="relative overflow-hidden min-h-[380px]">
+            <fieldset disabled={readOnly} className="relative overflow-hidden min-h-[380px] border-0 p-0 m-0 min-w-0">
               {exitingStep !== null && (
                 <div
                   key={`exit-${exitingStep}`}
@@ -659,7 +684,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               >
                 {renderStepContent(currentStep)}
               </div>
-            </div>
+            </fieldset>
 
             {/* Stepper Navigation Footer */}
             <div className="flex items-center justify-between pt-6 mt-8 border-t border-blue-100">
@@ -686,6 +711,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
               <div className="flex items-center gap-3">
                 {saveError ? <p className="text-xs font-bold text-red-600">{saveError}</p> : null}
+                {!readOnly && (
                 <Button
                   variant="ghost"
                   size="md"
@@ -695,8 +721,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                 >
                   {saving ? "Saving" : "Save & Exit"}
                 </Button>
+                )}
 
-                {currentStep < 6 ? (
+                {readOnly && currentStep === 6 ? null : currentStep < 6 ? (
                   <Button
                     variant="primary"
                     size="md"

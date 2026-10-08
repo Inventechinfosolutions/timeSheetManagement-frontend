@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowRight, Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
 import { Button, Dropdown, Modal } from "../../../components/ui";
 import { WorksphereLogoLoader } from "../../../components/ApiLoadingSpinner";
@@ -50,9 +50,22 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
   const [error, setError] = useState("");
   const [buttonState, setButtonState] = useState<AssignButtonState>(AssignButtonState.IDLE);
   const [summary, setSummary] = useState<AnnualSummaryRecord | null>(null);
+  const hideTimerRef = useRef<number | null>(null);
+
+  const clearHideTimer = () => {
+    if (hideTimerRef.current != null) {
+      window.clearTimeout(hideTimerRef.current);
+      hideTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => clearHideTimer();
+  }, []);
 
   useEffect(() => {
     if (!isOpen) {
+      clearHideTimer();
       setFinancialYear("");
       setPassword("");
       setShowPassword(false);
@@ -67,9 +80,7 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
       .then((period) => {
         if (cancelled) return;
         setYearOptions(period.years || []);
-        if (period.current?.financialYear) {
-          setFinancialYear(period.current.financialYear);
-        }
+        setFinancialYear(period.current?.financialYear || "");
       })
       .catch(() => {
         if (!cancelled) setYearOptions([]);
@@ -83,10 +94,12 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
   }, [isOpen]);
 
   const handleYearChange = (value: string) => {
+    clearHideTimer();
     setFinancialYear(value);
     setPassword("");
     setError("");
     setSummary(null);
+    setButtonState(AssignButtonState.IDLE);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -111,10 +124,16 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
       if (!record.passwordVerified) {
         setError(AppraisalCopy.passwordMismatch);
         setButtonState(AssignButtonState.IDLE);
-        return;
+      return;
       }
       setPassword("");
       setButtonState(AssignButtonState.ASSIGNED);
+      clearHideTimer();
+      hideTimerRef.current = window.setTimeout(() => {
+        setSummary(null);
+        setButtonState(AssignButtonState.IDLE);
+        hideTimerRef.current = null;
+      }, 2 * 60 * 1000);
       window.setTimeout(() => setSummary(record), 420);
     } catch (requestError) {
       setSummary(null);
@@ -202,12 +221,12 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
                 buttonClassName="w-full justify-between rounded-2xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm font-medium text-[#0F172A] shadow-none hover:border-blue-500"
               />
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
+              <div>
+                <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                 {AppraisalCopy.passwordLabel} <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
+                </label>
+                <div className="relative">
+                  <input
                   type={showPassword ? "text" : "password"}
                   name="password"
                   autoComplete="current-password"
@@ -233,26 +252,26 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
                 {error}
               </p>
             ) : null}
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
                 disabled={!financialYear || buttonState === AssignButtonState.ANIMATING}
                 className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer disabled:opacity-60"
-              >
+                >
                 <span>{buttonState === AssignButtonState.ANIMATING ? "Checking" : "Continue"}</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
     </Modal>
   );
 };
