@@ -22,11 +22,13 @@ export const NotesManagementPage: React.FC = () => {
     activeTab,
     selectedProject,
     searchQuery,
+    searchInput,
     fromDate,
     toDate,
     handleFromDateChange,
     handleToDateChange,
     handleClearDates,
+    handleSearchInputChange,
     loading,
     actionLoading,
     currentUser,
@@ -174,10 +176,11 @@ export const NotesManagementPage: React.FC = () => {
         <div className="w-full min-h-full bg-[#F4F7FE] p-2 sm:p-3 md:p-4 flex flex-col gap-4 font-sans">
           <NoteHeader
             activeTab={activeTab}
-            searchQuery={searchQuery}
+            searchQuery={searchInput}
             fromDate={fromDate}
             toDate={toDate}
             onTabSwitch={handleTabSwitch}
+            onSearchInputChange={handleSearchInputChange}
             onSearchChange={handleSearchChange}
             onClearSearch={handleClearSearch}
             onFromDateChange={handleFromDateChange}
@@ -195,7 +198,7 @@ export const NotesManagementPage: React.FC = () => {
             pageSize={pageSize}
             totalPages={totalPages}
             activeTab={activeTab}
-            searchQuery={searchQuery}
+            searchQuery={searchInput}
             fromDate={fromDate}
             toDate={toDate}
             expandedNotes={expandedNotes}

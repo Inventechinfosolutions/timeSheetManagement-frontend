@@ -10,6 +10,9 @@ interface NoteHeaderProps {
   fromDate: string;
   toDate: string;
   onTabSwitch: (tab: NoteType) => void;
+  /** Immediate keystrokes — drives client-side list filter */
+  onSearchInputChange?: (val: string) => void;
+  /** Debounced value — drives API fetch */
   onSearchChange: (val: string) => void;
   onClearSearch: () => void;
   onFromDateChange: (value: string) => void;
@@ -25,6 +28,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
   fromDate,
   toDate,
   onTabSwitch,
+  onSearchInputChange,
   onSearchChange,
   onClearSearch,
   onFromDateChange,
@@ -101,6 +105,7 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
         <SearchBox
           placeholder="Search by name, ID, or child note..."
           value={searchQuery}
+          onChange={(e) => onSearchInputChange?.(e.target.value)}
           onDebounce={onSearchChange}
           onClear={onClearSearch}
           inputSize="lg"
