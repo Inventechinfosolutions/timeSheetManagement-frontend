@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import EmployeeListMobileCard from "./EmployeeListMobileCard";
 import Toast from "../components/Toast";
+import { SearchBox } from "../components/ui";
 import { UserType, EmploymentType, UserStatus } from "../enums";
 
 const EmployeeListView = () => {
@@ -155,14 +156,6 @@ const EmployeeListView = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   useEffect(() => {
     dispatch(
@@ -684,25 +677,22 @@ const EmployeeListView = () => {
               </div>
             )}
 
-            {/* Search Box */}
-            <div className="flex items-center bg-white rounded-full px-5 py-2.5 min-w-[200px] border border-gray-200 focus-within:border-[#4318FF]/40 transition-all">
-              <Search size={18} className="text-[#A3AED0] mr-2" />
-              <input
-                type="text"
-                placeholder="Search by name or employee ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
-              />
-              {searchTerm && (
-                <button
-                  onClick={() => setSearchTerm("")}
-                  className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
+            <SearchBox
+              placeholder="Search by name or employee ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onDebounce={(val) => {
+                setDebouncedSearchTerm(val);
+                setCurrentPage(1);
+              }}
+              onClear={() => {
+                setSearchTerm("");
+                setDebouncedSearchTerm("");
+                setCurrentPage(1);
+              }}
+              containerClassName="w-full min-w-[200px] sm:w-72"
+              variant="outlined"
+            />
 
             {basePath === "/admin-dashboard" && canEdit && (
               <>

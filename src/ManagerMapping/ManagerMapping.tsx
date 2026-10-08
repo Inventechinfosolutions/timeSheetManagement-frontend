@@ -29,6 +29,7 @@ import {
   getManagerMappingHistory,
   getMappedEmployeeIds,
 } from "../reducers/managerMapping.reducer";
+import { SearchBox } from "../components/ui";
 
 interface Employee {
   id: string;
@@ -126,23 +127,6 @@ const ManagerMapping: React.FC = () => {
     dispatch(fetchDepartments());
     dispatch(getMappedEmployeeIds());
   }, [dispatch]);
-
-  // Debounce history search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedHistorySearch(historySearch);
-      setHistoryPage(1);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [historySearch]);
-
-  // Debounce employee search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchText(searchText);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchText]);
 
   // Fetch employees when search changes
   useEffect(() => {
@@ -511,27 +495,18 @@ const ManagerMapping: React.FC = () => {
               </div>
             )}
 
-            {/* Search */}
-            <div className="relative mb-4">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A3AED0]"
-              />
-              <input
-                type="text"
-                placeholder="Search employees..."
+            <div className="mb-4">
+              <SearchBox
+                placeholder="Search by name or ID..."
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                className="w-full pl-10 pr-8 py-2.5 bg-[#F4F7FE] border border-transparent rounded-xl text-sm font-medium outline-none focus:border-[#4318FF] transition-colors"
+                onDebounce={setDebouncedSearchText}
+                onClear={() => {
+                  setSearchText("");
+                  setDebouncedSearchText("");
+                }}
+                containerClassName="w-full"
               />
-              {searchText && (
-                <button
-                  onClick={() => setSearchText("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              )}
             </div>
 
             {/* Employee List */}
@@ -768,24 +743,21 @@ const ManagerMapping: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center bg-[#F4F7FE] rounded-xl px-4 py-2 flex-1 md:w-64 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
-            <Search size={18} className="text-[#A3AED0] mr-2" />
-            <input
-              type="text"
-              placeholder="Search history..."
-              value={historySearch}
-              onChange={(e) => setHistorySearch(e.target.value)}
-              className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
-            />
-            {historySearch && (
-              <button
-                onClick={() => setHistorySearch("")}
-                className="ml-2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
+          <SearchBox
+            placeholder="Search history..."
+            value={historySearch}
+            onChange={(e) => setHistorySearch(e.target.value)}
+            onDebounce={(val) => {
+              setDebouncedHistorySearch(val);
+              setHistoryPage(1);
+            }}
+            onClear={() => {
+              setHistorySearch("");
+              setDebouncedHistorySearch("");
+              setHistoryPage(1);
+            }}
+            containerClassName="flex-1 md:w-64"
+          />
 
           {/* Clear All Button */}
           {(historySearch ||

@@ -74,6 +74,7 @@ import {
 import { message } from "antd";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import { EmployeeDirectoryPickerModal } from "../Notes/components";
+import { SearchBox } from "../components/ui";
 
 const isCancellationAllowed = (submittedDate: string) => {
   if (!submittedDate) return true;
@@ -1846,36 +1847,22 @@ const AdminLeaveManagement = () => {
                     className="absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-xl border border-[#E9EDF7] max-h-60 overflow-y-auto"
                     onScroll={handleScroll}
                   >
-                    <div className="sticky top-0 bg-white p-2 border-b border-gray-100 z-10">
-                      <div className="relative">
-                        <Search
-                          size={16}
-                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Search by employee ID..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full pl-9 pr-9 py-2 bg-[#F4F7FE] rounded-xl text-sm outline-none focus:ring-2 focus:ring-[#4318FF]/20 text-[#2B3674]"
-                          onClick={(e) => e.stopPropagation()}
-                          autoFocus
-                        />
-                        {searchTerm && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSearchTerm("");
-                              flushDebouncedSearchTerm("");
-                            }}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-200/60 transition-colors cursor-pointer"
-                            title="Clear search"
-                          >
-                            <X size={14} />
-                          </button>
-                        )}
-                      </div>
+                    <div
+                      className="sticky top-0 bg-white p-2 border-b border-gray-100 z-10"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <SearchBox
+                        placeholder="Search by name or ID..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onClear={() => {
+                          setSearchTerm("");
+                          flushDebouncedSearchTerm("");
+                        }}
+                        autoFocus
+                        inputSize="sm"
+                        containerClassName="w-full"
+                      />
                     </div>
                     {loadingEmployees && empPage === 1 ? (
                       <div className="py-8 flex justify-center items-center text-[#4318FF]">

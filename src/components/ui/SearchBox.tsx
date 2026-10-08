@@ -1,19 +1,20 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Search } from "lucide-react";
 import { Input, InputProps } from "./Input";
 import { useDebounce } from "../../hooks/useDebounce";
 
 export interface SearchBoxProps extends Omit<InputProps, "prefixIcon"> {
   placeholder?: string;
+  /** Fires after debounce (default 400ms). Use for API / filter side-effects. */
   onDebounce?: (debouncedValue: string) => void;
   debounceDelay?: number;
 }
 
 export const SearchBox: React.FC<SearchBoxProps> = ({
-  placeholder = "Search name or ID...",
+  placeholder = "Search by name or ID...",
   allowClear = true,
   variant = "filled",
-  containerClassName = "w-36",
+  containerClassName = "w-full max-w-md",
   value,
   defaultValue = "",
   onChange,
@@ -26,26 +27,25 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     value !== undefined ? String(value) : String(defaultValue || ""),
   );
 
-  // Sync internal value when parent changes the controlled value
+  // Sync when parent clears / resets the controlled value
   useEffect(() => {
     if (value !== undefined) {
       setInternalValue(String(value));
     }
   }, [value]);
 
-  const [debouncedValue, flush] = useDebounce(
-    internalValue,
-    debounceDelay,
-  );
+  const [debouncedValue, flush] = useDebounce(internalValue, debounceDelay);
 
-  // Notify parent after debounce
+  // Keep callback stable so debounce effect does not re-fire on every parent render
+  const onDebounceRef = useRef(onDebounce);
+  onDebounceRef.current = onDebounce;
+
   useEffect(() => {
-    onDebounce?.(debouncedValue);
-  }, [debouncedValue, onDebounce]);
+    onDebounceRef.current?.(debouncedValue);
+  }, [debouncedValue]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
-
     setInternalValue(newValue);
     onChange?.(e);
   };
@@ -54,7 +54,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     setInternalValue("");
     flush("");
     onClear?.();
-    onDebounce?.("");
+    onDebounceRef.current?.("");
   };
 
   return (
@@ -64,7 +64,8 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
       allowClear={allowClear}
       variant={variant}
       containerClassName={containerClassName}
-      value={value !== undefined ? value : internalValue}
+      // Always show typed text immediately; parent may only update on debounce
+      value={internalValue}
       onChange={handleChange}
       onClear={handleClear}
       {...props}

@@ -80,7 +80,8 @@ export const NotesManagementPage: React.FC = () => {
     totalAttachmentsCount,
     xlsImportInputRef,
     handleXlsImport,
-    setSearchQuery,
+    handleSearchChange,
+    handleClearSearch,
     setCurrentPage,
   } = useNotesManagement();
 
@@ -164,8 +165,8 @@ export const NotesManagementPage: React.FC = () => {
             activeTab={activeTab}
             searchQuery={searchQuery}
             onTabSwitch={handleTabSwitch}
-            onSearchChange={(val) => setSearchQuery(val)}
-            onClearSearch={() => setSearchQuery("")}
+            onSearchChange={handleSearchChange}
+            onClearSearch={handleClearSearch}
             onCreateProjectNote={() => handleStartCreate("PROJECT")}
             onCreatePersonalNote={() => handleStartCreate("PERSONAL")}
           />

@@ -3,6 +3,7 @@ import { Modal, message } from "antd";
 import { Search, X, Check, Copy, UserCheck, Users } from "lucide-react";
 import { searchEmployeeDirectory, DirectoryEmployee } from "../utils/notesHelpers";
 import { WorksphereLogoLoader } from "../../components/ApiLoadingSpinner";
+import { SearchBox } from "../../components/ui";
 
 interface EmployeeDirectoryPickerModalProps {
   open: boolean;
@@ -56,25 +57,22 @@ export const EmployeeDirectoryPickerModal: React.FC<EmployeeDirectoryPickerModal
     }
   }, [open]);
 
-  // Only call GET when user types a search query (debounced)
-  useEffect(() => {
-    if (!open) return;
-    const trimmed = searchTerm.trim();
-
-    if (!trimmed) {
-      setEmployees([]);
-      setHasSearched(false);
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    const timer = setTimeout(() => {
+  // Fetch when SearchBox debounce settles (via useDebounce)
+  const handleSearchDebounce = useCallback(
+    (val: string) => {
+      if (!open) return;
+      const trimmed = val.trim();
+      if (!trimmed) {
+        setEmployees([]);
+        setHasSearched(false);
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
       fetchEmployees(trimmed);
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm, open, fetchEmployees]);
+    },
+    [open, fetchEmployees]
+  );
 
   // Toggle selection for an employee email
   const toggleSelect = (email: string) => {
@@ -194,28 +192,24 @@ export const EmployeeDirectoryPickerModal: React.FC<EmployeeDirectoryPickerModal
           </button>
         </div>
 
-        {/* Search Input Bar */}
+        {/* Search Input Bar — shared SearchBox + useDebounce */}
         <div className="p-3 border-b border-slate-100 bg-slate-50/50">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name, employee ID, or designation..."
-              className="w-full pl-9 pr-8 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF]/20 transition"
-              autoFocus
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm("")}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
+          <SearchBox
+            placeholder="Search by name, employee ID, or designation..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onDebounce={handleSearchDebounce}
+            onClear={() => {
+              setSearchTerm("");
+              setEmployees([]);
+              setHasSearched(false);
+              setLoading(false);
+            }}
+            autoFocus
+            inputSize="sm"
+            variant="outlined"
+            containerClassName="w-full"
+          />
 
           {/* Quick Bar: Select All & Count (only visible when employees are found) */}
           {employees.length > 0 && (

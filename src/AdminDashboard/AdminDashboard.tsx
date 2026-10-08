@@ -24,6 +24,7 @@ import { downloadAttendancePdfReport } from "../reducers/employeeAttendance.redu
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { saveAs } from "file-saver";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+import { SearchBox } from "../components/ui";
 
 const AdminDashboard = () => {
   const location = useLocation();
@@ -492,19 +493,15 @@ const AdminDashboard = () => {
                       </div>
                     )}
                   </div>
-                  <div className="relative flex-1">
-                    <Search
-                      size={16}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Search..."
-                      value={modalSearch}
-                      onChange={(e) => setModalSearch(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-100 rounded-xl text-sm font-medium outline-none"
-                    />
-                  </div>
+                  <SearchBox
+                    placeholder="Search by name or ID..."
+                    value={modalSearch}
+                    onChange={(e) => setModalSearch(e.target.value)}
+                    onClear={() => setModalSearch("")}
+                    containerClassName="flex-1"
+                    variant="outlined"
+                    inputSize="sm"
+                  />
                 </div>
                 <div className="flex-1 overflow-y-auto p-2">
                   <table className="w-full">

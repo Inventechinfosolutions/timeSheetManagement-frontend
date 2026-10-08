@@ -89,9 +89,9 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
       {/* Search Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
         <SearchBox
-          placeholder="Search notes..."
+          placeholder="Search by name or ID..."
           value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
+          onDebounce={onSearchChange}
           onClear={onClearSearch}
           inputSize="lg"
           containerClassName="w-full max-w-md"

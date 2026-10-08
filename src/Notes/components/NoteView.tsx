@@ -27,7 +27,10 @@ import {
   copyNoteContentToClipboard,
 } from "../utils/notesHelpers";
 import { buildDocumentPagesHtml, isNoteLandscape, paginateToA4Sheets } from "../utils/documentLayout";
-import { refreshAttachmentBadges } from "../utils/noteEditorAttachmentHelpers";
+import {
+  attachmentKeysInHtml,
+  refreshAttachmentBadges,
+} from "../utils/noteEditorAttachmentHelpers";
 import {
   htmlHasVisibleNoteContent,
   parseExcelWorkbookFromHtml,
@@ -77,6 +80,18 @@ export const NoteView: React.FC<NoteViewProps> = ({
   const visibleDescription = stripExcelWorkbookStore(activeNote.description);
   const showA4Content = htmlHasVisibleNoteContent(visibleDescription);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  // Hide Excel / table-row embeds from Files & Attachments
+  const filesSectionAttachments = (activeNote.attachments || []).filter((att) => {
+    const key = att.key || att.fileKey;
+    const name = att.fileName || att.name;
+    const embedded = attachmentKeysInHtml(activeNote.description);
+    const excelKey = storedWorkbook?.fileKey || excelWorkbook?.fileKey;
+    const excelName = storedWorkbook?.fileName || excelWorkbook?.fileName;
+    if (key && (embedded.has(String(key)) || (excelKey && key === excelKey))) return false;
+    if (name && excelName && name === excelName) return false;
+    return true;
+  });
 
   useLayoutEffect(() => {
     if (!showA4Content || !contentRef.current) return;
@@ -417,17 +432,17 @@ export const NoteView: React.FC<NoteViewProps> = ({
           </div>
       </div>
 
-        {/* Files & Attachments */}
-        {activeNote.attachments && activeNote.attachments.length > 0 && (
+        {/* Files & Attachments — only true file uploads, not Excel/table embeds */}
+        {filesSectionAttachments.length > 0 && (
           <div className="space-y-3 pt-2 border-t border-slate-100">
             <div className="flex items-center gap-2">
               <Paperclip className="w-4 h-4 text-[#4318FF]" />
               <span className="text-xs md:text-sm font-bold text-[#1B2559] uppercase tracking-wider block">
-                FILES & ATTACHMENTS ({activeNote.attachments.length})
+                FILES & ATTACHMENTS ({filesSectionAttachments.length})
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              {activeNote.attachments.map((att) => (
+              {filesSectionAttachments.map((att) => (
                 <NoteAttachmentChip
                   key={`view-att-${att.id || att.key || att.fileKey}`}
                   item={{

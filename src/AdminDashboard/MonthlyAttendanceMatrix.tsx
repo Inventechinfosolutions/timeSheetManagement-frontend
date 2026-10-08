@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAppDispatch, useAppSelector, useDebounce } from "../hooks";
+import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import {
   Download,
@@ -128,9 +128,9 @@ const MonthlyAttendanceMatrix: React.FC = () => {
     return "";
   }, [entity, matrixData]);
 
-  // Filters
+  // Filters — SearchBox applies useDebounce via onDebounce
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [debouncedSearchTerm, flushDebouncedSearchTerm] = useDebounce<string>(searchTerm, 400);
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
   const [selectedDepartment, setSelectedDepartment] = useState<string>(() => {
     if (isManager) {
       return entity?.department || entity?.department_name || "";
@@ -310,10 +310,11 @@ const MonthlyAttendanceMatrix: React.FC = () => {
   const filteredEmployees = useMemo(() => {
     if (!matrixData?.employees) return [];
     return matrixData.employees.filter((emp) => {
+      const q = debouncedSearchTerm.trim().toLowerCase();
       const matchesSearch =
-        !searchTerm.trim() ||
-        emp.fullName.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
-        emp.employeeId.toLowerCase().includes(searchTerm.toLowerCase().trim());
+        !q ||
+        emp.fullName.toLowerCase().includes(q) ||
+        emp.employeeId.toLowerCase().includes(q);
 
       const matchesDept =
         !selectedDepartment ||
@@ -329,7 +330,7 @@ const MonthlyAttendanceMatrix: React.FC = () => {
 
       return matchesSearch && matchesDept && matchesStatus;
     });
-  }, [matrixData, searchTerm, selectedDepartment, selectedStatus, isManager]);
+  }, [matrixData, debouncedSearchTerm, selectedDepartment, selectedStatus, isManager]);
 
   // Aggregate summary stats across visible employees
   const totalStats = useMemo(() => {
@@ -418,7 +419,7 @@ const MonthlyAttendanceMatrix: React.FC = () => {
               size="sm"
               onClick={() => {
                 setSearchTerm("");
-                flushDebouncedSearchTerm("");
+                setDebouncedSearchTerm("");
                 setSelectedStatus("All");
                 const defaultDept = isManager ? managerDepartment || "" : "All Departments";
                 setSelectedDepartment(defaultDept);
@@ -481,12 +482,15 @@ const MonthlyAttendanceMatrix: React.FC = () => {
             <div className="flex flex-wrap items-center gap-2">
               {/* Search Input */}
               <SearchBox
+                placeholder="Search by name or ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onDebounce={setDebouncedSearchTerm}
                 onClear={() => {
                   setSearchTerm("");
-                  flushDebouncedSearchTerm("");
+                  setDebouncedSearchTerm("");
                 }}
+                containerClassName="w-36"
               />
 
               {/* Status Filter (All / Submitted / Pending) - Placed FIRST */}
