@@ -134,6 +134,9 @@ export const NotesManagementPage: React.FC = () => {
           onDeleteServerAttachment={handleDeleteAttachment}
           onPreviewAttachment={handlePreviewAttachment}
           onDownloadAttachment={handleDownloadAttachment}
+          onPreviewImage={(url, title) =>
+            setPreviewImageModal({ open: true, url, title: title || "Screenshot" })
+          }
           onSubmit={handleSubmitForm}
           onBack={handleBackToList}
           autoSaveStatus={autoSaveStatus}
@@ -152,6 +155,9 @@ export const NotesManagementPage: React.FC = () => {
           onBack={handleBackToList}
           onPreviewAttachment={handlePreviewAttachment}
           onDownloadAttachment={handleDownloadAttachment}
+          onPreviewImage={(url, title) =>
+            setPreviewImageModal({ open: true, url, title: title || "Screenshot" })
+          }
           onTogglePin={handleTogglePin}
           onToggleArchive={handleToggleArchive}
           onOpenSendModal={handleOpenSendModal}

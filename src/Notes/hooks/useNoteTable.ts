@@ -24,6 +24,7 @@ interface UseNoteTableParams {
   handleEditorInputWrapper: () => void;
   onPreviewAttachment: (item: NoteDocumentItem) => void;
   onDownloadAttachment: (item: NoteDocumentItem) => void;
+  onPreviewImage?: (url: string, title?: string) => void;
 }
 
 export const useNoteTable = ({
@@ -34,6 +35,7 @@ export const useNoteTable = ({
   handleEditorInputWrapper,
   onPreviewAttachment,
   onDownloadAttachment,
+  onPreviewImage,
 }: UseNoteTableParams) => {
   const dispatch = useAppDispatch();
   const rowAttachmentInputRef = useRef<HTMLInputElement>(null);
@@ -185,6 +187,34 @@ export const useNoteTable = ({
     const handleTableClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
+
+      // Remove pasted screenshot via X control
+      const removeImgBtn = target.closest<HTMLElement>("[data-image-action='remove']");
+      if (removeImgBtn && editor.contains(removeImgBtn)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const wrap = removeImgBtn.closest<HTMLElement>(".note-inline-image");
+        saveUndoSnapshot();
+        if (wrap) wrap.remove();
+        else removeImgBtn.parentElement?.remove();
+        handleEditorInputWrapper();
+        return;
+      }
+
+      // Click pasted / inline screenshot → open full-size preview
+      if (target.tagName === "IMG" && onPreviewImage) {
+        const img = target as HTMLImageElement;
+        const src = img.currentSrc || img.src;
+        if (src) {
+          e.preventDefault();
+          e.stopPropagation();
+          onPreviewImage(
+            src,
+            img.getAttribute("alt") || img.getAttribute("title") || "Screenshot"
+          );
+          return;
+        }
+      }
 
       // 1. Click on Row Upload Button or Add More Button
       const uploadBtn = target.closest<HTMLElement>(
@@ -385,7 +415,7 @@ export const useNoteTable = ({
     return () => {
       editor.removeEventListener("click", handleTableClick);
     };
-  }, [editorRef, onDownloadAttachment, onPreviewAttachment]);
+  }, [editorRef, onDownloadAttachment, onPreviewAttachment, onPreviewImage]);
 
   useEffect(() => {
     const handle = document.createElement("button");

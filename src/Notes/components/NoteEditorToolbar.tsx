@@ -864,7 +864,7 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
         type="file"
         ref={doclingJsonInputRef}
         onChange={onDoclingUpload}
-        accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.json"
+        accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
         className="hidden"
       />
       <button

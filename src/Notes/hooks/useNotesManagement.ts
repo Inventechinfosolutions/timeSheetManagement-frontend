@@ -46,7 +46,7 @@ import {
   attachmentKeysInHtml,
   refreshAttachmentBadges,
 } from "../utils/noteEditorAttachmentHelpers";
-import { justifyImportedContent } from "../utils/notesHelpers";
+import { justifyImportedContent, wrapWideTablesInRoot } from "../utils/notesHelpers";
 import {
   parseExcelFile,
   parseExcelWorkbookFromHtml,
@@ -182,15 +182,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   const [isExtractingExcel, setIsExtractingExcel] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
-
-
-
-  // Opening Employee Notes calls three GETs: stats, projects, and the notes list.
-  useEffect(() => {
-    if (!loadList) return;
-    dispatch(fetchNoteStats());
-    dispatch(fetchProjectsList());
-  }, [dispatch, loadList]);
 
   // searchQuery is already debounced via SearchBox (useDebounce)
   useEffect(() => {
@@ -797,29 +788,113 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const getNotesImportMaxPages = () => {
+    const raw = Number(import.meta.env.VITE_NOTES_IMPORT_MAX_PAGES);
+    return Number.isFinite(raw) && raw > 0 ? raw : 50;
+  };
+
+  const getExtractedPageCount = (data: any): number => {
+    if (typeof data?.pageCount === "number" && data.pageCount > 0) return data.pageCount;
+    if (Array.isArray(data?.pages) && data.pages.length > 0) return data.pages.length;
+    const jsonPages = data?.json?.pages;
+    if (jsonPages && typeof jsonPages === "object") {
+      return Object.keys(jsonPages).length;
+    }
+    return 0;
+  };
+
+  /** Attach a long PDF/Doc under Files & Attachments (not Description). */
+  const attachFileToFilesSection = async (file: File) => {
+    const res = await dispatch(
+      uploadDirectNoteFiles({
+        noteId: activeNote?.id,
+        files: [file],
+      })
+    ).unwrap();
+    const uploaded = Array.isArray(res.uploaded) ? res.uploaded[0] : res.uploaded;
+    const key = uploaded?.key || uploaded?.fileKey;
+    if (!key) throw new Error("Upload succeeded but no file key was returned");
+
+    setFormData((prev) => ({
+      ...prev,
+      title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
+      attachmentKeys: prev.attachmentKeys.includes(key)
+        ? prev.attachmentKeys
+        : [...prev.attachmentKeys, key],
+      attachments: [
+        ...prev.attachments,
+        {
+          id: uploaded?.id,
+          key,
+          fileKey: key,
+          name: uploaded?.fileName || uploaded?.name || file.name,
+          size: uploaded?.fileSize || uploaded?.size || file.size,
+          file,
+        },
+      ],
+    }));
+
+    if (activeNote?.id) {
+      const updated = await dispatch(fetchNoteById(activeNote.id)).unwrap();
+      if (updated) setActiveNote(updated);
+    }
+  };
+
   // Upload Docling File / JSON handler
   const handleDoclingJsonUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const validExtensions = [".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg", ".json"];
+    const validExtensions = [".pdf", ".docx", ".doc"];
     const fileExt = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
     if (!validExtensions.includes(fileExt)) {
-      message.error("Please upload a PDF, DOCX, or Docling JSON file");
+      message.error("Please upload a PDF or Word document (.pdf, .docx, .doc)");
       return;
     }
 
     const uploadData = new FormData();
     uploadData.append("files", file);
     uploadData.append("file", file);
+    const maxPages = getNotesImportMaxPages();
 
     try {
       setIsImportingDocling(true);
       message.loading({ content: "Extracting document with Docling...", key: "docling-import", duration: 0 });
 
       const response = await axios.post("/api/notes/extract", uploadData, {
-        timeout: 180000,
+        timeout: 600000,
       });
+
+      const pageCount = getExtractedPageCount(response.data);
+      const serverMax = Number(response.data?.maxPages);
+      const effectiveMax =
+        Number.isFinite(serverMax) && serverMax > 0 ? serverMax : maxPages;
+      const tooLong =
+        Boolean(response.data?.tooLong) ||
+        (pageCount > 0 && pageCount > effectiveMax);
+
+      // Too long for Description → attach under Files & Attachments instead
+      if (tooLong) {
+        try {
+          await attachFileToFilesSection(file);
+          message.warning({
+            content:
+              response.data?.message ||
+              `Document is too long${pageCount ? ` (${pageCount} pages)` : ""}; max ${effectiveMax} pages for Description. Added to Files & Attachments instead.`,
+            key: "docling-import",
+            duration: 7,
+          });
+        } catch (attachErr: any) {
+          message.error({
+            content:
+              attachErr?.message ||
+              "Document is too long for Description, and attaching to Files failed. Please use Files & Attachments to upload it.",
+            key: "docling-import",
+            duration: 7,
+          });
+        }
+        return;
+      }
 
       const generatedHtml = buildDocumentPagesHtml(
         response.data?.description || response.data?.html || "",
@@ -852,9 +927,11 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
             landscape,
             reflowPages: true,
           });
+          wrapWideTablesInRoot(editorRef.current);
           removeEmptyPages(editorRef.current);
           paginateToA4Sheets(editorRef.current, landscape, true);
           removeEmptyPages(editorRef.current);
+          wrapWideTablesInRoot(editorRef.current);
           const finalVisible = editorRef.current.innerHTML || mergedVisible;
           setFormData((prev) => ({
             ...prev,
@@ -895,11 +972,49 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       });
     } catch (err: any) {
       console.error("Docling conversion error:", err);
+      const data = err.response?.data;
+      const code = data?.code || data?.message?.code;
+      const tooLongError =
+        err.response?.status === 413 ||
+        code === "DOCUMENT_TOO_LONG" ||
+        data?.attachAsFile ||
+        data?.attach_as_file ||
+        data?.tooLong;
+
+      if (tooLongError) {
+        const pageCount =
+          Number(data?.pageCount || data?.page_count || data?.message?.pageCount) || 0;
+        const limit =
+          Number(data?.maxPages || data?.max_pages || data?.message?.maxPages) ||
+          maxPages;
+        const warnText =
+          (typeof data?.message === "string" && data.message) ||
+          data?.message?.message ||
+          `Document is too long${pageCount ? ` (${pageCount} pages)` : ""}; max ${limit} pages for Description. Added to Files & Attachments instead.`;
+        try {
+          await attachFileToFilesSection(file);
+          message.warning({ content: warnText, key: "docling-import", duration: 7 });
+        } catch (attachErr: any) {
+          message.error({
+            content:
+              attachErr?.message ||
+              "Document is too long for Description, and attaching to Files failed. Please use Files & Attachments to upload it.",
+            key: "docling-import",
+            duration: 7,
+          });
+        }
+        return;
+      }
+
       const timedOut = err.code === "ECONNABORTED" || /timeout/i.test(err.message || "");
+      const apiMessage =
+        (typeof data?.message === "string" && data.message) ||
+        data?.message?.message ||
+        data?.detail;
       message.error({
         content: timedOut
           ? "Import timed out. Keep the Docling service running and try a smaller file."
-          : err.response?.data?.message || "Failed to parse document with Docling",
+          : apiMessage || "Failed to parse document with Docling",
         key: "docling-import",
       });
     } finally {
@@ -1569,6 +1684,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
         editorRef.current.innerHTML = nextHtml;
       }
       refreshAttachmentBadges(editorRef.current);
+      wrapWideTablesInRoot(editorRef.current);
       requestAnimationFrame(() => {
         if (editorRef.current) {
           paginateToA4Sheets(
@@ -1577,6 +1693,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
             true
           );
           refreshAttachmentBadges(editorRef.current);
+          wrapWideTablesInRoot(editorRef.current);
         }
       });
     }

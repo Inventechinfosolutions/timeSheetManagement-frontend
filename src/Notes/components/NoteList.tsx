@@ -258,7 +258,7 @@ export const NoteList: React.FC<NoteListProps> = ({
 
                       {/* Created By */}
                       <td className="py-4 px-6 text-slate-600">
-                        <div>{dayjs(note.createdAt).format("MMM DD, YYYY")}</div>
+                        <div>{dayjs(note.createdAt).format("MMM DD, YYYY hh:mm A")}</div>
                         <div className="text-[11px] text-slate-400">
                           Created by {note.createdBy || currentUser?.loginId || "Kusuma"}
                         </div>
@@ -473,7 +473,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                                             )}
                                           </td>
                                           <td className="py-3 px-6 text-slate-600">
-                                            <div>{dayjs(sub.createdAt).format("MMM DD, YYYY")}</div>
+                                            <div>{dayjs(sub.createdAt).format("MMM DD, YYYY hh:mm A")}</div>
                                             <div className="text-[11px] text-slate-400">
                                               Created by {sub.createdBy || currentUser?.loginId || "Kusuma"}
                                             </div>

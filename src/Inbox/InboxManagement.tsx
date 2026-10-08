@@ -4,6 +4,7 @@ import {
   fetchInbox,
   fetchInboxCounts,
   markInboxAsRead,
+  toggleInboxStar,
   deleteInboxItem,
   InboxItem,
 } from '../reducers/inbox.reducer';
@@ -18,6 +19,7 @@ import {
   Edit3,
   Send,
   Inbox,
+  Star,
 } from 'lucide-react';
 import { Modal, message, Tooltip } from 'antd';
 import { PopconfirmWithTooltip } from '../components/ui/PopconfirmWithTooltip';
@@ -76,6 +78,18 @@ export const InboxManagement: React.FC = () => {
       );
     };
   }, [notesMgr.pageMode]);
+
+  const handleToggleStar = (item: InboxItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    dispatch(toggleInboxStar(item.inboxId))
+      .unwrap()
+      .then((result) => {
+        message.success(Number(result?.isStarred) === 1 ? 'Starred' : 'Star removed');
+      })
+      .catch((err) => {
+        message.error(err || 'Failed to update star');
+      });
+  };
 
   const handleMarkAsRead = (item: InboxItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -215,6 +229,13 @@ export const InboxManagement: React.FC = () => {
           onDeleteServerAttachment={notesMgr.handleDeleteAttachment}
           onPreviewAttachment={notesMgr.handlePreviewAttachment}
           onDownloadAttachment={notesMgr.handleDownloadAttachment}
+          onPreviewImage={(url, title) =>
+            notesMgr.setPreviewImageModal({
+              open: true,
+              url,
+              title: title || "Screenshot",
+            })
+          }
           onSubmit={async (e) => {
             await notesMgr.handleSubmitForm(e);
             dispatch(fetchInbox({ folder }));
@@ -262,6 +283,13 @@ export const InboxManagement: React.FC = () => {
           }}
           onPreviewAttachment={notesMgr.handlePreviewAttachment}
           onDownloadAttachment={notesMgr.handleDownloadAttachment}
+          onPreviewImage={(url, title) =>
+            notesMgr.setPreviewImageModal({
+              open: true,
+              url,
+              title: title || "Screenshot",
+            })
+          }
           onTogglePin={notesMgr.handleTogglePin}
           onToggleArchive={notesMgr.handleToggleArchive}
         />
@@ -459,6 +487,7 @@ export const InboxManagement: React.FC = () => {
             const isSentMode = folder === 'SENT';
             const hasAttachments = item.note?.attachments && item.note.attachments.length > 0;
             const isUnread = !isSentMode && !item.isRead;
+            const isStarred = Number(item.isStarred) === 1;
             const isEditable = canEditNote(item.permission);
 
             const displayName = isSentMode
@@ -560,6 +589,21 @@ export const InboxManagement: React.FC = () => {
 
                     {/* Actions: Icon-only View, Edit, Delete, and Mark as read buttons */}
                     <div className="flex items-center gap-1.5 shrink-0">
+                    <Tooltip title={isStarred ? 'Remove star' : 'Star'} placement="top">
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleStar(item, e)}
+                        className={`w-8 h-8 flex items-center justify-center border rounded-lg transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${
+                          isStarred
+                            ? 'bg-amber-50 text-amber-500 border-amber-200 hover:bg-amber-100'
+                            : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200'
+                        }`}
+                        aria-label={isStarred ? 'Remove star' : 'Star'}
+                      >
+                        <Star className={`w-4 h-4 ${isStarred ? 'fill-amber-400 text-amber-500' : ''}`} />
+                      </button>
+                    </Tooltip>
+
                     {/* View Icon Button */}
                     <Tooltip title="View Note" placement="top">
                       <button

@@ -34,6 +34,7 @@ export interface InboxItem {
   folder?: InboxFolder | string;
   permission?: 'VIEW' | 'EDIT' | 'CanView' | 'CanEdit' | string;
   isRead: boolean;
+  isStarred?: 0 | 1 | boolean;
   hasDocument?: boolean;
   hasDescription?: boolean;
   createdAt: string;
@@ -139,7 +140,22 @@ export const markInboxAsRead = createAsyncThunk(
   }
 );
 
-// 4. Mark All as Read
+// 4. Toggle starred (1 starred, 0 not starred)
+export const toggleInboxStar = createAsyncThunk(
+  'inbox/toggleStar',
+  async (inboxId: number, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${inboxId}/star`);
+      return response.data as { inboxId: number; isStarred: 0 | 1 };
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to update star'
+      );
+    }
+  }
+);
+
+// 5. Mark All as Read
 export const markAllInboxAsRead = createAsyncThunk(
   'inbox/markAllInboxAsRead',
   async (_, { rejectWithValue }) => {
@@ -262,6 +278,18 @@ const inboxSlice = createSlice({
       }
       if (state.selectedItem && state.selectedItem.inboxId === id) {
         state.selectedItem.isRead = true;
+      }
+    });
+
+    builder.addCase(toggleInboxStar.fulfilled, (state, action) => {
+      const inboxId = Number(action.payload?.inboxId);
+      const isStarred = Number(action.payload?.isStarred) ? 1 : 0;
+      const item = state.items.find((i) => i.inboxId === inboxId);
+      if (item) {
+        item.isStarred = isStarred;
+      }
+      if (state.selectedItem && state.selectedItem.inboxId === inboxId) {
+        state.selectedItem.isStarred = isStarred;
       }
     });
 

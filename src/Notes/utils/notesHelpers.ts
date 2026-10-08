@@ -991,6 +991,98 @@ export const sanitizeNoteHtmlForClipboard = (html?: string): string => {
   return parsed.body.innerHTML.trim();
 };
 
+const isEditorManagedTable = (table: HTMLTableElement) =>
+  Boolean(
+    table.querySelector(
+      ".excel-sl-col, .excel-attachment-col, .excel-attachment-cell, .row-attach-container, .table-file-badge"
+    )
+  );
+
+/** Strip width locks that clip Outlook/Gmail tables inside A4. */
+const relaxPastedTableConstraints = (table: HTMLTableElement) => {
+  table.classList.add("note-wide-table");
+  table.removeAttribute("width");
+  table.style.removeProperty("width");
+  table.style.removeProperty("max-width");
+  table.style.removeProperty("min-width");
+  table.style.removeProperty("table-layout");
+  table.querySelectorAll<HTMLElement>("col, colgroup, th, td").forEach((el) => {
+    el.removeAttribute("width");
+    el.style.removeProperty("width");
+    el.style.removeProperty("max-width");
+    el.style.removeProperty("min-width");
+  });
+};
+
+/**
+ * Wrap wide / pasted tables so they can scroll horizontally inside the A4 page
+ * instead of being clipped (production email paste issue).
+ */
+export const wrapWideTablesInRoot = (root: HTMLElement | null | undefined) => {
+  if (!root) return;
+  root.querySelectorAll("table").forEach((tableEl) => {
+    const table = tableEl as HTMLTableElement;
+    if (isEditorManagedTable(table)) return;
+    if (table.closest(".note-table-scroll")) {
+      relaxPastedTableConstraints(table);
+      return;
+    }
+    const colCount = table.rows[0]?.cells.length || 0;
+    // Always scroll-wrap pasted/email tables; also wrap any wide table
+    const shouldWrap =
+      table.classList.contains("note-wide-table") ||
+      colCount >= 4 ||
+      table.querySelector("colgroup, col") !== null;
+
+    relaxPastedTableConstraints(table);
+    if (!shouldWrap && colCount < 3) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "note-table-scroll";
+    wrap.setAttribute("contenteditable", "false");
+    table.parentNode?.insertBefore(wrap, table);
+    // Inner editable host so users can still edit cell text
+    const inner = document.createElement("div");
+    inner.className = "note-table-scroll-inner";
+    inner.setAttribute("contenteditable", "true");
+    wrap.appendChild(inner);
+    inner.appendChild(table);
+  });
+};
+
+/**
+ * Prepare HTML pasted from email/Word/Outlook for the note editor:
+ * unwrap A4 shells, keep full tables, enable horizontal scroll wrappers.
+ */
+export const preparePastedHtmlForNote = (html?: string): string => {
+  if (!html || !html.trim()) return "";
+  const flat = sanitizeNoteHtmlForClipboard(html);
+  if (!flat) return "";
+
+  const parsed = new DOMParser().parseFromString(flat, "text/html");
+  // Drop scripts / Word conditional noise that can truncate paste
+  parsed.querySelectorAll("script, style, meta, link").forEach((el) => el.remove());
+
+  parsed.querySelectorAll("table").forEach((tableEl) => {
+    const table = tableEl as HTMLTableElement;
+    if (isEditorManagedTable(table)) return;
+    relaxPastedTableConstraints(table);
+    if (table.closest(".note-table-scroll")) return;
+
+    const wrap = parsed.createElement("div");
+    wrap.className = "note-table-scroll";
+    wrap.setAttribute("contenteditable", "false");
+    const inner = parsed.createElement("div");
+    inner.className = "note-table-scroll-inner";
+    inner.setAttribute("contenteditable", "true");
+    table.parentNode?.insertBefore(wrap, table);
+    wrap.appendChild(inner);
+    inner.appendChild(table);
+  });
+
+  return parsed.body.innerHTML.trim();
+};
+
 export const copyNoteContentToClipboard = async (
   htmlContent?: string
 ): Promise<void> => {
@@ -1031,6 +1123,33 @@ export const copyNoteContentToClipboard = async (
 };
 
 /**
+ * Wrap pasted/inline screenshots so edit mode can show a remove (X) control.
+ * Skips Docling page images and images already wrapped.
+ */
+export const wrapNoteInlineImages = (root: HTMLElement | null | undefined) => {
+  if (!root) return;
+  const images = Array.from(
+    root.querySelectorAll<HTMLImageElement>("img:not(.docling-page-image)")
+  );
+  images.forEach((img) => {
+    if (img.closest(".note-inline-image")) return;
+    const wrap = document.createElement("span");
+    wrap.className = "note-inline-image";
+    wrap.setAttribute("contenteditable", "false");
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "note-inline-image-remove";
+    removeBtn.setAttribute("data-image-action", "remove");
+    removeBtn.setAttribute("title", "Remove screenshot");
+    removeBtn.setAttribute("aria-label", "Remove screenshot");
+    removeBtn.textContent = "×";
+    img.parentNode?.insertBefore(wrap, img);
+    wrap.appendChild(img);
+    wrap.appendChild(removeBtn);
+  });
+};
+
+/**
  * Remove edit-only attach controls from note HTML.
  * Keeps file badges (name + preview/download) so View mode matches Edit.
  */
@@ -1040,9 +1159,16 @@ export const stripAttachmentUiFromHtml = (html?: string): string => {
   tempDiv.innerHTML = html;
   tempDiv
     .querySelectorAll(
-      ".row-attach-upload-btn, .row-attach-add-btn, .row-attach-loading, .table-file-btn.remove"
+      ".row-attach-upload-btn, .row-attach-add-btn, .row-attach-loading, .table-file-btn.remove, .note-inline-image-remove"
     )
     .forEach((el) => el.remove());
+  // Unwrap note-inline-image spans so saved/view HTML stays clean
+  tempDiv.querySelectorAll(".note-inline-image").forEach((wrap) => {
+    const parent = wrap.parentNode;
+    if (!parent) return;
+    while (wrap.firstChild) parent.insertBefore(wrap.firstChild, wrap);
+    parent.removeChild(wrap);
+  });
   return tempDiv.innerHTML;
 };
 
