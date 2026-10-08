@@ -23,6 +23,7 @@ import {
   getLeaveDurationTypes,
   modifyLeaveRequest,
   getLeaveRequestEmailConfig,
+  notifyBatchLeaveRequests,
 } from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchAttendanceByDateRange } from "../reducers/employeeAttendance.reducer";
@@ -51,9 +52,12 @@ import {
   ArrowLeft,
   Building2,
   Filter,
+  Search,
+  Plus,
 } from "lucide-react";
 import { message } from "antd";
 import CommonMultipleUploader from "./CommonMultipleUploader";
+import { EmployeeDirectoryPickerModal } from "../Notes/components";
 
 const datePickerTheme = {
   token: {
@@ -188,6 +192,7 @@ const LeaveManagement = () => {
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [ccEmailInput, setCcEmailInput] = useState("");
   const [ccEmailError, setCcEmailError] = useState("");
+  const [isEmployeePickerOpen, setIsEmployeePickerOpen] = useState(false);
   const [modifyCcInput, setModifyCcInput] = useState("");
   const [modifyCcError, setModifyCcError] = useState("");
   const [modifyErrors, setModifyErrors] = useState<{
@@ -205,6 +210,18 @@ const LeaveManagement = () => {
     endDate: "",
     duration: 0,
   });
+  // Batch multi-date ranges (up to 5 ranges)
+  const [queuedDateRanges, setQueuedDateRanges] = useState<
+    {
+      id: string;
+      startDate: string;
+      endDate: string;
+      duration: number;
+      leaveDurationType: string;
+      halfDayType: string | null;
+      otherHalfType: string | null;
+    }[]
+  >([]);
   const [leaveDurationType, setLeaveDurationType] = useState(
     HalfDayType.FULL_DAY,
   );
@@ -318,6 +335,21 @@ const LeaveManagement = () => {
     const currentDate = current.startOf("day");
     const today = dayjs().startOf("day");
 
+    // Block any dates that are already added in queuedDateRanges
+    if (queuedDateRanges.length > 0) {
+      const isQueued = queuedDateRanges.some((range) => {
+        const qStart = dayjs(range.startDate).startOf("day");
+        const qEnd = dayjs(range.endDate).startOf("day");
+        return (
+          (currentDate.isSame(qStart) || currentDate.isAfter(qStart)) &&
+          (currentDate.isSame(qEnd) || currentDate.isBefore(qEnd))
+        );
+      });
+      if (isQueued) {
+        return true;
+      }
+    }
+
     if (!isPrivileged) {
       if (selectedLeaveType === WorkLocation.CLIENT_VISIT) {
         // Any past date allowed for Client Visit
@@ -415,6 +447,20 @@ const LeaveManagement = () => {
     // Always check if date has Leave or WFH applied (regardless of request type)
     if (disabledDate(current)) return true;
 
+    const currentDate = current ? current.startOf("day") : null;
+
+    // Check if selecting this end date would cross over any already queued range
+    if (formData.startDate && currentDate && queuedDateRanges.length > 0) {
+      const selStart = dayjs(formData.startDate).startOf("day");
+      const selEnd = currentDate;
+      const overlapsQueued = queuedDateRanges.some((range) => {
+        const qStart = dayjs(range.startDate).startOf("day");
+        const qEnd = dayjs(range.endDate).startOf("day");
+        return !selStart.isAfter(qEnd) && !selEnd.isBefore(qStart);
+      });
+      if (overlapsQueued) return true;
+    }
+
     // Privileged users and Client Visit always allowed past dates
     if (isPrivileged || selectedLeaveType === WorkLocation.CLIENT_VISIT) {
       // Don't allow end date before start date
@@ -427,7 +473,6 @@ const LeaveManagement = () => {
     }
 
     const today = dayjs().startOf("day");
-    const currentDate = current.startOf("day");
 
     if (
       selectedLeaveType === WorkLocation.WFH ||
@@ -437,8 +482,8 @@ const LeaveManagement = () => {
       selectedLeaveType === AttendanceStatus.LEAVE
     ) {
       const oneMonthAgo = today.subtract(1, "month");
-      if (currentDate.isBefore(oneMonthAgo)) return true;
-    } else if (currentDate.isBefore(today)) {
+      if (currentDate && currentDate.isBefore(oneMonthAgo)) return true;
+    } else if (currentDate && currentDate.isBefore(today)) {
       return true;
     }
 
@@ -474,7 +519,7 @@ const LeaveManagement = () => {
     return isAway(h1) && isAway(h2) ? 1.0 : 0.5;
   };
 
-  const validateForm = (shouldScroll = false) => {
+  const validateForm = (shouldScroll = false, isBatch = false) => {
     let isValid = true;
     const newErrors = {
       title: "",
@@ -487,13 +532,15 @@ const LeaveManagement = () => {
       newErrors.title = "Subject is required";
       isValid = false;
     }
-    if (!formData.startDate) {
-      newErrors.startDate = "Start date is required";
-      isValid = false;
-    }
-    if (!formData.endDate) {
-      newErrors.endDate = "End date is required";
-      isValid = false;
+    if (!isBatch) {
+      if (!formData.startDate) {
+        newErrors.startDate = "Start date is required";
+        isValid = false;
+      }
+      if (!formData.endDate) {
+        newErrors.endDate = "End date is required";
+        isValid = false;
+      }
     }
     if (!formData.description.trim()) {
       newErrors.description = "Description is required";
@@ -742,8 +789,185 @@ const LeaveManagement = () => {
     return count;
   };
 
+  // Helper to calculate duration for any arbitrary start & end date based on active request settings
+  const getCalculatedDuration = (start: string, end: string): number => {
+    if (!start || !end) return 0;
+    if (
+      selectedLeaveType === WorkLocation.CLIENT_VISIT ||
+      selectedLeaveType === WorkLocation.WORK_FROM_HOME ||
+      selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+      selectedLeaveType === LeaveRequestType.LEAVE ||
+      selectedLeaveType === LeaveRequestType.HALF_DAY
+    ) {
+      const baseDur = calculateDurationExcludingWeekends(start, end);
+      const isHalf =
+        leaveDurationType === HalfDayType.HALF_DAY ||
+        leaveDurationType === HalfDayType.FIRST_HALF ||
+        leaveDurationType === HalfDayType.SECOND_HALF;
+      if (isHalf) {
+        const factor = getDurationFactor(
+          leaveDurationType === HalfDayType.HALF_DAY
+            ? halfDayType
+            : leaveDurationType,
+          otherHalfType,
+        );
+        return baseDur * factor;
+      }
+      return baseDur;
+    } else {
+      return dayjs(end).diff(dayjs(start), "day") + 1;
+    }
+  };
+
+  const handleAddDateRange = () => {
+    if (!formData.startDate) {
+      setErrors((prev) => ({ ...prev, startDate: "Start date is required" }));
+      return;
+    }
+    if (!formData.endDate) {
+      setErrors((prev) => ({ ...prev, endDate: "End date is required" }));
+      return;
+    }
+    if (queuedDateRanges.length >= 5) {
+      message.warning("You can add up to 5 date ranges.");
+      return;
+    }
+
+    const dur = getCalculatedDuration(formData.startDate, formData.endDate);
+    if (dur <= 0) {
+      message.error(
+        "Selected range has 0 working days (e.g. falls entirely on weekends or holidays)."
+      );
+      return;
+    }
+
+    // Overlap check with already queued ranges
+    const startM = dayjs(formData.startDate).startOf("day");
+    const endM = dayjs(formData.endDate).startOf("day");
+    const hasOverlap = queuedDateRanges.some((r) => {
+      const rStart = dayjs(r.startDate).startOf("day");
+      const rEnd = dayjs(r.endDate).startOf("day");
+      return !startM.isAfter(rEnd) && !endM.isBefore(rStart);
+    });
+
+    if (hasOverlap) {
+      message.error(
+        "This date range overlaps with an already added range in your list."
+      );
+      return;
+    }
+
+    const newRange = {
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      startDate: formData.startDate,
+      endDate: formData.endDate,
+      duration: dur,
+      leaveDurationType,
+      halfDayType,
+      otherHalfType,
+    };
+
+    setQueuedDateRanges((prev) => [...prev, newRange]);
+    setFormData((prev) => ({ ...prev, startDate: "", endDate: "" }));
+    message.success(
+      `Added: ${dayjs(newRange.startDate).format("DD MMM YYYY")} – ${dayjs(newRange.endDate).format("DD MMM YYYY")} (${dur} Day${dur > 1 ? "s" : ""})`
+    );
+  };
+
+  const handleRemoveDateRange = (id: string) => {
+    setQueuedDateRanges((prev) => prev.filter((r) => r.id !== id));
+  };
+
   const handleSubmit = async () => {
-    if (validateForm(true)) {
+    const allRangesToSubmit = [...queuedDateRanges];
+    if (queuedDateRanges.length > 0 && queuedDateRanges.length < 5 && formData.startDate && formData.endDate) {
+      const extraDur = getCalculatedDuration(formData.startDate, formData.endDate);
+      if (extraDur > 0) {
+        allRangesToSubmit.push({
+          id: `current-${Date.now()}`,
+          startDate: formData.startDate,
+          endDate: formData.endDate,
+          duration: extraDur,
+          leaveDurationType,
+          halfDayType,
+          otherHalfType,
+        });
+      }
+    }
+
+    const isBatch = allRangesToSubmit.length > 0;
+    if (validateForm(true, isBatch)) {
+      if (isBatch) {
+        try {
+          let countSubmitted = 0;
+          const createdIds: number[] = [];
+          const isMultiple = allRangesToSubmit.length > 1;
+
+          for (const item of allRangesToSubmit) {
+            let finalRequestType = selectedLeaveType;
+            const isSplitRequest =
+              item.leaveDurationType === HalfDayType.HALF_DAY ||
+              item.leaveDurationType === HalfDayType.FIRST_HALF ||
+              item.leaveDurationType === HalfDayType.SECOND_HALF;
+
+            if (
+              selectedLeaveType === LeaveRequestType.APPLY_LEAVE ||
+              selectedLeaveType === LeaveRequestType.LEAVE ||
+              selectedLeaveType === LeaveRequestType.HALF_DAY
+            ) {
+              finalRequestType = isSplitRequest
+                ? LeaveRequestType.HALF_DAY
+                : LeaveRequestType.APPLY_LEAVE;
+            }
+
+            const actionResult: any = await dispatch(
+              submitLeaveRequest({
+                employeeId: employeeId!,
+                requestType: finalRequestType,
+                title: formData.title,
+                description: formData.description,
+                fromDate: item.startDate,
+                toDate: item.endDate,
+                duration: item.duration,
+                isHalfDay: isSplitRequest,
+                halfDayType: isSplitRequest ? item.halfDayType : null,
+                otherHalfType: isSplitRequest ? item.otherHalfType : null,
+                firstHalf: isSplitRequest ? item.halfDayType : finalRequestType,
+                secondHalf: isSplitRequest ? item.otherHalfType : finalRequestType,
+                submittedDate: dayjs().format("YYYY-MM-DD"),
+                ccEmails: ccEmails && ccEmails.length > 0 ? ccEmails : [],
+                documentKeys: uploadedDocumentKeys,
+                suppressEmail: isMultiple,
+              })
+            );
+
+            if (actionResult?.payload?.id) {
+              createdIds.push(actionResult.payload.id);
+            }
+            countSubmitted++;
+          }
+
+          // Trigger consolidated batch email with dedicated template when multiple date ranges are submitted
+          if (isMultiple && createdIds.length > 0) {
+            await dispatch(
+              notifyBatchLeaveRequests({
+                employeeId: employeeId!,
+                requestIds: createdIds,
+              })
+            );
+          }
+
+          message.success(
+            `Successfully submitted all ${countSubmitted} request${countSubmitted > 1 ? "s" : ""}!`
+          );
+          handleCloseModal();
+          refreshData();
+        } catch (err: any) {
+          message.error("Failed to submit requests. Please check your history.");
+        }
+        return;
+      }
+
       // Determine the actual request type and duration factor
       let finalRequestType = selectedLeaveType;
       const isSplitRequest =
@@ -1055,6 +1279,7 @@ const LeaveManagement = () => {
       duration: 0,
     }); // Explicitly clear any stale data
     setUploadedDocumentKeys([]);
+    setQueuedDateRanges([]);
     if (label === LeaveRequestType.HALF_DAY) {
       setLeaveDurationType(HalfDayType.FIRST_HALF);
       setIsHalfDay(true);
@@ -1115,6 +1340,7 @@ const LeaveManagement = () => {
       setCcEmailInput("");
       setCcEmailError("");
       setUploadedDocumentKeys([]);
+      setQueuedDateRanges([]);
       if (fetchedItem.employeeId) {
         dispatch(getLeaveRequestEmailConfig(fetchedItem.employeeId))
           .unwrap()
@@ -1152,6 +1378,7 @@ const LeaveManagement = () => {
     setCcEmailError("");
     setErrors({ title: "", description: "", startDate: "", endDate: "" });
     setUploadedDocumentKeys([]);
+    setQueuedDateRanges([]);
     dispatch(resetSubmitSuccess());
   };
 
@@ -1169,6 +1396,15 @@ const LeaveManagement = () => {
   };
   const removeCcEmail = (email: string) =>
     setCcEmails(ccEmails.filter((e) => e !== email));
+
+  const handleAddCcFromDirectory = (newEmails: string[]) => {
+    const existingLower = new Set(ccEmails.map((e) => e.trim().toLowerCase()));
+    const filtered = newEmails.filter((e) => !existingLower.has(e.trim().toLowerCase()));
+    if (filtered.length > 0) {
+      setCcEmails((prev) => [...prev, ...filtered]);
+      if (ccEmailError) setCcEmailError("");
+    }
+  };
 
   const addModifyCcEmail = (email: string) => {
     const trimmed = email.trim().toLowerCase();
@@ -2406,9 +2642,22 @@ const LeaveManagement = () => {
                     </div>
                   </div>
                   <div>
-                    <span className="text-xs font-medium text-gray-600 ml-1 block mb-1">
-                      CC
-                    </span>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-medium text-gray-600 ml-1 block">
+                        CC
+                      </span>
+                      {!isViewMode && (
+                        <button
+                          type="button"
+                          onClick={() => setIsEmployeePickerOpen(true)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-800 active:scale-95 rounded-lg border border-slate-200 transition cursor-pointer"
+                          title="Search and select employees to get email IDs"
+                        >
+                          <Search className="w-3.5 h-3.5 text-slate-500" />
+                          <span>Get Email Id's</span>
+                        </button>
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-2 items-center">
                       {isViewMode ? (
                         ccEmails.length > 0 ? (
@@ -2607,7 +2856,7 @@ const LeaveManagement = () => {
               )}
 
             {/* Dates Row + Total Days */}
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
               <div className="space-y-2" ref={startDateRef}>
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   From <span className="text-red-500">*</span>
@@ -2620,6 +2869,7 @@ const LeaveManagement = () => {
                   <>
                     <ConfigProvider theme={datePickerTheme}>
                       <DatePicker
+                        disabled={queuedDateRanges.length >= 5}
                         inputReadOnly={true}
                         classNames={{
                           popup: "hide-other-months show-weekdays",
@@ -2679,6 +2929,7 @@ const LeaveManagement = () => {
                   <>
                     <ConfigProvider theme={datePickerTheme}>
                       <DatePicker
+                        disabled={queuedDateRanges.length >= 5}
                         inputReadOnly={true}
                         classNames={{
                           popup: "hide-other-months show-weekdays",
@@ -2712,9 +2963,30 @@ const LeaveManagement = () => {
                 )}
               </div>
               <div className="space-y-2 flex flex-col justify-end">
-                <label className="text-sm font-bold text-[#2B3674] ml-1">
-                  Duration:
-                </label>
+                <div className="flex items-center gap-1.5 ml-1 h-5">
+                  {!isViewMode && (
+                    <button
+                      type="button"
+                      onClick={handleAddDateRange}
+                      disabled={queuedDateRanges.length >= 5}
+                      className={`w-5 h-5 rounded-md flex items-center justify-center transition-all shadow-xs active:scale-90 shrink-0 ${
+                        queuedDateRanges.length >= 5
+                          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                          : "bg-[#4318FF] hover:bg-[#3311CC] text-white cursor-pointer"
+                      }`}
+                      title={
+                        queuedDateRanges.length >= 5
+                          ? "Maximum 5 date ranges added"
+                          : "Add date range to list (up to 5)"
+                      }
+                    >
+                      <Plus size={13} strokeWidth={2.5} />
+                    </button>
+                  )}
+                  <label className="text-sm font-bold text-[#2B3674]">
+                    Duration:
+                  </label>
+                </div>
                 <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
@@ -2759,6 +3031,57 @@ const LeaveManagement = () => {
                 </div>
               </div>
             </div>
+
+            {/* Selected Date Ranges List */}
+            {!isViewMode && queuedDateRanges.length > 0 && (
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-[#F4F7FE] to-indigo-50/50 border border-blue-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-[#2B3674] uppercase tracking-wider">
+                    Selected Date Ranges ({queuedDateRanges.length}/5 added)
+                  </span>
+                  <span className="text-xs font-bold text-[#4318FF] bg-white px-2.5 py-1 rounded-lg border border-blue-100 shadow-xs">
+                    Total Duration:{" "}
+                    {queuedDateRanges.reduce(
+                      (acc, curr) => acc + (parseFloat(String(curr.duration)) || 0),
+                      0,
+                    )}{" "}
+                    Day(s)
+                  </span>
+                </div>
+                <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
+                  {queuedDateRanges.map((range, index) => (
+                    <div
+                      key={range.id || index}
+                      className="flex items-center justify-between bg-white px-3.5 py-2.5 rounded-xl border border-gray-100 shadow-xs hover:border-blue-200 transition-all"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="w-5 h-5 rounded-full bg-[#F4F7FE] text-[#4318FF] text-xs font-extrabold flex items-center justify-center shrink-0">
+                          {index + 1}
+                        </span>
+                        <div className="text-xs sm:text-sm font-bold text-[#2B3674]">
+                          <span>{dayjs(range.startDate).format("DD MMM YYYY")}</span>
+                          <span className="text-gray-400 mx-2">→</span>
+                          <span>{dayjs(range.endDate).format("DD MMM YYYY")}</span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-blue-50 text-[#4318FF]">
+                          {range.duration} Day(s)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveDateRange(range.id)}
+                          className="w-7 h-7 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all cursor-pointer"
+                          title="Remove this date range"
+                        >
+                          <X size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Split-Day Information (View Mode Only) */}
             {isViewMode &&
@@ -2925,6 +3248,8 @@ const LeaveManagement = () => {
                     <Loader2 className="animate-spin" size={18} />
                     <span>Submitting...</span>
                   </div>
+                ) : queuedDateRanges.length > 0 ? (
+                  `Submit All (${queuedDateRanges.length + (formData.startDate && formData.endDate ? 1 : 0)} Requests)`
                 ) : (
                   "Submit Request"
                 )}
@@ -3737,6 +4062,14 @@ const LeaveManagement = () => {
           )}
         </div>
       </Modal>
+
+      {/* Employee Directory Picker for CC emails */}
+      <EmployeeDirectoryPickerModal
+        open={isEmployeePickerOpen}
+        onClose={() => setIsEmployeePickerOpen(false)}
+        existingEmails={ccEmails}
+        onAddRecipients={handleAddCcFromDirectory}
+      />
     </div>
   );
 };

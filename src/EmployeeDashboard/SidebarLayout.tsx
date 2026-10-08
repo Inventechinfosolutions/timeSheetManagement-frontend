@@ -49,19 +49,6 @@ const SidebarLayout = ({
     dispatch(fetchInboxUnreadCount());
   }, [dispatch]);
 
-  // Auto-unlock sidebar when note page orientation changes to maximize space
-  useEffect(() => {
-    const handleOrientationChange = () => {
-      setIsLocked(false);
-      setIsHovered(false);
-    };
-
-    window.addEventListener("note-orientation-change", handleOrientationChange);
-    return () => {
-      window.removeEventListener("note-orientation-change", handleOrientationChange);
-    };
-  }, []);
-
   // Track whether citizen is inside Note Workspace (Create/Edit/View) alone vs List mode / other pages
   const [isWorkspaceMode, setIsWorkspaceMode] = useState(false);
 
@@ -387,7 +374,8 @@ const SidebarLayout = ({
             <ApiLoadingSpinner contained contentAreaRef={mainContentRef} />
           </div>
           <Footer className="sidebar-footer" />
-          {derivedActiveTab === "Employee Notes" && (
+          {(derivedActiveTab === "Employee Notes" ||
+            derivedActiveTab === "Inbox") && (
             <ScrollNavigator targetRef={mainContentRef} />
           )}
         </main>

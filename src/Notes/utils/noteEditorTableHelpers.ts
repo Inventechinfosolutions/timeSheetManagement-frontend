@@ -39,16 +39,43 @@ export const clearSelectionVisuals = (
  */
 export const applySelectionVisuals = (
   cells: HTMLTableCellElement[],
-  type: "row" | "column" | "cells" = "cells"
+  type: "row" | "column" | "cells" | "table" = "cells"
 ) => {
   if (cells.length === 0) return;
   const table = cells[0].closest("table");
   clearSelectionVisuals(table);
 
-  const borderColor = "#2563eb"; // Excel selection blue
+  const borderColor = "#60a5fa"; // Soft selection blue
+
+  if (type === "table" && table) {
+    // Outer box around the whole table only
+    const rows = Array.from(table.rows);
+    const lastRowIdx = rows.length - 1;
+    rows.forEach((row, rIdx) => {
+      const cellsInRow = Array.from(row.cells) as HTMLTableCellElement[];
+      const lastColIdx = cellsInRow.length - 1;
+      cellsInRow.forEach((c, cIdx) => {
+        c.classList.add("excel-cell-selected");
+        if (rIdx === 0) {
+          c.style.setProperty("border-top", `2px solid ${borderColor}`, "important");
+        }
+        if (rIdx === lastRowIdx) {
+          c.style.setProperty("border-bottom", `2px solid ${borderColor}`, "important");
+        }
+        if (cIdx === 0) {
+          c.style.setProperty("border-left", `2px solid ${borderColor}`, "important");
+        }
+        if (cIdx === lastColIdx) {
+          c.style.setProperty("border-right", `2px solid ${borderColor}`, "important");
+        }
+        c.style.setProperty("z-index", "2", "important");
+      });
+    });
+    return;
+  }
 
   if (type === "row") {
-    // ONLY outer border: Top and bottom across the row, left on first cell, right on last cell. NO vertical lines in-between!
+    // ONLY outer border: Top and bottom across the row, left on first cell, right on last cell.
     cells.forEach((c, idx) => {
       c.classList.add("excel-cell-selected");
       c.style.setProperty("border-top", `2px solid ${borderColor}`, "important");
@@ -62,7 +89,7 @@ export const applySelectionVisuals = (
       c.style.setProperty("z-index", "2", "important");
     });
   } else if (type === "column") {
-    // ONLY outer border: Left and right down the column, top on first cell, bottom on last cell. NO horizontal lines in-between!
+    // ONLY outer border: Left and right down the column, top on first cell, bottom on last cell.
     cells.forEach((c, idx) => {
       c.classList.add("excel-cell-selected");
       c.style.setProperty("border-left", `2px solid ${borderColor}`, "important");
@@ -102,14 +129,14 @@ export const updateTableHeadersAndSl = (table: HTMLTableElement) => {
         th.setAttribute("contenteditable", "false");
         th.className = "excel-sl-col";
         th.textContent = "SL";
-        th.setAttribute("title", "Serial Number Column");
+        th.setAttribute("title", "Click to select entire table");
         row.insertBefore(th, row.cells[0]);
       } else {
         const td = document.createElement("td");
         td.setAttribute("contenteditable", "false");
         td.className = "excel-sl-col";
         td.textContent = `${idx}`;
-        td.setAttribute("title", `Row ${idx} (Click to select row)`);
+        td.setAttribute("title", "Click to select this row");
         row.insertBefore(td, row.cells[0]);
       }
     });
@@ -125,6 +152,7 @@ export const updateTableHeadersAndSl = (table: HTMLTableElement) => {
         th.textContent = "SL";
         th.className = "excel-sl-col";
         th.setAttribute("contenteditable", "false");
+        th.setAttribute("title", "Click to select entire table");
         return;
       }
       if (th.classList.contains("excel-attachment-col") || th.getAttribute("data-col-type") === "attachment") {
@@ -151,8 +179,56 @@ export const updateTableHeadersAndSl = (table: HTMLTableElement) => {
         firstCell.textContent = `${idx + 1}`;
         firstCell.setAttribute("contenteditable", "false");
         firstCell.className = "excel-sl-col";
-        firstCell.setAttribute("title", `Row ${idx + 1} (Click to select row)`);
+        firstCell.setAttribute("title", "Click to select this row");
       }
     });
   }
+};
+
+const isFormattableCell = (cell: HTMLTableCellElement) =>
+  document.contains(cell) &&
+  !cell.classList.contains("excel-sl-col") &&
+  !cell.classList.contains("excel-attachment-cell") &&
+  cell.getAttribute("contenteditable") !== "false";
+
+export const getSelectedTableCells = (
+  selectedCells: HTMLTableCellElement[]
+): HTMLTableCellElement[] =>
+  selectedCells.filter(
+    (cell) => cell.classList.contains("excel-cell-selected") && isFormattableCell(cell)
+  );
+
+export const applyToolbarCommandToCells = (
+  cells: HTMLTableCellElement[],
+  command: string,
+  value = ""
+): boolean => {
+  const targets = cells.filter(isFormattableCell);
+  if (!targets.length) return false;
+
+  const selection = window.getSelection();
+  document.execCommand("styleWithCSS", false, "true");
+
+  targets.forEach((cell) => {
+    const range = document.createRange();
+    range.selectNodeContents(cell);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+
+    if (command === "formatBlock") {
+      const ok = document.execCommand("formatBlock", false, value);
+      if (!ok) document.execCommand("formatBlock", false, value.replace(/[<>]/g, ""));
+    } else if (command === "hiliteColor") {
+      const ok = document.execCommand("hiliteColor", false, value);
+      if (!ok) document.execCommand("backColor", false, value);
+    } else if (command === "foreColor") {
+      document.execCommand("foreColor", false, value);
+      cell.style.color = value;
+    } else {
+      document.execCommand(command, false, value || undefined);
+    }
+  });
+
+  selection?.removeAllRanges();
+  return true;
 };

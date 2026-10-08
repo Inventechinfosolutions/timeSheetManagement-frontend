@@ -73,6 +73,7 @@ import {
 } from "lucide-react";
 import { message } from "antd";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
+import { EmployeeDirectoryPickerModal } from "../Notes/components";
 
 const isCancellationAllowed = (submittedDate: string) => {
   if (!submittedDate) return true;
@@ -223,6 +224,7 @@ const AdminLeaveManagement = () => {
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [ccEmailInput, setCcEmailInput] = useState("");
   const [ccEmailError, setCcEmailError] = useState("");
+  const [isEmployeePickerOpen, setIsEmployeePickerOpen] = useState(false);
   const [modifyErrors, setModifyErrors] = useState<{
     title: string;
     description: string;
@@ -1612,6 +1614,15 @@ const AdminLeaveManagement = () => {
   const removeCcEmail = (email: string) =>
     setCcEmails(ccEmails.filter((e) => e !== email));
 
+  const handleAddCcFromDirectory = (newEmails: string[]) => {
+    const existingLower = new Set(ccEmails.map((e) => e.trim().toLowerCase()));
+    const filtered = newEmails.filter((e) => !existingLower.has(e.trim().toLowerCase()));
+    if (filtered.length > 0) {
+      setCcEmails((prev) => [...prev, ...filtered]);
+      if (ccEmailError) setCcEmailError("");
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case LeaveRequestStatus.APPROVED:
@@ -2779,9 +2790,22 @@ const AdminLeaveManagement = () => {
                     </div>
 
                     <div>
-                      <span className="text-xs font-medium text-gray-600 ml-1 block mb-1 uppercase tracking-wide">
-                        CC
-                      </span>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-medium text-gray-600 ml-1 block uppercase tracking-wide">
+                          CC
+                        </span>
+                        {!isViewMode && (
+                          <button
+                            type="button"
+                            onClick={() => setIsEmployeePickerOpen(true)}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-800 active:scale-95 rounded-lg border border-slate-200 transition cursor-pointer"
+                            title="Search and select employees to get email IDs"
+                          >
+                            <Search className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Get Email Id's</span>
+                          </button>
+                        )}
+                      </div>
                       <div className="flex flex-wrap gap-2 items-center">
                         {isViewMode ? (
                           ccEmails.length > 0 ? (
@@ -4031,6 +4055,14 @@ const AdminLeaveManagement = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Employee Directory Picker for CC emails */}
+      <EmployeeDirectoryPickerModal
+        open={isEmployeePickerOpen}
+        onClose={() => setIsEmployeePickerOpen(false)}
+        existingEmails={ccEmails}
+        onAddRecipients={handleAddCcFromDirectory}
+      />
     </div>
   );
 };

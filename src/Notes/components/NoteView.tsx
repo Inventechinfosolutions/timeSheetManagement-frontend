@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import {
   FileText,
   Edit3,
@@ -19,16 +19,25 @@ import {
 } from "lucide-react";
 import { Dropdown, Popconfirm, type MenuProps } from "antd";
 import dayjs from "dayjs";
-import { Note, NoteDocumentItem } from "../types/notes.types";
+import { Note, NoteDocumentItem, ExcelWorkbookData } from "../types/notes.types";
 import { NoteAttachmentChip } from "./NoteAttachmentChip";
 import {
   exportNoteToPdf,
   exportNoteToWord,
   copyNoteContentToClipboard,
 } from "../utils/notesHelpers";
+import { buildDocumentPagesHtml, isNoteLandscape, paginateToA4Sheets } from "../utils/documentLayout";
+import { refreshAttachmentBadges } from "../utils/noteEditorAttachmentHelpers";
+import {
+  htmlHasVisibleNoteContent,
+  parseExcelWorkbookFromHtml,
+  stripExcelWorkbookStore,
+} from "../utils/excelExtract";
+import { ExcelSpreadsheetView } from "../../components/ExcelSpreadsheetView";
 
 interface NoteViewProps {
   activeNote: Note;
+  excelWorkbook?: ExcelWorkbookData | null;
   onStartEdit: (note: Note) => void;
   onBack: () => void;
   onPreviewAttachment: (item: NoteDocumentItem) => void;
@@ -43,6 +52,7 @@ interface NoteViewProps {
 
 export const NoteView: React.FC<NoteViewProps> = ({
   activeNote,
+  excelWorkbook,
   onStartEdit,
   onBack,
   onPreviewAttachment,
@@ -55,25 +65,24 @@ export const NoteView: React.FC<NoteViewProps> = ({
   onDelete,
 }) => {
   const isProjectNote = activeNote.type === "PROJECT";
+  const isLandscape = isNoteLandscape(activeNote);
+  // Excel viewer only when description is an Excel note (workbook store), not when .xlsx is just a file attachment
+  const storedWorkbook = parseExcelWorkbookFromHtml(activeNote.description);
+  const viewerWorkbook =
+    storedWorkbook && excelWorkbook?.sheetNames?.length
+      ? excelWorkbook
+      : storedWorkbook?.sheetNames?.length
+        ? storedWorkbook
+        : null;
+  const visibleDescription = stripExcelWorkbookStore(activeNote.description);
+  const showA4Content = htmlHasVisibleNoteContent(visibleDescription);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!contentRef.current) return;
-    const badges = contentRef.current.querySelectorAll<HTMLElement>(".table-file-badge");
-    badges.forEach((badge) => {
-      const fileKey = badge.getAttribute("data-file-key") || badge.querySelector("[data-key]")?.getAttribute("data-key");
-      const fileName = badge.getAttribute("data-file-name") || badge.querySelector(".table-file-name")?.textContent || "Attachment";
-      if (!badge.querySelector("[data-file-action='download']") && fileKey) {
-        const previewBtn = badge.querySelector("[data-file-action='preview']");
-        const downloadBtnHtml = `<button type="button" class="table-file-btn download" data-file-action="download" data-key="${fileKey}" data-name="${fileName}" title="Download file"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg></button>`;
-        if (previewBtn) {
-          previewBtn.insertAdjacentHTML("afterend", downloadBtnHtml);
-        } else {
-          badge.insertAdjacentHTML("beforeend", downloadBtnHtml);
-        }
-      }
-    });
-  }, [activeNote.description]);
+  useLayoutEffect(() => {
+    if (!showA4Content || !contentRef.current) return;
+    paginateToA4Sheets(contentRef.current, isLandscape, true);
+    refreshAttachmentBadges(contentRef.current);
+  }, [activeNote.description, isLandscape, showA4Content]);
 
   const getDownloadMenuItems = (note: Note): MenuProps["items"] => [
     {
@@ -321,58 +330,92 @@ export const NoteView: React.FC<NoteViewProps> = ({
           </div>
         </div>
 
-        {/* NOTE CONTENT VIEW */}
-        <div className="space-y-2 w-full">
-          {activeNote.description && activeNote.description.trim() && (
-            <div className="flex items-center justify-end">
-              <button
-                type="button"
-                onClick={() => copyNoteContentToClipboard(activeNote.description)}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#4318FF] bg-slate-50 hover:bg-indigo-50/50 px-3 py-1.5 rounded-lg border border-slate-200/70 transition cursor-pointer"
-                title="Copy page content to clipboard"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                <span>Copy Page</span>
-              </button>
+        {/* DESCRIPTION / NOTE CONTENT VIEW */}
+        <div className="space-y-3 w-full">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-[#4318FF]" />
+              <span className="text-xs md:text-sm font-bold text-[#1B2559] uppercase tracking-wider">
+                Description & Content
+              </span>
             </div>
-          )}
 
-          {/* A4 Workspace Simulation for View Mode */}
-          <div className="a4-page-workspace w-full rounded-2xl flex justify-start items-start overflow-x-auto bg-slate-100/80 p-4 sm:p-8 min-h-[640px] border border-slate-200/60">
-            <div
-              className={`a4-page shrink-0 transition-all duration-300 ${
-                activeNote.isVertical === false ? "landscape" : ""
-              }`}
-              style={
-                activeNote.isVertical === false
-                  ? { minWidth: "337mm", width: "max-content", minHeight: "210mm" }
-                  : { minWidth: "210mm", width: "max-content", minHeight: "297mm" }
-              }
-            >
-              {activeNote.description && activeNote.description.trim() ? (
-                <div
-                  ref={contentRef}
-                  className="notes-content-view prose prose-slate max-w-none text-slate-800 text-sm sm:text-base leading-relaxed break-words"
-                  dangerouslySetInnerHTML={{ __html: activeNote.description }}
-                  onClick={handleContentViewClick}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center py-24 text-center text-slate-400 gap-3">
-                  <FileText className="w-12 h-12 text-slate-300 stroke-[1.5]" />
-                  <p className="text-sm font-medium text-slate-500">No description or notes have been added yet.</p>
-                  <button
-                    type="button"
-                    onClick={() => onStartEdit(activeNote)}
-                    className="mt-1 px-4 py-2 bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 font-semibold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5"
-                  >
-                    <Edit3 className="w-3.5 h-3.5" />
-                    <span>Add Description</span>
-                  </button>
-                </div>
+            <div className="flex items-center gap-2">
+              {activeNote.description && activeNote.description.trim() && (
+                <button
+                  type="button"
+                  onClick={() => copyNoteContentToClipboard(activeNote.description)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#4318FF] bg-slate-50 hover:bg-indigo-50/50 px-3 py-1.5 rounded-lg border border-slate-200/70 transition cursor-pointer"
+                  title="Copy note text to clipboard"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy Text</span>
+                </button>
               )}
             </div>
           </div>
-        </div>
+
+          {/* A4 description (kept) + Excel grid when present — Excel never replaces existing content */}
+          <div className="w-full flex flex-col gap-4">
+            {showA4Content ? (
+              <div
+                className={`a4-page-workspace w-full rounded-2xl flex justify-center items-start overflow-auto bg-slate-100/80 p-4 sm:p-8 min-h-[720px] border border-slate-200/60${isLandscape ? " is-landscape" : ""}`}
+              >
+                <div className="a4-page-rotator">
+                  <div className="a4-page doc-pages">
+                    <div
+                      className={`notes-content-view doc-pages-editor text-slate-800 text-sm sm:text-base leading-relaxed break-words${isLandscape ? " is-landscape" : ""}`}
+                      ref={contentRef}
+                      onClick={handleContentViewClick}
+                      dangerouslySetInnerHTML={{
+                        __html: buildDocumentPagesHtml(
+                          visibleDescription,
+                          undefined,
+                          undefined,
+                          undefined,
+                          isLandscape
+                        ),
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ) : !viewerWorkbook?.sheetNames?.length ? (
+              <div
+                className={`a4-page-workspace w-full rounded-2xl flex justify-center items-start overflow-auto bg-slate-100/80 p-4 sm:p-8 min-h-[720px] border border-slate-200/60${isLandscape ? " is-landscape" : ""}`}
+              >
+                <div className="a4-page-rotator">
+                  <div className="a4-page doc-pages">
+                    <div className="notes-content-view doc-pages-editor">
+                      <div className="page">
+                        <div className="flex flex-col items-center justify-center py-24 text-center text-slate-400 gap-3">
+                          <FileText className="w-12 h-12 text-slate-300 stroke-[1.5]" />
+                          <p className="text-sm font-medium text-slate-500">
+                            No description or notes have been added yet.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => onStartEdit(activeNote)}
+                            className="mt-1 px-4 py-2 bg-indigo-50 text-[#4318FF] hover:bg-indigo-100 font-semibold text-xs rounded-xl transition cursor-pointer flex items-center gap-1.5"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Add Description</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {viewerWorkbook?.sheetNames?.length ? (
+              <div className="w-full overflow-auto bg-white rounded-2xl p-4 sm:p-5 min-h-[480px] border border-slate-200/60">
+                <ExcelSpreadsheetView embedded workbook={viewerWorkbook} />
+              </div>
+            ) : null}
+          </div>
+      </div>
 
         {/* Files & Attachments */}
         {activeNote.attachments && activeNote.attachments.length > 0 && (

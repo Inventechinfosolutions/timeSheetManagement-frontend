@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   List,
   ListOrdered,
@@ -125,6 +125,86 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
   handleCopyAll,
   isCopied,
 }) => {
+  // Local state for custom rows/cols input so user can freely delete, edit and press Enter
+  const [rowInput, setRowInput] = useState<string>(String(customRows || 1));
+  const [colInput, setColInput] = useState<string>(String(customCols || 2));
+
+  useEffect(() => {
+    setRowInput(String(customRows || 1));
+  }, [customRows]);
+
+  useEffect(() => {
+    setColInput(String(customCols || 2));
+  }, [customCols]);
+
+  const handleRowChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === "") {
+      setRowInput("");
+      return;
+    }
+    const num = parseInt(val, 10);
+    if (!isNaN(num)) {
+      setRowInput(val);
+      if (num >= 1 && num <= 50) {
+        setCustomRows(num);
+      }
+    }
+  };
+
+  const handleRowBlur = () => {
+    const num = parseInt(rowInput, 10);
+    if (isNaN(num) || num < 1) {
+      setRowInput("1");
+      setCustomRows(1);
+    } else if (num > 50) {
+      setRowInput("50");
+      setCustomRows(50);
+    } else {
+      setRowInput(String(num));
+      setCustomRows(num);
+    }
+  };
+
+  const handleColChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val === "") {
+      setColInput("");
+      return;
+    }
+    const num = parseInt(val, 10);
+    if (!isNaN(num)) {
+      setColInput(val);
+      if (num >= 1 && num <= 50) {
+        setCustomCols(num);
+      }
+    }
+  };
+
+  const handleColBlur = () => {
+    const num = parseInt(colInput, 10);
+    if (isNaN(num) || num < 1) {
+      setColInput("1");
+      setCustomCols(1);
+    } else if (num > 50) {
+      setColInput("50");
+      setCustomCols(50);
+    } else {
+      setColInput(String(num));
+      setCustomCols(num);
+    }
+  };
+
+  const handleCustomInsert = () => {
+    const r = Math.max(1, Math.min(50, parseInt(rowInput, 10) || customRows || 1));
+    const c = Math.max(1, Math.min(50, parseInt(colInput, 10) || customCols || 2));
+    setCustomRows(r);
+    setCustomCols(c);
+    setRowInput(String(r));
+    setColInput(String(c));
+    onInsertTable(r, c);
+  };
+
   return (
     <div className="flex items-center overflow-x-auto flex-nowrap gap-1 sm:gap-1.5 p-2 px-3 bg-white border-b border-slate-100 text-slate-700 select-none shrink-0 sticky top-0 z-30 rounded-t-2xl shadow-xs scrollbar-thin">
       {/* Bold */}
@@ -370,26 +450,40 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
                     type="number"
                     min={1}
                     max={50}
-                    value={customRows}
-                    onChange={(e) => setCustomRows(Math.max(1, parseInt(e.target.value) || 1))}
+                    value={rowInput}
+                    onChange={handleRowChange}
+                    onBlur={handleRowBlur}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleCustomInsert();
+                      }
+                    }}
                     className="w-11 px-1.5 py-1 text-xs text-center font-bold text-slate-800 bg-white border border-slate-200 rounded-md focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
-                    title="Number of rows"
+                    title="Number of rows (Press Enter to insert)"
                   />
                   <span className="text-xs text-slate-400 font-bold">×</span>
                   <input
                     type="number"
                     min={1}
                     max={50}
-                    value={customCols}
-                    onChange={(e) => setCustomCols(Math.max(1, parseInt(e.target.value) || 1))}
+                    value={colInput}
+                    onChange={handleColChange}
+                    onBlur={handleColBlur}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleCustomInsert();
+                      }
+                    }}
                     className="w-11 px-1.5 py-1 text-xs text-center font-bold text-slate-800 bg-white border border-slate-200 rounded-md focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
-                    title="Number of columns"
+                    title="Number of columns (Press Enter to insert)"
                   />
                   <span className="text-[11px] text-slate-500 font-medium">grid</span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => onInsertTable(customRows, customCols)}
+                  onClick={handleCustomInsert}
                   className="px-2.5 py-1 bg-[#4318FF] hover:bg-[#320fe0] text-white text-xs font-bold rounded-md shadow-xs transition cursor-pointer shrink-0"
                   title={`Insert ${customRows}×${customCols} Table`}
                 >
@@ -572,10 +666,11 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
               <div className="grid grid-cols-5 gap-1.5 pt-0.5">
                 {BOLD_DARK_COLORS.map((c) => (
                   <button
-                    key={`tbl-bg-${c.className}`}
+                    key={`tbl-bg-${c.color}`}
                     type="button"
                     onClick={() => onApplyFillColor(c.color, fillMode)}
-                    className={`w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 active:scale-95 transition-all duration-150 shadow-xs cursor-pointer outline-none focus:outline-none focus:ring-2 focus:ring-slate-400/50 focus:border-slate-500 ${c.className}`}
+                    className="w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 active:scale-95 transition-all duration-150 shadow-xs cursor-pointer outline-none"
+                    style={{ backgroundColor: c.color }}
                     title={c.label}
                   />
                 ))}
@@ -590,10 +685,11 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
               <div className="grid grid-cols-5 gap-1.5 pt-0.5">
                 {LIGHT_SHADING_COLORS.map((c) => (
                   <button
-                    key={`tbl-bg-${c.className}`}
+                    key={`tbl-bg-${c.color}`}
                     type="button"
                     onClick={() => onApplyFillColor(c.color, fillMode)}
-                    className={`w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 active:scale-95 transition-all duration-150 shadow-xs cursor-pointer outline-none focus:outline-none focus:ring-2 focus:ring-slate-400/50 focus:border-slate-500 ${c.className}`}
+                    className="w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 active:scale-95 transition-all duration-150 shadow-xs cursor-pointer outline-none"
+                    style={{ backgroundColor: c.color }}
                     title={c.label}
                   />
                 ))}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Modal, message, Checkbox } from "antd";
 import {
   Send,
@@ -10,6 +10,8 @@ import {
   Sparkles,
   X,
   Search,
+  Inbox,
+  Mail,
 } from "lucide-react";
 import { Note } from "../types/notes.types";
 import { getCleanDescriptionSnippet, sendNoteContent } from "../utils/notesHelpers";
@@ -36,10 +38,15 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
   const [canView, setCanView] = useState(true);
   const [canEdit, setCanEdit] = useState(false);
   const [canDelete, setCanDelete] = useState(false);
+  /** Worksphere application Inbox */
+  const [sendToInbox, setSendToInbox] = useState(true);
+  /** Email notification */
+  const [sendToEmail, setSendToEmail] = useState(true);
   const [includeDescription, setIncludeDescription] = useState(true);
   const [includeFiles, setIncludeFiles] = useState(true);
   const [selectedFileKeys, setSelectedFileKeys] = useState<string[]>([]);
   const [isSending, setIsSending] = useState(false);
+  const isSendingRef = useRef(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -67,6 +74,8 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
       setCanView(true);
       setCanEdit(false);
       setCanDelete(false);
+      setSendToInbox(true);
+      setSendToEmail(true);
       setIncludeDescription(true);
       setIncludeFiles(true);
 
@@ -148,6 +157,8 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
   };
 
   const handleSend = async () => {
+    if (isSendingRef.current) return;
+    isSendingRef.current = true;
     // If user typed an email but didn't press enter, add it automatically
     let currentEmails = [...recipientEmails];
     if (emailInput.trim()) {
@@ -162,6 +173,7 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
       } else {
         setEmailError(`"${pending}" is not a valid email address.`);
         message.error("Please enter a valid email address");
+        isSendingRef.current = false;
         return;
       }
     }
@@ -169,11 +181,21 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
     if (currentEmails.length === 0) {
       setEmailError("Please enter a valid email address.");
       message.error("Please enter a valid recipient email address");
+      isSendingRef.current = false;
       return;
     }
 
     if (!canView && !canEdit && !canDelete) {
       message.error("Please select at least one permission (View, Edit, or Delete)");
+      isSendingRef.current = false;
+      return;
+    }
+
+    if (!sendToInbox && !sendToEmail) {
+      message.error(
+        "Select at least one delivery option: Worksphere Inbox and/or Email"
+      );
+      isSendingRef.current = false;
       return;
     }
 
@@ -185,6 +207,7 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
       message.error(
         "Please select at least one item (Description or Files) to send"
       );
+      isSendingRef.current = false;
       return;
     }
 
@@ -220,16 +243,26 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
         hasDescription: includeDescription,
         selectedAttachmentKeys: isDocumentSelected ? selectedFileKeys : [],
         attachmentKeys: isDocumentSelected ? selectedFileKeys : [],
+        sendToInbox,
+        sendToEmail,
       });
 
       hideLoading();
       setIsSending(false);
-      message.success("Note sent successfully!");
+      isSendingRef.current = false;
+      const via =
+        sendToInbox && sendToEmail
+          ? "Inbox + Email"
+          : sendToInbox
+            ? "Worksphere Inbox"
+            : "Email";
+      message.success(`Note sent successfully via ${via}!`);
       onSuccess?.();
       onClose();
     } catch (err: any) {
       hideLoading();
       setIsSending(false);
+      isSendingRef.current = false;
       console.error("Error sending note:", err);
       message.error("Failed to send note. Please try again.");
     }
@@ -381,7 +414,44 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
             </div>
           </div>
 
-          {/* Recipient Permission Checkboxes - View, Edit, Delete */}
+          {/* Delivery channel: Inbox (app) and/or Email — both allowed */}
+          <div>
+            <div className="flex items-center justify-between mb-1 ml-1">
+              <label className="text-xs font-bold text-[#2B3674]">
+                Deliver To
+              </label>
+              <span className="text-[11px] text-slate-400">
+                (Select one or both)
+              </span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5 ml-1 p-2.5 bg-slate-50 border border-slate-200/80 rounded-xl">
+              <Checkbox
+                checked={sendToInbox}
+                onChange={(e) => setSendToInbox(e.target.checked)}
+                className="text-xs font-semibold text-slate-700 select-none cursor-pointer"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <Inbox className="w-3.5 h-3.5 text-[#4318FF]" />
+                  Worksphere Inbox
+                </span>
+              </Checkbox>
+              <Checkbox
+                checked={sendToEmail}
+                onChange={(e) => setSendToEmail(e.target.checked)}
+                className="text-xs font-semibold text-slate-700 select-none cursor-pointer"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-sky-600" />
+                  Email
+                </span>
+              </Checkbox>
+            </div>
+            <p className="text-[10px] text-slate-400 ml-1 mt-1">
+              Inbox = application only. Email = notification to their mailbox. Select both to send both ways.
+            </p>
+          </div>
+
+          {/* Recipient Permission Checkboxes - View, Edit */}
           <div>
             <div className="flex items-center justify-between mb-1 ml-1">
               <label className="text-xs font-bold text-[#2B3674]">
@@ -406,7 +476,6 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
               >
                 Can Edit
               </Checkbox>
-           
             </div>
           </div>
 
