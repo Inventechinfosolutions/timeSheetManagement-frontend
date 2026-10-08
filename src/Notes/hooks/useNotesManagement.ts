@@ -89,6 +89,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  /** Immediate search text for client-side filtering (Redux `searchQuery` is debounced for API). */
+  const [searchInput, setSearchInput] = useState(searchQuery || "");
 
   // Active note for View and Edit
   const [activeNote, setActiveNote] = useState<Note | null>(null);
@@ -198,7 +200,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, selectedProject, searchQuery, fromDate, toDate]);
+  }, [activeTab, selectedProject, searchInput, searchQuery, fromDate, toDate]);
 
   const loadNotes = () => {
     if (activeTab === "ARCHIVED") {
@@ -1585,11 +1587,17 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     }
   };
 
+  const handleSearchInputChange = (val: string) => {
+    setSearchInput(val);
+  };
+
   const handleSearchChange = (val: string) => {
+    setSearchInput(val);
     dispatch(setSearchQuery(val));
   };
 
   const handleClearSearch = () => {
+    setSearchInput("");
     dispatch(setSearchQuery(""));
   };
 
@@ -1607,8 +1615,9 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   };
 
   // Filtered Notes (tab/project + search and created date, including child notes)
+  // Use immediate `searchInput` so typing filters without waiting for debounce.
   const displayNotes = useMemo(() => {
-    const searchOn = Boolean(searchQuery.trim());
+    const searchOn = Boolean(searchInput.trim());
     const dateOn = Boolean(fromDate || toDate);
     return notes.filter((n) => {
       if (activeTab === "ARCHIVED") {
@@ -1630,27 +1639,27 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       if (!searchOn && !dateOn) return true;
 
       const parentMatches =
-        noteMatchesSearch(n, searchQuery) &&
+        noteMatchesSearch(n, searchInput) &&
         noteMatchesCreatedDate(n.createdAt, fromDate, toDate);
       const childMatches = (n.subNotes || []).some(
         (sub) =>
-          noteMatchesSearch(sub, searchQuery) &&
+          noteMatchesSearch(sub, searchInput) &&
           noteMatchesCreatedDate(sub.createdAt, fromDate, toDate),
       );
       return parentMatches || childMatches;
     });
-  }, [notes, activeTab, selectedProject, searchQuery, fromDate, toDate]);
+  }, [notes, activeTab, selectedProject, searchInput, fromDate, toDate]);
 
   useEffect(() => {
-    if (!searchQuery.trim() && !fromDate && !toDate) return;
+    if (!searchInput.trim() && !fromDate && !toDate) return;
     const parentIds = displayNotes
       .filter((note) => {
         const parentMatches =
-          noteMatchesSearch(note, searchQuery) &&
+          noteMatchesSearch(note, searchInput) &&
           noteMatchesCreatedDate(note.createdAt, fromDate, toDate);
         const childMatches = (note.subNotes || []).some(
           (sub) =>
-            noteMatchesSearch(sub, searchQuery) &&
+            noteMatchesSearch(sub, searchInput) &&
             noteMatchesCreatedDate(sub.createdAt, fromDate, toDate),
         );
         return childMatches && !parentMatches;
@@ -1664,7 +1673,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       });
       return next;
     });
-  }, [displayNotes, searchQuery, fromDate, toDate]);
+  }, [displayNotes, searchInput, fromDate, toDate]);
 
   // Paginated Notes
   const totalPages = Math.max(1, Math.ceil(displayNotes.length / pageSize));
@@ -1756,11 +1765,13 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     activeTab,
     selectedProject,
     searchQuery,
+    searchInput,
     fromDate,
     toDate,
     handleFromDateChange,
     handleToDateChange,
     handleClearDates,
+    handleSearchInputChange,
     loading,
     actionLoading,
     currentUser,

@@ -26,13 +26,8 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   const [internalValue, setInternalValue] = useState(
     value !== undefined ? String(value) : String(defaultValue || ""),
   );
-
-  // Sync when parent clears / resets the controlled value
-  useEffect(() => {
-    if (value !== undefined) {
-      setInternalValue(String(value));
-    }
-  }, [value]);
+  /** Skip one parent→local sync after we emit onDebounce (avoids wiping in-progress typing). */
+  const skipNextValueSyncRef = useRef(false);
 
   const [debouncedValue, flush] = useDebounce(internalValue, debounceDelay);
 
@@ -41,8 +36,19 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   onDebounceRef.current = onDebounce;
 
   useEffect(() => {
+    skipNextValueSyncRef.current = true;
     onDebounceRef.current?.(debouncedValue);
   }, [debouncedValue]);
+
+  // Sync when parent clears / resets — but not right after our own debounce emit
+  useEffect(() => {
+    if (value === undefined) return;
+    if (skipNextValueSyncRef.current) {
+      skipNextValueSyncRef.current = false;
+      return;
+    }
+    setInternalValue(String(value));
+  }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
@@ -54,6 +60,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     setInternalValue("");
     flush("");
     onClear?.();
+    skipNextValueSyncRef.current = true;
     onDebounceRef.current?.("");
   };
 
