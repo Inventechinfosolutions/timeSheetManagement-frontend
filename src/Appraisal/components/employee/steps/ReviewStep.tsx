@@ -59,7 +59,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
         {/* ===================================================================
             STEP 1: ROLE & QUARTER OVERVIEW
            =================================================================== */}
-        <div className="eval-step-card eval-reveal-card space-y-3">
+        <div className="eval-step-card eval-reveal-card is-revealed space-y-3">
           <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
@@ -84,7 +84,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
         {/* ===================================================================
             STEP 2: KEY ACHIEVEMENTS & PROJECTS
            =================================================================== */}
-        <div className="eval-step-card eval-reveal-card space-y-3.5">
+        <div className="eval-step-card eval-reveal-card is-revealed space-y-3.5">
           <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
@@ -156,7 +156,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
         {/* ===================================================================
             STEP 3: TEAMWORK & COLLABORATION
            =================================================================== */}
-        <div className="eval-step-card eval-reveal-card space-y-3.5">
+        <div className="eval-step-card eval-reveal-card is-revealed space-y-3.5">
           <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
@@ -215,7 +215,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
         {/* ===================================================================
             STEP 4: CONTINUOUS LEARNING & GOALS
            =================================================================== */}
-        <div className="eval-step-card eval-reveal-card space-y-3">
+        <div className="eval-step-card eval-reveal-card is-revealed space-y-3">
           <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
@@ -255,7 +255,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
         {/* ===================================================================
             STEP 5: COMPANY ENVIRONMENT
            =================================================================== */}
-        <div className="eval-step-card eval-reveal-card space-y-3.5">
+        <div className="eval-step-card eval-reveal-card is-revealed space-y-3.5">
           <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">

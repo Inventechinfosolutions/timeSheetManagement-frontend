@@ -302,6 +302,7 @@ export const AppraisalDashboard: React.FC = () => {
         deadline: performance?.deadlineDate
           ? formatAppraisalDisplayDate(performance.deadlineDate)
           : assignment.deadline,
+        description: performance?.description ?? assignment.description,
       });
     } catch (error) {
       message.error(readApiError(error));
@@ -332,6 +333,7 @@ export const AppraisalDashboard: React.FC = () => {
           ? formatAppraisalDisplayDate(performance.submittedAt)
           : assignment.performanceDate,
         reviewId: performance?.reviewId ?? assignment.reviewId,
+        description: performance?.description ?? assignment.description,
       });
     } catch (error) {
       message.error(readApiError(error));
@@ -521,6 +523,7 @@ export const AppraisalDashboard: React.FC = () => {
       performanceStatus: viewingPerformanceStatus,
       submission: viewingForm,
       status: viewingReviewStatus,
+      description: viewingAssignment.description,
     };
 
     return (

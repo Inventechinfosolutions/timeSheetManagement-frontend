@@ -887,17 +887,18 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const managerEvaluationReady =
     record.reviewStatus === QuarterlyReviewStatus.COMPLETED &&
     record.performanceStatus === EmployeePerformanceStatus.COMPLETED;
-  const employeeSubmitted = [
-    EmployeePerformanceStatus.SUBMITTED,
-    EmployeePerformanceStatus.UNDER_REVIEW,
-    EmployeePerformanceStatus.REVIEWED,
-    EmployeePerformanceStatus.APPROVED,
-    EmployeePerformanceStatus.REQUESTED_FOR_EDIT,
-    EmployeePerformanceStatus.APPROVED_FOR_EDITING,
-    EmployeePerformanceStatus.ALLOWED_TO_EDIT,
-    EmployeePerformanceStatus.COMPLETED,
-    EmployeePerformanceStatus.REVIEWED,
-  ].includes(record.performanceStatus as EmployeePerformanceStatus);
+  const normalizedPerfStatus = String(record.performanceStatus || record.status || "").toUpperCase();
+  const employeeSubmitted =
+    [
+      EmployeePerformanceStatus.SUBMITTED,
+      EmployeePerformanceStatus.UNDER_REVIEW,
+      EmployeePerformanceStatus.REVIEWED,
+      EmployeePerformanceStatus.APPROVED,
+      EmployeePerformanceStatus.REQUESTED_FOR_EDIT,
+      EmployeePerformanceStatus.APPROVED_FOR_EDITING,
+      EmployeePerformanceStatus.ALLOWED_TO_EDIT,
+      EmployeePerformanceStatus.COMPLETED,
+    ].some((s) => s.toUpperCase() === normalizedPerfStatus) || Boolean(record.submittedOn);
 
   const toIsoDate = (value: string): string | undefined => {
     const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value.trim());
@@ -1469,7 +1470,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           </div>
 
                 {/* Shown to the employee only after both review and performance are COMPLETED. */}
-                {(!isViewMode || managerEvaluationReady) && (
+                {(!isViewMode || managerEvaluationReady) ? (
                 <div className="eval-matrix-cta-card eval-reveal-card relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-blue-200/70 bg-gradient-to-br from-white via-blue-50/40 to-blue-100/20 shadow-lg shadow-blue-500/10 mt-6">
             {/* Ambient Decorative SVG in Background */}
               <svg
@@ -1554,12 +1555,20 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </button>
               </div>
             </div>
-                )}
+                ) : hideScoreParameters ? (
+                  <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4">
+                    <p className="text-sm font-medium text-[#64748B]">
+                      Quarterly review submitted. Waiting for manager review.
+                    </p>
+                  </div>
+                ) : null}
               </>
             ) : (
               <div className="eval-glass-card eval-reveal-card p-4 sm:p-5">
                 <p className="text-sm font-medium text-[#64748B]">
-                  This employee has not submitted the quarterly review yet. The data appear here after they submit.
+                  {hideScoreParameters
+                    ? "You have not submitted the quarterly review yet. The data will appear here after you submit."
+                    : "This employee has not submitted the quarterly review yet. The data appear here after they submit."}
                 </p>
               </div>
             )}

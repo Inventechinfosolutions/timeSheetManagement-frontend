@@ -59,10 +59,14 @@ export const AchievementsStep: React.FC<StepProps> = ({
     });
   };
 
-  const titleError = errors?.projectTitle || addErrors.projectTitle;
-  const descriptionError = errors?.projectDescription || addErrors.projectDescription;
-  const challengeError = errors?.projectChallenge || addErrors.projectChallenge;
-  const listError = errors?.projects;
+  const draftIsEmpty = !projectTitle.trim() && !projectDescription.trim() && !projectChallenge.trim();
+  const hasSavedProject = projects.some(
+    (project) => project.title.trim() && project.description.trim() && project.challenge.trim(),
+  );
+  const showDraftErrors = !(draftIsEmpty && hasSavedProject);
+  const titleError = showDraftErrors ? errors?.projectTitle || addErrors.projectTitle : "";
+  const descriptionError = showDraftErrors ? errors?.projectDescription || addErrors.projectDescription : "";
+  const challengeError = showDraftErrors ? errors?.projectChallenge || addErrors.projectChallenge : "";
 
   const handleTitleChange = (val: string) => {
     onChange("projectTitle", val);
@@ -252,9 +256,6 @@ export const AchievementsStep: React.FC<StepProps> = ({
           <p className="text-xs text-[#64748B] mt-1 eval-subtitle-anim">
             Detail your key project deliverables, project description, and challenges navigated.
           </p>
-          {listError && (
-            <p className="text-xs text-red-600 font-semibold mt-2">{listError}</p>
-          )}
         </div>
         <button
           type="button"

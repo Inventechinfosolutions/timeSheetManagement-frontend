@@ -260,8 +260,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
           if (!firstFieldId) firstFieldId = "field-projectChallenge";
         }
       } else if (!isDraftComplete && savedProjects.length === 0) {
-        stepErrors.projects = "Add at least one project.";
-        if (!firstFieldId) firstFieldId = "field-projects";
+        stepErrors.projectTitle = "Project title is required.";
+        stepErrors.projectDescription = "Project description is required.";
+        stepErrors.projectChallenge = "Challenge overcome is required.";
+        if (!firstFieldId) firstFieldId = "field-projectTitle";
       }
     } else if (stepNum === 3) {
       const ratings = data.teamRatings || {};
@@ -441,6 +443,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       scrollToField(validation.firstFieldId);
       return;
     }
+    setErrors({});
     const saved = await persistStep(false, currentData);
     if (!saved) {
       return;
@@ -509,6 +512,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       }
     }
 
+    setErrors({});
     const saved = await persistStep(false, currentData);
     if (!saved) {
       return;

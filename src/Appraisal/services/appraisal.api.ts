@@ -275,6 +275,7 @@ export interface EmployeePerformanceDetail {
   assignedBy?: string | null;
   assignedDate?: string | null;
   deadlineDate?: string | null;
+  description?: string | null;
   reviewId?: number | null;
   skillsAcquired: string | null;
   careerDevelopmentGoals: string | null;
@@ -603,6 +604,7 @@ export const toPerformanceAssignment = (
   canEdit: performanceCanEdit(row),
   performanceId: row.id,
   reviewId: row.reviewId ?? undefined,
+  description: row.description || "",
   submittedAt: row.submittedAt || undefined,
   editAllowedUntil: row.editAllowedUntil || undefined,
 });
