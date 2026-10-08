@@ -1,6 +1,6 @@
 import React from "react";
 import { ArrowLeft, Star, ShieldCheck, Info } from "lucide-react";
-import { Card, CardTitle, CardContent, Button } from "../../../components/ui";
+import { Card, CardContent, Button } from "../../../components/ui";
 import "./AppraisalDashboard.css";
 
 interface AnnualRatingViewProps {
@@ -76,22 +76,9 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
   employeeRole = "Software Engineer",
 }) => {
   return (
-    <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 manager-review-bg-container">
-      {/* Luxury Background Canvas */}
-      <div className="manager-review-canvas" aria-hidden="true">
-        <div className="manager-review-dot-grid" />
-        <div className="manager-review-aurora-tr" />
-        <div className="manager-review-aurora-tl" />
-        <div className="manager-review-aurora-br" />
-        <div className="manager-review-aurora-bl" />
-        <div className="manager-review-wave-top" />
-        <div className="manager-review-wave-bottom" />
-        <div className="manager-review-star-1" />
-        <div className="manager-review-star-2" />
-        <div className="manager-review-star-3" />
-        <div className="manager-review-star-4" />
-        <div className="manager-review-star-5" />
-      </div>
+    <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE]">
+      
+      
 
       <div className="relative z-10 max-w-5xl mx-auto space-y-6">
         {/* Top Header Card */}
@@ -156,7 +143,21 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {MOCK_FY_RATINGS.map((row) => (
+                  {MOCK_FY_RATINGS.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="relative mb-3 flex items-center justify-center">
+                            <div className="manager-review-empty-glow" />
+                            <div className="manager-review-empty-illustration !w-28 !h-28" />
+                          </div>
+                          <p className="font-bold text-[#0F172A] text-base">No ratings available</p>
+                          <p className="text-xs text-[#64748B] mt-1">Annual performance ratings will appear here once quarterly appraisals are completed.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    MOCK_FY_RATINGS.map((row) => (
                     <tr
                       key={row.fy}
                       className="hover:bg-[#EFF6FF]/70 transition-colors border-b border-blue-50 last:border-b-0"
@@ -197,7 +198,8 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )))
+                }
                 </tbody>
               </table>
             </div>

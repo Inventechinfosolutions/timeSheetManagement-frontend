@@ -414,17 +414,17 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       onClose={handleModalClose}
       title={modalTitle}
       footer={modalFooter}
-      maxWidth="xl"
+      maxWidth="2xl"
       overlayClassName={`assign-quarterly-modal-overlay ${isModalClosing ? "modal-overlay-is-closing" : ""}`}
       closeBtnClassName="assign-modal-close-btn"
       closeOnBackdrop={false}
       closeOnEsc={false}
-      className={`assign-quarterly-modal-dialog ${isModalClosing ? "modal-is-closing" : ""} p-5 sm:p-6 overflow-hidden [&>div:first-child]:border-none [&>div:first-child]:pb-1.5 [&>div:first-child]:mb-1.5 [&>div:last-child]:border-none [&>div:last-child]:pt-2.5 [&>div:last-child]:mt-2.5`}
+      className={`assign-quarterly-modal-dialog ${isModalClosing ? "modal-is-closing" : ""} p-5 sm:p-6 overflow-hidden flex flex-col justify-between [&>div:first-child]:border-none [&>div:first-child]:pb-1.5 [&>div:first-child]:mb-1.5 [&>div:last-child]:border-none [&>div:last-child]:pt-2.5 [&>div:last-child]:mt-2.5`}
     >
       {buttonState !== AssignButtonState.IDLE && submitSummary ? (
         <AssignSubmitPanel summary={submitSummary} status={buttonState} error={assignError} />
       ) : (
-      <div key={formSession} className="space-y-3.5">
+      <div key={formSession} className="space-y-3.5 h-[340px] flex flex-col justify-between min-h-0">
         {/* SELECT EMPLOYEES */}
         <div className="assign-modal-form-section">
           <div className="flex items-center justify-between mb-1">
@@ -597,11 +597,11 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             DESCRIPTION <span className="text-red-500">*</span>
           </label>
           <textarea
-            rows={2}
+            rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Add instructions, focus areas, or deadline remarks for the employee(s)..."
-            className="w-full px-3.5 py-2 bg-white border border-blue-200/70 rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[64px] assign-input-control assign-input-textarea"
+            className="w-full px-3.5 py-2.5 bg-white border border-blue-200/70 rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[80px] assign-input-control assign-input-textarea custom-scrollbar"
           />
         </div>
       </div>

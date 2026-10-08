@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
 import {
-  Plus,
   Calendar,
   Clock,
   ClipboardList,
@@ -361,17 +360,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
   if (evaluatingRecord) {
     return (
-      <div className="w-full min-h-screen relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 pt-1 sm:pt-1.5 pb-8 manager-review-bg-container">
-        {/* LUXURY BACKGROUND CANVAS */}
-        <div className="manager-review-canvas" aria-hidden="true">
-          <div className="manager-review-dot-grid" />
-          <div className="manager-review-aurora-tr" />
-          <div className="manager-review-aurora-tl" />
-          <div className="manager-review-aurora-br" />
-          <div className="manager-review-aurora-bl" />
-          <div className="manager-review-wave-top" />
-          <div className="manager-review-wave-bottom" />
-        </div>
+      <div className="w-full min-h-screen relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 pt-1 sm:pt-1.5 pb-8 bg-[#F4F7FE]">
+        
+        
         <div className="relative z-10">
           <EvaluationPanel
             record={evaluatingRecord}
@@ -412,25 +403,12 @@ export const ManagerQuarterlyReview: React.FC = () => {
   }
 
   return (
-    <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 manager-review-bg-container">
+    <div className="w-full relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
       {/* LUXURY BACKGROUND CANVAS (All SVGs & animations managed and loaded via ManagerQuarterlyReview.css) */}
-      <div className="manager-review-canvas" aria-hidden="true">
-        <div className="manager-review-dot-grid" />
-        <div className="manager-review-aurora-tr" />
-        <div className="manager-review-aurora-tl" />
-        <div className="manager-review-aurora-br" />
-        <div className="manager-review-aurora-bl" />
-        <div className="manager-review-wave-top" />
-        <div className="manager-review-wave-bottom" />
-        <div className="manager-review-star-1" />
-        <div className="manager-review-star-2" />
-        <div className="manager-review-star-3" />
-        <div className="manager-review-star-4" />
-        <div className="manager-review-star-5" />
-      </div>
+      
 
       {/* FOREGROUND CONTENT (z-10 layer for crisp interactivity and clarity) */}
-      <div className="relative z-10">
+      <div className="relative z-10 flex-1 flex flex-col min-h-0">
         {/* Page Header */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -489,7 +467,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
         </div>
 
         {/* Main Section Card */}
-        <Card className="w-full p-5 sm:p-7 manager-review-glass-card">
+        <Card className="w-full p-5 sm:p-7 manager-review-glass-card min-h-[calc(100vh-230px)]">
           <CardHeader className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
             <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title whitespace-nowrap shrink-0">
               Quarterly Reviews

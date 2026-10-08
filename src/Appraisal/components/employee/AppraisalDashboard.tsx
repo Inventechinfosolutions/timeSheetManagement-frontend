@@ -20,13 +20,15 @@ import {
   ArrowRight,
 } from "lucide-react";
 import {
+  animateKeyIconBounce,
+} from "../../animations/appraisalAnimations";
+import {
   QuarterlyReviewAssignment,
   ManagerQuarterlyReviewRecord,
   AccessRequest,
   ReviewFormData,
 } from "../../types/appraisal.types";
 import {
-  mockQuarterlyReviewAssignments,
   initialMockAccessRequests,
 } from "../../mockData/quarterlyReview.mock";
 import { useEmployeeAppraisal } from "../../hooks/useEmployeeAppraisal";
@@ -46,6 +48,16 @@ import {
   Pagination,
 } from "../../../components/ui";
 import "./AppraisalDashboard.css";
+
+// Empty State Illustration using modern vector illustration style from manager side
+export const EmptyReviewIllustration: React.FC = () => {
+  return (
+    <div className="relative mb-5 flex items-center justify-center">
+      <div className="manager-review-empty-glow" />
+      <div className="manager-review-empty-illustration" />
+    </div>
+  );
+};
 
 const renderQuarterBadge = (quarter: string) => {
   const q = (quarter || "").trim().toUpperCase();
@@ -533,20 +545,9 @@ export const AppraisalDashboard: React.FC = () => {
     };
 
     return (
-      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 manager-review-bg-container">
-        {/* LUXURY BACKGROUND CANVAS */}
-        <div className="manager-review-canvas" aria-hidden="true">
-          <div className="manager-review-dot-grid" />
-          <div className="manager-review-aurora-tr" />
-          <div className="manager-review-aurora-tl" />
-          <div className="manager-review-aurora-br" />
-          <div className="manager-review-aurora-bl" />
-          <div className="manager-review-wave-top" />
-          <div className="manager-review-wave-bottom" />
-          <div className="manager-review-star-1" />
-          <div className="manager-review-star-2" />
-          <div className="manager-review-star-3" />
-        </div>
+      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE]">
+        
+        
 
         <div className="relative z-10">
           <EvaluationPanel
@@ -588,22 +589,9 @@ export const AppraisalDashboard: React.FC = () => {
   // If stepper is open, display 6-step review UI
   if (activeAssignment) {
     return (
-      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 manager-review-bg-container">
-        {/* LUXURY BACKGROUND CANVAS (All SVGs & animations managed and loaded via CSS) */}
-        <div className="manager-review-canvas" aria-hidden="true">
-          <div className="manager-review-dot-grid" />
-          <div className="manager-review-aurora-tr" />
-          <div className="manager-review-aurora-tl" />
-          <div className="manager-review-aurora-br" />
-          <div className="manager-review-aurora-bl" />
-          <div className="manager-review-wave-top" />
-          <div className="manager-review-wave-bottom" />
-          <div className="manager-review-star-1" />
-          <div className="manager-review-star-2" />
-          <div className="manager-review-star-3" />
-          <div className="manager-review-star-4" />
-          <div className="manager-review-star-5" />
-        </div>
+      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE]">
+        
+        
 
         <div className="relative z-10">
           <QuarterlyReviewStepper
@@ -630,25 +618,12 @@ export const AppraisalDashboard: React.FC = () => {
   }
 
   return (
-    <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 manager-review-bg-container">
-      {/* LUXURY BACKGROUND CANVAS (All SVGs & animations managed and loaded via CSS) */}
-      <div className="manager-review-canvas" aria-hidden="true">
-        <div className="manager-review-dot-grid" />
-        <div className="manager-review-aurora-tr" />
-        <div className="manager-review-aurora-tl" />
-        <div className="manager-review-aurora-br" />
-        <div className="manager-review-aurora-bl" />
-        <div className="manager-review-wave-top" />
-        <div className="manager-review-wave-bottom" />
-        <div className="manager-review-star-1" />
-        <div className="manager-review-star-2" />
-        <div className="manager-review-star-3" />
-        <div className="manager-review-star-4" />
-        <div className="manager-review-star-5" />
-      </div>
+    <div className="w-full relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
+      
+      
 
       {/* FOREGROUND CONTENT (z-10 layer for crisp interactivity and clarity) */}
-      <div className="relative z-10">
+      <div className="relative z-10 flex-1 flex flex-col min-h-0">
         {/* Page Header with Compact Summary Cards Beside Title */}
         <div className="mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
@@ -754,7 +729,7 @@ export const AppraisalDashboard: React.FC = () => {
         </div>
 
         {/* MAIN SECTION: QUARTERLY REVIEW HISTORY */}
-        <Card className="w-full p-5 sm:p-7 manager-review-glass-card">
+        <Card className="w-full p-5 sm:p-7 manager-review-glass-card min-h-[calc(100vh-230px)]">
           {/* Card Header & Filters */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
             <div className="flex items-center gap-3">
@@ -767,45 +742,45 @@ export const AppraisalDashboard: React.FC = () => {
             </div>
 
             {/* Filters Bar */}
-            <div className="flex items-center gap-2.5 flex-nowrap overflow-x-auto no-scrollbar py-1.5 manager-review-filters-bar">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar flex-nowrap py-1 manager-review-filters-bar flex-1 justify-start xl:justify-end">
               {/* Financial Year Dropdown */}
               <Dropdown
-                className="shrink-0"
+                className="shrink-0 filter-item-stagger-1"
                 placeholder="Financial Year"
                 allowClear={true}
                 defaultValue=""
-                prefixIcon={<Calendar size={15} />}
+                prefixIcon={<Calendar size={14} className="filter-icon-fy" />}
                 options={yearOptions}
                 value={financialYear}
                 onChange={setFinancialYear}
                 onOpen={loadFinancialYears}
                 loading={yearsLoading}
-                maxLabelWidth="max-w-[105px]"
-                buttonClassName="bg-white/90 border border-blue-200/80 hover:border-blue-500 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[140px] shadow-none hover:bg-blue-50/40"
+                maxLabelWidth="max-w-[124px]"
+                buttonClassName="manager-review-filter-btn filter-btn-fy rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[172px]"
               />
 
               <Dropdown
-                className="shrink-0"
+                className="shrink-0 filter-item-stagger-2"
                 placeholder="Quarter"
                 allowClear={false}
                 defaultValue=""
-                prefixIcon={<Clock size={15} />}
+                prefixIcon={<Clock size={14} className="filter-icon-quarters" />}
                 options={quarterOptions}
                 value={quarter}
                 onChange={setQuarter}
                 onOpen={loadQuarters}
                 loading={quartersLoading && quarterOptions.length === 0}
-                maxLabelWidth="max-w-[95px]"
-                buttonClassName="bg-white/90 border border-blue-200/80 hover:border-blue-500 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[120px] shadow-none hover:bg-blue-50/40"
+                maxLabelWidth="max-w-[100px]"
+                buttonClassName="manager-review-filter-btn filter-btn-quarters rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[150px]"
               />
 
               {/* Status Dropdown */}
               <Dropdown
-                className="shrink-0"
+                className="shrink-0 filter-item-stagger-3"
                 placeholder="Status"
                 allowClear={true}
                 defaultValue=""
-                prefixIcon={<ClipboardList size={15} />}
+                prefixIcon={<ClipboardList size={14} className="filter-icon-status" />}
                 options={[
                   { value: "NOT_STARTED", label: "Not Started" },
                   { value: "DRAFT", label: "Draft" },
@@ -814,8 +789,9 @@ export const AppraisalDashboard: React.FC = () => {
                 ]}
                 value={statusFilter}
                 onChange={setStatusFilter}
-                maxLabelWidth="max-w-[95px]"
-                buttonClassName="bg-white/90 border border-blue-200/80 hover:border-blue-500 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[120px] shadow-none hover:bg-blue-50/40"
+                maxLabelWidth="max-w-[80px]"
+                contentWidth
+                buttonClassName="manager-review-filter-btn filter-btn-status rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[124px]"
               />
 
               {/* Clear Button */}
@@ -823,11 +799,12 @@ export const AppraisalDashboard: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  leftIcon={<RotateCcw size={14} className="text-[#94A3B8]" />}
                   onClick={handleClearFilters}
-                  className="text-[#94A3B8] hover:text-[#64748B] font-medium !shadow-none shrink-0 whitespace-nowrap"
+                  className="manager-review-clear-btn shrink-0 p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-xs font-medium flex items-center gap-1 border border-blue-200/80 bg-white/90 text-blue-600 hover:text-blue-700 hover:bg-blue-50/80 shadow-xs"
+                  title="Clear all filters"
                 >
-                  Clear
+                  <RotateCcw size={13} className="filter-clear-icon shrink-0" />
+                  <span className="hidden 2xl:inline text-xs">Clear</span>
                 </Button>
               )}
             </div>
@@ -936,6 +913,9 @@ export const AppraisalDashboard: React.FC = () => {
                                         <button
                                           type="button"
                                           disabled={!elig.eligible}
+                                          onMouseEnter={(e) => {
+                                            if (elig.eligible) animateKeyIconBounce(e.currentTarget);
+                                          }}
                                           onClick={() =>
                                             elig.eligible &&
                                             handleOpenAccessRequest(assignment, elig.remainingHours)
@@ -1105,10 +1085,7 @@ export const AppraisalDashboard: React.FC = () => {
             ) : (
               /* STATE 1: Empty state matching reference image illustration (Rendered via CSS) */
               <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
-                <div className="relative mb-6">
-                  <div className="appraisal-empty-glow" />
-                  <div className="appraisal-empty-illustration" aria-hidden="true" />
-                </div>
+                <EmptyReviewIllustration />
                 <h3 className="text-xl font-bold text-[#0F172A]">
                   No reviews available
                 </h3>
@@ -1211,6 +1188,7 @@ export const AppraisalDashboard: React.FC = () => {
       <RatingVerificationModal
         isOpen={isRatingAuthModalOpen}
         onClose={() => setIsRatingAuthModalOpen(false)}
+        onSuccess={handleVerificationSuccess}
       />
 
       {/* ACCESS REQUEST MODAL */}

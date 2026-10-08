@@ -5,8 +5,12 @@ import {
   CheckCircle2,
   ChevronRight,
   Send,
-  AlertCircle,
 } from "lucide-react";
+import {
+  animateStepSlide,
+  initActiveStepperCircle,
+  animateFieldError,
+} from "../../animations/appraisalAnimations";
 import { ReviewFormData, QuarterlyReviewAssignment, StoredPerformanceFile } from "../../types/appraisal.types";
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
 import { AppraisalApi, readApiError, toPerformancePayload, toReviewFormData } from "../../services/appraisal.api";
@@ -125,6 +129,20 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }, 480);
   };
 
+  const activeCircleRef = useRef<HTMLDivElement | null>(null);
+  const enterContentRef = useRef<HTMLDivElement | null>(null);
+  const exitContentRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    return initActiveStepperCircle(activeCircleRef.current);
+  }, [currentStep]);
+
+  useEffect(() => {
+    if (exitingStep !== null) {
+      animateStepSlide(enterContentRef.current, exitContentRef.current, direction);
+    }
+  }, [currentStep, exitingStep, direction]);
+
   const scrollToField = (fieldId?: string) => {
     if (!fieldId) return;
     setTimeout(() => {
@@ -139,13 +157,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
           focusTarget.focus({ preventScroll: true });
         }
 
-        el.classList.remove("eval-field-error-pulse");
-        // Trigger reflow
-        void el.offsetWidth;
-        el.classList.add("eval-field-error-pulse");
-        setTimeout(() => {
-          el.classList.remove("eval-field-error-pulse");
-        }, 1500);
+        animateFieldError(el);
       }
     }, 120);
   };
@@ -611,16 +623,17 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                 >
                   {/* Circle with Step Number */}
                   <div
+                    ref={isActive ? activeCircleRef : undefined}
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ease-out ${
                       isActive
-                        ? "bg-[#2563EB] text-white ring-4 ring-blue-400/30 shadow-lg shadow-blue-500/25 scale-110 stepper-circle-active"
+                        ? "bg-[#2563EB] text-white ring-4 ring-blue-400/30 shadow-lg shadow-blue-500/25 scale-110"
                         : isCompleted
                         ? "bg-blue-500 text-white shadow-xs hover:scale-105 border-2 border-blue-500"
                         : "bg-white text-[#64748B] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB] hover:scale-105"
                     }`}
                   >
                     {isCompleted ? (
-                      <Check className="w-5 h-5 stroke-[2.8] animate-in zoom-in-50 duration-200" />
+                      <Check className="w-5 h-5 stroke-[2.8]" />
                     ) : (
                       <span>{step.id}</span>
                     )}
@@ -659,28 +672,20 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
           </div>
         ) : (
           <>
-            {/* Animated Step Sliding Content Container */}
             <fieldset disabled={readOnly} className="relative overflow-hidden min-h-[380px] border-0 p-0 m-0 min-w-0">
               {exitingStep !== null && (
                 <div
+                  ref={exitContentRef}
                   key={`exit-${exitingStep}`}
-                  className={`absolute inset-x-0 top-0 pointer-events-none ${
-                    direction === "forward" ? "step-slide-out-up" : "step-slide-out-down"
-                  }`}
+                  className="absolute inset-x-0 top-0 pointer-events-none"
                 >
                   {renderStepContent(exitingStep)}
                 </div>
               )}
 
               <div
+                ref={enterContentRef}
                 key={`enter-${currentStep}`}
-                className={
-                  exitingStep !== null
-                    ? direction === "forward"
-                      ? "step-slide-in-up"
-                      : "step-slide-in-down"
-                    : ""
-                }
               >
                 {renderStepContent(currentStep)}
               </div>

@@ -1,68 +1,7 @@
 import React, { useRef, useState } from "react";
 import { StepProps } from "../../../types/appraisal.types";
-import { AlertCircle, X } from "lucide-react";
+import { AlertCircle, X, Paperclip } from "lucide-react";
 import { readApiError } from "../../../services/appraisal.api";
-
-// Animated SVG Icon for Attach Document Button
-const AnimatedAttachIcon: React.FC<{ className?: string }> = ({ className = "w-4 h-4" }) => (
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={`overflow-visible ${className}`}
-  >
-    <defs>
-      <linearGradient id="attachClipGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stopColor="#1D4ED8" />
-        <stop offset="50%" stopColor="#2563EB" />
-        <stop offset="100%" stopColor="#60A5FA" />
-      </linearGradient>
-      <radialGradient id="attachAuraGrad" cx="50%" cy="50%" r="50%">
-        <stop offset="0%" stopColor="#93C5FD" stopOpacity="0.55" />
-        <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
-      </radialGradient>
-      <filter id="attachGlow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="0.8" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
-    </defs>
-
-    {/* Soft Pulsing Halo / Aura */}
-    <circle
-      cx="12"
-      cy="12"
-      r="8.5"
-      fill="url(#attachAuraGrad)"
-      className="anim-attach-aura"
-    />
-
-    {/* Floating Paperclip */}
-    <g className="anim-attach-clip">
-      <path
-        d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l7.88-7.88"
-        stroke="url(#attachClipGrad)"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        filter="url(#attachGlow)"
-      />
-    </g>
-
-    {/* Animated Golden Sparkle 1 */}
-    <path
-      d="M19 2l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6L19 2z"
-      fill="#EECC8C"
-      className="anim-attach-sparkle-1"
-    />
-
-    {/* Animated Sky Blue Sparkle 2 */}
-    <path
-      d="M5 16l.4 1 1 .4-1 .4-.4 1-.4-1-1-.4 1-.4.4-1z"
-      fill="#60A5FA"
-      className="anim-attach-sparkle-2"
-    />
-  </svg>
-);
 
 export const AchievementsStep: React.FC<StepProps> = ({
   formData,
@@ -326,7 +265,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
               key={file.objectKey}
               className="flex items-center gap-2.5 px-3 py-1.5 bg-gradient-to-r from-[#FAF2EE] to-[#F8EFEA] border border-[#D3A29D]/50 rounded-xl shadow-2xs max-w-full"
             >
-              <AnimatedAttachIcon className="w-4 h-4 shrink-0" />
+              <Paperclip className="w-4 h-4 text-[#A36361] shrink-0" />
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-bold text-[#0F172A] truncate max-w-[150px] sm:max-w-[190px]">
                   {file.fileName}
@@ -352,7 +291,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
               onClick={() => fileInputRef.current?.click()}
               className="btn-attach-document group inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#A36361] bg-gradient-to-r from-[#FAF2EE] via-white to-[#F8EFEA] hover:from-[#FAF0EB] hover:to-[#F5E8E2] border border-[#D3A29D]/50 hover:border-[#A36361] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-sm hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait"
             >
-              <AnimatedAttachIcon className="w-4 h-4 shrink-0 transition-transform duration-200 group-hover:scale-110" />
+              <Paperclip className="w-4 h-4 text-[#A36361] shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6" />
               <span className="tracking-wide">
                 {uploading ? "Saving..." : attachments.length === 0 ? "Attach Document" : "Add more"}
               </span>

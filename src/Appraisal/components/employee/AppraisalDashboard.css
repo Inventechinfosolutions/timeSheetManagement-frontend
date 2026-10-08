@@ -1,73 +1,59 @@
-/* ==========================================================================
-   Employee Appraisal Dashboard - Luxury Background & Header Styling
-   Reuses the manager page's styling, background canvas, and title animations.
-   ========================================================================== */
-
 @import "../manager/ManagerQuarterlyReview.css";
 @import "../manager/QuarterlyReviewTable.css";
 @import "../manager/EvaluationPanel.css";
 
 /* ==========================================================================
-   Step Header & Card Entrance Animations (Matching Edit & View Page)
+   Page Background & Card Styles (Matching Image 1: #F4F7FE)
+   Remove only the background SVG canvas, keeping all other styles intact
    ========================================================================== */
-@keyframes stepCardReveal {
-  0% {
-    opacity: 0;
-    transform: translateY(22px) scale(0.985);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
+.manager-review-bg-container {
+  background: #F4F7FE !important;
+  position: relative;
+  min-height: 100vh;
 }
 
+.manager-review-canvas {
+  display: none !important;
+}
+
+.manager-review-glass-card {
+  background: #FFFFFF !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0px 20px 50px 0px rgba(17, 28, 68, 0.05) !important;
+  border-radius: 20px !important;
+}
+
+.employee-header-stat-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.95rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 16px !important;
+  border: 1px solid #E2E8F0 !important;
+  min-height: 70px;
+  min-width: 230px;
+  background: #FFFFFF !important;
+  box-shadow: 0px 4px 12px 0px rgba(17, 28, 68, 0.04) !important;
+}
+
+/* ==========================================================================
+   Step Header & Card Layout System
+   ========================================================================== */
 .step-reveal-card {
-  animation: stepCardReveal 500ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
   will-change: opacity, transform;
 }
 
-.step-reveal-stagger-1 {
-  animation-delay: 50ms;
-}
-
-.step-reveal-stagger-2 {
-  animation-delay: 100ms;
-}
-
-.step-reveal-stagger-3 {
-  animation-delay: 150ms;
-}
-
-.step-reveal-stagger-4 {
-  animation-delay: 200ms;
-}
-
-.step-reveal-stagger-5 {
-  animation-delay: 250ms;
-}
-
-.step-reveal-stagger-6 {
-  animation-delay: 300ms;
-}
-
-/* Glassmorphic luxury card with Ice-Blue Watercolor gradient and SVG texture */
+/* Glassmorphic luxury card with Ice-Blue Watercolor gradient */
 .manager-review-glass-card {
-  background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 600' width='100%25' height='100%25' preserveAspectRatio='none'%3E%3Cpath d='M-50 80 C 200 40, 420 120, 680 70 C 850 40, 950 110, 1050 75 L 1050 220 C 850 260, 650 190, 400 240 C 200 270, 80 200, -50 230 Z' fill='%2393C5FD' opacity='0.16'/%3E%3Cpath d='M-50 190 C 220 240, 480 180, 720 230 C 890 260, 980 210, 1050 240 L 1050 390 C 840 430, 600 370, 360 410 C 180 435, 70 380, -50 400 Z' fill='%2360A5FA' opacity='0.14'/%3E%3Cpath d='M-50 360 C 200 420, 460 360, 700 410 C 870 440, 960 390, 1050 420 L 1050 620 L -50 620 Z' fill='%23EFF6FF' opacity='0.30'/%3E%3C/svg%3E"),
-    linear-gradient(135deg,
-      rgba(255, 255, 255, 0.96) 0%,
-      rgba(240, 246, 255, 0.94) 35%,
-      rgba(230, 240, 252, 0.92) 70%,
-      rgba(255, 255, 255, 0.96) 100%) !important;
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  border: 1.5px solid rgba(219, 234, 254, 0.85) !important;
-  box-shadow:
-    0 24px 60px rgba(30, 64, 175, 0.08),
-    0 4px 18px rgba(37, 99, 235, 0.06),
-    inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
-  border-radius: 1.5rem;
+  background: #FFFFFF !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0px 20px 50px 0px rgba(17, 28, 68, 0.05) !important;
+  border-radius: 20px !important;
 }
 
 /* ==========================================================================
@@ -79,15 +65,12 @@
   justify-content: space-between;
   gap: 0.95rem;
   padding: 0.85rem 1.25rem;
-  border-radius: 1.35rem !important;
-  border: 1px solid rgba(219, 234, 254, 0.8) !important;
+  border-radius: 16px !important;
+  border: 1px solid #E2E8F0 !important;
   min-height: 70px;
   min-width: 230px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:
-    0 10px 25px rgba(30, 64, 175, 0.06),
-    0 2px 10px rgba(37, 99, 235, 0.08),
-    inset 0 1px 2px rgba(255, 255, 255, 0.95) !important;
+  background: #FFFFFF !important;
+  box-shadow: 0px 4px 12px 0px rgba(17, 28, 68, 0.04) !important;
 }
 
 .employee-header-stat-card:hover {
@@ -111,88 +94,13 @@
 }
 
 /* ==========================================================================
-   Stepper Numbered Circles Animations
+   Stepper Numbered Circles & Rating Element Base Styles (Animations in GSAP)
    ========================================================================== */
-@keyframes stepperPulse {
-
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4), 0 4px 14px rgba(37, 99, 235, 0.22);
-  }
-
-  50% {
-    box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.15), 0 6px 18px rgba(37, 99, 235, 0.32);
-  }
-}
-
 .stepper-circle-active {
-  animation: stepperPulse 2.4s infinite ease-in-out;
-}
-
-/* ==========================================================================
-   Interactive Star Rating Animations (Super Expressive 3D Pop & Hover)
-   ========================================================================== */
-@keyframes starSuperPop {
-  0% {
-    transform: scale(0.4) rotate(-120deg);
-    filter: drop-shadow(0 0 24px rgba(255, 181, 71, 1)) brightness(1.8);
-  }
-
-  35% {
-    transform: scale(1.65) rotate(190deg);
-    filter: drop-shadow(0 0 20px rgba(255, 181, 71, 1)) brightness(1.5);
-  }
-
-  65% {
-    transform: scale(0.85) rotate(380deg);
-  }
-
-  85% {
-    transform: scale(1.2) rotate(355deg);
-  }
-
-  100% {
-    transform: scale(1) rotate(360deg);
-    filter: drop-shadow(0 2px 10px rgba(255, 181, 71, 0.65));
-  }
-}
-
-@keyframes starSuperHover {
-  0% {
-    transform: scale(1) translateY(0);
-  }
-
-  35% {
-    transform: scale(1.38) translateY(-4px) rotate(-10deg);
-    filter: drop-shadow(0 4px 14px rgba(255, 181, 71, 0.85));
-  }
-
-  70% {
-    transform: scale(1.22) translateY(-2px) rotate(6deg);
-  }
-
-  100% {
-    transform: scale(1.28) translateY(-3px) rotate(0deg);
-    filter: drop-shadow(0 3px 10px rgba(255, 181, 71, 0.75));
-  }
-}
-
-@keyframes starBreathingGlow {
-
-  0%,
-  100% {
-    transform: scale(1);
-    filter: drop-shadow(0 2px 5px rgba(255, 181, 71, 0.4));
-  }
-
-  50% {
-    transform: scale(1.06);
-    filter: drop-shadow(0 2px 12px rgba(255, 181, 71, 0.85));
-  }
+  box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4), 0 4px 14px rgba(37, 99, 235, 0.22);
 }
 
 .star-spin-pop {
-  animation: starSuperPop 0.58s cubic-bezier(0.175, 0.885, 0.32, 1.35) forwards;
   z-index: 20;
 }
 
@@ -200,104 +108,8 @@
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
 }
 
-.star-jelly-hover:hover {
-  animation: starSuperHover 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  z-index: 15;
-}
-
 .star-active-glow {
-  animation: starBreathingGlow 3s infinite ease-in-out;
-}
-
-/* ==========================================================================
-   Company Environment Emoji Rating Animations
-   ========================================================================== */
-@keyframes emojiPopBounce {
-  0% {
-    transform: scale(0.75);
-  }
-
-  50% {
-    transform: scale(1.22);
-  }
-
-  100% {
-    transform: scale(1.1);
-  }
-}
-
-@keyframes emojiAuraVeryBad {
-
-  0%,
-  100% {
-    transform: scale(1.08);
-    filter: drop-shadow(0 0 12px rgba(255, 77, 79, 0.85)) drop-shadow(0 0 4px rgba(207, 19, 34, 0.5));
-  }
-
-  50% {
-    transform: scale(1.14);
-    filter: drop-shadow(0 0 18px rgba(255, 77, 79, 1)) drop-shadow(0 0 7px rgba(207, 19, 34, 0.7));
-  }
-}
-
-@keyframes emojiAuraBad {
-
-  0%,
-  100% {
-    transform: scale(1.08);
-    filter: drop-shadow(0 0 12px rgba(255, 146, 43, 0.85)) drop-shadow(0 0 4px rgba(217, 119, 6, 0.5));
-  }
-
-  50% {
-    transform: scale(1.14);
-    filter: drop-shadow(0 0 18px rgba(255, 146, 43, 1)) drop-shadow(0 0 7px rgba(217, 119, 6, 0.7));
-  }
-}
-
-@keyframes emojiAuraNeutral {
-
-  0%,
-  100% {
-    transform: scale(1.08);
-    filter: drop-shadow(0 0 12px rgba(252, 196, 25, 0.85)) drop-shadow(0 0 4px rgba(217, 119, 6, 0.5));
-  }
-
-  50% {
-    transform: scale(1.14);
-    filter: drop-shadow(0 0 18px rgba(252, 196, 25, 1)) drop-shadow(0 0 7px rgba(217, 119, 6, 0.7));
-  }
-}
-
-@keyframes emojiAuraGood {
-
-  0%,
-  100% {
-    transform: scale(1.08);
-    filter: drop-shadow(0 0 12px rgba(81, 207, 102, 0.85)) drop-shadow(0 0 4px rgba(43, 138, 62, 0.5));
-  }
-
-  50% {
-    transform: scale(1.14);
-    filter: drop-shadow(0 0 18px rgba(81, 207, 102, 1)) drop-shadow(0 0 7px rgba(43, 138, 62, 0.7));
-  }
-}
-
-@keyframes emojiAuraExcellent {
-
-  0%,
-  100% {
-    transform: scale(1.08);
-    filter: drop-shadow(0 0 12px rgba(255, 210, 51, 0.85)) drop-shadow(0 0 6px rgba(255, 45, 117, 0.55));
-  }
-
-  50% {
-    transform: scale(1.14);
-    filter: drop-shadow(0 0 18px rgba(255, 210, 51, 1)) drop-shadow(0 0 8px rgba(255, 45, 117, 0.75));
-  }
-}
-
-.emoji-btn-pop {
-  animation: emojiPopBounce 0.35s ease-out forwards;
+  filter: drop-shadow(0 2px 10px rgba(255, 181, 71, 0.65));
 }
 
 .emoji-hover-effect {
@@ -306,94 +118,6 @@
 
 .emoji-hover-effect:hover {
   transform: translateY(-4px) scale(1.15);
-}
-
-.emoji-active-1 {
-  animation: emojiAuraVeryBad 2.6s infinite ease-in-out;
-}
-
-.emoji-active-2 {
-  animation: emojiAuraBad 2.6s infinite ease-in-out;
-}
-
-.emoji-active-3 {
-  animation: emojiAuraNeutral 2.6s infinite ease-in-out;
-}
-
-.emoji-active-4 {
-  animation: emojiAuraGood 2.6s infinite ease-in-out;
-}
-
-.emoji-active-5,
-.emoji-active-star {
-  animation: emojiAuraExcellent 2.6s infinite ease-in-out;
-}
-
-/* ==========================================================================
-   Smooth Vertical Slide Step Transitions (480ms cubic-bezier)
-   ========================================================================== */
-@keyframes stepSlideOutUp {
-  0% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-}
-
-@keyframes stepSlideInUp {
-  0% {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes stepSlideOutDown {
-  0% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  100% {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-}
-
-@keyframes stepSlideInDown {
-  0% {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.step-slide-out-up {
-  animation: stepSlideOutUp 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.step-slide-in-up {
-  animation: stepSlideInUp 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.step-slide-out-down {
-  animation: stepSlideOutDown 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-.step-slide-in-down {
-  animation: stepSlideInDown 480ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 /* ==========================================================================
@@ -434,433 +158,11 @@
 }
 
 /* ==========================================================================
-   Company Environment Rating Metaphor Animations (Volcano, Rain, Coffee, Sprout, Rocket)
+   Mandatory Field Validation Styles (Errors Animated via GSAP)
    ========================================================================== */
-
-/* 1. Volcano Eruption & Rumble */
-/* ==========================================================================
-   Interactive Animated SVG Emojis (Living Features & Effects)
-   ========================================================================== */
-
-/* 1. Angry Emoji: Steam Puffs & Rage Tremor */
-@keyframes angrySteamPuffL {
-  0% {
-    transform: translate(0, 0) scale(0.4);
-    opacity: 0;
-  }
-
-  30% {
-    opacity: 0.9;
-  }
-
-  100% {
-    transform: translate(-6px, -7px) scale(1.3);
-    opacity: 0;
-  }
-}
-
-@keyframes angrySteamPuffR {
-  0% {
-    transform: translate(0, 0) scale(0.4);
-    opacity: 0;
-  }
-
-  30% {
-    opacity: 0.9;
-  }
-
-  100% {
-    transform: translate(6px, -7px) scale(1.3);
-    opacity: 0;
-  }
-}
-
-@keyframes angerVeinPulse {
-
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.7;
-  }
-
-  50% {
-    transform: scale(1.35);
-    opacity: 1;
-    filter: drop-shadow(0 0 3px #EF4444);
-  }
-}
-
-@keyframes angryHeadShake {
-
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-
-  20% {
-    transform: translate(-1.5px, -0.5px) rotate(-4deg);
-  }
-
-  40% {
-    transform: translate(1.5px, 0.5px) rotate(4deg);
-  }
-
-  60% {
-    transform: translate(-1px, 0.5px) rotate(-3deg);
-  }
-
-  80% {
-    transform: translate(1px, -0.5px) rotate(3deg);
-  }
-}
-
-.anim-steam-puff-l {
-  animation: angrySteamPuffL 1.2s infinite ease-out;
-  transform-origin: 8px 14px;
-}
-
-.anim-steam-puff-r {
-  animation: angrySteamPuffR 1.2s infinite ease-out 0.2s;
-  transform-origin: 36px 14px;
-}
-
-.anim-anger-vein {
-  animation: angerVeinPulse 0.9s infinite ease-in-out;
-  transform-origin: 29px 10.5px;
-}
-
-.anim-angry-head {
-  animation: angryHeadShake 1s infinite ease-in-out;
-  transform-origin: center bottom;
-}
-
-/* 2. Sad Emoji: Falling Tear Drop & Sigh */
-@keyframes tearDropFall {
-  0% {
-    transform: translateY(0) scale(0.6);
-    opacity: 0;
-  }
-
-  25% {
-    opacity: 1;
-    transform: translateY(2px) scale(1);
-  }
-
-  80% {
-    transform: translateY(11px) scale(1.1);
-    opacity: 0.9;
-  }
-
-  100% {
-    transform: translateY(15px) scale(0.4);
-    opacity: 0;
-  }
-}
-
-@keyframes sadHeadSigh {
-
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-
-  35% {
-    transform: translateY(2.5px) rotate(-4deg);
-  }
-
-  70% {
-    transform: translateY(1.5px) rotate(3deg);
-  }
-}
-
-.anim-tear-drop {
-  animation: tearDropFall 1.8s infinite ease-in;
-  transform-origin: center top;
-}
-
-.anim-sad-head {
-  animation: sadHeadSigh 2.2s infinite ease-in-out;
-  transform-origin: center bottom;
-}
-
-/* 3. Neutral Emoji: Eyelid Blink & Gentle Float */
-@keyframes eyeLidBlink {
-
-  0%,
-  45%,
-  55%,
-  100% {
-    transform: scaleY(1);
-  }
-
-  50% {
-    transform: scaleY(0.08);
-  }
-}
-
-@keyframes neutralFloat {
-
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-
-  50% {
-    transform: translateY(-3px);
-  }
-}
-
-.anim-eye-blink {
-  animation: eyeLidBlink 3.2s infinite ease-in-out;
-  transform-origin: 22px 20.5px;
-}
-
-.anim-neutral-head {
-  animation: neutralFloat 2.4s infinite ease-in-out;
-  transform-origin: center;
-}
-
-/* 4. Good Emoji: Cheerful Bounce, Blush & Twinkling Sparkle */
-@keyframes happyBounceHead {
-
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-
-  30% {
-    transform: translateY(-5px) rotate(3deg);
-  }
-
-  60% {
-    transform: translateY(1px) rotate(-2deg);
-  }
-
-  80% {
-    transform: translateY(-2px) rotate(1deg);
-  }
-}
-
-@keyframes blushPulse {
-
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.15);
-  }
-}
-
-@keyframes sparkleSpin {
-  0% {
-    transform: scale(0.5) rotate(0deg);
-    opacity: 0.3;
-  }
-
-  50% {
-    transform: scale(1.2) rotate(180deg);
-    opacity: 1;
-    filter: drop-shadow(0 0 4px #FACC15);
-  }
-
-  100% {
-    transform: scale(0.5) rotate(360deg);
-    opacity: 0.3;
-  }
-}
-
-.anim-happy-head {
-  animation: happyBounceHead 1.7s infinite ease-in-out;
-  transform-origin: center bottom;
-}
-
-.anim-blush {
-  animation: blushPulse 1.8s infinite ease-in-out;
-  transform-origin: center;
-}
-
-.anim-sparkle {
-  animation: sparkleSpin 2s infinite linear;
-  transform-origin: 36px 13.5px;
-}
-
-/* 5. Excellent Emoji: Star Eyes Rotate & Celebration Twinkles */
-@keyframes starEyeSpinPulse {
-
-  0%,
-  100% {
-    transform: scale(1) rotate(0deg);
-    filter: drop-shadow(0 0 2px #F59E0B);
-  }
-
-  50% {
-    transform: scale(1.28) rotate(35deg);
-    filter: drop-shadow(0 0 6px #EC4899);
-  }
-}
-
-@keyframes starEyeSpinPulseAlt {
-
-  0%,
-  100% {
-    transform: scale(1) rotate(0deg);
-    filter: drop-shadow(0 0 2px #F59E0B);
-  }
-
-  50% {
-    transform: scale(1.28) rotate(-35deg);
-    filter: drop-shadow(0 0 6px #EC4899);
-  }
-}
-
-@keyframes starTwinkleParticle1 {
-
-  0%,
-  100% {
-    transform: scale(0.4) rotate(0deg);
-    opacity: 0.2;
-  }
-
-  50% {
-    transform: scale(1.25) rotate(90deg);
-    opacity: 1;
-    filter: drop-shadow(0 0 4px #FDE047);
-  }
-}
-
-@keyframes starTwinkleParticle2 {
-
-  0%,
-  100% {
-    transform: scale(0.4) rotate(0deg);
-    opacity: 0.2;
-  }
-
-  50% {
-    transform: scale(1.25) rotate(-90deg);
-    opacity: 1;
-    filter: drop-shadow(0 0 4px #EC4899);
-  }
-}
-
-@keyframes excellentCelebrationHead {
-
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg) scale(1);
-  }
-
-  25% {
-    transform: translateY(-4px) rotate(-6deg) scale(1.04);
-  }
-
-  50% {
-    transform: translateY(0) rotate(0deg) scale(1);
-  }
-
-  75% {
-    transform: translateY(-4px) rotate(6deg) scale(1.04);
-  }
-}
-
-.anim-star-eye-l {
-  animation: starEyeSpinPulse 1.5s infinite ease-in-out;
-  transform-origin: 16px 18.5px;
-}
-
-.anim-star-eye-r {
-  animation: starEyeSpinPulseAlt 1.5s infinite ease-in-out 0.25s;
-  transform-origin: 28px 18.5px;
-}
-
-.anim-star-twinkle-1 {
-  animation: starTwinkleParticle1 1.4s infinite ease-in-out;
-  transform-origin: 6px 14.5px;
-}
-
-.anim-star-twinkle-2 {
-  animation: starTwinkleParticle2 1.4s infinite ease-in-out 0.5s;
-  transform-origin: 38px 12.5px;
-}
-
-.anim-excellent-head {
-  animation: excellentCelebrationHead 1.6s infinite ease-in-out;
-  transform-origin: center bottom;
-}
-
-/* Click Pop Effect */
-@keyframes emojiClickPopEffect {
-  0% {
-    transform: scale(0.9);
-  }
-
-  45% {
-    transform: scale(1.38) rotate(10deg);
-  }
-
-  80% {
-    transform: scale(1.15) rotate(-3deg);
-  }
-
-  100% {
-    transform: scale(1.22) rotate(0deg);
-  }
-}
-
-.emoji-click-pop {
-  animation: emojiClickPopEffect 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
-}
-
-/* ==========================================================================
-   Mandatory Field Validation & Auto-Scroll Attention Styles
-   ========================================================================== */
-
-@keyframes errorAttentionShake {
-
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-
-  15%,
-  45%,
-  75% {
-    transform: translateX(-5px);
-  }
-
-  30%,
-  60%,
-  90% {
-    transform: translateX(5px);
-  }
-}
-
-@keyframes errorBorderPulse {
-
-  0%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
-  }
-
-  50% {
-    box-shadow: 0 0 0 6px rgba(239, 68, 68, 0.22);
-  }
-}
-
 .eval-field-has-error {
   border-color: #EF4444 !important;
   background-color: rgba(254, 242, 242, 0.4) !important;
-}
-
-.eval-field-error-pulse {
-  animation: errorAttentionShake 0.48s cubic-bezier(0.36, 0.07, 0.19, 0.97) both,
-    errorBorderPulse 1.2s ease-in-out !important;
-  border-color: #EF4444 !important;
-  scroll-margin-top: 120px;
 }
 
 .eval-input-error {
@@ -874,119 +176,16 @@
 }
 
 /* ==========================================================================
-   Star Rating: Unselect Break-Apart & Glowing Shard Scatter Animation
+   Star Rating: Shard & Crack Geometries (Motion powered exclusively by GSAP)
    ========================================================================== */
-
-/* Left Cracked Half: Compresses, cracks, recoils left and fades */
-@keyframes starHalfLeft {
-  0% {
-    transform: scale(1) translate(0, 0) rotate(0deg);
-    opacity: 1;
-    filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8));
-  }
-
-  18% {
-    /* Compress / shrink anticipation */
-    transform: scale(0.82) translate(0, 0) rotate(-2deg);
-    opacity: 1;
-  }
-
-  36% {
-    /* Crack snaps and starts splitting */
-    transform: scale(1.04) translate(-2px, -1px) rotate(-6deg);
-    opacity: 0.95;
-    filter: drop-shadow(0 0 7px rgba(245, 158, 11, 1));
-  }
-
-  70% {
-    transform: scale(0.68) translate(-6px, -4px) rotate(-16deg);
-    opacity: 0.55;
-  }
-
-  100% {
-    transform: scale(0.25) translate(-11px, -7px) rotate(-26deg);
-    opacity: 0;
-  }
-}
-
-/* Right Cracked Half: Compresses, cracks, recoils right and fades */
-@keyframes starHalfRight {
-  0% {
-    transform: scale(1) translate(0, 0) rotate(0deg);
-    opacity: 1;
-    filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.8));
-  }
-
-  18% {
-    /* Compress / shrink anticipation */
-    transform: scale(0.82) translate(0, 0) rotate(2deg);
-    opacity: 1;
-  }
-
-  36% {
-    /* Crack snaps and starts splitting */
-    transform: scale(1.04) translate(2px, 1px) rotate(6deg);
-    opacity: 0.95;
-    filter: drop-shadow(0 0 7px rgba(245, 158, 11, 1));
-  }
-
-  70% {
-    transform: scale(0.68) translate(6px, 4px) rotate(16deg);
-    opacity: 0.55;
-  }
-
-  100% {
-    transform: scale(0.25) translate(11px, 7px) rotate(26deg);
-    opacity: 0;
-  }
-}
-
 .anim-star-crack-left {
   clip-path: polygon(0% 0%, 50% 0%, 42% 35%, 55% 62%, 40% 100%, 0% 100%);
-  animation: starHalfLeft 0.44s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
 .anim-star-crack-right {
   clip-path: polygon(50% 0%, 100% 0%, 100% 100%, 40% 100%, 55% 62%, 42% 35%);
-  animation: starHalfRight 0.44s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 }
 
-/* Electric Crack Flash Line across star */
-@keyframes starCrackFlash {
-  0% {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-
-  16% {
-    opacity: 0;
-  }
-
-  24% {
-    opacity: 1;
-    transform: scale(1.08);
-    filter: drop-shadow(0 0 5px #FFFBEB) drop-shadow(0 0 9px #F59E0B);
-  }
-
-  48% {
-    opacity: 0.75;
-    transform: scale(1);
-  }
-
-  75% {
-    opacity: 0;
-  }
-
-  100% {
-    opacity: 0;
-  }
-}
-
-.anim-star-crack-flash {
-  animation: starCrackFlash 0.38s ease-out forwards;
-}
-
-/* Glowing Star Shards / Fragments Scatter */
 .star-shard {
   position: absolute;
   width: 4px;
@@ -1009,364 +208,6 @@
   height: 3.5px;
 }
 
-.star-shard-1 {
-  animation: starShardFly1 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.star-shard-2 {
-  animation: starShardFly2 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.star-shard-3 {
-  animation: starShardFly3 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.star-shard-4 {
-  animation: starShardFly4 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.star-shard-5 {
-  animation: starShardFly5 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.star-shard-6 {
-  animation: starShardFly6 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.star-shard-7 {
-  animation: starShardFly7 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes starShardFly1 {
-  0% {
-    transform: translate(0, 0) scale(0);
-    opacity: 0;
-  }
-
-  18% {
-    transform: translate(0, 0) scale(1.2);
-    opacity: 1;
-  }
-
-  100% {
-    transform: translate(16px, -11px) scale(0.2) rotate(45deg);
-    opacity: 0;
-  }
-}
-
-@keyframes starShardFly2 {
-  0% {
-    transform: translate(0, 0) scale(0);
-    opacity: 0;
-  }
-
-  18% {
-    transform: translate(0, 0) scale(1.3);
-    opacity: 1;
-  }
-
-  100% {
-    transform: translate(14px, 12px) scale(0.2) rotate(-35deg);
-    opacity: 0;
-  }
-}
-
-@keyframes starShardFly3 {
-  0% {
-    transform: translate(0, 0) scale(0);
-    opacity: 0;
-  }
-
-  18% {
-    transform: translate(0, 0) scale(1.1);
-    opacity: 1;
-  }
-
-  100% {
-    transform: translate(-3px, 18px) scale(0.2) rotate(60deg);
-    opacity: 0;
-  }
-}
-
-@keyframes starShardFly4 {
-  0% {
-    transform: translate(0, 0) scale(0);
-    opacity: 0;
-  }
-
-  18% {
-    transform: translate(0, 0) scale(1.3);
-    opacity: 1;
-  }
-
-  100% {
-    transform: translate(-17px, 7px) scale(0.2) rotate(-45deg);
-    opacity: 0;
-  }
-}
-
-@keyframes starShardFly5 {
-  0% {
-    transform: translate(0, 0) scale(0);
-    opacity: 0;
-  }
-
-  18% {
-    transform: translate(0, 0) scale(1.1);
-    opacity: 1;
-  }
-
-  100% {
-    transform: translate(-13px, -12px) scale(0.2) rotate(30deg);
-    opacity: 0;
-  }
-}
-
-@keyframes starShardFly6 {
-  0% {
-    transform: translate(0, 0) scale(0);
-    opacity: 0;
-  }
-
-  18% {
-    transform: translate(0, 0) scale(1.2);
-    opacity: 1;
-  }
-
-  100% {
-    transform: translate(2px, -18px) scale(0.2) rotate(-60deg);
-    opacity: 0;
-  }
-}
-
-@keyframes starShardFly7 {
-  0% {
-    transform: translate(0, 0) scale(0);
-    opacity: 0;
-  }
-
-  18% {
-    transform: translate(0, 0) scale(1.4);
-    opacity: 1;
-  }
-
-  100% {
-    transform: translate(18px, -2px) scale(0.2) rotate(50deg);
-    opacity: 0;
-  }
-}
-
-/* ==========================================================================
-   Step 3: Average Rating Animated Star & Sparkles SVG
-   ========================================================================== */
-
-@keyframes avgStarFloat {
-
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-
-  50% {
-    transform: translateY(-2.5px) rotate(3deg);
-  }
-}
-
-@keyframes avgStarAura {
-
-  0%,
-  100% {
-    transform: scale(0.9);
-    opacity: 0.45;
-  }
-
-  50% {
-    transform: scale(1.25);
-    opacity: 0.9;
-  }
-}
-
-@keyframes avgStarPulse {
-
-  0%,
-  100% {
-    transform: scale(1);
-    filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.4));
-  }
-
-  50% {
-    transform: scale(1.08);
-    filter: drop-shadow(0 0 10px rgba(251, 191, 36, 0.9));
-  }
-}
-
-@keyframes avgSparkleRotate1 {
-  0% {
-    transform: scale(0.5) rotate(0deg);
-    opacity: 0.3;
-  }
-
-  50% {
-    transform: scale(1.3) rotate(90deg);
-    opacity: 1;
-  }
-
-  100% {
-    transform: scale(0.5) rotate(180deg);
-    opacity: 0.3;
-  }
-}
-
-@keyframes avgSparkleRotate2 {
-  0% {
-    transform: scale(1.2) rotate(0deg);
-    opacity: 0.9;
-  }
-
-  50% {
-    transform: scale(0.5) rotate(-90deg);
-    opacity: 0.2;
-  }
-
-  100% {
-    transform: scale(1.2) rotate(-180deg);
-    opacity: 0.9;
-  }
-}
-
-.anim-avg-star-float {
-  animation: avgStarFloat 2.6s ease-in-out infinite;
-  transform-origin: center;
-}
-
-.anim-avg-star-aura {
-  animation: avgStarAura 2s ease-in-out infinite;
-  transform-origin: 16px 16px;
-}
-
-.anim-avg-star-pulse {
-  animation: avgStarPulse 2s ease-in-out infinite;
-  transform-origin: 16px 16px;
-}
-
-.anim-avg-sparkle-1 {
-  animation: avgSparkleRotate1 1.8s ease-in-out infinite;
-  transform-origin: 27px 7px;
-}
-
-.anim-avg-sparkle-2 {
-  animation: avgSparkleRotate2 2.2s ease-in-out infinite;
-  transform-origin: 5px 26px;
-}
-
-/* ==========================================================================
-   2-Second Transfer TO Default Star & Break FROM Default Star Animations
-   ========================================================================== */
-
-/* Transfer star TO the default star (Rating Increased) - 2s */
-@keyframes transferToDefaultStar {
-  0% {
-    transform: translate(28px, -12px) scale(0.2) rotate(40deg);
-    opacity: 0;
-    filter: drop-shadow(0 0 14px #F59E0B);
-  }
-
-  20% {
-    transform: translate(20px, -9px) scale(1.2) rotate(18deg);
-    opacity: 1;
-    filter: drop-shadow(0 0 18px #FBBF24);
-  }
-
-  50% {
-    transform: translate(10px, -4px) scale(1.3) rotate(-8deg);
-    opacity: 1;
-    filter: drop-shadow(0 0 22px #FEF08A);
-  }
-
-  75% {
-    transform: translate(2px, -1px) scale(1.15) rotate(4deg);
-    opacity: 0.95;
-  }
-
-  90% {
-    transform: translate(0, 0) scale(1.4) rotate(0deg);
-    opacity: 0.85;
-  }
-
-  100% {
-    transform: translate(0, 0) scale(0) rotate(0deg);
-    opacity: 0;
-    filter: drop-shadow(0 0 30px #F59E0B);
-  }
-}
-
-/* Default Star pulse when absorbing newly transferred star */
-@keyframes defaultStarAbsorbPulse {
-
-  0%,
-  68% {
-    transform: scale(1);
-  }
-
-  80% {
-    transform: scale(1.45);
-    filter: drop-shadow(0 0 16px rgba(251, 191, 36, 1)) drop-shadow(0 0 24px rgba(245, 158, 11, 0.9));
-  }
-
-  90% {
-    transform: scale(0.92);
-  }
-
-  100% {
-    transform: scale(1);
-    filter: drop-shadow(0 2px 4px rgba(245, 158, 11, 0.4));
-  }
-}
-
-.anim-transfer-to-default {
-  animation: transferToDefaultStar 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-  pointer-events: none;
-  z-index: 30;
-}
-
-.anim-default-star-absorb {
-  animation: defaultStarAbsorbPulse 2s ease-in-out forwards;
-}
-
-/* Transfer & Break FROM the default star (Rating Decreased) - 2s */
-@keyframes breakFromDefaultContainer {
-  0% {
-    transform: translate(0, 0) scale(0.85);
-    opacity: 1;
-  }
-
-  25% {
-    transform: translate(14px, -6px) scale(1.22) rotate(10deg);
-    opacity: 1;
-  }
-
-  55% {
-    transform: translate(22px, -10px) scale(1.08) rotate(18deg);
-    opacity: 0.95;
-  }
-
-  85% {
-    transform: translate(28px, -14px) scale(0.65) rotate(26deg);
-    opacity: 0.6;
-  }
-
-  100% {
-    transform: translate(32px, -16px) scale(0) rotate(35deg);
-    opacity: 0;
-  }
-}
-
-.anim-break-from-default {
-  animation: breakFromDefaultContainer 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-  pointer-events: none;
-  z-index: 30;
-}
-
 .star-transfer-particle {
   position: absolute;
   width: 3.5px;
@@ -1380,119 +221,11 @@
 .particle-1 {
   top: -2px;
   left: -2px;
-  animation: starTwinkleParticle1 0.8s infinite ease-in-out;
 }
 
 .particle-2 {
   bottom: -2px;
   right: -2px;
-  animation: starTwinkleParticle2 0.8s infinite ease-in-out 0.3s;
-}
-
-/* ========================================================
-   ANIMATED ATTACH DOCUMENT BUTTON & SVG
-   ======================================================== */
-@keyframes attachClipBounce {
-
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-
-  25% {
-    transform: translateY(-2px) rotate(-4deg);
-  }
-
-  75% {
-    transform: translateY(1.5px) rotate(3deg);
-  }
-}
-
-@keyframes attachAuraPulse {
-
-  0%,
-  100% {
-    transform: scale(0.85);
-    opacity: 0.3;
-  }
-
-  50% {
-    transform: scale(1.25);
-    opacity: 0.75;
-  }
-}
-
-@keyframes attachSparkleTwinkle1 {
-
-  0%,
-  100% {
-    transform: scale(0) rotate(0deg);
-    opacity: 0;
-  }
-
-  30%,
-  70% {
-    transform: scale(1.15) rotate(45deg);
-    opacity: 1;
-  }
-
-  85% {
-    transform: scale(0.6) rotate(90deg);
-    opacity: 0.35;
-  }
-}
-
-@keyframes attachSparkleTwinkle2 {
-
-  0%,
-  25%,
-  100% {
-    transform: scale(0) rotate(0deg);
-    opacity: 0;
-  }
-
-  50%,
-  85% {
-    transform: scale(1.25) rotate(-45deg);
-    opacity: 1;
-  }
-
-  95% {
-    transform: scale(0.4) rotate(-90deg);
-    opacity: 0.3;
-  }
-}
-
-.anim-attach-clip {
-  animation: attachClipBounce 2.4s infinite ease-in-out;
-  transform-origin: 12px 12px;
-}
-
-.anim-attach-aura {
-  animation: attachAuraPulse 2s infinite ease-in-out;
-  transform-origin: 12px 12px;
-}
-
-.anim-attach-sparkle-1 {
-  animation: attachSparkleTwinkle1 2s infinite ease-in-out;
-  transform-origin: 19px 4px;
-}
-
-.anim-attach-sparkle-2 {
-  animation: attachSparkleTwinkle2 2.2s infinite ease-in-out 0.6s;
-  transform-origin: 5px 17px;
-}
-
-.btn-attach-document:hover .anim-attach-clip {
-  animation: attachClipBounce 1.2s infinite ease-in-out;
-}
-
-.btn-attach-document:hover .anim-attach-sparkle-1 {
-  animation: attachSparkleTwinkle1 1.1s infinite ease-in-out;
-}
-
-.btn-attach-document:hover .anim-attach-sparkle-2 {
-  animation: attachSparkleTwinkle2 1.2s infinite ease-in-out 0.3s;
 }
 
 /* ==========================================================================
@@ -1646,10 +379,6 @@
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
 }
 
-.qr-action-btn-access-enabled:hover svg {
-  animation: qrKeyBounce 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
 .qr-action-btn-access-enabled:active {
   transform: scale(0.94);
 }
@@ -1670,62 +399,18 @@
   box-shadow: 0 1px 2px rgba(2, 132, 199, 0.05);
 }
 
-@keyframes qrKeyBounce {
-  0% {
-    transform: rotate(0deg) scale(1);
-  }
-  35% {
-    transform: rotate(-15deg) scale(1.2);
-  }
-  70% {
-    transform: rotate(10deg) scale(1.1);
-  }
-  100% {
-    transform: rotate(0deg) scale(1);
-  }
-}
-
-/* Empty State Illustration managed via CSS */
+/* Empty State Illustration (Animated exclusively via GSAP) */
 .appraisal-empty-glow {
   position: absolute;
   inset: -1.5rem;
   background: radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, rgba(238, 245, 255, 0.45) 45%, rgba(238, 245, 255, 0) 70%);
   border-radius: 9999px;
   filter: blur(24px);
-  animation: appraisalEmptyGlow 3.5s ease-in-out infinite;
   pointer-events: none;
 }
 
 .appraisal-empty-illustration {
   position: relative;
   z-index: 10;
-  width: 9.5rem;
-  height: 9.5rem;
   margin: 0 auto;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160' fill='none'%3E%3Cdefs%3E%3ClinearGradient id='fbg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='60%25' stop-color='%23EFF6FF'/%3E%3Cstop offset='100%25' stop-color='%23BFDBFE'/%3E%3C/linearGradient%3E%3ClinearGradient id='dg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='100%25' stop-color='%23FFFFFF'/%3E%3C/linearGradient%3E%3ClinearGradient id='hg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%231D4ED8'/%3E%3Cstop offset='50%25' stop-color='%232563EB'/%3E%3Cstop offset='100%25' stop-color='%2360A5FA'/%3E%3C/linearGradient%3E%3ClinearGradient id='gbg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233B82F6'/%3E%3Cstop offset='100%25' stop-color='%2360A5FA'/%3E%3C/linearGradient%3E%3ClinearGradient id='bg' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%233B82F6'/%3E%3Cstop offset='100%25' stop-color='%231D4ED8'/%3E%3C/linearGradient%3E%3Cfilter id='ds' x='-10%25' y='-10%25' width='130%25' height='130%25'%3E%3CfeDropShadow dx='0' dy='8' stdDeviation='8' flood-color='%231D4ED8' flood-opacity='0.16'/%3E%3C/filter%3E%3C/defs%3E%3Cg transform='rotate(-6 80 80)'%3E%3Crect x='35' y='36' width='86' height='98' rx='14' fill='url(%23fbg)' stroke='%23BFDBFE' stroke-width='1.5'/%3E%3Crect x='48' y='52' width='38' height='4' rx='2' fill='%2360A5FA' opacity='0.6'/%3E%3Crect x='48' y='62' width='56' height='4' rx='2' fill='%2360A5FA' opacity='0.4'/%3E%3C/g%3E%3Cg filter='url(%23ds)'%3E%3Crect x='42' y='26' width='84' height='104' rx='14' fill='url(%23dg)' stroke='%23BFDBFE' stroke-width='1.2'/%3E%3Cpath d='M42 40 C42 32.268 48.268 26 56 26 H112 C119.732 26 126 32.268 126 40 V48 H42 V40 Z' fill='url(%23hg)'/%3E%3Ccircle cx='56' cy='37' r='3' fill='%23FFFFFF' opacity='0.9'/%3E%3Ccircle cx='66' cy='37' r='2' fill='%23FFFFFF' opacity='0.6'/%3E%3Ccircle cx='74' cy='37' r='2' fill='%23FFFFFF' opacity='0.4'/%3E%3Ccircle cx='54' cy='62' r='4' fill='%2360A5FA'/%3E%3Crect x='64' y='60' width='46' height='4.5' rx='2.25' fill='%23E2E8F0'/%3E%3Ccircle cx='54' cy='76' r='4' fill='%2360A5FA'/%3E%3Crect x='64' y='74' width='38' height='4.5' rx='2.25' fill='%23EFF6FF'/%3E%3Ccircle cx='54' cy='90' r='4' fill='%2360A5FA'/%3E%3Crect x='64' y='88' width='50' height='4.5' rx='2.25' fill='%23E2E8F0'/%3E%3Crect x='52' y='104' width='62' height='6' rx='3' fill='%23FFFFFF'/%3E%3Crect x='52' y='104' width='44' height='6' rx='3' fill='url(%23gbg)'/%3E%3C/g%3E%3Cg transform='translate(102, 94)'%3E%3Ccircle cx='16' cy='16' r='16' fill='url(%23bg)'/%3E%3Ccircle cx='16' cy='16' r='18' stroke='url(%23bg)' stroke-width='2' opacity='0.3'/%3E%3Cpath d='M10 16.5 L14 20.5 L22 12' stroke='%23FFFFFF' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3Cg fill='%2360A5FA'%3E%3Cpath d='M138 20 L140 26 L146 28 L140 30 L138 36 L136 30 L130 28 L136 26 Z' opacity='0.9'/%3E%3C/g%3E%3Cg fill='%2360A5FA'%3E%3Cpath d='M26 100 L27.5 104.5 L32 106 L27.5 107.5 L26 112 L24.5 107.5 L20 106 L24.5 104.5 Z' opacity='0.8'/%3E%3C/g%3E%3Ccircle cx='28' cy='44' r='3' fill='%2360A5FA' opacity='0.7'/%3E%3Ccircle cx='140' cy='80' r='2.5' fill='%232563EB' opacity='0.8'/%3E%3C/svg%3E");
-  animation: appraisalEmptyFloat 4s ease-in-out infinite;
-  filter: drop-shadow(0 14px 28px rgba(37, 99, 235, 0.15));
-}
-
-@keyframes appraisalEmptyFloat {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-8px);
-  }
-}
-
-@keyframes appraisalEmptyGlow {
-  0%, 100% {
-    transform: scale(0.95);
-    opacity: 0.4;
-  }
-  50% {
-    transform: scale(1.08);
-    opacity: 0.8;
-  }
 }

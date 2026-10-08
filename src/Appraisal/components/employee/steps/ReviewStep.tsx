@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { StepProps } from "../../../types/appraisal.types";
 import { Star } from "lucide-react";
+import { initScrollRevealCards } from "../../../animations/appraisalAnimations";
 import { renderAnimatedEmojiIcon } from "./CompanyEnvironmentStep";
 
 const TEAM_CRITERIA = [
@@ -21,6 +22,7 @@ const ENVIRONMENT_RATINGS: Record<number, { label: string; emoji: string }> = {
 };
 
 export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const teamRatings = formData.teamRatings || {};
   const ratedTeamKeys = Object.keys(teamRatings).filter((k) => (teamRatings[k as keyof typeof teamRatings] || 0) > 0);
   const avgTeamScore = ratedTeamKeys.length > 0
@@ -33,58 +35,13 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
   const envRating = formData.companyEnvironmentRating || formData.managementSupportRating || 0;
   const envRatingInfo = ENVIRONMENT_RATINGS[envRating];
 
-  // Scroll-based reveal animation for review cards using IntersectionObserver (matching View mode)
+  // GSAP Scroll-based reveal animation for review cards
   useEffect(() => {
-    // Respect prefers-reduced-motion
-    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      document.querySelectorAll(".eval-reveal-card").forEach((el) => {
-        el.classList.add("is-revealed");
-      });
-      return;
-    }
-
-    if (!("IntersectionObserver" in window)) {
-      document.querySelectorAll(".eval-reveal-card").forEach((el) => {
-        el.classList.add("is-revealed");
-      });
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.intersectionRatio >= 0.12) {
-            entry.target.classList.add("is-revealed");
-          } else if (entry.intersectionRatio === 0 || !entry.isIntersecting) {
-            entry.target.classList.remove("is-revealed");
-          }
-        });
-      },
-      {
-        root: null,
-        threshold: [0, 0.12],
-      }
-    );
-
-    const observeAllCards = () => {
-      const cards = document.querySelectorAll(".eval-reveal-card");
-      cards.forEach((card) => {
-        observer.observe(card);
-      });
-    };
-
-    const rafId = requestAnimationFrame(observeAllCards);
-    const timerId = setTimeout(observeAllCards, 50);
-
-    return () => {
-      cancelAnimationFrame(rafId);
-      clearTimeout(timerId);
-      observer.disconnect();
-    };
+    return initScrollRevealCards(containerRef.current);
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       {/* Step Header */}
       <div className="border-b border-blue-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>

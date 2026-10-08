@@ -326,16 +326,27 @@
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
 }
 
-/* Employee Submission Inputs: Blocked Cursor */
+/* Employee Submission Inputs: Blocked Cursor (Only for read-only submission cards) */
 .eval-submission-col .eval-readonly-field,
-.eval-submission-col input,
-.eval-submission-col textarea,
-.eval-submission-col select,
+.eval-submission-col .eval-step-card input,
+.eval-submission-col .eval-step-card textarea,
+.eval-submission-col .eval-step-card select,
 .eval-submission-col .eval-step-card div[class*="rounded-xl"],
 .eval-submission-col .eval-teamwork-item {
   cursor: not-allowed !important;
 }
 
+/* Editable textareas & inputs in Assignment Section */
+.eval-submission-col textarea:not(:read-only):not([readonly]):not(:disabled):not(.eval-textarea-readonly),
+.eval-textarea-field:not(:read-only):not([readonly]):not(:disabled):not(.eval-textarea-readonly) {
+  cursor: text !important;
+}
+
+.eval-submission-col input:not(:read-only):not([readonly]):not(:disabled) {
+  cursor: text !important;
+}
+
+.eval-assignment-readonly-field,
 .eval-readonly-field {
   cursor: not-allowed !important;
   user-select: text;

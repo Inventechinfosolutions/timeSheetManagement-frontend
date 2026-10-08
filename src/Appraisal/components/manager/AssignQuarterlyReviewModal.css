@@ -48,6 +48,7 @@
 .assign-quarterly-modal-dialog {
   position: relative !important;
   z-index: 30 !important;
+  margin: auto !important;
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.98) 0%,
@@ -65,9 +66,47 @@
   animation: assignModalExpand 0.48s cubic-bezier(0.34, 1.4, 0.64, 1) forwards !important;
   transform-origin: center center;
   overflow: hidden !important;
-  max-height: none !important;
+  height: 495px !important;
+  min-height: 495px !important;
+  max-height: 495px !important;
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
+}
+
+.custom-scrollbar,
+.assign-input-textarea {
+  scrollbar-width: thin !important;
+  scrollbar-color: #CBD5E1 transparent !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar,
+.assign-input-textarea::-webkit-scrollbar,
+textarea.assign-input-textarea::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+}
+.custom-scrollbar::-webkit-scrollbar-track,
+.assign-input-textarea::-webkit-scrollbar-track,
+textarea.assign-input-textarea::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb,
+.assign-input-textarea::-webkit-scrollbar-thumb,
+textarea.assign-input-textarea::-webkit-scrollbar-thumb {
+  background: #CBD5E1 !important;
+  border-radius: 9999px !important;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+.assign-input-textarea::-webkit-scrollbar-thumb:hover,
+textarea.assign-input-textarea::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8 !important;
+}
+.custom-scrollbar::-webkit-scrollbar-button,
+.assign-input-textarea::-webkit-scrollbar-button,
+textarea.assign-input-textarea::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 .assign-quarterly-modal-dialog::-webkit-scrollbar {

@@ -133,12 +133,12 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         disabled={disabled}
         aria-expanded={open}
         onClick={openPicker}
-        className={`ui-date-field flex w-full items-center justify-between rounded-xl border border-[#D3A29D]/50 bg-white px-3.5 py-2.5 text-left text-sm shadow-none ${className}`}
+        className={`ui-date-field flex w-full items-center justify-between rounded-xl border border-blue-200/70 bg-white px-3.5 py-2.5 text-left text-sm shadow-none hover:border-blue-400 ${className}`}
       >
         <span className={`font-mono ${selected ? "text-[#0F172A]" : "text-[#64748B]"}`}>
           {selected ? value : placeholder}
         </span>
-        <Calendar className="h-4 w-4 shrink-0 text-[#A36361]" />
+        <Calendar className="h-4 w-4 shrink-0 text-[#2563EB]" />
       </button>
 
       {open &&
@@ -146,12 +146,12 @@ export const DatePicker: React.FC<DatePickerProps> = ({
           <div
             ref={panelRef}
             style={panelStyle}
-            className="rounded-2xl border border-[#E5C98F]/55 bg-white p-3 shadow-xl"
+            className="rounded-2xl border border-blue-100 bg-white p-3 shadow-xl"
           >
             <div className="mb-2 flex items-center justify-between">
               <button
                 type="button"
-                className="rounded-lg p-1.5 text-[#A36361] hover:bg-[#FAF2EE]"
+                className="rounded-lg p-1.5 text-[#2563EB] hover:bg-blue-50"
                 onClick={() =>
                   pane === "days"
                     ? setView(new Date(year, view.getMonth() - 1, 1))
@@ -163,14 +163,14 @@ export const DatePicker: React.FC<DatePickerProps> = ({
               </button>
               <button
                 type="button"
-                className="rounded-lg px-2 py-1 text-sm font-bold text-[#0F172A] hover:bg-[#FAF2EE]"
+                className="rounded-lg px-2 py-1 text-sm font-bold text-[#0F172A] hover:bg-blue-50"
                 onClick={() => setPane(pane === "days" ? "monthYear" : "days")}
               >
                 {pane === "days" ? `${monthName} ${year}` : `${year}`}
               </button>
               <button
                 type="button"
-                className="rounded-lg p-1.5 text-[#A36361] hover:bg-[#FAF2EE]"
+                className="rounded-lg p-1.5 text-[#2563EB] hover:bg-blue-50"
                 onClick={() =>
                   pane === "days"
                     ? setView(new Date(year, view.getMonth() + 1, 1))
@@ -196,7 +196,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                         data-active={active ? "true" : "false"}
                         onClick={() => setView(new Date(item, view.getMonth(), 1))}
                         className={`rounded-lg py-1.5 text-xs font-semibold ${
-                          active ? "bg-[#A36361] text-white" : "text-[#0F172A] hover:bg-[#FAF2EE]"
+                          active ? "bg-[#2563EB] text-white" : "text-[#0F172A] hover:bg-blue-50"
                         }`}
                       >
                         {item}
@@ -216,7 +216,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                           setPane("days");
                         }}
                         className={`rounded-lg py-2 text-xs font-semibold ${
-                          active ? "bg-[#A36361] text-white" : "text-[#0F172A] hover:bg-[#FAF2EE]"
+                          active ? "bg-[#2563EB] text-white" : "text-[#0F172A] hover:bg-blue-50"
                         }`}
                       >
                         {item}
@@ -245,8 +245,8 @@ export const DatePicker: React.FC<DatePickerProps> = ({
                     }}
                     className={`h-8 rounded-lg text-xs font-semibold ${
                       isSelected
-                        ? "bg-[#A36361] text-white"
-                        : "text-[#0F172A] hover:bg-[#FAF2EE]"
+                        ? "bg-[#2563EB] text-white"
+                        : "text-[#0F172A] hover:bg-blue-50"
                     }`}
                   >
                     {day.getDate()}

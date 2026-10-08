@@ -55,9 +55,9 @@
   min-width: 1180px;
 }
 
-/* Table Header - Modern Vibrant Royal Blue Gradient */
+/* Table Header - Vibrant Royal Blue Solid */
 .quarterly-review-table thead tr {
-  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #3B82F6 100%);
+  background: #2563EB !important;
   border-bottom: 2px solid #1D4ED8;
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
 }
@@ -80,51 +80,30 @@
   border-right: none;
 }
 
-/* Sticky Action Column Header */
+/* Sticky Action Column Header - Matches Full Header Royal Blue */
 .qr-sticky-action-th {
   position: sticky;
   right: 0;
-  background: #1E3A8A !important;
+  background: #2563EB !important;
   color: #FFFFFF !important;
   z-index: 10;
-  box-shadow: -5px 0 14px rgba(30, 58, 138, 0.32);
+  box-shadow: -5px 0 14px rgba(37, 99, 235, 0.32);
   border-left: none;
 }
 
-/* Theme Variant 1: Royal Ice */
-.qr-header-indigo thead tr {
-  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #3B82F6 100%) !important;
-  border-bottom: 2px solid #1D4ED8 !important;
-}
-.qr-header-indigo .qr-sticky-action-th {
-  background: #1E3A8A !important;
-}
-
-/* Theme Variant 2: Deep Navy */
-.qr-header-navy thead tr {
-  background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 55%, #2563EB 100%) !important;
-  border-bottom: 2px solid rgba(37, 99, 235, 0.4) !important;
-}
-.qr-header-navy .qr-sticky-action-th {
-  background: #0F172A !important;
-}
-
-/* Theme Variant 3: Vibrant Sky */
-.qr-header-purple thead tr {
-  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #3B82F6 100%) !important;
-  border-bottom: 2px solid #1D4ED8 !important;
-}
-.qr-header-purple .qr-sticky-action-th {
-  background: #1E3A8A !important;
-}
-
-/* Theme Variant 4: Cyan Sapphire */
+/* Theme Variants: Unified Royal Blue Header */
+.qr-header-indigo thead tr,
+.qr-header-navy thead tr,
+.qr-header-purple thead tr,
 .qr-header-teal thead tr {
-  background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #3B82F6 100%) !important;
+  background: #2563EB !important;
   border-bottom: 2px solid #1D4ED8 !important;
 }
+.qr-header-indigo .qr-sticky-action-th,
+.qr-header-navy .qr-sticky-action-th,
+.qr-header-purple .qr-sticky-action-th,
 .qr-header-teal .qr-sticky-action-th {
-  background: #1E3A8A !important;
+  background: #2563EB !important;
 }
 
 /* Table Body Rows - Subtle Cool Zebra Striping & Smooth Transitions */
@@ -418,14 +397,16 @@
   position: relative;
 }
 
-.qr-action-btn-edit {
+.qr-action-btn-edit,
+.qr-action-btn-view {
   background: #EFF6FF;
   color: #1D4ED8;
   border: 1px solid #BFDBFE;
   box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
 }
 
-.qr-action-btn-edit:hover {
+.qr-action-btn-edit:hover,
+.qr-action-btn-view:hover {
   background: #2563EB;
   color: #FFFFFF;
   border-color: #2563EB;
@@ -433,25 +414,7 @@
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
 }
 
-.qr-action-btn-edit:active {
-  transform: scale(0.94);
-}
-
-.qr-action-btn-view {
-  background: #F0F9FF;
-  color: #0284C7;
-  border: 1px solid #BAE6FD;
-  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.08);
-}
-
-.qr-action-btn-view:hover {
-  background: #0284C7;
-  color: #FFFFFF;
-  border-color: #0284C7;
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.28);
-}
-
+.qr-action-btn-edit:active,
 .qr-action-btn-view:active {
   transform: scale(0.94);
 }

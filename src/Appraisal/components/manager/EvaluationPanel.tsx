@@ -1130,7 +1130,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-1">
                     Assigned quarter
                   </span>
-                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A]">
+                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                     {record.quarter} · {record.financialYear}
                   </div>
                 </div>
@@ -1138,7 +1138,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-1">
                     Assigned date
                   </span>
-                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A]">
+                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                     {assignedDate || "—"}
                   </div>
                 </div>
@@ -1147,7 +1147,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     Deadline
                   </span>
                   {isViewMode ? (
-                    <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A]">
+                    <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                       {deadlineDate || "—"}
                     </div>
                   ) : (
@@ -1165,7 +1165,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   value={assignmentDescription}
                   onChange={(event) => setAssignmentDescription(event.target.value)}
                   placeholder="Assignment description"
-                  className={`eval-textarea-field w-full ${isViewMode ? "eval-textarea-readonly" : ""}`}
+                  className={`eval-textarea-field w-full ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : "!cursor-text cursor-text"}`}
                 />
               </div>
               {!isViewMode && (

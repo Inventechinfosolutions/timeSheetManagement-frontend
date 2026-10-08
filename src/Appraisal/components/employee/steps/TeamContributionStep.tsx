@@ -1,6 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { StepProps } from "../../../types/appraisal.types";
 import { Star, CheckCircle2, AlertCircle } from "lucide-react";
+import {
+  initDefaultStarAnimation,
+  animateDefaultStarAbsorb,
+  animateTransferIncrease,
+  animateTransferDecrease,
+  animateStarPop,
+  animateStarHover,
+  animateStarHoverLeave,
+  animateShatteringStar,
+} from "../../../animations/appraisalAnimations";
 
 interface Criterion {
   key: string;
@@ -30,6 +40,181 @@ interface ShatteringStarItem {
   id: number;
 }
 
+// GSAP Break-Apart Shattering Star Effect
+const ShatteringStar: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      return animateShatteringStar(containerRef.current);
+    }
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-visible"
+    >
+      {/* Left Cracked Half */}
+      <div
+        className="absolute inset-0 flex items-center justify-center star-crack-left-el [clip-path:polygon(0%_0%,50%_0%,42%_35%,55%_62%,40%_100%,0%_100%)]"
+      >
+        <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-[#EECC8C] text-[#E2B666] drop-shadow-[0_0_6px_rgba(238,204,140,0.9)]" />
+      </div>
+
+      {/* Right Cracked Half */}
+      <div
+        className="absolute inset-0 flex items-center justify-center star-crack-right-el [clip-path:polygon(50%_0%,100%_0%,100%_100%,40%_100%,55%_62%,42%_35%)]"
+      >
+        <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-[#EECC8C] text-[#E2B666] drop-shadow-[0_0_6px_rgba(238,204,140,0.9)]" />
+      </div>
+
+      {/* Electric Crack Flash */}
+      <div className="absolute inset-0 flex items-center justify-center star-crack-flash-el pointer-events-none">
+        <div className="w-0.5 h-5 bg-gradient-to-b from-amber-100 via-white to-amber-200 rotate-12 rounded-full shadow-[0_0_8px_#FFFBEB]" />
+      </div>
+
+      {/* Glowing Fragments Scattering Outward */}
+      <span className="star-shard star-shard-el" />
+      <span className="star-shard star-shard-el" />
+      <span className="star-shard star-shard-el" />
+      <span className="star-shard star-shard-el" />
+      <span className="star-shard star-shard-el" />
+      <span className="star-shard star-shard-el" />
+      <span className="star-shard star-shard-el" />
+    </div>
+  );
+};
+
+// GSAP Transfer Increase Effect (Star flying into default star)
+const TransferIncreaseEffect: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      return animateTransferIncrease(containerRef.current);
+    }
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 overflow-visible"
+    >
+      <Star className="w-5 h-5 fill-amber-300 text-amber-500 drop-shadow-[0_0_12px_rgba(251,191,36,1)]" />
+      <span className="star-transfer-particle particle-1" />
+      <span className="star-transfer-particle particle-2" />
+    </div>
+  );
+};
+
+// GSAP Transfer Decrease Effect (Star separating & breaking from default star)
+const TransferDecreaseEffect: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      return animateTransferDecrease(containerRef.current);
+    }
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className="absolute inset-0 flex items-center justify-center pointer-events-none z-30 overflow-visible"
+    >
+      <div
+        className="absolute inset-0 flex items-center justify-center star-crack-left-el [clip-path:polygon(0%_0%,50%_0%,42%_35%,55%_62%,40%_100%,0%_100%)]"
+      >
+        <Star className="w-5 h-5 fill-amber-400 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.9)]" />
+      </div>
+      <div
+        className="absolute inset-0 flex items-center justify-center star-crack-right-el [clip-path:polygon(50%_0%,100%_0%,100%_100%,40%_100%,55%_62%,42%_35%)]"
+      >
+        <Star className="w-5 h-5 fill-amber-400 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.9)]" />
+      </div>
+      <div className="absolute inset-0 flex items-center justify-center star-crack-flash-el pointer-events-none">
+        <div className="w-0.5 h-5 bg-gradient-to-b from-amber-100 via-white to-amber-200 rotate-12 rounded-full shadow-[0_0_8px_#FFFBEB]" />
+      </div>
+      <span className="star-shard star-shard-el" />
+      <span className="star-shard star-shard-el" />
+      <span className="star-shard star-shard-el" />
+      <span className="star-shard star-shard-el" />
+      <span className="star-shard star-shard-el" />
+      <span className="star-shard star-shard-el" />
+      <span className="star-shard star-shard-el" />
+    </div>
+  );
+};
+
+interface CriterionStarButtonProps {
+  criterionKey: string;
+  criterionTitle: string;
+  starIndex: number;
+  currentRating: number;
+  hovered: number;
+  isDirectlyClicked: boolean;
+  isShattering: boolean;
+  onRate: (criterionKey: string, score: number) => void;
+  onHover: (criterionKey: string, score: number) => void;
+}
+
+const CriterionStarButton: React.FC<CriterionStarButtonProps> = ({
+  criterionKey,
+  criterionTitle,
+  starIndex,
+  currentRating,
+  hovered,
+  isDirectlyClicked,
+  isShattering,
+  onRate,
+  onHover,
+}) => {
+  const btnRef = useRef<HTMLButtonElement | null>(null);
+  const displayRating = Math.max(currentRating, hovered);
+  const isFilled = starIndex <= displayRating;
+
+  useEffect(() => {
+    if (isDirectlyClicked && btnRef.current) {
+      animateStarPop(btnRef.current);
+    }
+  }, [isDirectlyClicked]);
+
+  const handleMouseEnter = () => {
+    onHover(criterionKey, starIndex);
+    if (btnRef.current) {
+      animateStarHover(btnRef.current);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (btnRef.current) {
+      animateStarHoverLeave(btnRef.current);
+    }
+  };
+
+  return (
+    <button
+      ref={btnRef}
+      type="button"
+      onClick={() => onRate(criterionKey, starIndex)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      title={`${criterionTitle}: ${starIndex} of 5 (${RATING_LABELS[starIndex]})`}
+      className="relative p-1 sm:p-1.5 rounded-lg cursor-pointer focus:outline-none select-none overflow-visible"
+    >
+      <Star
+        className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors duration-200 ${
+          isFilled && !isShattering
+            ? "fill-[#EECC8C] text-[#EECC8C] drop-shadow-[0_2px_8px_rgba(238,204,140,0.85)]"
+            : "text-gray-300 fill-transparent hover:text-[#EECC8C]"
+        }`}
+      />
+      {isShattering && <ShatteringStar />}
+    </button>
+  );
+};
+
 export const TeamContributionStep: React.FC<StepProps> = ({
   formData,
   onChange,
@@ -41,29 +226,43 @@ export const TeamContributionStep: React.FC<StepProps> = ({
   const [animatingStar, setAnimatingStar] = useState<{ key: string; star: number } | null>(null);
   const [shatteringStars, setShatteringStars] = useState<ShatteringStarItem[]>([]);
 
+  // Default Star GSAP Animation References
+  const defaultStarRef = useRef<HTMLDivElement | null>(null);
+  const defaultStarAuraRef = useRef<HTMLDivElement | null>(null);
+  const defaultStarBodyRef = useRef<HTMLDivElement | null>(null);
+  const sparkle1Ref = useRef<HTMLSpanElement | null>(null);
+  const sparkle2Ref = useRef<HTMLSpanElement | null>(null);
+
+  // Default Star continuous living animations (GSAP)
+  useEffect(() => {
+    return initDefaultStarAnimation({
+      container: defaultStarRef.current,
+      aura: defaultStarAuraRef.current,
+      body: defaultStarBodyRef.current,
+      sparkle1: sparkle1Ref.current,
+      sparkle2: sparkle2Ref.current,
+    });
+  }, []);
+
   const handleRate = (criterionKey: string, score: number) => {
     const currentScore = (ratings as Record<string, number>)[criterionKey] || 0;
     let finalScore = score;
     const unselectedStars: number[] = [];
 
     if (currentScore === score) {
-      // Clicking the currently selected star unselects it (drops down by 1)
       finalScore = score - 1;
       unselectedStars.push(score);
     } else if (score < currentScore) {
-      // Lowering rating: stars between score + 1 and currentScore break apart
       for (let s = score + 1; s <= currentScore; s++) {
         unselectedStars.push(s);
       }
       finalScore = score;
     } else {
-      // Increasing rating: animate the newly selected star
       finalScore = score;
       setAnimatingStar({ key: criterionKey, star: score });
       setTimeout(() => setAnimatingStar(null), 550);
     }
 
-    // Trigger smooth break-apart animation for all unselected stars
     if (unselectedStars.length > 0) {
       const now = Date.now();
       const newItems: ShatteringStarItem[] = unselectedStars.map((starNum, idx) => ({
@@ -90,7 +289,6 @@ export const TeamContributionStep: React.FC<StepProps> = ({
       clearError(criterionKey);
     }
 
-    // Sync human-readable summary
     const filledCount = Object.keys(updated).filter((k) => (((updated as Record<string, number>)[k] || 0) > 0)).length;
     const avgScore = (Object.values(updated).reduce((a: number, b) => a + ((b as number) || 0), 0) / (filledCount || 1)).toFixed(1);
     const summaryText = `Teamwork evaluation: ${filledCount}/6 criteria rated (Avg score: ${avgScore}/5.0). ${formData.collaborationDetails && !formData.collaborationDetails.startsWith("Teamwork evaluation:")
@@ -120,15 +318,17 @@ export const TeamContributionStep: React.FC<StepProps> = ({
 
     const prev = prevAvgScoreRef.current;
     if (overallAvgNum > prev) {
-      // Numbers increased: star transfers TO the default star for 2 sec
       setTransferAnim("increase");
       prevAvgScoreRef.current = overallAvgNum;
+
+      // Animate absorption pulse on default star with GSAP
+      animateDefaultStarAbsorb(defaultStarRef.current);
+
       const timer = setTimeout(() => {
         setTransferAnim(null);
       }, 2000);
       return () => clearTimeout(timer);
     } else if (overallAvgNum < prev) {
-      // Numbers decreased: star breaks & removes FROM the default star for 2 sec
       setTransferAnim("decrease");
       prevAvgScoreRef.current = overallAvgNum;
       const timer = setTimeout(() => {
@@ -162,105 +362,39 @@ export const TeamContributionStep: React.FC<StepProps> = ({
           >
             {/* The Default Star: Receives transfer on increase, or emits breaking star on decrease (2 sec) */}
             <div className="relative w-5 h-5 flex items-center justify-center shrink-0 overflow-visible">
-              <svg
-                viewBox="0 0 32 32"
-                className={`w-5 h-5 overflow-visible anim-avg-star-float ${
-                  transferAnim === "increase" ? "anim-default-star-absorb" : ""
-                }`}
+              <div
+                ref={defaultStarRef}
+                className="relative w-5 h-5 flex items-center justify-center shrink-0 overflow-visible"
               >
-                <defs>
-                  <linearGradient id="avgStarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#FFF2D6" />
-                    <stop offset="50%" stopColor="#EECC8C" />
-                    <stop offset="100%" stopColor="#E2B666" />
-                  </linearGradient>
-                  <radialGradient id="avgGlowGrad" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stopColor="#EECC8C" stopOpacity="0.8" />
-                    <stop offset="100%" stopColor="#2563EB" stopOpacity="0" />
-                  </radialGradient>
-                </defs>
-
-                {/* Pulsing Aura Behind Star */}
-                <circle cx="16" cy="16" r="13" fill="url(#avgGlowGrad)" className="anim-avg-star-aura" />
-
-                {/* Main Star Body */}
-                <polygon
-                  points="16,2 20.3,11.2 30.5,12.5 23,19.6 24.9,29.8 16,24.8 7.1,29.8 9,19.6 1.5,12.5 11.7,11.2"
-                  fill="url(#avgStarGrad)"
-                  stroke="#E2B666"
-                  strokeWidth="1.2"
-                  strokeLinejoin="round"
-                  className="anim-avg-star-pulse"
+                {/* Pulsing Aura Behind Star (GSAP Animated) */}
+                <div
+                  ref={defaultStarAuraRef}
+                  className="absolute inset-0 rounded-full bg-gradient-to-br from-amber-300/40 via-amber-400/20 to-blue-500/20 blur-[2px]"
                 />
 
-                {/* Twinkling Star Sparkle Top-Right */}
-                <g className="anim-avg-sparkle-1">
-                  <polygon
-                    points="27,3 28,6 31,7 28,8 27,11 26,8 23,7 26,6"
-                    fill="#FFF2D6"
-                    stroke="#EECC8C"
-                    strokeWidth="0.5"
-                  />
-                </g>
-
-                {/* Twinkling Star Sparkle Bottom-Left */}
-                <g className="anim-avg-sparkle-2">
-                  <polygon
-                    points="5,23 6,25 8,26 6,27 5,29 4,27 2,26 4,25"
-                    fill="#FFFFFF"
-                    stroke="#EECC8C"
-                    strokeWidth="0.4"
-                  />
-                </g>
-              </svg>
-
-              {/* 1. Rating INCREASE: Star transfers TO the default star for 2 seconds */}
-              {transferAnim === "increase" && (
-                <div className="absolute inset-0 flex items-center justify-center anim-transfer-to-default">
-                  <Star className="w-5 h-5 fill-amber-300 text-amber-500 drop-shadow-[0_0_12px_rgba(251,191,36,1)]" />
-                  <span className="star-transfer-particle particle-1" />
-                  <span className="star-transfer-particle particle-2" />
+                {/* Main Star Body (GSAP Animated) */}
+                <div ref={defaultStarBodyRef} className="relative z-10 flex items-center justify-center">
+                  <Star className="w-5 h-5 fill-[#EECC8C] text-[#E2B666] drop-shadow-[0_1px_4px_rgba(226,182,102,0.6)]" />
                 </div>
-              )}
 
-              {/* 2. Rating DECREASE: Star separates & breaks FROM the default star for 2 seconds */}
-              {transferAnim === "decrease" && (
-                <div className="absolute inset-0 flex items-center justify-center anim-break-from-default">
-                  {/* Left Cracked Half */}
-                  <div className="absolute inset-0 flex items-center justify-center anim-star-crack-left">
-                    <Star className="w-5 h-5 fill-amber-400 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.9)]" />
-                  </div>
+                {/* Twinkling Star Sparkle Top-Right (GSAP Animated) */}
+                <span
+                  ref={sparkle1Ref}
+                  className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-200 shadow-[0_0_4px_#FFF2D6]"
+                />
 
-                  {/* Right Cracked Half */}
-                  <div className="absolute inset-0 flex items-center justify-center anim-star-crack-right">
-                    <Star className="w-5 h-5 fill-amber-400 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.9)]" />
-                  </div>
+                {/* Twinkling Star Sparkle Bottom-Left (GSAP Animated) */}
+                <span
+                  ref={sparkle2Ref}
+                  className="absolute -bottom-1 -left-1 w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_3px_#FFFFFF]"
+                />
+              </div>
 
-                  {/* Electric Crack Flash Line */}
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="absolute w-5 h-5 anim-star-crack-flash"
-                  >
-                    <path
-                      d="M12 3 L10.5 8 L13.5 12 L10 16 L12.5 21"
-                      stroke="#FFFBEB"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      fill="none"
-                    />
-                  </svg>
+              {/* 1. Rating INCREASE: Star transfers TO the default star for 2 seconds (GSAP) */}
+              {transferAnim === "increase" && <TransferIncreaseEffect />}
 
-                  {/* Glowing Star Shards Scattering */}
-                  <span className="star-shard star-shard-1" />
-                  <span className="star-shard star-shard-2" />
-                  <span className="star-shard star-shard-3" />
-                  <span className="star-shard star-shard-4" />
-                  <span className="star-shard star-shard-5" />
-                  <span className="star-shard star-shard-6" />
-                  <span className="star-shard star-shard-7" />
-                </div>
-              )}
+              {/* 2. Rating DECREASE: Star separates & breaks FROM the default star for 2 seconds (GSAP) */}
+              {transferAnim === "decrease" && <TransferDecreaseEffect />}
             </div>
 
             {/* Average Rating Text */}
@@ -318,8 +452,6 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                     }
                   >
                     {[1, 2, 3, 4, 5].map((starIndex) => {
-                      const displayRating = Math.max(currentRating, hovered);
-                      const isFilled = starIndex <= displayRating;
                       const isDirectlyClicked =
                         animatingStar?.key === criterion.key &&
                         animatingStar?.star === starIndex;
@@ -328,71 +460,23 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                       );
 
                       return (
-                        <button
+                        <CriterionStarButton
                           key={starIndex}
-                          type="button"
-                          onClick={() => handleRate(criterion.key, starIndex)}
-                          onMouseEnter={() =>
+                          criterionKey={criterion.key}
+                          criterionTitle={criterion.title}
+                          starIndex={starIndex}
+                          currentRating={currentRating}
+                          hovered={hovered}
+                          isDirectlyClicked={isDirectlyClicked}
+                          isShattering={isShattering}
+                          onRate={handleRate}
+                          onHover={(key, score) =>
                             setHoveredStars((prev) => ({
                               ...prev,
-                              [criterion.key]: starIndex,
+                              [key]: score,
                             }))
                           }
-                          title={`${criterion.title}: ${starIndex} of 5 (${RATING_LABELS[starIndex]})`}
-                          className={`relative p-1 sm:p-1.5 rounded-lg transition-transform cursor-pointer focus:outline-none select-none star-jelly-hover overflow-visible ${isDirectlyClicked
-                              ? "star-spin-pop"
-                              : isFilled && !isShattering
-                                ? "star-active-glow"
-                                : ""
-                            }`}
-                        >
-                          {/* Base Star: Smooth transition into unselected gray state */}
-                          <Star
-                            className={`w-5 h-5 sm:w-6 sm:h-6 transition-all duration-300 ease-out ${isFilled && !isShattering
-                                ? "fill-[#EECC8C] text-[#EECC8C] drop-shadow-[0_2px_8px_rgba(238,204,140,0.85)]"
-                                : "text-gray-300 fill-transparent hover:text-[#EECC8C]"
-                              }`}
-                          />
-
-                          {/* Break-Apart Animation: Cracks, shatters, and scatters glowing particles */}
-                          {isShattering && (
-                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20 overflow-visible">
-                              {/* Left Cracked Half */}
-                              <div className="absolute inset-0 flex items-center justify-center anim-star-crack-left">
-                                <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-[#EECC8C] text-[#E2B666] drop-shadow-[0_0_6px_rgba(238,204,140,0.9)]" />
-                              </div>
-
-                              {/* Right Cracked Half */}
-                              <div className="absolute inset-0 flex items-center justify-center anim-star-crack-right">
-                                <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-[#EECC8C] text-[#E2B666] drop-shadow-[0_0_6px_rgba(238,204,140,0.9)]" />
-                              </div>
-
-                              {/* Electric Crack Flash Line */}
-                              <svg
-                                viewBox="0 0 24 24"
-                                className="absolute w-5 h-5 sm:w-6 sm:h-6 anim-star-crack-flash"
-                              >
-                                <path
-                                  d="M12 3 L10.5 8 L13.5 12 L10 16 L12.5 21"
-                                  stroke="#FFFBEB"
-                                  strokeWidth="1.6"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  fill="none"
-                                />
-                              </svg>
-
-                              {/* Glowing Fragments / Particles Scattering Outward */}
-                              <span className="star-shard star-shard-1" />
-                              <span className="star-shard star-shard-2" />
-                              <span className="star-shard star-shard-3" />
-                              <span className="star-shard star-shard-4" />
-                              <span className="star-shard star-shard-5" />
-                              <span className="star-shard star-shard-6" />
-                              <span className="star-shard star-shard-7" />
-                            </div>
-                          )}
-                        </button>
+                        />
                       );
                     })}
                   </div>
@@ -401,7 +485,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
 
               {/* Inline Error Message */}
               {criterionError && (
-                <div className="flex items-center gap-1.5 text-xs text-red-600 font-semibold mt-2 pt-1.5 border-t border-red-200/70 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="flex items-center gap-1.5 text-xs text-red-600 font-semibold mt-2 pt-1.5 border-t border-red-200/70">
                   <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
                   <span>{criterionError}</span>
                 </div>
