@@ -137,7 +137,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             </div>
             {avgTeamScore ? (
               <span className="text-xs font-bold text-[#2563EB] px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200/60 flex items-center gap-1 eval-stagger-item eval-stagger-2">
-                <Star className="w-3.5 h-3.5 fill-[#EECC8C] text-[#EECC8C]" />
+                <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B]" />
                 Avg Score: {avgTeamScore}/5.0
               </span>
             ) : null}
@@ -166,7 +166,7 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
                           key={s}
                           className={`w-3.5 h-3.5 ${
                             s <= score
-                              ? "fill-[#EECC8C] text-[#EECC8C]"
+                              ? "fill-[#F59E0B] text-[#F59E0B]"
                               : "fill-transparent text-gray-300"
                           }`}
                         />

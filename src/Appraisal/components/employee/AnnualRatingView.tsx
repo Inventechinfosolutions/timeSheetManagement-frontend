@@ -64,7 +64,7 @@ const renderQuarterCell = (val: number | null) => {
 
   return (
     <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-xl bg-white/90 border border-blue-100 shadow-2xs">
-      <Star className="w-3.5 h-3.5 fill-[#EECC8C] text-[#EECC8C] drop-shadow-[0_0_3px_rgba(238,204,140,0.5)] shrink-0" />
+      <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
       <span className="text-sm font-bold text-[#0F172A]">{val}</span>
     </div>
   );
@@ -191,7 +191,7 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
                       {/* 6. Total (With Star) */}
                       <td className="text-center px-3 py-3.5">
                         <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] shadow-2xs whitespace-nowrap">
-                          <Star className="w-3.5 h-3.5 fill-[#EECC8C] text-[#EECC8C] drop-shadow-[0_0_3px_rgba(238,204,140,0.5)] shrink-0" />
+                          <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
                           <span className="text-sm font-extrabold text-[#1D4ED8]">
                             {row.total.toFixed(2)}
                           </span>

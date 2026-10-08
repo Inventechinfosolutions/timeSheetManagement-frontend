@@ -59,14 +59,14 @@ const ShatteringStar: React.FC = () => {
       <div
         className="absolute inset-0 flex items-center justify-center star-crack-left-el [clip-path:polygon(0%_0%,50%_0%,42%_35%,55%_62%,40%_100%,0%_100%)]"
       >
-        <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-[#EECC8C] text-[#E2B666] drop-shadow-[0_0_6px_rgba(238,204,140,0.9)]" />
+        <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-[#F59E0B] text-[#D97706] drop-shadow-[0_2px_5px_rgba(245,158,11,0.5)]" />
       </div>
 
       {/* Right Cracked Half */}
       <div
         className="absolute inset-0 flex items-center justify-center star-crack-right-el [clip-path:polygon(50%_0%,100%_0%,100%_100%,40%_100%,55%_62%,42%_35%)]"
       >
-        <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-[#EECC8C] text-[#E2B666] drop-shadow-[0_0_6px_rgba(238,204,140,0.9)]" />
+        <Star className="w-5 h-5 sm:w-6 sm:h-6 fill-[#F59E0B] text-[#D97706] drop-shadow-[0_2px_5px_rgba(245,158,11,0.5)]" />
       </div>
 
       {/* Electric Crack Flash */}
@@ -206,8 +206,8 @@ const CriterionStarButton: React.FC<CriterionStarButtonProps> = ({
       <Star
         className={`w-5 h-5 sm:w-6 sm:h-6 transition-colors duration-200 ${
           isFilled && !isShattering
-            ? "fill-[#EECC8C] text-[#EECC8C] drop-shadow-[0_2px_8px_rgba(238,204,140,0.85)]"
-            : "text-gray-300 fill-transparent hover:text-[#EECC8C]"
+            ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_2px_5px_rgba(245,158,11,0.5)]"
+            : "text-gray-300 fill-transparent hover:text-[#F59E0B]"
         }`}
       />
       {isShattering && <ShatteringStar />}
@@ -374,7 +374,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
 
                 {/* Main Star Body (GSAP Animated) */}
                 <div ref={defaultStarBodyRef} className="relative z-10 flex items-center justify-center">
-                  <Star className="w-5 h-5 fill-[#EECC8C] text-[#E2B666] drop-shadow-[0_1px_4px_rgba(226,182,102,0.6)]" />
+                  <Star className="w-5 h-5 fill-[#F59E0B] text-[#D97706] drop-shadow-[0_2px_5px_rgba(245,158,11,0.5)]" />
                 </div>
 
                 {/* Twinkling Star Sparkle Top-Right (GSAP Animated) */}

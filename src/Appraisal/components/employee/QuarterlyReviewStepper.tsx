@@ -176,6 +176,51 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     handleClearError(field as string);
   };
 
+  const commitDraftsIfNeeded = (currentData: ReviewFormData): ReviewFormData => {
+    let updated = { ...currentData };
+    let hasChanged = false;
+
+    // Step 2: Auto-commit project draft if all required fields are filled
+    const pTitle = (updated.projectTitle || "").trim();
+    const pDesc = (updated.projectDescription || "").trim();
+    const pChallenge = (updated.projectChallenge || "").trim();
+    if (pTitle && pDesc && pChallenge) {
+      const existing = updated.projects || [];
+      const newProject = {
+        title: pTitle,
+        description: pDesc,
+        challenge: pChallenge,
+        attachments: updated.projectAttachments ? [...updated.projectAttachments] : [],
+      };
+      updated = {
+        ...updated,
+        projects: [...existing, newProject],
+        projectTitle: "",
+        projectDescription: "",
+        projectChallenge: "",
+        projectAttachments: [],
+      };
+      hasChanged = true;
+    }
+
+    // Step 4: Auto-commit learning goal draft if filled
+    const goalDraft = (updated.learningGoals || "").trim();
+    if (goalDraft) {
+      const existingGoals = updated.learningGoalItems || [];
+      const newGoals = [...existingGoals, goalDraft];
+      updated = {
+        ...updated,
+        learningGoalItems: newGoals,
+        learningGoals: "",
+        skillsAcquired: newGoals.join("\n"),
+        nextQuarterLearningGoals: newGoals.join("\n"),
+      };
+      hasChanged = true;
+    }
+
+    return hasChanged ? updated : currentData;
+  };
+
   const validateStep = (
     stepNum: number,
     data: ReviewFormData = formData
@@ -190,10 +235,31 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         if (!firstFieldId) firstFieldId = "field-overview";
       }
     } else if (stepNum === 2) {
+      const pTitle = (data.projectTitle || "").trim();
+      const pDesc = (data.projectDescription || "").trim();
+      const pChallenge = (data.projectChallenge || "").trim();
+      const hasAnyDraft = Boolean(pTitle || pDesc || pChallenge);
+      const isDraftComplete = Boolean(pTitle && pDesc && pChallenge);
+
       const savedProjects = (data.projects || []).filter(
         (project) => project.title.trim() && project.description.trim() && project.challenge.trim(),
       );
-      if (savedProjects.length === 0) {
+
+      // If user partially filled draft in active input fields, point out missing field
+      if (hasAnyDraft && !isDraftComplete) {
+        if (!pTitle) {
+          stepErrors.projectTitle = "Project title is required.";
+          if (!firstFieldId) firstFieldId = "field-projectTitle";
+        }
+        if (!pDesc) {
+          stepErrors.projectDescription = "Project description is required.";
+          if (!firstFieldId) firstFieldId = "field-projectDescription";
+        }
+        if (!pChallenge) {
+          stepErrors.projectChallenge = "Challenge overcome is required.";
+          if (!firstFieldId) firstFieldId = "field-projectChallenge";
+        }
+      } else if (!isDraftComplete && savedProjects.length === 0) {
         stepErrors.projects = "Add at least one project.";
         if (!firstFieldId) firstFieldId = "field-projects";
       }
@@ -216,8 +282,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         }
       }
     } else if (stepNum === 4) {
-      const goals = (data.learningGoalItems || []).filter((goal) => goal.trim());
-      if (goals.length === 0) {
+      const goalDraft = (data.learningGoals || "").trim();
+      const savedGoals = (data.learningGoalItems || []).filter((goal) => goal.trim());
+      if (!goalDraft && savedGoals.length === 0) {
         stepErrors.learningGoals = "Add at least one learning goal.";
         if (!firstFieldId) firstFieldId = "field-learningGoals";
       }
@@ -294,7 +361,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
   };
 
-  const persistStep = async (asDraft = false): Promise<boolean> => {
+  const persistStep = async (asDraft = false, dataToPersist: ReviewFormData = formData): Promise<boolean> => {
     const quarter = quarterValue(assignment.quarter);
     if (!assignment.employeeId || !quarter || !assignment.financialYear) {
       setSaveError("This quarter is missing an employee, quarter, or financial year.");
@@ -304,7 +371,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       assignment.employeeId,
       quarter,
       assignment.financialYear,
-      formData,
+      dataToPersist,
     );
     setSaving(true);
     setSaveError("");
@@ -358,13 +425,23 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (currentStep >= 6 || saving) {
       return;
     }
-    const validation = validateStep(currentStep);
+
+    let currentData = formData;
+    if (currentStep === 2 || currentStep === 4) {
+      currentData = commitDraftsIfNeeded(formData);
+      if (currentData !== formData) {
+        setFormData(currentData);
+        formDataRef.current = currentData;
+      }
+    }
+
+    const validation = validateStep(currentStep, currentData);
     if (!validation.isValid) {
       setErrors(validation.errors);
       scrollToField(validation.firstFieldId);
       return;
     }
-    const saved = await persistStep();
+    const saved = await persistStep(false, currentData);
     if (!saved) {
       return;
     }
@@ -409,9 +486,18 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
     if (targetStep === currentStep || saving) return;
 
+    let currentData = formData;
+    if (currentStep === 2 || currentStep === 4) {
+      currentData = commitDraftsIfNeeded(formData);
+      if (currentData !== formData) {
+        setFormData(currentData);
+        formDataRef.current = currentData;
+      }
+    }
+
     if (targetStep > currentStep) {
       for (let s = currentStep; s < targetStep; s++) {
-        const validation = validateStep(s);
+        const validation = validateStep(s, currentData);
         if (!validation.isValid) {
           if (s !== currentStep) {
             goToStep(s, false);
@@ -423,7 +509,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       }
     }
 
-    const saved = await persistStep();
+    const saved = await persistStep(false, currentData);
     if (!saved) {
       return;
     }
@@ -443,7 +529,15 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (saving) {
       return;
     }
-    const saved = await persistStep(true);
+    let currentData = formData;
+    if (currentStep === 2 || currentStep === 4) {
+      currentData = commitDraftsIfNeeded(formData);
+      if (currentData !== formData) {
+        setFormData(currentData);
+        formDataRef.current = currentData;
+      }
+    }
+    const saved = await persistStep(true, currentData);
     if (!saved) {
       return;
     }
@@ -455,8 +549,16 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (saving) {
       return;
     }
+    let currentData = formData;
+    if (currentStep === 2 || currentStep === 4) {
+      currentData = commitDraftsIfNeeded(formData);
+      if (currentData !== formData) {
+        setFormData(currentData);
+        formDataRef.current = currentData;
+      }
+    }
     for (let s = 1; s <= 5; s++) {
-      const validation = validateStep(s);
+      const validation = validateStep(s, currentData);
       if (!validation.isValid) {
         goToStep(s, false);
         setErrors(validation.errors);
@@ -464,7 +566,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         return;
       }
     }
-    const saved = await persistStep();
+    const saved = await persistStep(false, currentData);
     if (!saved) {
       return;
     }
@@ -672,7 +774,12 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
           </div>
         ) : (
           <>
-            <fieldset disabled={readOnly} className="relative overflow-hidden min-h-[380px] border-0 p-0 m-0 min-w-0">
+            <fieldset
+              disabled={readOnly}
+              className={`relative min-h-[380px] border-0 p-0 m-0 min-w-0 ${
+                exitingStep !== null ? "overflow-hidden" : "overflow-visible"
+              }`}
+            >
               {exitingStep !== null && (
                 <div
                   ref={exitContentRef}

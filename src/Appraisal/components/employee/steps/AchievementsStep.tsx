@@ -1,6 +1,6 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { StepProps } from "../../../types/appraisal.types";
-import { AlertCircle, X, Paperclip } from "lucide-react";
+import { AlertCircle, X, Paperclip, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { readApiError } from "../../../services/appraisal.api";
 
 export const AchievementsStep: React.FC<StepProps> = ({
@@ -18,9 +18,46 @@ export const AchievementsStep: React.FC<StepProps> = ({
   const attachments = formData.projectAttachments || [];
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const accordionContainerRef = useRef<HTMLDivElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [addErrors, setAddErrors] = useState<Record<string, string>>({});
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        accordionContainerRef.current &&
+        !accordionContainerRef.current.contains(event.target as Node)
+      ) {
+        setExpandedIndex(null);
+      }
+    };
+
+    if (expandedIndex !== null) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [expandedIndex]);
+
+  const toggleAccordion = (index: number) => {
+    setExpandedIndex((prev) => {
+      const isOpening = prev !== index;
+      if (isOpening) {
+        setTimeout(() => {
+          const itemEl = document.getElementById(`accordion-project-${index}`);
+          if (itemEl) {
+            itemEl.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }, 60);
+        return index;
+      }
+      return null;
+    });
+  };
 
   const titleError = errors?.projectTitle || addErrors.projectTitle;
   const descriptionError = errors?.projectDescription || addErrors.projectDescription;
@@ -32,6 +69,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
     setAddErrors((prev) => ({ ...prev, projectTitle: "" }));
     if (clearError) {
       clearError("projectTitle");
+      clearError("projects");
     }
   };
 
@@ -40,6 +78,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
     setAddErrors((prev) => ({ ...prev, projectDescription: "" }));
     if (clearError) {
       clearError("projectDescription");
+      clearError("projects");
     }
   };
 
@@ -48,6 +87,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
     setAddErrors((prev) => ({ ...prev, projectChallenge: "" }));
     if (clearError) {
       clearError("projectChallenge");
+      clearError("projects");
     }
   };
 
@@ -63,10 +103,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
     if (Object.keys(nextErrors).length > 0) {
       return;
     }
-    onChange("projects", [
+    const newProjects = [
       ...projects,
-      { title, description, challenge, attachments },
-    ]);
+      { title, description, challenge, attachments: [...attachments] },
+    ];
+    onChange("projects", newProjects);
     onChange("projectTitle", "");
     onChange("projectDescription", "");
     onChange("projectChallenge", "");
@@ -80,6 +121,69 @@ export const AchievementsStep: React.FC<StepProps> = ({
     }
   };
 
+  const handleEditProject = (targetIndex: number) => {
+    const projectToEdit = projects[targetIndex];
+    if (!projectToEdit) return;
+
+    const currentTitle = projectTitle.trim();
+    const currentDesc = projectDescription.trim();
+    const currentChallenge = projectChallenge.trim();
+    const hasCurrentData = Boolean(
+      currentTitle || currentDesc || currentChallenge || (attachments && attachments.length > 0)
+    );
+
+    const updatedProjects = [...projects];
+
+    if (hasCurrentData) {
+      // What was currently in the input boxes moves into the accordion list at targetIndex
+      updatedProjects[targetIndex] = {
+        title: currentTitle || "Untitled Project",
+        description: projectDescription,
+        challenge: projectChallenge,
+        attachments: [...attachments],
+      };
+      if (expandedIndex === targetIndex) {
+        setExpandedIndex(null);
+      }
+    } else {
+      // If the input boxes were empty, remove the selected project from the accordion list
+      updatedProjects.splice(targetIndex, 1);
+      if (expandedIndex === targetIndex) {
+        setExpandedIndex(null);
+      } else if (expandedIndex !== null && expandedIndex > targetIndex) {
+        setExpandedIndex(expandedIndex - 1);
+      }
+    }
+
+    // Move the selected project into the active input boxes
+    onChange("projects", updatedProjects);
+    onChange("projectTitle", projectToEdit.title);
+    onChange("projectDescription", projectToEdit.description);
+    onChange("projectChallenge", projectToEdit.challenge);
+    onChange("projectAttachments", projectToEdit.attachments ? [...projectToEdit.attachments] : []);
+
+    // Clear validation errors
+    setAddErrors({});
+    if (clearError) {
+      clearError("projects");
+      clearError("projectTitle");
+      clearError("projectDescription");
+      clearError("projectChallenge");
+    }
+
+    // Smooth scroll to the input form and focus title place
+    const inputElement = document.getElementById("field-projects");
+    if (inputElement) {
+      inputElement.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    setTimeout(() => {
+      const titleInput = document.getElementById("input-projectTitle");
+      if (titleInput) {
+        titleInput.focus();
+      }
+    }, 100);
+  };
+
   const handleRemoveProject = (index: number) => {
     const removed = projects[index];
     (removed?.attachments || []).forEach((file) => {
@@ -87,6 +191,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
         void onRemoveAttachment(file.objectKey);
       }
     });
+    if (expandedIndex === index) {
+      setExpandedIndex(null);
+    } else if (expandedIndex !== null && expandedIndex > index) {
+      setExpandedIndex(expandedIndex - 1);
+    }
     onChange(
       "projects",
       projects.filter((_, itemIndex) => itemIndex !== index),
@@ -134,7 +243,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
   return (
     <div className="space-y-6">
-      <div id="field-projects" className="flex items-start justify-between gap-3 border-b border-[#D3A29D]/30 pb-4">
+      <div id="field-projects" className="flex items-start justify-between gap-3 border-b border-blue-100 pb-4 scroll-mt-24">
         <div>
           <h3 className="text-lg font-bold text-[#0F172A]">
             <span className="eval-title-anim">Step 2: Key Achievements & Projects</span>
@@ -150,7 +259,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
         <button
           type="button"
           onClick={handleAddProject}
-          className="shrink-0 inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#A36361] bg-gradient-to-r from-[#FAF2EE] via-white to-[#F8EFEA] border border-[#D3A29D]/50 hover:border-[#A36361] rounded-xl transition-all duration-200 cursor-pointer"
+          className="shrink-0 inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs active:scale-[0.98] mr-0.5 mt-0.5"
         >
           <span className="tracking-wide">+ Add more project</span>
         </button>
@@ -263,9 +372,9 @@ export const AchievementsStep: React.FC<StepProps> = ({
           {attachments.map((file) => (
             <div
               key={file.objectKey}
-              className="flex items-center gap-2.5 px-3 py-1.5 bg-gradient-to-r from-[#FAF2EE] to-[#F8EFEA] border border-[#D3A29D]/50 rounded-xl shadow-2xs max-w-full"
+              className="flex items-center gap-2.5 px-3 py-1.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl shadow-2xs max-w-full"
             >
-              <Paperclip className="w-4 h-4 text-[#A36361] shrink-0" />
+              <Paperclip className="w-4 h-4 text-[#2563EB] shrink-0" />
               <div className="flex flex-col min-w-0">
                 <span className="text-xs font-bold text-[#0F172A] truncate max-w-[150px] sm:max-w-[190px]">
                   {file.fileName}
@@ -289,9 +398,9 @@ export const AchievementsStep: React.FC<StepProps> = ({
               type="button"
               disabled={uploading}
               onClick={() => fileInputRef.current?.click()}
-              className="btn-attach-document group inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#A36361] bg-gradient-to-r from-[#FAF2EE] via-white to-[#F8EFEA] hover:from-[#FAF0EB] hover:to-[#F5E8E2] border border-[#D3A29D]/50 hover:border-[#A36361] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-sm hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait"
+              className="btn-attach-document group inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait"
             >
-              <Paperclip className="w-4 h-4 text-[#A36361] shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6" />
+              <Paperclip className="w-4 h-4 text-[#2563EB] shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6" />
               <span className="tracking-wide">
                 {uploading ? "Saving..." : attachments.length === 0 ? "Attach Document" : "Add more"}
               </span>
@@ -306,39 +415,155 @@ export const AchievementsStep: React.FC<StepProps> = ({
         </div>
 
         {projects.length > 0 && (
-          <div className="space-y-2">
-            {projects.map((project, index) => (
-              <div
-                key={`${project.title}-${index}`}
-                className="flex items-start justify-between gap-3 px-3.5 py-3 bg-white border border-[#D3A29D]/40 rounded-xl"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-[#0F172A]">{project.title}</p>
-                  <p className="text-xs text-[#64748B] mt-1 whitespace-pre-line">{project.description}</p>
-                  <p className="text-xs text-[#0F172A] mt-1 whitespace-pre-line">{project.challenge}</p>
-                  {(project.attachments || []).length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {(project.attachments || []).map((file) => (
-                        <span
-                          key={file.objectKey}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold text-[#0F172A] bg-[#FAF2EE] border border-[#D3A29D]/50 rounded-lg"
-                        >
-                          {file.fileName}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveProject(index)}
-                  className="p-1 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 cursor-pointer"
-                  title="Remove project"
+          <div ref={accordionContainerRef} className="space-y-3 pt-2">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+                Added Projects ({projects.length})
+              </span>
+            </div>
+
+            {projects.map((project, index) => {
+              const isExpanded = expandedIndex === index;
+
+              return (
+                <div
+                  id={`accordion-project-${index}`}
+                  key={`${project.title}-${index}`}
+                  className="bg-white border border-blue-200/80 hover:border-blue-400/90 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 scroll-mt-24"
                 >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
+                  {/* Accordion Header */}
+                  <div
+                    onClick={() => toggleAccordion(index)}
+                    className="flex items-center justify-between gap-3 px-4 py-3.5 bg-gradient-to-r from-white via-blue-50/20 to-white hover:bg-blue-50/30 cursor-pointer select-none group transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="shrink-0 px-2.5 py-1 text-[11px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg">
+                        Project {index + 1}
+                      </span>
+                      <h4 className="text-sm font-bold text-[#0F172A] truncate group-hover:text-[#2563EB] transition-colors">
+                        {project.title || "Untitled Project"}
+                      </h4>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {/* Edit Button - Icon Only */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditProject(index);
+                        }}
+                        className="inline-flex items-center justify-center w-8 h-8 text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-xl transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                        title="Edit project (swaps into input box)"
+                        aria-label="Edit project"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Delete Button - Icon Only */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveProject(index);
+                        }}
+                        className="inline-flex items-center justify-center w-8 h-8 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 rounded-xl transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                        title="Delete project"
+                        aria-label="Delete project"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Accordion Chevron */}
+                      <div className="p-1 rounded-lg text-[#64748B] group-hover:text-[#2563EB] group-hover:bg-blue-50/60 transition-colors ml-1">
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform duration-300 ease-in-out ${
+                            isExpanded ? "rotate-180 text-[#2563EB]" : ""
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Accordion Body with Smooth Grid Transition Animation */}
+                  <div
+                    className={`grid transition-all duration-300 ease-in-out ${
+                      isExpanded
+                        ? "grid-rows-[1fr] opacity-100"
+                        : "grid-rows-[0fr] opacity-0"
+                    }`}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="px-4 pb-4 pt-3 border-t border-blue-100/70 space-y-4 bg-gradient-to-b from-blue-50/20 to-white">
+                        {/* 1. Project Title Card (matching input field position and style) */}
+                        <div className="eval-step-card space-y-2">
+                          <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
+                            <span>Project Title</span>
+                          </label>
+                          <div className="eval-input-field font-semibold text-[#0F172A] bg-white">
+                            {project.title || "—"}
+                          </div>
+                        </div>
+
+                        {/* 2. Side-by-Side Grid for Description and Challenge (matching input field position and style) */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                          {/* Project Description Card */}
+                          <div className="eval-step-card space-y-3 flex flex-col justify-between h-full">
+                            <div>
+                              <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
+                                <span>Project Description</span>
+                              </label>
+                              <div className="eval-textarea-field mt-2 min-h-[96px] whitespace-pre-line leading-relaxed bg-white text-[#334155]">
+                                {project.description || "—"}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Challenge Card */}
+                          <div className="eval-step-card space-y-2 flex flex-col justify-between h-full">
+                            <div>
+                              <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
+                                <span>Challenge Overcome</span>
+                              </label>
+                              <div className="eval-textarea-field mt-2 min-h-[96px] whitespace-pre-line leading-relaxed bg-white text-[#334155]">
+                                {project.challenge || "—"}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 3. Attached Documents (matching input field position and style) */}
+                        {(project.attachments || []).length > 0 && (
+                          <div className="space-y-1.5 pt-1">
+                            <span className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
+                              Attached Documents ({(project.attachments || []).length})
+                            </span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {(project.attachments || []).map((file) => (
+                                <div
+                                  key={file.objectKey}
+                                  className="flex items-center gap-2.5 px-3 py-1.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl shadow-2xs max-w-full"
+                                >
+                                  <Paperclip className="w-4 h-4 text-[#2563EB] shrink-0" />
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="text-xs font-bold text-[#0F172A] truncate max-w-[150px] sm:max-w-[190px]">
+                                      {file.fileName}
+                                    </span>
+                                    {file.sizeLabel && (
+                                      <span className="text-[10px] text-[#64748B]">({file.sizeLabel})</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
