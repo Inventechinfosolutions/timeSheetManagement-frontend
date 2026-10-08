@@ -83,11 +83,17 @@ const apiUrl = '/api/inbox';
 // 1. Fetch User Inbox
 export const fetchInbox = createAsyncThunk(
   'inbox/fetchInbox',
-  async (params: { isRead?: boolean; search?: string; folder?: InboxFolder | string } | undefined, { rejectWithValue }) => {
+  async (
+    params: { isRead?: boolean; search?: string; folder?: InboxFolder | string } | undefined,
+    { rejectWithValue, signal }
+  ) => {
     try {
-      const response = await axios.get(apiUrl, { params });
+      const response = await axios.get(apiUrl, { params, signal });
       return response.data;
     } catch (error: any) {
+      if (axios.isCancel(error) || error?.code === 'ERR_CANCELED' || signal.aborted) {
+        return rejectWithValue(null);
+      }
       return rejectWithValue(
         error.response?.data?.message || 'Failed to fetch inbox items'
       );
@@ -231,8 +237,12 @@ const inboxSlice = createSlice({
       state.items = action.payload || [];
     });
     builder.addCase(fetchInbox.rejected, (state, action) => {
+      // Ignore aborted/superseded requests so a newer search keeps loading state clean
+      if (action.payload === null || action.meta.aborted) {
+        return;
+      }
       state.loading = false;
-      state.error = action.payload as string;
+      state.error = (action.payload as string) || 'Failed to fetch inbox items';
     });
 
     // Fetch All Unified Counts

@@ -45,6 +45,8 @@ export const fetchNotes = createAsyncThunk(
       if (params.type) searchParams.append("type", params.type);
       if (params.projectName) searchParams.append("projectName", params.projectName);
       if (params.search) searchParams.append("search", params.search);
+      if (params.fromDate) searchParams.append("fromDate", params.fromDate);
+      if (params.toDate) searchParams.append("toDate", params.toDate);
       if (params.isPinned !== undefined) searchParams.append("isPinned", String(params.isPinned));
       if (params.isArchived !== undefined) searchParams.append("isArchived", String(params.isArchived));
 

@@ -2,6 +2,7 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { message } from "antd";
 import axios from "axios";
+import dayjs from "dayjs";
 import { Note, ColorOption } from "../types/notes.types";
 import { paginateToA4Sheets } from "./documentLayout";
 
@@ -28,6 +29,38 @@ export const HIGHLIGHT_COLORS: ColorOption[] = [
   { label: "Soft Purple", color: "#E9D5FF" },
   { label: "Soft Orange", color: "#FED7AA" },
 ];
+
+export const noteMatchesSearch = (
+  note: Pick<Note, "id" | "title" | "projectName" | "createdBy" | "description">,
+  query: string,
+): boolean => {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  const text = [
+    note.id,
+    note.title,
+    note.projectName,
+    note.createdBy,
+    (note.description || "").replace(/<[^>]*>/g, " "),
+  ]
+    .filter((value) => value !== undefined && value !== null && String(value).trim() !== "")
+    .join(" ")
+    .toLowerCase();
+  return text.includes(q);
+};
+
+export const noteMatchesCreatedDate = (
+  createdAt: string | undefined,
+  fromDate?: string,
+  toDate?: string,
+): boolean => {
+  if (!fromDate && !toDate) return true;
+  if (!createdAt) return false;
+  const day = dayjs(createdAt).format("YYYY-MM-DD");
+  if (fromDate && day < fromDate) return false;
+  if (toDate && day > toDate) return false;
+  return true;
+};
 
 export const formatFileSize = (bytes?: number): string => {
   if (!bytes || bytes === 0) return "8.4 KB";

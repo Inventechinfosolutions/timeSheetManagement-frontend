@@ -110,6 +110,8 @@ export interface QueryNotesParams {
   type?: NoteType;
   projectName?: string;
   search?: string;
+  fromDate?: string;
+  toDate?: string;
   isPinned?: boolean;
   isArchived?: boolean;
   isAutoSave?: boolean;

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   FileText,
   Plus,
@@ -18,7 +18,8 @@ import { Tooltip } from "antd";
 import { PopconfirmWithTooltip } from "../../components/ui/PopconfirmWithTooltip";
 import dayjs from "dayjs";
 import { Note, NoteType } from "../types/notes.types";
-import { getCleanDescriptionSnippet } from "../utils/notesHelpers";
+import { getCleanDescriptionSnippet, noteMatchesCreatedDate, noteMatchesSearch } from "../utils/notesHelpers";
+import { SearchBox } from "../../components/ui";
 import { useNoteDragDrop } from "../hooks/useNoteDragDrop";
 
 interface NoteListProps {
@@ -30,6 +31,8 @@ interface NoteListProps {
   totalPages: number;
   activeTab: NoteType;
   searchQuery: string;
+  fromDate: string;
+  toDate: string;
   expandedNotes: Record<number, boolean>;
   currentUser?: { loginId?: string } | null;
   dragDrop: ReturnType<typeof useNoteDragDrop>;
@@ -54,6 +57,8 @@ export const NoteList: React.FC<NoteListProps> = ({
   totalPages,
   activeTab,
   searchQuery,
+  fromDate,
+  toDate,
   expandedNotes,
   currentUser,
   dragDrop,
@@ -69,6 +74,20 @@ export const NoteList: React.FC<NoteListProps> = ({
   onPageChange,
 }) => {
   const isProjectNotesTab = activeTab === "PROJECT";
+  const [childFilters, setChildFilters] = useState<
+    Record<number, { search: string; from: string; to: string }>
+  >({});
+  const childFilterFor = (noteId: number) =>
+    childFilters[noteId] || { search: "", from: "", to: "" };
+  const setChildFilter = (
+    noteId: number,
+    patch: Partial<{ search: string; from: string; to: string }>,
+  ) => {
+    setChildFilters((prev) => ({
+      ...prev,
+      [noteId]: { ...childFilterFor(noteId), ...prev[noteId], ...patch },
+    }));
+  };
   const {
     draggedItem,
     dragOverTarget,
@@ -95,11 +114,11 @@ export const NoteList: React.FC<NoteListProps> = ({
             <FileText className="w-7 h-7 text-[#4318FF]" />
           </div>
           <h3 className="text-base font-bold text-[#1B2559] mb-1">
-            {searchQuery ? "No matching notes found" : "No notes created yet"}
+            {searchQuery || fromDate || toDate ? "No matching notes found" : "No notes created yet"}
           </h3>
           <p className="text-slate-400 text-xs md:text-sm max-w-sm mb-6">
-            {searchQuery
-              ? "Try clearing your search query or switching filters."
+            {searchQuery || fromDate || toDate
+              ? "Try clearing your search or date filter."
               : "Click '+ Create Project Note' or '+ Create Personal Note' above to add your notes."}
           </p>
           {isProjectNotesTab && (
@@ -147,6 +166,21 @@ export const NoteList: React.FC<NoteListProps> = ({
                 const slNo = (currentPage - 1) * pageSize + index + 1;
                 const isExpanded = !!expandedNotes[note.id];
                 const subNotes = note.subNotes || [];
+                const childFilter = childFilterFor(note.id);
+                const parentMatchesFilters =
+                  noteMatchesSearch(note, searchQuery) &&
+                  noteMatchesCreatedDate(note.createdAt, fromDate, toDate);
+                const visibleSubNotes = subNotes.filter((sub) => {
+                  const matchesGlobalSearch =
+                    parentMatchesFilters || noteMatchesSearch(sub, searchQuery);
+                  const matchesGlobalDate = noteMatchesCreatedDate(sub.createdAt, fromDate, toDate);
+                  return (
+                    matchesGlobalSearch &&
+                    matchesGlobalDate &&
+                    noteMatchesSearch(sub, childFilter.search) &&
+                    noteMatchesCreatedDate(sub.createdAt, childFilter.from, childFilter.to)
+                  );
+                });
                 const isBeingDragged = draggedItem?.id === note.id;
                 const isCurrentDropTarget = dragOverTarget?.id === note.id && dragOverTarget.type === "root";
                 const isFileDropTarget = fileDropTargetNoteId === note.id;
@@ -366,11 +400,54 @@ export const NoteList: React.FC<NoteListProps> = ({
                       <tr>
                         <td colSpan={isProjectNotesTab ? 6 : 5} className="p-0 bg-slate-50/50">
                           <div className="p-5 pl-12 space-y-3">
-                            <div className="flex items-center justify-end">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <SearchBox
+                                  placeholder="Search child notes..."
+                                  value={childFilter.search}
+                                  onDebounce={(value) => setChildFilter(note.id, { search: value })}
+                                  onClear={() => setChildFilter(note.id, { search: "" })}
+                                  containerClassName="w-full sm:w-56"
+                                />
+                                <label className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+                                  From
+                                  <input
+                                    type="date"
+                                    value={childFilter.from}
+                                    max={childFilter.to || undefined}
+                                    onChange={(e) => setChildFilter(note.id, { from: e.target.value })}
+                                    className="h-9 px-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-700"
+                                  />
+                                </label>
+                                <label className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+                                  To
+                                  <input
+                                    type="date"
+                                    value={childFilter.to}
+                                    min={childFilter.from || undefined}
+                                    onChange={(e) => setChildFilter(note.id, { to: e.target.value })}
+                                    className="h-9 px-2 rounded-xl border border-slate-200 bg-white text-xs text-slate-700"
+                                  />
+                                </label>
+                                {(childFilter.search || childFilter.from || childFilter.to) && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setChildFilters((prev) => ({
+                                        ...prev,
+                                        [note.id]: { search: "", from: "", to: "" },
+                                      }))
+                                    }
+                                    className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-[11px] font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+                                  >
+                                    Clear
+                                  </button>
+                                )}
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => onStartCreateSubNote(note)}
-                                className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#4318FF] hover:bg-[#320fe0] text-white text-xs font-semibold rounded-xl shadow-sm transition cursor-pointer"
+                                className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#4318FF] hover:bg-[#320fe0] text-white text-xs font-semibold rounded-xl shadow-sm transition cursor-pointer self-start lg:self-auto"
                               >
                                 <Plus className="w-3.5 h-3.5" />
                                 <span>Add Note</span>
@@ -390,22 +467,29 @@ export const NoteList: React.FC<NoteListProps> = ({
                                 </thead>
 
                                 <tbody className="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
-                                  {subNotes.length === 0 ? (
+                                  {visibleSubNotes.length === 0 ? (
                                     <tr>
                                       <td colSpan={5} className="py-8 text-center text-slate-400">
-                                        No notes yet. Click{" "}
-                                        <button
-                                          type="button"
-                                          onClick={() => onStartCreateSubNote(note)}
-                                          className="font-bold text-[#4318FF] hover:underline cursor-pointer bg-transparent border-none p-0 inline"
-                                        >
-                                          + Add Note
-                                        </button>{" "}
-                                        to add one, or drag a note here.
+                                        {subNotes.length === 0 ? (
+                                          <>
+                                            No notes yet. Click{" "}
+                                            <button
+                                              type="button"
+                                              onClick={() => onStartCreateSubNote(note)}
+                                              className="font-bold text-[#4318FF] hover:underline cursor-pointer bg-transparent border-none p-0 inline"
+                                            >
+                                              + Add Note
+                                            </button>{" "}
+                                            to add one, or drag a note here.
+                                          </>
+                                        ) : (
+                                          "No child notes match this search or date."
+                                        )}
                                       </td>
                                     </tr>
                                   ) : (
-                                    subNotes.map((sub, subIdx) => {
+                                    visibleSubNotes.map((sub, subIdx) => {
+                                      const originalIndex = subNotes.findIndex((item) => item.id === sub.id);
                                       const isSubDragged = draggedItem?.id === sub.id;
                                       const isSubDropTarget = dragOverTarget?.id === sub.id && dragOverTarget.type === "sub";
 
@@ -420,13 +504,13 @@ export const NoteList: React.FC<NoteListProps> = ({
                                               itemType: "sub-note",
                                               parentId: note.id,
                                               projectName: note.projectName || undefined,
-                                              index: subIdx,
+                                              index: originalIndex,
                                             })
                                           }
                                           onDragEnd={handleDragEnd}
-                                          onDragOver={(e) => handleSubRowDragOver(e, note, sub, subIdx)}
+                                          onDragOver={(e) => handleSubRowDragOver(e, note, sub, originalIndex)}
                                           onDragLeave={(e) => handleSubRowDragLeave(e, sub)}
-                                          onDrop={(e) => handleSubRowDrop(e, note, sub, subIdx)}
+                                          onDrop={(e) => handleSubRowDrop(e, note, sub, originalIndex)}
                                           className={`transition-all duration-150 ${
                                             isSubDragged ? "opacity-30 bg-slate-100" : ""
                                           } ${

@@ -169,16 +169,45 @@ export const InboxManagement: React.FC = () => {
     }
   };
 
-  // Filter items (status tabs filter client-side for INBOX only, search filters from backend)
+  const matchesInboxSearch = (item: InboxItem, q: string) => {
+    if (!q) return true;
+    const note = item.note;
+    const plainDesc = (note?.description || "").replace(/<[^>]*>/g, " ");
+    const haystack = [
+      note?.title,
+      plainDesc,
+      note?.projectName,
+      String(note?.id ?? item.notesId ?? ""),
+      item.senderName,
+      item.receiverName,
+      item.fromMail,
+      item.toMail,
+      item.senderDesignation,
+      item.receiverDesignation,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(q);
+  };
+
+  // Search matches (before tab filter) — used for badge counts while searching
+  const searchMatchedItems = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((item) => matchesInboxSearch(item, q));
+  }, [items, debouncedSearch]);
+
+  // Tab filter (INBOX) + client search so UI stays correct even if API/races misbehave
   const filteredItems = useMemo(() => {
-    if (folder === InboxFolder.SENT) return items;
-    return items.filter((item) => {
-      // Tab filter
-      if (activeTab === InboxTab.UNREAD && item.isRead) return false;
-      if (activeTab === InboxTab.READ && !item.isRead) return false;
+    return searchMatchedItems.filter((item) => {
+      if (folder === InboxFolder.INBOX) {
+        if (activeTab === InboxTab.UNREAD && item.isRead) return false;
+        if (activeTab === InboxTab.READ && !item.isRead) return false;
+      }
       return true;
     });
-  }, [items, folder, activeTab]);
+  }, [searchMatchedItems, folder, activeTab]);
 
   const getInitials = (name?: string, email?: string) => {
     if (name && name.trim()) {
@@ -238,7 +267,12 @@ export const InboxManagement: React.FC = () => {
           }
           onSubmit={async (e) => {
             await notesMgr.handleSubmitForm(e);
-            dispatch(fetchInbox({ folder }));
+            dispatch(
+              fetchInbox({
+                folder,
+                search: debouncedSearch.trim() || undefined,
+              })
+            );
             dispatch(fetchInboxCounts());
           }}
           onBack={() => {
@@ -399,7 +433,7 @@ export const InboxManagement: React.FC = () => {
             >
               <span>All Notes</span>
               <span className="text-[11px] px-1.5 py-0.2 bg-slate-200/60 rounded-full">
-                {debouncedSearch.trim() ? items.length : (counts?.inbox ?? 0)}
+                {debouncedSearch.trim() ? searchMatchedItems.length : (counts?.inbox ?? 0)}
               </span>
             </button>
 
@@ -413,11 +447,11 @@ export const InboxManagement: React.FC = () => {
             >
               <span>Unread</span>
               {(debouncedSearch.trim()
-                ? items.filter((i) => !i.isRead).length
+                ? searchMatchedItems.filter((i) => !i.isRead).length
                 : (counts?.unread ?? 0)) > 0 && (
                 <span className="text-[11px] px-1.5 py-0.2 bg-[#4318FF] text-white rounded-full">
                   {debouncedSearch.trim()
-                    ? items.filter((i) => !i.isRead).length
+                    ? searchMatchedItems.filter((i) => !i.isRead).length
                     : (counts?.unread ?? 0)}
                 </span>
               )}
@@ -434,7 +468,7 @@ export const InboxManagement: React.FC = () => {
               <span>Read</span>
               <span className="text-[11px] px-1.5 py-0.2 bg-slate-200/60 rounded-full">
                 {debouncedSearch.trim()
-                  ? items.filter((i) => i.isRead).length
+                  ? searchMatchedItems.filter((i) => i.isRead).length
                   : (counts?.read ?? 0)}
               </span>
             </button>
@@ -443,7 +477,7 @@ export const InboxManagement: React.FC = () => {
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 px-2 py-1">
             <span>Sent Messages</span>
             <span className="px-2 py-0.5 bg-[#4318FF]/10 text-[#4318FF] font-bold rounded-full text-xs">
-              {debouncedSearch.trim() ? items.length : (counts?.sent ?? 0)}
+              {debouncedSearch.trim() ? searchMatchedItems.length : (counts?.sent ?? 0)}
             </span>
           </div>
         )}

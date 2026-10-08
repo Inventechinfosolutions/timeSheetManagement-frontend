@@ -46,7 +46,12 @@ import {
   attachmentKeysInHtml,
   refreshAttachmentBadges,
 } from "../utils/noteEditorAttachmentHelpers";
-import { justifyImportedContent, wrapWideTablesInRoot } from "../utils/notesHelpers";
+import {
+  justifyImportedContent,
+  wrapWideTablesInRoot,
+  noteMatchesSearch,
+  noteMatchesCreatedDate,
+} from "../utils/notesHelpers";
 import {
   parseExcelFile,
   parseExcelWorkbookFromHtml,
@@ -82,6 +87,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
 
   // Accordion expansion state for sub-tables
   const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   // Active note for View and Edit
   const [activeNote, setActiveNote] = useState<Note | null>(null);
@@ -187,11 +194,11 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   useEffect(() => {
     if (!loadList) return;
     loadNotes();
-  }, [activeTab, selectedProject, searchQuery, loadList]);
+  }, [activeTab, selectedProject, searchQuery, fromDate, toDate, loadList]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeTab, selectedProject, searchQuery]);
+  }, [activeTab, selectedProject, searchQuery, fromDate, toDate]);
 
   const loadNotes = () => {
     if (activeTab === "ARCHIVED") {
@@ -199,6 +206,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
         fetchNotes({
           isArchived: true,
           search: searchQuery || undefined,
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
         })
       );
     } else {
@@ -208,6 +217,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
           isArchived: false,
           projectName: activeTab === "PROJECT" ? selectedProject || undefined : undefined,
           search: searchQuery || undefined,
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
         })
       );
     }
@@ -1582,9 +1593,23 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     dispatch(setSearchQuery(""));
   };
 
-  // Filtered Notes (tab/project + client-side search by name/id)
+  const handleFromDateChange = (value: string) => {
+    setFromDate(value);
+  };
+
+  const handleToDateChange = (value: string) => {
+    setToDate(value);
+  };
+
+  const handleClearDates = () => {
+    setFromDate("");
+    setToDate("");
+  };
+
+  // Filtered Notes (tab/project + search and created date, including child notes)
   const displayNotes = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const searchOn = Boolean(searchQuery.trim());
+    const dateOn = Boolean(fromDate || toDate);
     return notes.filter((n) => {
       if (activeTab === "ARCHIVED") {
         if (!n.isArchived) return false;
@@ -1602,24 +1627,44 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
         }
       }
 
-      if (!q) return true;
+      if (!searchOn && !dateOn) return true;
 
-      const haystack = [
-        String(n.id),
-        n.title,
-        n.projectName,
-        n.createdBy,
-        n.updatedBy,
-        // Strip HTML for description search
-        (n.description || "").replace(/<[^>]*>/g, " "),
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-
-      return haystack.includes(q);
+      const parentMatches =
+        noteMatchesSearch(n, searchQuery) &&
+        noteMatchesCreatedDate(n.createdAt, fromDate, toDate);
+      const childMatches = (n.subNotes || []).some(
+        (sub) =>
+          noteMatchesSearch(sub, searchQuery) &&
+          noteMatchesCreatedDate(sub.createdAt, fromDate, toDate),
+      );
+      return parentMatches || childMatches;
     });
-  }, [notes, activeTab, selectedProject, searchQuery]);
+  }, [notes, activeTab, selectedProject, searchQuery, fromDate, toDate]);
+
+  useEffect(() => {
+    if (!searchQuery.trim() && !fromDate && !toDate) return;
+    const parentIds = displayNotes
+      .filter((note) => {
+        const parentMatches =
+          noteMatchesSearch(note, searchQuery) &&
+          noteMatchesCreatedDate(note.createdAt, fromDate, toDate);
+        const childMatches = (note.subNotes || []).some(
+          (sub) =>
+            noteMatchesSearch(sub, searchQuery) &&
+            noteMatchesCreatedDate(sub.createdAt, fromDate, toDate),
+        );
+        return childMatches && !parentMatches;
+      })
+      .map((note) => note.id);
+    if (parentIds.length === 0) return;
+    setExpandedNotes((prev) => {
+      const next = { ...prev };
+      parentIds.forEach((id) => {
+        next[id] = true;
+      });
+      return next;
+    });
+  }, [displayNotes, searchQuery, fromDate, toDate]);
 
   // Paginated Notes
   const totalPages = Math.max(1, Math.ceil(displayNotes.length / pageSize));
@@ -1711,6 +1756,11 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     activeTab,
     selectedProject,
     searchQuery,
+    fromDate,
+    toDate,
+    handleFromDateChange,
+    handleToDateChange,
+    handleClearDates,
     loading,
     actionLoading,
     currentUser,
