@@ -3,10 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   Users,
-  Search,
   ChevronLeft,
   ChevronRight,
-  X,
   User,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -18,6 +16,7 @@ import {
   reset as resetEmployeeDetails,
 } from "../reducers/employeeDetails.reducer";
 import { UserStatus } from "../enums";
+import { SearchBox } from "../components/ui";
 
 const ManagerEmployeesView: React.FC = () => {
   const { managerId } = useParams<{ managerId: string }>();
@@ -98,14 +97,6 @@ const ManagerEmployeesView: React.FC = () => {
   }, [mappings, managerId, managerNameState]);
 
   // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(teamSearch);
-      setTeamPage(1); // Reset to first page on search
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [teamSearch]);
-
   useEffect(() => {
     if (managerId) {
       dispatch(
@@ -198,26 +189,22 @@ const ManagerEmployeesView: React.FC = () => {
           </div>
         </div>
 
-        {/* Search Bar next to Card */}
-        <div className="flex items-center bg-white rounded-full px-5 py-2.5 border border-gray-200 focus-within:border-[#4318FF]/40 transition-all w-full sm:max-w-xs h-[52px]">
-          <Search size={18} className="text-[#A3AED0] mr-2 shrink-0" />
-          <input
-            type="text"
-            placeholder="Search employees..."
-            value={teamSearch}
-            onChange={(e) => setTeamSearch(e.target.value)}
-            className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
-          />
-          {teamSearch && (
-            <button
-              onClick={() => setTeamSearch("")}
-              className="text-[#A3AED0] hover:text-[#4318FF] transition-colors focus:outline-none ml-2 flex items-center justify-center shrink-0"
-              type="button"
-            >
-              <X size={18} />
-            </button>
-          )}
-        </div>
+        <SearchBox
+          placeholder="Search by name or ID..."
+          value={teamSearch}
+          onChange={(e) => setTeamSearch(e.target.value)}
+          onDebounce={(val) => {
+            setDebouncedSearch(val);
+            setTeamPage(1);
+          }}
+          onClear={() => {
+            setTeamSearch("");
+            setDebouncedSearch("");
+            setTeamPage(1);
+          }}
+          containerClassName="w-full sm:max-w-xs"
+          variant="outlined"
+        />
       </div>
 
       {/* Employee List Table */}

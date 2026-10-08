@@ -42,7 +42,10 @@ import {
   paginateToA4Sheets,
   removeEmptyPages,
 } from "../utils/documentLayout";
-import { refreshAttachmentBadges } from "../utils/noteEditorAttachmentHelpers";
+import {
+  attachmentKeysInHtml,
+  refreshAttachmentBadges,
+} from "../utils/noteEditorAttachmentHelpers";
 import { justifyImportedContent } from "../utils/notesHelpers";
 import {
   parseExcelFile,
@@ -56,7 +59,8 @@ import {
   type ExcelWorkbookData,
 } from "../utils/excelExtract";
 
-export const useNotesManagement = () => {
+export const useNotesManagement = (options?: { loadList?: boolean }) => {
+  const loadList = options?.loadList !== false;
   const dispatch = useAppDispatch();
   const {
     notes,
@@ -113,6 +117,18 @@ export const useNotesManagement = () => {
 
   const handleOpenSendModal = (note: Note) => {
     setSendNoteModal({ open: true, note });
+    if (!note?.id) return;
+    dispatch(fetchNoteById(note.id))
+      .unwrap()
+      .then((full) => {
+        if (!full) return;
+        setSendNoteModal((prev) =>
+          prev.open && prev.note?.id === note.id ? { open: true, note: full } : prev
+        );
+      })
+      .catch(() => {
+        /* list data is enough to send; names refresh when the note opens */
+      });
   };
 
   const handleCloseSendModal = () => {
@@ -169,12 +185,18 @@ export const useNotesManagement = () => {
 
 
 
-  // Load notes on mount and filter changes
+  // Opening Employee Notes calls three GETs: stats, projects, and the notes list.
   useEffect(() => {
+    if (!loadList) return;
     dispatch(fetchNoteStats());
     dispatch(fetchProjectsList());
+  }, [dispatch, loadList]);
+
+  // searchQuery is already debounced via SearchBox (useDebounce)
+  useEffect(() => {
+    if (!loadList) return;
     loadNotes();
-  }, [activeTab, selectedProject, searchQuery]);
+  }, [activeTab, selectedProject, searchQuery, loadList]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -355,9 +377,9 @@ export const useNotesManagement = () => {
 
   const persistExcelToMinio = async (workbook: ExcelWorkbookData): Promise<ExcelWorkbookData> => {
     const file = workbookDataToFile(workbook);
+    // Upload to MinIO only — do not pass noteId (that would list it under Files & Attachments)
     const res = await dispatch(
       uploadDirectNoteFiles({
-        noteId: activeNote?.id,
         files: [file],
       })
     ).unwrap();
@@ -400,10 +422,7 @@ export const useNotesManagement = () => {
           excelWorkbook: saved,
           description: embedExcelWorkbookInHtml(existingHtml, saved),
           title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
-          attachmentKeys:
-            saved.fileKey && !prev.attachmentKeys.includes(saved.fileKey)
-              ? [...prev.attachmentKeys, saved.fileKey]
-              : prev.attachmentKeys,
+          // Spreadsheet lives in Description viewer — not Files & Attachments
         }));
         message.success({
           content: "Excel sheets added to the existing spreadsheet",
@@ -426,10 +445,7 @@ export const useNotesManagement = () => {
         excelWorkbook: saved,
         description: embedExcelWorkbookInHtml(existingHtml, saved),
         title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
-        attachmentKeys:
-          saved.fileKey && !prev.attachmentKeys.includes(saved.fileKey)
-            ? [...prev.attachmentKeys, saved.fileKey]
-            : prev.attachmentKeys,
+        // Spreadsheet lives in Description viewer — not Files & Attachments
       }));
 
       message.success({
@@ -498,10 +514,6 @@ export const useNotesManagement = () => {
       ...prev,
       excelWorkbook: saved,
       description: merged,
-      attachmentKeys:
-        saved.fileKey && !prev.attachmentKeys.includes(saved.fileKey)
-          ? [...prev.attachmentKeys, saved.fileKey]
-          : prev.attachmentKeys,
     }));
     return merged;
   };
@@ -682,12 +694,21 @@ export const useNotesManagement = () => {
         setActiveNote(detailedNote);
         const workbook = await hydrateExcelWorkbook(detailedNote);
         const detailOrient = orientationFromLandscape(isNoteLandscape(detailedNote));
+        const embeddedKeys = attachmentKeysInHtml(detailedNote.description);
+        if (workbook?.fileKey) embeddedKeys.add(workbook.fileKey);
+        const filesOnlyKeys = (detailedNote.attachments || [])
+          .map((a) => a.key || a.fileKey)
+          .filter(
+            (k): k is string =>
+              Boolean(k) && !embeddedKeys.has(String(k))
+          );
         setFormData({
           title: detailedNote.title,
           description: detailedNote.description || "",
           type: detailedNote.type,
           projectName: detailedNote.projectName || "",
-          attachmentKeys: workbook?.fileKey ? [workbook.fileKey] : [],
+          // Keep only true Files-section keys (exclude Excel / table-row embeds)
+          attachmentKeys: filesOnlyKeys,
           attachments: [],
           files: [],
           isPinned: detailedNote.isPinned || false,
@@ -863,55 +884,13 @@ export const useNotesManagement = () => {
         return;
       }
 
-      // Also keep the original PDF/Doc under Files & Attachments (not only inside Description)
-      let attachedOriginal = false;
-      if (fileExt !== ".json") {
-        try {
-          const attachRes = await dispatch(
-            uploadDirectNoteFiles({
-              noteId: activeNote?.id,
-              files: [file],
-            })
-          ).unwrap();
-          const uploaded = attachRes.uploaded?.[0];
-          const key = uploaded?.key || uploaded?.fileKey;
-          if (key) {
-            attachedOriginal = true;
-            setFormData((prev) => ({
-              ...prev,
-              attachmentKeys: prev.attachmentKeys.includes(key)
-                ? prev.attachmentKeys
-                : [...prev.attachmentKeys, key],
-              attachments: [
-                ...prev.attachments,
-                {
-                  id: uploaded?.id,
-                  key,
-                  fileKey: key,
-                  name: uploaded?.fileName || uploaded?.name || file.name,
-                  size: uploaded?.fileSize || uploaded?.size || file.size,
-                  file,
-                },
-              ],
-            }));
-          }
-        } catch {
-          /* best-effort — extract already succeeded */
-        }
-      }
-
+      // Import goes into Description only — do not list under Files & Attachments
       message.success({
         content: existingWorkbook
-          ? attachedOriginal
-            ? "Document added; existing Excel spreadsheet kept. Original file also saved under Files."
-            : "Document added; existing Excel spreadsheet kept."
+          ? "Document added; existing Excel spreadsheet kept."
           : existingHasContent
-            ? attachedOriginal
-              ? "Document added below your existing description. Original file also saved under Files."
-              : "Document added below your existing description."
-            : attachedOriginal
-              ? "Document extracted into Description. Original file also saved under Files."
-              : "Document extracted into Description box! You can now edit it directly.",
+            ? "Document added below your existing description."
+            : "Document extracted into Description box! You can now edit it directly.",
         key: "docling-import",
       });
     } catch (err: any) {
@@ -1480,19 +1459,52 @@ export const useNotesManagement = () => {
     }
   };
 
-  // Filtered Notes
+  const handleSearchChange = (val: string) => {
+    dispatch(setSearchQuery(val));
+  };
+
+  const handleClearSearch = () => {
+    dispatch(setSearchQuery(""));
+  };
+
+  // Filtered Notes (tab/project + client-side search by name/id)
   const displayNotes = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return notes.filter((n) => {
-      if (activeTab === "ARCHIVED") return n.isArchived;
-      if (n.isArchived) return false;
-      if (activeTab === "PERSONAL") return n.type === "PERSONAL";
-      if (activeTab === "PROJECT") {
-        if (selectedProject) return n.projectName?.toLowerCase() === selectedProject.toLowerCase();
-        return n.type === "PROJECT";
+      if (activeTab === "ARCHIVED") {
+        if (!n.isArchived) return false;
+      } else {
+        if (n.isArchived) return false;
+        if (activeTab === "PERSONAL" && n.type !== "PERSONAL") return false;
+        if (activeTab === "PROJECT") {
+          if (n.type !== "PROJECT") return false;
+          if (
+            selectedProject &&
+            n.projectName?.toLowerCase() !== selectedProject.toLowerCase()
+          ) {
+            return false;
+          }
+        }
       }
-      return true;
+
+      if (!q) return true;
+
+      const haystack = [
+        String(n.id),
+        n.title,
+        n.projectName,
+        n.createdBy,
+        n.updatedBy,
+        // Strip HTML for description search
+        (n.description || "").replace(/<[^>]*>/g, " "),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(q);
     });
-  }, [notes, activeTab, selectedProject]);
+  }, [notes, activeTab, selectedProject, searchQuery]);
 
   // Paginated Notes
   const totalPages = Math.max(1, Math.ceil(displayNotes.length / pageSize));
@@ -1506,8 +1518,34 @@ export const useNotesManagement = () => {
     setExpandedNotes((prev) => ({ ...prev, [noteId]: true }));
   });
 
-  // Total Attachments count
-  const totalAttachmentsCount = formData.attachments.length + (activeNote?.attachments?.length || 0);
+  // Keys embedded in Description (table-row badges + Excel workbook) — hide from Files list
+  const embeddedAttachmentKeys = useMemo(() => {
+    const keys = attachmentKeysInHtml(formData.description);
+    const excelKey =
+      formData.excelWorkbook?.fileKey ||
+      parseExcelWorkbookFromHtml(formData.description)?.fileKey;
+    if (excelKey) keys.add(excelKey);
+    // Also hide by Excel file name when older notes stored the workbook under Files
+    const excelName =
+      formData.excelWorkbook?.fileName ||
+      parseExcelWorkbookFromHtml(formData.description)?.fileName;
+    if (excelName) keys.add(`name:${excelName}`);
+    return keys;
+  }, [formData.description, formData.excelWorkbook]);
+
+  const isFilesSectionAttachment = (key?: string | null, name?: string | null) => {
+    if (key && embeddedAttachmentKeys.has(String(key))) return false;
+    if (name && embeddedAttachmentKeys.has(`name:${name}`)) return false;
+    return Boolean(key || name);
+  };
+
+  const totalAttachmentsCount =
+    formData.attachments.filter((a) =>
+      isFilesSectionAttachment(a.key || a.fileKey, a.name || a.fileName)
+    ).length +
+    (activeNote?.attachments || []).filter((a) =>
+      isFilesSectionAttachment(a.key || a.fileKey, a.fileName || a.name)
+    ).length;
 
   // Hydrate editor only when switching note / mode — NOT on every activeNote
   // object refresh (auto-save), or live edits + undo history get wiped.
@@ -1616,6 +1654,7 @@ export const useNotesManagement = () => {
     xlsImportInputRef,
     handleXlsImport,
     dispatch,
-    setSearchQuery,
+    handleSearchChange,
+    handleClearSearch,
   };
 };

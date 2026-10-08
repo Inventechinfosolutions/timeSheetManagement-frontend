@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Button, Empty, Input, Spin, Tag } from "antd";
-import { Download, FileSpreadsheet, Layers, Search } from "lucide-react";
+import { Button, Empty, Spin, Tag } from "antd";
+import { Download, FileSpreadsheet, Layers } from "lucide-react";
 import Spreadsheet, { type CellBase, type Matrix } from "react-spreadsheet";
 import { parseExcelFile, type ExcelWorkbookData } from "../Notes/utils/excelExtract";
+import { SearchBox } from "./ui";
 
 type SheetCell = CellBase<string | number>;
 
@@ -40,6 +41,7 @@ export const ExcelSpreadsheetView: React.FC<ExcelSpreadsheetViewProps> = ({
   const [sheetNames, setSheetNames] = useState<string[]>(workbook?.sheetNames || []);
   const [activeSheet, setActiveSheet] = useState<string>(workbook?.sheetNames?.[0] || "");
   const [sheetsData, setSheetsData] = useState<Record<string, any[][]>>(workbook?.sheetsData || {});
+  const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
@@ -146,14 +148,17 @@ export const ExcelSpreadsheetView: React.FC<ExcelSpreadsheetViewProps> = ({
           ))}
         </div>
         <div className="w-full sm:w-64">
-          <Input
-            prefix={<Search className="w-3.5 h-3.5 text-gray-400 mr-1" />}
+          <SearchBox
             placeholder="Search in sheet..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            allowClear
-            size="small"
-            className="rounded-xl border-gray-200 text-xs py-1.5"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onDebounce={setSearchQuery}
+            onClear={() => {
+              setSearchInput("");
+              setSearchQuery("");
+            }}
+            inputSize="sm"
+            containerClassName="w-full"
           />
         </div>
       </div>

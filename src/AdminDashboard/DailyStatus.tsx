@@ -26,6 +26,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import DailyStatusMobileCard from "./DailyStatusMobileCard";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { AttendanceStatus } from "../enums";
+import { SearchBox } from "../components/ui";
 
 const DailyStatus = () => {
   const navigate = useNavigate();
@@ -111,11 +112,6 @@ const DailyStatus = () => {
     );
     dispatch(fetchDepartments());
   }, [dispatch, currentMonth, currentYear]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearchTerm(searchTerm), 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   useEffect(() => {
     dispatch(
@@ -323,17 +319,22 @@ const DailyStatus = () => {
               )}
             </div>
 
-            {/* Search Box */}
-            <div className="flex items-center bg-white rounded-full px-5 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] flex-1 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
-              <Search size={18} className="text-[#A3AED0] mr-2" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
-              />
-            </div>
+            <SearchBox
+              placeholder="Search by name or ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onDebounce={(val) => {
+                setDebouncedSearchTerm(val);
+                setCurrentPage(1);
+              }}
+              onClear={() => {
+                setSearchTerm("");
+                setDebouncedSearchTerm("");
+                setCurrentPage(1);
+              }}
+              containerClassName="w-full flex-1"
+              variant="outlined"
+            />
 
             {/* Clear All Button */}
             {(searchTerm !== "" || selectedDept !== "All") && (
@@ -595,19 +596,15 @@ const DailyStatus = () => {
                     )}
                   </div>
 
-                  <div className="relative flex-1">
-                    <Search
-                      size={16}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Search by name..."
-                      value={modalSearch}
-                      onChange={(e) => setModalSearch(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-100 rounded-xl text-sm font-medium outline-none shadow-sm focus:ring-2 ring-blue-50"
-                    />
-                  </div>
+                  <SearchBox
+                    placeholder="Search by name or ID..."
+                    value={modalSearch}
+                    onChange={(e) => setModalSearch(e.target.value)}
+                    onClear={() => setModalSearch("")}
+                    containerClassName="flex-1"
+                    variant="outlined"
+                    inputSize="sm"
+                  />
                 </div>
 
                 {/* Modal List */}

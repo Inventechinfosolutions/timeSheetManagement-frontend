@@ -924,9 +924,9 @@ export const useNoteTable = ({
     }
 
     try {
+      // Upload to MinIO only — row badge keeps the key; do not list under Files & Attachments
       const res = await dispatch(
         uploadDirectNoteFiles({
-          noteId: activeNote?.id,
           files: [file],
         })
       ).unwrap();
@@ -967,7 +967,7 @@ export const useNoteTable = ({
       setFormData((prev) => ({
         ...prev,
         description: newHtml || prev.description,
-        attachmentKeys: Array.from(new Set([...(prev.attachmentKeys || []), fileKey])),
+        // Row attachments stay in the table cell only — not Files & Attachments
       }));
 
       handleEditorInputWrapper();
