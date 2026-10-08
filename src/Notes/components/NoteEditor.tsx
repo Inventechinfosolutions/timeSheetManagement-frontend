@@ -711,14 +711,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
           {/* Top Form Header: Input boxes + Back Button */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-1 border-b border-slate-100">
             <div className="flex flex-col md:flex-row md:items-center gap-4 flex-1 min-w-0">
-              {/* Parent Note Context Indicator */}
-              {parentNoteContext && (
-                <div className="flex items-center gap-1.5 px-3 py-1 bg-indigo-50 border border-indigo-200 rounded-xl text-xs font-semibold text-[#4318FF] shrink-0">
-                  <span className="text-slate-400">Parent Note:</span>
-                  <span className="max-w-[160px] truncate font-bold">{parentNoteContext.title}</span>
-                </div>
-              )}
-
               {/* PROJECT NAME (Only for Project Notes) */}
               {isProjectNote && (
                 <div className="flex items-center gap-2.5 shrink-0 min-w-[200px] sm:min-w-[240px] max-w-xs">
