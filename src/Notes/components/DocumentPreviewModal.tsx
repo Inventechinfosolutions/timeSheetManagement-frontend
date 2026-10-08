@@ -16,9 +16,14 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 }) => {
   const titleLower = (title || "").toLowerCase();
   const isPdf = titleLower.endsWith(".pdf") || url.includes("pdf");
+  // Include pasted screenshots (data:image / titled Screenshot) — not only file extensions
   const isImage =
-    /\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i.test(titleLower) ||
-    /\.(png|jpe?g|webp|gif|svg)/i.test(url);
+    /^data:image\//i.test(url) ||
+    titleLower === "screenshot" ||
+    titleLower.startsWith("screenshot.") ||
+    /\.(png|jpe?g|webp|gif|svg|bmp)(\?.*)?$/i.test(titleLower) ||
+    /\.(png|jpe?g|webp|gif|svg|bmp)/i.test(url) ||
+    /[?&]mime=image\//i.test(url);
   const isWord = /\.(docx?|rtf|odt)$/i.test(titleLower);
   const isExcel = /\.(xlsx?|csv)$/i.test(titleLower);
 
@@ -64,11 +69,27 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
           )}
         </div>
       }
-      width={920}
+      width={isImage ? "min(96vw, 1100px)" : 920}
       centered
-      styles={{ body: { padding: 0 } }}
+      styles={{
+        body: {
+          padding: 0,
+          overflow: "hidden",
+          maxHeight: isImage ? "calc(100vh - 120px)" : undefined,
+        },
+      }}
+      className={isImage ? "note-image-preview-modal" : undefined}
     >
-      <div className="w-full flex items-center justify-center p-2 bg-slate-50/60 rounded-b-xl min-h-[350px]">
+      <div
+        className={`w-full flex items-center justify-center bg-slate-50/60 rounded-b-xl ${
+          isImage ? "p-3 overflow-hidden" : "p-2 min-h-[350px]"
+        }`}
+        style={
+          isImage
+            ? { height: "calc(100vh - 140px)", maxHeight: "calc(100vh - 140px)" }
+            : undefined
+        }
+      >
         {url &&
           (isPdf ? (
             <iframe
@@ -80,7 +101,7 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
             <img
               src={url}
               alt={title || "Preview"}
-              className="max-h-[76vh] max-w-full object-contain rounded-lg shadow-2xs"
+              className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg shadow-2xs"
             />
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-sm max-w-md w-full my-10">

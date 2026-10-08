@@ -37,7 +37,10 @@ import {
   TEXT_COLORS,
   HIGHLIGHT_COLORS,
   justifyImportedContent,
+  preparePastedHtmlForNote,
   sanitizeNoteHtmlForClipboard,
+  wrapNoteInlineImages,
+  wrapWideTablesInRoot,
 } from "../utils/notesHelpers";
 import { FONT_SIZES, BOLD_DARK_COLORS, LIGHT_SHADING_COLORS } from "../utils/noteEditorConstants";
 import { descriptionFromExcelWorkbook } from "../utils/excelExtract";
@@ -87,6 +90,8 @@ interface NoteEditorProps {
   onDeleteServerAttachment: (noteId: number, key?: string) => void;
   onPreviewAttachment: (item: NoteDocumentItem) => void;
   onDownloadAttachment: (item: NoteDocumentItem) => void;
+  /** Open full-size preview for inline/pasted screenshots */
+  onPreviewImage?: (url: string, title?: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   onBack: () => void;
   autoSaveStatus?: AutoSaveStatus;
@@ -126,6 +131,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   onDeleteServerAttachment,
   onPreviewAttachment,
   onDownloadAttachment,
+  onPreviewImage,
   onSubmit,
   onBack,
   autoSaveStatus = "idle",
@@ -201,6 +207,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     if (!current || current === "<br>" || current === "<p><br></p>") {
       editorRef.current.innerHTML = visible;
     }
+    wrapNoteInlineImages(editorRef.current);
   }, [showA4Editor, formData.excelWorkbook, activeNote?.id]);
 
   /** Push pre-change HTML onto the undo stack (call before mutating, or with prior HTML). */
@@ -221,6 +228,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 
   const handleEditorInputWrapper = () => {
     if (isHistoryNavigatingRef.current) return;
+    if (editorRef.current) wrapNoteInlineImages(editorRef.current);
     onEditorInput();
     setHasContent(checkHasContent());
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
@@ -256,38 +264,81 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       isTypingSessionRef.current = true;
 
       const html = e.clipboardData?.getData("text/html");
-      if (!html || !/class=["'][^"']*\bpage\b|a4-page/i.test(html)) {
-        // Plain paste — pagination will settle layout after input
+      const plain = e.clipboardData?.getData("text/plain") || "";
+      const hasPageShell = Boolean(
+        html && /class=["'][^"']*\bpage\b|a4-page/i.test(html)
+      );
+      const hasTable = Boolean(html && /<table[\s>]/i.test(html));
+
+      // Email/Word tables + note page shells need cleanup so columns aren't clipped
+      if (!html || (!hasPageShell && !hasTable)) {
+        requestAnimationFrame(() => {
+          if (!editorRef.current) return;
+          wrapWideTablesInRoot(editorRef.current);
+          wrapNoteInlineImages(editorRef.current);
+          handleEditorInputWrapper();
+        });
         return;
       }
 
-      // Pasting note HTML with .page shells causes a double A4 layout — sanitize first
       e.preventDefault();
-      const clean = sanitizeNoteHtmlForClipboard(html);
+      const clean = hasTable
+        ? preparePastedHtmlForNote(html)
+        : sanitizeNoteHtmlForClipboard(html);
       if (!clean) {
-        const text = e.clipboardData?.getData("text/plain") || "";
-        document.execCommand("insertText", false, text);
+        document.execCommand("insertText", false, plain);
       } else {
         document.execCommand("insertHTML", false, clean);
       }
       requestAnimationFrame(() => {
         if (!editorRef.current) return;
+        wrapWideTablesInRoot(editorRef.current);
+        wrapNoteInlineImages(editorRef.current);
         const landscape = editorRef.current.classList.contains("is-landscape");
         removeEmptyPages(editorRef.current);
         paginateToA4Sheets(editorRef.current, landscape, true);
         removeEmptyPages(editorRef.current);
+        wrapWideTablesInRoot(editorRef.current);
+        wrapNoteInlineImages(editorRef.current);
         handleEditorInputWrapper();
       });
     };
 
+    const onClickImage = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      const removeBtn = target.closest<HTMLElement>("[data-image-action='remove']");
+      if (removeBtn && editor.contains(removeBtn)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const wrap = removeBtn.closest<HTMLElement>(".note-inline-image");
+        pushUndoHtml(editor.innerHTML);
+        if (wrap) wrap.remove();
+        else removeBtn.parentElement?.remove();
+        handleEditorInputWrapper();
+        return;
+      }
+
+      if (target.tagName !== "IMG") return;
+      const img = target as HTMLImageElement;
+      const src = img.currentSrc || img.src;
+      if (!src || !onPreviewImage) return;
+      e.preventDefault();
+      e.stopPropagation();
+      onPreviewImage(src, img.getAttribute("alt") || img.getAttribute("title") || "Screenshot");
+    };
+
     editor.addEventListener("beforeinput", onBeforeInput);
     editor.addEventListener("paste", onPaste);
+    editor.addEventListener("click", onClickImage, true);
     return () => {
       editor.removeEventListener("beforeinput", onBeforeInput);
       editor.removeEventListener("paste", onPaste);
+      editor.removeEventListener("click", onClickImage, true);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.excelWorkbook, activeNote?.id]);
+  }, [formData.excelWorkbook, activeNote?.id, onPreviewImage]);
 
   // Reset undo history when opening a different note (not on auto-save refreshes)
   useEffect(() => {
@@ -345,6 +396,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     handleEditorInputWrapper,
     onPreviewAttachment,
     onDownloadAttachment,
+    onPreviewImage,
   });
 
   const runToolbarCommand = (command: string, value?: string) => {
@@ -1509,7 +1561,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   type="file"
                   ref={doclingJsonInputRef}
                   onChange={onDoclingUpload}
-                  accept=".pdf,.docx,.doc,.png,.jpg,.jpeg,.json"
+                  accept=".pdf,.docx,.doc,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword"
                   className="hidden"
                 />
                 <button
@@ -1518,7 +1570,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   onClick={() => doclingJsonInputRef.current?.click()}
                   disabled={isImportingDocling || isExtractingExcel}
                   className="h-8 px-2 shrink-0 flex items-center gap-1 rounded-lg text-xs font-semibold text-[#4318FF] bg-[#4318FF]/10 hover:bg-[#4318FF]/20 transition cursor-pointer disabled:opacity-50"
-                  title="Import PDF/Word text into Description only (not listed under Files & Attachments)."
+                  title="Import PDF/Word into Description (max pages from env; longer files go to Files & Attachments)."
                 >
                   {isImportingDocling ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />

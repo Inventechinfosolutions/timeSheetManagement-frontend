@@ -22,6 +22,11 @@ export const NotesManagementPage: React.FC = () => {
     activeTab,
     selectedProject,
     searchQuery,
+    fromDate,
+    toDate,
+    handleFromDateChange,
+    handleToDateChange,
+    handleClearDates,
     loading,
     actionLoading,
     currentUser,
@@ -134,6 +139,9 @@ export const NotesManagementPage: React.FC = () => {
           onDeleteServerAttachment={handleDeleteAttachment}
           onPreviewAttachment={handlePreviewAttachment}
           onDownloadAttachment={handleDownloadAttachment}
+          onPreviewImage={(url, title) =>
+            setPreviewImageModal({ open: true, url, title: title || "Screenshot" })
+          }
           onSubmit={handleSubmitForm}
           onBack={handleBackToList}
           autoSaveStatus={autoSaveStatus}
@@ -152,6 +160,9 @@ export const NotesManagementPage: React.FC = () => {
           onBack={handleBackToList}
           onPreviewAttachment={handlePreviewAttachment}
           onDownloadAttachment={handleDownloadAttachment}
+          onPreviewImage={(url, title) =>
+            setPreviewImageModal({ open: true, url, title: title || "Screenshot" })
+          }
           onTogglePin={handleTogglePin}
           onToggleArchive={handleToggleArchive}
           onOpenSendModal={handleOpenSendModal}
@@ -164,9 +175,14 @@ export const NotesManagementPage: React.FC = () => {
           <NoteHeader
             activeTab={activeTab}
             searchQuery={searchQuery}
+            fromDate={fromDate}
+            toDate={toDate}
             onTabSwitch={handleTabSwitch}
             onSearchChange={handleSearchChange}
             onClearSearch={handleClearSearch}
+            onFromDateChange={handleFromDateChange}
+            onToDateChange={handleToDateChange}
+            onClearDates={handleClearDates}
             onCreateProjectNote={() => handleStartCreate("PROJECT")}
             onCreatePersonalNote={() => handleStartCreate("PERSONAL")}
           />
@@ -180,6 +196,8 @@ export const NotesManagementPage: React.FC = () => {
             totalPages={totalPages}
             activeTab={activeTab}
             searchQuery={searchQuery}
+            fromDate={fromDate}
+            toDate={toDate}
             expandedNotes={expandedNotes}
             currentUser={currentUser}
             dragDrop={dragDrop}

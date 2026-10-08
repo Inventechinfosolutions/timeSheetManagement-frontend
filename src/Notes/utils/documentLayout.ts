@@ -484,6 +484,104 @@ export function applyLandscapeToPages(root: ParentNode, landscape: boolean) {
   }
 }
 
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const renderInlineMarkdown = (value: string) => {
+  let text = escapeHtml(value.trim());
+  text = text.replace(
+    /\[([^\]]+)\]\(([^)\s]+)\)/g,
+    (_match, label, href) => `<a href="${href}">${label}</a>`
+  );
+  text = text.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  return text;
+};
+
+const isMarkdownTableRule = (line: string) =>
+  /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?$/.test(line.trim());
+
+const splitMarkdownRow = (line: string) =>
+  line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+
+/** Docling sometimes returns markdown while html and pages stay empty (Word files). */
+export function markdownToNoteHtml(markdown: string): string {
+  const lines = (markdown || "").replace(/\r\n/g, "\n").split("\n");
+  const out: string[] = [];
+  let list: string[] = [];
+  let index = 0;
+
+  const flushList = () => {
+    if (list.length === 0) return;
+    out.push(
+      `<ul>${list.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join("")}</ul>`
+    );
+    list = [];
+  };
+
+  while (index < lines.length) {
+    const line = lines[index].trim();
+    if (!line || line.startsWith("<!--")) {
+      flushList();
+      index += 1;
+      continue;
+    }
+
+    if (line.startsWith("|")) {
+      flushList();
+      const rows: string[][] = [];
+      while (index < lines.length && lines[index].trim().startsWith("|")) {
+        const current = lines[index].trim();
+        if (!isMarkdownTableRule(current)) rows.push(splitMarkdownRow(current));
+        index += 1;
+      }
+      if (rows.length > 0) {
+        const [head, ...body] = rows;
+        const header = `<tr>${head.map((cell) => `<th>${renderInlineMarkdown(cell)}</th>`).join("")}</tr>`;
+        const bodyHtml = body
+          .map(
+            (row) =>
+              `<tr>${row.map((cell) => `<td>${renderInlineMarkdown(cell)}</td>`).join("")}</tr>`
+          )
+          .join("");
+        out.push(`<table><thead>${header}</thead><tbody>${bodyHtml}</tbody></table>`);
+      }
+      continue;
+    }
+
+    const heading = /^(#{1,6})\s+(.+)$/.exec(line);
+    if (heading) {
+      flushList();
+      const level = heading[1].length;
+      out.push(`<h${level}>${renderInlineMarkdown(heading[2])}</h${level}>`);
+      index += 1;
+      continue;
+    }
+
+    const bullet = /^[-*]\s+(.+)$/.exec(line);
+    if (bullet) {
+      list.push(bullet[1]);
+      index += 1;
+      continue;
+    }
+
+    flushList();
+    out.push(`<p>${renderInlineMarkdown(line)}</p>`);
+    index += 1;
+  }
+
+  flushList();
+  return out.join("");
+}
+
 /**
  * Build one sheet per PDF page and put each block on the page it belongs to.
  * Docling often returns all HTML in a single `.page`; json.pages still has 2–3 pages.
@@ -491,7 +589,7 @@ export function applyLandscapeToPages(root: ParentNode, landscape: boolean) {
 export function buildDocumentPagesHtml(
   html: string,
   docling?: DoclingDocument | Record<string, ExtractedPage> | null,
-  _markdown?: string,
+  markdown?: string,
   extractPages?: ExtractedRenderPage[] | null,
   landscape = false
 ): string {
@@ -537,10 +635,14 @@ export function buildDocumentPagesHtml(
     );
   }
 
-  const blob =
+  let blob =
     extractInners.find((inner) => hasVisibleContent(inner)) ||
     (htmlPagesWithContent[0] ? htmlPagesWithContent[0].innerHTML.trim() : "") ||
     innerFromExtractHtml(html);
+
+  if (!hasVisibleContent(blob) && markdown?.trim()) {
+    blob = markdownToNoteHtml(markdown);
+  }
 
   const pageCount = Math.max(jsonPages.length, extractPages?.length || 0, 1);
   const blocks = collectBlocks(blob);

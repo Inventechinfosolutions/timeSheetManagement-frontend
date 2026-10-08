@@ -34,6 +34,7 @@ export interface InboxItem {
   folder?: InboxFolder | string;
   permission?: 'VIEW' | 'EDIT' | 'CanView' | 'CanEdit' | string;
   isRead: boolean;
+  isStarred?: 0 | 1 | boolean;
   hasDocument?: boolean;
   hasDescription?: boolean;
   createdAt: string;
@@ -82,11 +83,17 @@ const apiUrl = '/api/inbox';
 // 1. Fetch User Inbox
 export const fetchInbox = createAsyncThunk(
   'inbox/fetchInbox',
-  async (params: { isRead?: boolean; search?: string; folder?: InboxFolder | string } | undefined, { rejectWithValue }) => {
+  async (
+    params: { isRead?: boolean; search?: string; folder?: InboxFolder | string } | undefined,
+    { rejectWithValue, signal }
+  ) => {
     try {
-      const response = await axios.get(apiUrl, { params });
+      const response = await axios.get(apiUrl, { params, signal });
       return response.data;
     } catch (error: any) {
+      if (axios.isCancel(error) || error?.code === 'ERR_CANCELED' || signal.aborted) {
+        return rejectWithValue(null);
+      }
       return rejectWithValue(
         error.response?.data?.message || 'Failed to fetch inbox items'
       );
@@ -139,7 +146,22 @@ export const markInboxAsRead = createAsyncThunk(
   }
 );
 
-// 4. Mark All as Read
+// 4. Toggle starred (1 starred, 0 not starred)
+export const toggleInboxStar = createAsyncThunk(
+  'inbox/toggleStar',
+  async (inboxId: number, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/${inboxId}/star`);
+      return response.data as { inboxId: number; isStarred: 0 | 1 };
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Failed to update star'
+      );
+    }
+  }
+);
+
+// 5. Mark All as Read
 export const markAllInboxAsRead = createAsyncThunk(
   'inbox/markAllInboxAsRead',
   async (_, { rejectWithValue }) => {
@@ -215,8 +237,12 @@ const inboxSlice = createSlice({
       state.items = action.payload || [];
     });
     builder.addCase(fetchInbox.rejected, (state, action) => {
+      // Ignore aborted/superseded requests so a newer search keeps loading state clean
+      if (action.payload === null || action.meta.aborted) {
+        return;
+      }
       state.loading = false;
-      state.error = action.payload as string;
+      state.error = (action.payload as string) || 'Failed to fetch inbox items';
     });
 
     // Fetch All Unified Counts
@@ -262,6 +288,18 @@ const inboxSlice = createSlice({
       }
       if (state.selectedItem && state.selectedItem.inboxId === id) {
         state.selectedItem.isRead = true;
+      }
+    });
+
+    builder.addCase(toggleInboxStar.fulfilled, (state, action) => {
+      const inboxId = Number(action.payload?.inboxId);
+      const isStarred = Number(action.payload?.isStarred) ? 1 : 0;
+      const item = state.items.find((i) => i.inboxId === inboxId);
+      if (item) {
+        item.isStarred = isStarred;
+      }
+      if (state.selectedItem && state.selectedItem.inboxId === inboxId) {
+        state.selectedItem.isStarred = isStarred;
       }
     });
 
