@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   ArrowLeft,
   Paperclip,
@@ -51,6 +51,7 @@ import {
   htmlHasVisibleNoteContent,
   stripExcelWorkbookStore,
 } from "../utils/excelExtract";
+import { attachmentKeysInHtml } from "../utils/noteEditorAttachmentHelpers";
 import { ExcelSpreadsheetView } from "../../components/ExcelSpreadsheetView";
 import { useNoteTable } from "../hooks";
 import { applyToolbarCommandToCells, getSelectedTableCells } from "../utils/noteEditorTableHelpers";
@@ -170,6 +171,22 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   // Keep A4 editor when there is visible content; Excel viewer can show alongside
   const showA4Editor =
     !formData.excelWorkbook || htmlHasVisibleNoteContent(formData.description);
+
+  // Table-row / Excel embeds stay in Description — hide them from Files & Attachments
+  const embeddedAttachmentKeys = useMemo(() => {
+    const keys = attachmentKeysInHtml(formData.description);
+    if (formData.excelWorkbook?.fileKey) keys.add(formData.excelWorkbook.fileKey);
+    if (formData.excelWorkbook?.fileName) {
+      keys.add(`name:${formData.excelWorkbook.fileName}`);
+    }
+    return keys;
+  }, [formData.description, formData.excelWorkbook]);
+
+  const isFilesOnlyAttachment = (key?: string | null, name?: string | null) => {
+    if (key && embeddedAttachmentKeys.has(String(key))) return false;
+    if (name && embeddedAttachmentKeys.has(`name:${name}`)) return false;
+    return true;
+  };
 
   useEffect(() => {
     setHasContent(checkHasContent());
@@ -1501,7 +1518,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   onClick={() => doclingJsonInputRef.current?.click()}
                   disabled={isImportingDocling || isExtractingExcel}
                   className="h-8 px-2 shrink-0 flex items-center gap-1 rounded-lg text-xs font-semibold text-[#4318FF] bg-[#4318FF]/10 hover:bg-[#4318FF]/20 transition cursor-pointer disabled:opacity-50"
-                  title="Import PDF/Word text into Description (original file also goes to Files). Use Files & Attachments to attach only."
+                  title="Import PDF/Word text into Description only (not listed under Files & Attachments)."
                 >
                   {isImportingDocling ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1780,35 +1797,44 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               className="hidden"
             />
 
-            {/* Attached File Cards */}
+            {/* Attached File Cards — Files section only (not table/Excel embeds) */}
             <div className="flex flex-wrap items-center gap-3 pt-1">
-              {/* Server Attachments */}
               {activeNote?.attachments &&
-                activeNote.attachments.map((att) => (
+                activeNote.attachments
+                  .filter((att) =>
+                    isFilesOnlyAttachment(att.key || att.fileKey, att.fileName || att.name)
+                  )
+                  .map((att) => (
+                    <NoteAttachmentChip
+                      key={`server-att-${att.id || att.key || att.fileKey}`}
+                      item={{
+                        id: att.id,
+                        key: att.key || att.fileKey,
+                        name: att.fileName || att.name || "Attachment",
+                        size: att.fileSize,
+                      }}
+                      onPreview={onPreviewAttachment}
+                      onDownload={onDownloadAttachment}
+                      onDelete={() =>
+                        onDeleteServerAttachment(activeNote.id, att.key || att.fileKey)
+                      }
+                    />
+                  ))}
+
+              {formData.attachments
+                .map((item, idx) => ({ item, idx }))
+                .filter(({ item }) =>
+                  isFilesOnlyAttachment(item.key || item.fileKey, item.name || item.fileName)
+                )
+                .map(({ item, idx }) => (
                   <NoteAttachmentChip
-                    key={`server-att-${att.id || att.key || att.fileKey}`}
-                    item={{
-                      id: att.id,
-                      key: att.key || att.fileKey,
-                      name: att.fileName || att.name || "Attachment",
-                      size: att.fileSize,
-                    }}
+                    key={`form-att-${item.key || idx}`}
+                    item={item}
                     onPreview={onPreviewAttachment}
                     onDownload={onDownloadAttachment}
-                    onDelete={() => onDeleteServerAttachment(activeNote.id, att.key || att.fileKey)}
+                    onDelete={() => onRemoveAttachment(idx)}
                   />
                 ))}
-
-              {/* Uploaded Form Attachments */}
-              {formData.attachments.map((item, idx) => (
-                <NoteAttachmentChip
-                  key={`form-att-${item.key || idx}`}
-                  item={item}
-                  onPreview={onPreviewAttachment}
-                  onDownload={onDownloadAttachment}
-                  onDelete={() => onRemoveAttachment(idx)}
-                />
-              ))}
             </div>
           </div>
 

@@ -23,6 +23,7 @@ import {
 import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
 import Toast from "../components/Toast";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+import { SearchBox } from "../components/ui";
 import { MonthStatus, UserType } from "../enums";
 
 const AdminEmployeeTimesheetList = () => {
@@ -130,14 +131,6 @@ const AdminEmployeeTimesheetList = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   useEffect(() => {
     dispatch(
@@ -440,25 +433,22 @@ const AdminEmployeeTimesheetList = () => {
             )}
           </div>
 
-          {/* Search Box */}
-          <div className="flex items-center bg-white rounded-full px-4 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] w-full sm:w-auto min-w-[240px] sm:min-w-[300px] md:min-w-[360px] flex-1 sm:flex-none border border-transparent focus-within:border-[#4318FF]/20 transition-all">
-            <Search size={16} className="text-[#A3AED0] mr-2 flex-shrink-0" />
-            <input
-              type="text"
-              placeholder="Search by name or employee ID..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="ml-2 text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
+          <SearchBox
+            placeholder="Search by name or employee ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onDebounce={(val) => {
+              setDebouncedSearchTerm(val);
+              setCurrentPage(1);
+            }}
+            onClear={() => {
+              setSearchTerm("");
+              setDebouncedSearchTerm("");
+              setCurrentPage(1);
+            }}
+            containerClassName="w-full sm:w-auto min-w-[240px] sm:min-w-[300px] md:min-w-[360px] flex-1 sm:flex-none"
+            variant="outlined"
+          />
 
           {(searchTerm ||
             selectedDepartment !== "All Departments" ||

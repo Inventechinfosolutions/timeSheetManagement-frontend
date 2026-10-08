@@ -26,6 +26,7 @@ import {
   ArrowRightLeft,
   Download,
 } from "lucide-react";
+import { SearchBox } from "../components/ui";
 import {
   getAllLeaveRequests,
   downloadLeaveRequestsExcel,
@@ -363,14 +364,6 @@ const Requests = () => {
     selectedRequest?.fromDate,
     selectedRequest?.toDate,
   ]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   useEffect(() => {
     dispatch(
@@ -1073,27 +1066,23 @@ const Requests = () => {
           </p>
         </div>
 
-        <div className="relative w-full sm:w-auto sm:min-w-[300px] md:min-w-[360px] lg:min-w-[400px] sm:max-w-[480px] group">
-          <Search
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#4318FF] transition-colors"
-            size={20}
-          />
-          <input
-            type="text"
-            placeholder="Search by name or employee ID..."
-            className="w-full pl-12 pr-10 py-3 bg-white rounded-2xl border-none outline-none shadow-sm focus:ring-2 focus:ring-[#4318FF] transition-all text-[#2B3674] font-medium placeholder:text-gray-300"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm("")}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <X size={18} />
-            </button>
-          )}
-        </div>
+        <SearchBox
+          placeholder="Search by name or employee ID..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onDebounce={(val) => {
+            setDebouncedSearchTerm(val);
+            setCurrentPage(1);
+          }}
+          onClear={() => {
+            setSearchTerm("");
+            setDebouncedSearchTerm("");
+            setCurrentPage(1);
+          }}
+          inputSize="lg"
+          variant="outlined"
+          containerClassName="w-full sm:w-auto sm:min-w-[300px] md:min-w-[360px] lg:min-w-[400px] sm:max-w-[480px]"
+        />
       </div>
 
       {/* Filters Area */}

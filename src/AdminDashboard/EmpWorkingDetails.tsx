@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import EmpWorkingDetailsMobileCard from "./EmpWorkingDetailsMobileCard";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+import { SearchBox } from "../components/ui";
 
 const EmpWorkingDetails = () => {
   const navigate = useNavigate();
@@ -62,14 +63,6 @@ const EmpWorkingDetails = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm);
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   useEffect(() => {
     dispatch(
@@ -211,17 +204,22 @@ const EmpWorkingDetails = () => {
               </div>
             )}
 
-            {/* Search Box */}
-            <div className="flex items-center bg-white rounded-full px-5 py-2.5 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] min-w-0 sm:min-w-[250px] flex-1 border border-transparent focus-within:border-[#4318FF]/20 transition-all">
-              <Search size={18} className="text-[#A3AED0] mr-2" />
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border-none outline-none bg-transparent text-[#2B3674] w-full text-sm font-semibold placeholder:text-[#A3AED0]/60"
-              />
-            </div>
+            <SearchBox
+              placeholder="Search by name or ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onDebounce={(val) => {
+                setDebouncedSearchTerm(val);
+                setCurrentPage(1);
+              }}
+              onClear={() => {
+                setSearchTerm("");
+                setDebouncedSearchTerm("");
+                setCurrentPage(1);
+              }}
+              containerClassName="w-full min-w-0 sm:min-w-[250px] flex-1"
+              variant="outlined"
+            />
           </div>
         </div>
 

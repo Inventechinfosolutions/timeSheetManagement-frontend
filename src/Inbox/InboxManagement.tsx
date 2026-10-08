@@ -43,7 +43,7 @@ const canEditNote = (permission?: string): boolean => {
 export const InboxManagement: React.FC = () => {
   const dispatch = useAppDispatch();
   const { items, counts, loading } = useAppSelector((state) => state.inbox);
-  const notesMgr = useNotesManagement();
+  const notesMgr = useNotesManagement({ loadList: false });
 
   const [folder, setFolder] = useState<InboxFolder>(InboxFolder.INBOX);
   const [activeTab, setActiveTab] = useState<InboxTab>(InboxTab.ALL);
