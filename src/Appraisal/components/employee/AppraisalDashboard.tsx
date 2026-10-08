@@ -1152,7 +1152,6 @@ export const AppraisalDashboard: React.FC = () => {
       <RatingVerificationModal
         isOpen={isRatingAuthModalOpen}
         onClose={() => setIsRatingAuthModalOpen(false)}
-        onSuccess={handleVerificationSuccess}
       />
 
       {/* ACCESS REQUEST MODAL */}
