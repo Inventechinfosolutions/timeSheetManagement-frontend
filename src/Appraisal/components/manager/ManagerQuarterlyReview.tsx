@@ -12,8 +12,11 @@ import {
   AppraisalApi,
   MasterFinancialYearOption,
   MasterQuarterRecord,
+  readApiError,
   toManagerReviewRecord,
+  toReviewFormData,
 } from "../../services/appraisal.api";
+import { message } from "antd";
 import {
   AppraisalFilterAll,
   QuaterlyEnum,
@@ -24,6 +27,7 @@ import AssignQuarterlyReviewModal from "./AssignQuarterlyReviewModal";
 import { QuarterlyReviewTable } from "./QuarterlyReviewTable";
 import EvaluationPanel, { EvaluationData } from "./EvaluationPanel";
 import { QUARTERLY_REVIEW_TABLE_PAGE_SIZE } from "../../constants/appraisal.constants";
+import { loadAppraisalPeriod } from "../../utils/appraisalHelpers";
 import {
   Button,
   Card,
@@ -106,18 +110,35 @@ export const ManagerQuarterlyReview: React.FC = () => {
     triggerScrollToTop();
   };
 
+  const openRecordFromApi = async (
+    item: ManagerQuarterlyReviewRecord,
+    mode: "edit" | "view",
+  ) => {
+    if (!item.reviewId) {
+      message.error("This review cannot be opened.");
+      return;
+    }
+    triggerScrollToTop();
+    try {
+      const review = await AppraisalApi.getReviewById(item.reviewId);
+      const record = toManagerReviewRecord(review);
+      setEvaluationMode(mode);
+      setEvaluatingRecord({
+        ...record,
+        submission: toReviewFormData(review.performanceDetails),
+      });
+      triggerScrollToTop();
+    } catch (error) {
+      message.error(readApiError(error));
+    }
+  };
+
   const handleEditRecord = (item: ManagerQuarterlyReviewRecord) => {
-    triggerScrollToTop();
-    setEvaluationMode("edit");
-    setEvaluatingRecord(item);
-    triggerScrollToTop();
+    void openRecordFromApi(item, "edit");
   };
 
   const handleViewRecord = (item: ManagerQuarterlyReviewRecord) => {
-    triggerScrollToTop();
-    setEvaluationMode("view");
-    setEvaluatingRecord(item);
-    triggerScrollToTop();
+    void openRecordFromApi(item, "view");
   };
 
   const handleEvaluationSubmit = (recordId: string, evaluation: EvaluationData) => {
@@ -151,9 +172,19 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const [financialYear, setFinancialYear] = useState<string>("");
   const [quarter, setQuarter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [defaultsReady, setDefaultsReady] = useState(false);
+  const yearsLoaded = useRef(false);
+  const quartersLoaded = useRef(false);
+  const yearChosen = useRef(false);
+  const quarterChosen = useRef(false);
+  const defaultYear = useRef("");
+  const defaultQuarter = useRef("");
 
   const hasActiveFilters = Boolean(
-    searchTerm.trim() || financialYear || quarter || statusFilter
+    searchTerm.trim() ||
+      statusFilter ||
+      (financialYear && financialYear !== defaultYear.current) ||
+      (quarter && quarter !== defaultQuarter.current)
   );
 
   const handleOpenCreateModal = () => {
@@ -184,13 +215,48 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const handleClearFilters = () => {
     setSearchTerm("");
     setDebouncedSearch("");
-    setFinancialYear("");
-    setQuarter("");
+    yearChosen.current = false;
+    quarterChosen.current = false;
+    setFinancialYear(defaultYear.current);
+    setQuarter(defaultQuarter.current);
     setStatusFilter("");
   };
 
-  const yearsLoaded = useRef(false);
-  const quartersLoaded = useRef(false);
+  useEffect(() => {
+    let cancelled = false;
+    yearsLoaded.current = true;
+    setYearsLoading(true);
+    void loadAppraisalPeriod()
+      .then((period) => {
+        if (cancelled) return;
+        setMasterYears(period.years);
+        setMasterQuarters(period.quarters);
+        quartersLoaded.current = period.quarters.length > 0;
+        const currentYear = period.current?.financialYear || "";
+        const currentQuarter = period.current?.quarter || "";
+        defaultYear.current = currentYear;
+        defaultQuarter.current = currentQuarter;
+        if (currentYear && !yearChosen.current) {
+          setFinancialYear(currentYear);
+        }
+        if (currentQuarter && !quarterChosen.current) {
+          setQuarter(currentQuarter);
+        }
+        setDefaultsReady(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        yearsLoaded.current = false;
+        setMasterYears([]);
+        setDefaultsReady(true);
+      })
+      .finally(() => {
+        if (!cancelled) setYearsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const loadFinancialYears = () => {
     if (yearsLoaded.current) return;
@@ -230,9 +296,11 @@ export const ManagerQuarterlyReview: React.FC = () => {
   }
 
   useEffect(() => {
-    if (!managerId) {
-      setAssignments([]);
-      setTableTotal(0);
+    if (!defaultsReady || !managerId) {
+      if (!managerId) {
+        setAssignments([]);
+        setTableTotal(0);
+      }
       return;
     }
     const selectedYear =
@@ -242,9 +310,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
     const selectedStatus =
       !statusFilter || statusFilter === AppraisalFilterAll.ALL
         ? undefined
-        : statusFilter === QuarterlyReviewStatus.COMPLETED
-          ? QuarterlyReviewStatus.REVIEWED
-          : (statusFilter as QuarterlyReviewStatus);
+        : (statusFilter as QuarterlyReviewStatus);
     const query = {
       assignerId: managerId,
       page: tablePage,
@@ -260,14 +326,21 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
     void request
       .then((result) => {
-        setAssignments((result.data || []).map(toManagerReviewRecord));
+        setAssignments(
+          (result.data || []).map((review) => ({
+            ...toManagerReviewRecord(review),
+            submission: review.performanceDetails
+              ? toReviewFormData(review.performanceDetails)
+              : undefined,
+          })),
+        );
         setTableTotal(result.total ?? 0);
       })
       .catch(() => {
         setAssignments([]);
         setTableTotal(0);
       });
-  }, [managerId, debouncedSearch, financialYear, quarter, statusFilter, reloadKey, tablePage]);
+  }, [defaultsReady, managerId, debouncedSearch, financialYear, quarter, statusFilter, reloadKey, tablePage]);
 
   const financialYearOptions = masterYears.map((year) => ({
     value: year.financialYear,
@@ -295,9 +368,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const statusOptions = [
     { value: AppraisalFilterAll.ALL, label: "Status" },
     { value: QuarterlyReviewStatus.NOT_STARTED, label: "Not Started" },
-    { value: QuarterlyReviewStatus.IN_PROGRESS, label: "In Progress" },
-    { value: QuarterlyReviewStatus.SUBMITTED, label: "Submitted" },
-    { value: QuarterlyReviewStatus.UNDER_REVIEW, label: "Under Review" },
+    { value: QuarterlyReviewStatus.ASSIGNED, label: "Assigned" },
+    { value: "PERFORMANCE_RECEIVED", label: "Performance Received" },
     { value: QuarterlyReviewStatus.COMPLETED, label: "Completed" },
   ];
 
@@ -317,6 +389,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
         <div className="relative z-10">
           <EvaluationPanel
             record={evaluatingRecord}
+            submissionData={evaluatingRecord.submission}
             mode={evaluationMode}
             onBack={handleBackToDashboard}
             onSubmitEvaluation={handleEvaluationSubmit}
@@ -461,7 +534,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 prefixIcon={<Calendar size={14} className="filter-icon-fy" />}
                 options={financialYearOptions}
                 value={financialYear}
-                onChange={setFinancialYear}
+                onChange={(value) => {
+                  yearChosen.current = true;
+                  setFinancialYear(value);
+                }}
                 onOpen={loadFinancialYears}
                 loading={yearsLoading}
                 maxLabelWidth="max-w-[124px]"
@@ -476,7 +552,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 prefixIcon={<Clock size={14} className="filter-icon-quarters" />}
                 options={quarterOptions}
                 value={quarter}
-                onChange={setQuarter}
+                onChange={(value) => {
+                  quarterChosen.current = true;
+                  setQuarter(value);
+                }}
                 onOpen={loadQuarters}
                 loading={quartersLoading && quarterOptions.length === 0}
                 maxLabelWidth="max-w-[100px]"

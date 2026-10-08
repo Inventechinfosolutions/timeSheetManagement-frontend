@@ -8,6 +8,7 @@ export enum EmployeePerformanceStatus {
   REJECTED = "REJECTED",
   EDIT_REQUESTED = "EDIT_REQUESTED",
   EDIT_GRANTED = "EDIT_GRANTED",
+  COMPLETED = "COMPLETED",
 }
 
 export enum EditRequestStatus {
@@ -19,6 +20,7 @@ export enum EditRequestStatus {
 
 export enum QuarterlyReviewStatus {
   NOT_STARTED = "NOT_STARTED",
+  ASSIGNED = "ASSIGNED",
   DRAFT = "DRAFT",
   PENDING = "PENDING",
   IN_PROGRESS = "IN_PROGRESS",
@@ -46,6 +48,7 @@ export enum AssignmentKind {
 export enum EmployeeReviewStatus {
   NOT_STARTED = "not_started",
   ASSIGNED = "assigned",
+  DRAFT = "draft",
   IN_PROGRESS = "in_progress",
   SUBMITTED = "submitted",
   REVIEWED = "reviewed",

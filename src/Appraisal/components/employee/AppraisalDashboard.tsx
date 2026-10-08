@@ -53,23 +53,19 @@ const renderQuarterBadge = (quarter: string) => {
 };
 
 const renderStatusBadge = (status: string) => {
-  const raw = (status || "").trim().toLowerCase();
+  const raw = (status || "").trim();
+  const normalized = raw.toLowerCase().replace(/_/g, " ");
   let badgeClass = "qr-status-not-started";
-  let label = "Assigned";
 
-  if (raw === "assigned" || raw === "not_started") {
-    badgeClass = "qr-status-not-started";
-    label = "Assigned";
-  } else if (raw === "in_progress") {
+  if (normalized.includes("progress") || normalized === "draft" || normalized.includes("requested")) {
     badgeClass = "qr-status-in-progress";
-    label = "In Progress";
-  } else if (raw === "submitted") {
+  } else if (normalized.includes("submitted") || normalized.includes("received")) {
     badgeClass = "qr-status-submitted";
-    label = "Submitted";
-  } else if (raw === "completed" || raw === "reviewed") {
+  } else if (normalized.includes("completed") || normalized === "reviewed") {
     badgeClass = "qr-status-completed";
-    label = "Completed";
   }
+
+  const label = normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
 
   return (
     <span className={`qr-status-badge ${badgeClass}`}>
@@ -87,6 +83,11 @@ export const AppraisalDashboard: React.FC = () => {
     quarter,
     statusFilter,
     yearOptions,
+    quarterOptions,
+    yearsLoading,
+    quartersLoading,
+    loadFinancialYears,
+    loadQuarters,
     hasActiveFilters,
     setFinancialYear,
     setQuarter,
@@ -101,6 +102,20 @@ export const AppraisalDashboard: React.FC = () => {
 
   // Viewing assignment in EvaluationPanel
   const [viewingAssignment, setViewingAssignment] = useState<QuarterlyReviewAssignment | null>(null);
+  const [viewingForm, setViewingForm] = useState<ReviewFormData | undefined>(undefined);
+  const [viewingPerformanceStatus, setViewingPerformanceStatus] = useState<string>("");
+  const [viewingReviewStatus, setViewingReviewStatus] = useState<string>("");
+  const [viewingEvaluation, setViewingEvaluation] = useState<{
+    productivity?: number | string | null;
+    qualityOfWork?: number | string | null;
+    ownershipResponsibility?: number | string | null;
+    communication?: number | string | null;
+    teamCollaboration?: number | string | null;
+    innovationProblemSolving?: number | string | null;
+    performanceStrengths?: string | null;
+    areasOfImprovement?: string | null;
+    additionalRemarks?: string | null;
+  }>();
 
   // Annual Rating Page and Verification states
   const [isAnnualRatingOpen, setIsAnnualRatingOpen] = useState<boolean>(false);
@@ -163,9 +178,26 @@ export const AppraisalDashboard: React.FC = () => {
     setTimeout(scrollToPageTop, 50);
   };
 
-  const handleOpenView = (assignment: QuarterlyReviewAssignment) => {
+  const handleOpenView = async (assignment: QuarterlyReviewAssignment) => {
     scrollToPageTop();
-    setViewingAssignment(assignment);
+    try {
+      const [performance, review] = await Promise.all([
+        AppraisalApi.getPerformanceForAssignment(
+          assignment.employeeId,
+          assignment.quarter,
+          assignment.financialYear,
+        ),
+        AppraisalApi.getReviewById(Number(assignment.id)),
+      ]);
+      setViewingForm(performance ? toReviewFormData(performance) : undefined);
+      setViewingPerformanceStatus(performance?.status || "");
+      setViewingReviewStatus(review.status || "");
+      setViewingEvaluation(undefined);
+      setViewingAssignment(assignment);
+    } catch (error) {
+      message.error(readApiError(error));
+      return;
+    }
     setTimeout(scrollToPageTop, 50);
   };
 
@@ -186,16 +218,30 @@ export const AppraisalDashboard: React.FC = () => {
   const [selectedAccessAssignment, setSelectedAccessAssignment] = useState<QuarterlyReviewAssignment | null>(null);
   const [selectedAccessRemainingHours, setSelectedAccessRemainingHours] = useState<number>(24);
 
-  // 1-Day Eligibility check helper:
-  // - Enabled ONLY when review is submitted (submitted, completed, reviewed)
-  // - Enabled strictly for 1 day (24 hours) after review submission
-  // - Otherwise disabled with informative tooltip
   const checkAccessEligibility = (assignment: QuarterlyReviewAssignment) => {
+    const hidden = {
+      visible: false,
+      eligible: false,
+      alreadyRequested: false,
+      remainingHours: 0,
+      tooltip: "",
+    };
+    const twoDayMs = 48 * 60 * 60 * 1000;
+    if (assignment.status.toUpperCase() !== "SUBMITTED" || !assignment.submittedAt) {
+      return hidden;
+    }
+    const submittedTime = new Date(assignment.submittedAt).getTime();
+    if (Number.isNaN(submittedTime) || Date.now() - submittedTime > twoDayMs) {
+      return hidden;
+    }
+
+    const remainingHours = Math.max(1, Math.round((twoDayMs - (Date.now() - submittedTime)) / (3600 * 1000)));
     const isAlreadyRequested = accessRequests.some(
       (req) => req.assignmentId === assignment.id || (req.quarter === assignment.quarter && req.financialYear === assignment.financialYear)
     );
     if (isAlreadyRequested) {
       return {
+        visible: true,
         eligible: false,
         alreadyRequested: true,
         remainingHours: 0,
@@ -203,47 +249,12 @@ export const AppraisalDashboard: React.FC = () => {
       };
     }
 
-    const isSubmitted =
-      assignment.status === "submitted" ||
-      assignment.status === "reviewed";
-
-    if (!isSubmitted) {
-      return {
-        eligible: false,
-        alreadyRequested: false,
-        remainingHours: 0,
-        tooltip: "Access Request is enabled only after submitting your review.",
-      };
-    }
-
-    const oneDayMs = 24 * 60 * 60 * 1000;
-    if (!assignment.submittedAt) {
-      return {
-        eligible: true,
-        alreadyRequested: false,
-        remainingHours: 24,
-        tooltip: `Request edit access from ${assignment.assignedBy} (~24h remaining in 1-day window).`,
-      };
-    }
-
-    const submittedTime = new Date(assignment.submittedAt).getTime();
-    const timeDiff = Date.now() - submittedTime;
-
-    if (timeDiff > oneDayMs) {
-      return {
-        eligible: false,
-        alreadyRequested: false,
-        remainingHours: 0,
-        tooltip: "Access request window expired (only enabled for 1 day / 24 hours post-submission).",
-      };
-    }
-
-    const remainingHours = Math.max(1, Math.round((oneDayMs - timeDiff) / (3600 * 1000)));
     return {
+      visible: true,
       eligible: true,
       alreadyRequested: false,
       remainingHours,
-      tooltip: `Request edit access from ${assignment.assignedBy} (~${remainingHours}h remaining in 1-day window).`,
+      tooltip: `Request edit access from ${assignment.assignedBy} (~${remainingHours}h remaining in the 2-day window).`,
     };
   };
 
@@ -297,59 +308,70 @@ export const AppraisalDashboard: React.FC = () => {
     return assignments.slice(startIndex, startIndex + pageSize);
   }, [assignments, currentPage, pageSize]);
 
-  // Nearest pending deadline (upcoming first, otherwise most recent overdue)
+  // Nearest deadline among assignments that are loaded and not finally submitted.
   const deadlineInfo = useMemo(() => {
     const MONTHS: Record<string, number> = {
       jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
       jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
     };
-    const parse = (s: string): Date | null => {
-      const [d, m, y] = (s || "").split("-");
-      const mi = MONTHS[(m || "").slice(0, 3).toLowerCase()];
-      if (!d || mi === undefined || !y) return null;
-      return new Date(Number(y), mi, Number(d));
+    const parse = (value: string): Date | null => {
+      const parts = (value || "").trim().split("-");
+      if (parts.length !== 3) return null;
+      const [dayText, monthText, yearText] = parts;
+      const day = Number(dayText);
+      const year = Number(yearText);
+      const monthNumber = Number(monthText);
+      const month = Number.isInteger(monthNumber) && monthNumber >= 1 && monthNumber <= 12
+        ? monthNumber - 1
+        : MONTHS[monthText.slice(0, 3).toLowerCase()];
+      if (!day || month === undefined || !year) return null;
+      const date = new Date(year, month, day);
+      if (date.getFullYear() !== year || date.getMonth() !== month || date.getDate() !== day) {
+        return null;
+      }
+      return date;
     };
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const finished = new Set(["submitted", "reviewed", "completed"]);
 
     const pending = assignments
-      .filter((a) => a.status === "assigned" || a.status === "in_progress")
-      .map((a) => ({ a, date: parse(a.deadline) }))
-      .filter((x): x is { a: QuarterlyReviewAssignment; date: Date } => x.date !== null);
+      .filter((assignment) => !finished.has((assignment.status || "").toLowerCase()))
+      .map((assignment) => ({ assignment, date: parse(assignment.deadline) }))
+      .filter((item): item is { assignment: QuarterlyReviewAssignment; date: Date } => item.date !== null)
+      .sort((left, right) => {
+        const leftDistance = Math.abs(left.date.getTime() - today.getTime());
+        const rightDistance = Math.abs(right.date.getTime() - today.getTime());
+        if (leftDistance !== rightDistance) return leftDistance - rightDistance;
+        return left.date.getTime() - right.date.getTime();
+      });
 
     if (pending.length === 0) return null;
 
-    const upcoming = pending
-      .filter((x) => x.date >= today)
-      .sort((p, q) => p.date.getTime() - q.date.getTime());
-    const overdue = pending
-      .filter((x) => x.date < today)
-      .sort((p, q) => q.date.getTime() - p.date.getTime());
-    const pick = upcoming[0] ?? overdue[0];
+    const pick = pending[0];
     const days = Math.round((pick.date.getTime() - today.getTime()) / 86400000);
-
-    return { assignment: pick.a, days, pendingCount: pending.length };
+    return { assignment: pick.assignment, days, pendingCount: pending.length };
   }, [assignments]);
 
   // If viewing assignment, display same luxury view page with hidden score parameters
   if (viewingAssignment) {
     const viewRecord: ManagerQuarterlyReviewRecord = {
-      name: "Current Employee",
-      id: viewingAssignment.id,
-      role: "Software Engineer",
+      name: viewingAssignment.employeeName || "Employee",
+      id: viewingAssignment.employeeId,
+      role: viewingAssignment.designation || "",
       quarter: viewingAssignment.quarter,
       financialYear: viewingAssignment.financialYear,
-      fromDate: "01-04-2026",
+      fromDate: viewingAssignment.assignedDate,
       toDate: viewingAssignment.deadline,
       assignedOn: viewingAssignment.assignedDate,
       assignedBy: viewingAssignment.assignedBy,
-      finalRating: "4.0",
-      status:
-        viewingAssignment.status === "submitted" ||
-          viewingAssignment.status === "completed" ||
-          viewingAssignment.status === "reviewed"
-          ? "COMPLETED"
-          : "IN_PROGRESS",
+      finalRating: "",
+      submittedOn: viewingAssignment.performanceDate,
+      reviewId: Number(viewingAssignment.id),
+      reviewStatus: viewingReviewStatus,
+      performanceStatus: viewingPerformanceStatus,
+      submission: viewingForm,
+      status: viewingReviewStatus,
     };
 
     return (
@@ -371,11 +393,17 @@ export const AppraisalDashboard: React.FC = () => {
         <div className="relative z-10">
           <EvaluationPanel
             record={viewRecord}
+            submissionData={viewingForm}
+            managerEvaluation={viewingEvaluation}
             mode="view"
             hideScoreParameters={true}
             onBack={() => {
               scrollToPageTop();
               setViewingAssignment(null);
+              setViewingForm(undefined);
+              setViewingEvaluation(undefined);
+              setViewingPerformanceStatus("");
+              setViewingReviewStatus("");
               setTimeout(scrollToPageTop, 50);
             }}
           />
@@ -587,6 +615,8 @@ export const AppraisalDashboard: React.FC = () => {
                 options={yearOptions}
                 value={financialYear}
                 onChange={setFinancialYear}
+                onOpen={loadFinancialYears}
+                loading={yearsLoading}
                 maxLabelWidth="max-w-[105px]"
                 buttonClassName="bg-white/90 border border-blue-200/80 hover:border-blue-500 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[140px] shadow-none hover:bg-blue-50/40"
               />
@@ -598,14 +628,11 @@ export const AppraisalDashboard: React.FC = () => {
                 allowClear={true}
                 defaultValue=""
                 prefixIcon={<Clock size={15} />}
-                options={[
-                  { value: "Q1", label: "Quarter 1" },
-                  { value: "Q2", label: "Quarter 2" },
-                  { value: "Q3", label: "Quarter 3" },
-                  { value: "Q4", label: "Quarter 4" },
-                ]}
+                options={quarterOptions}
                 value={quarter}
                 onChange={setQuarter}
+                onOpen={loadQuarters}
+                loading={quartersLoading && quarterOptions.length === 0}
                 maxLabelWidth="max-w-[95px]"
                 buttonClassName="bg-white/90 border border-blue-200/80 hover:border-blue-500 rounded-2xl px-3 py-2 text-sm font-medium text-[#64748B] min-w-[120px] shadow-none hover:bg-blue-50/40"
               />
@@ -618,9 +645,10 @@ export const AppraisalDashboard: React.FC = () => {
                 defaultValue=""
                 prefixIcon={<ClipboardList size={15} />}
                 options={[
-                  { value: "assigned", label: "Assigned" },
-                  { value: "in_progress", label: "In Progress" },
-                  { value: "submitted", label: "Submitted" },
+                  { value: "NOT_STARTED", label: "Not Started" },
+                  { value: "DRAFT", label: "Draft" },
+                  { value: "SUBMITTED", label: "Submitted" },
+                  { value: "COMPLETED", label: "Completed" },
                 ]}
                 value={statusFilter}
                 onChange={setStatusFilter}
@@ -656,6 +684,7 @@ export const AppraisalDashboard: React.FC = () => {
                             <th className="text-left min-w-[110px]">Quarter</th>
                             <th className="text-left min-w-[150px]">Financial Year</th>
                             <th className="text-center min-w-[130px]">Assigned By</th>
+                            <th className="text-center min-w-[140px]">Assigned Date</th>
                             <th className="text-center min-w-[140px]">Deadline</th>
                             <th className="text-center min-w-[130px]">Status</th>
                             <th className="text-center min-w-[140px] qr-sticky-action-th">Action</th>
@@ -690,10 +719,16 @@ export const AppraisalDashboard: React.FC = () => {
                                   </span>
                                 </td>
 
-                                {/* 4. Deadline */}
                                 <td className="text-center">
                                   <span className="qr-date-chip">
-                                    <Calendar className="w-3.5 h-3.5 text-[#2563EB] mr-1.5 inline" />
+                                    <Calendar className="w-3.5 h-3.5 text-[#A36361] mr-1.5 inline" />
+                                    {assignment.assignedDate}
+                                  </span>
+                                </td>
+
+                                <td className="text-center">
+                                  <span className="qr-date-chip">
+                                    <Calendar className="w-3.5 h-3.5 text-[#A36361] mr-1.5 inline" />
                                     {assignment.deadline}
                                   </span>
                                 </td>
@@ -715,6 +750,7 @@ export const AppraisalDashboard: React.FC = () => {
                                     >
                                       <Eye className="w-4 h-4" />
                                     </button>
+                                    {assignment.canEdit && (
                                     <button
                                       type="button"
                                       onClick={() => handleOpenEdit(assignment)}
@@ -724,10 +760,11 @@ export const AppraisalDashboard: React.FC = () => {
                                     >
                                       <Pencil className="w-4 h-4" />
                                     </button>
+                                    )}
 
-                                    {/* Access Request Icon Button (Text Removed) */}
                                     {(() => {
                                       const elig = checkAccessEligibility(assignment);
+                                      if (!elig.visible) return null;
                                       return (
                                         <button
                                           type="button"
@@ -823,9 +860,16 @@ export const AppraisalDashboard: React.FC = () => {
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
+                            <span>Assigned date:</span>
+                            <span className="qr-date-chip">
+                              <Calendar className="w-3 h-3 text-[#A36361] mr-1 inline" />
+                              {assignment.assignedDate}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
                             <span>Deadline:</span>
                             <span className="qr-date-chip">
-                              <Calendar className="w-3 h-3 text-[#2563EB] mr-1 inline" />
+                              <Calendar className="w-3 h-3 text-[#A36361] mr-1 inline" />
                               {assignment.deadline}
                             </span>
                           </div>
@@ -840,6 +884,7 @@ export const AppraisalDashboard: React.FC = () => {
                             <Eye className="w-3.5 h-3.5" />
                             View
                           </button>
+                          {assignment.canEdit && (
                           <button
                             type="button"
                             onClick={() => handleOpenEdit(assignment)}
@@ -848,9 +893,11 @@ export const AppraisalDashboard: React.FC = () => {
                             <Pencil className="w-3.5 h-3.5" />
                             Edit
                           </button>
+                          )}
 
                           {(() => {
                             const elig = checkAccessEligibility(assignment);
+                            if (!elig.visible) return null;
                             return (
                               <button
                                 type="button"
@@ -886,7 +933,10 @@ export const AppraisalDashboard: React.FC = () => {
             ) : (
               /* STATE 1: Empty state matching reference image illustration (Rendered via CSS) */
               <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
-                <div className="appraisal-empty-illustration mb-6" aria-hidden="true" />
+                <div className="relative mb-6">
+                  <div className="appraisal-empty-glow" />
+                  <div className="appraisal-empty-illustration" aria-hidden="true" />
+                </div>
                 <h3 className="text-xl font-bold text-[#0F172A]">
                   No reviews available
                 </h3>

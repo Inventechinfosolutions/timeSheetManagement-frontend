@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef } from "react";
+import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { Send, Check } from "lucide-react";
 import { AssignQuarterlyReviewModalProps } from "../../types/appraisal.types";
 import { useAppSelector } from "../../../hooks";
@@ -19,6 +19,7 @@ import {
   DatePicker,
 } from "../../../components/ui";
 import { AssignSubmitPanel, AssignSubmitSummary } from "./AssignSubmitPanel";
+import { loadAppraisalPeriod } from "../../utils/appraisalHelpers";
 import "./AssignQuarterlyReviewModal.css";
 
 const todayDisplayDate = (): string => {
@@ -55,6 +56,10 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   const [description, setDescription] = useState<string>("");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [mappedEmployees, setMappedEmployees] = useState<MappedEmployee[]>([]);
+  const [teamMembers, setTeamMembers] = useState<MappedEmployee[]>([]);
+  const teamApplied = useRef(false);
+  const yearsLoaded = useRef(false);
+  const periodTouched = useRef(false);
   const [assignError, setAssignError] = useState<string>("");
   const [errorField, setErrorField] = useState<AssignFormField | null>(null);
   const [submitSummary, setSubmitSummary] = useState<AssignSubmitSummary | null>(null);
@@ -72,10 +77,15 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       setAssignError("");
       setErrorField(null);
       setSelectedEmployees([]);
+      setTeamMembers([]);
+      teamApplied.current = false;
       setSubmitSummary(null);
       setSelectedFinancialYear("");
       setSelectedQuarter("");
       setFromDate(todayDisplayDate());
+      setMasterQuarters([]);
+      periodTouched.current = false;
+      yearsLoaded.current = false;
       setToDate("");
       setDescription("");
     }
@@ -95,12 +105,21 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       return;
     }
     void AppraisalApi.getMappedEmployees(managerId, search)
-      .then(setMappedEmployees)
+      .then((employees) => {
+        setMappedEmployees(employees);
+        if (search?.trim()) return;
+        setTeamMembers(employees);
+        if (
+          assignmentType === AssignmentKind.ALL &&
+          employees.length > 0 &&
+          !teamApplied.current
+        ) {
+          teamApplied.current = true;
+          setSelectedEmployees(employees.map((employee) => employee.employeeId));
+        }
+      })
       .catch(() => setMappedEmployees([]));
-  }, [managerId]);
-
-  const yearsLoaded = useRef(false);
-  const quartersLoaded = useRef(false);
+  }, [managerId, assignmentType]);
 
   const loadFinancialYears = () => {
     if (yearsLoaded.current) return;
@@ -115,36 +134,29 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       .finally(() => setYearsLoading(false));
   };
 
-  const loadQuarters = () => {
-    if (quartersLoaded.current) return;
-    quartersLoaded.current = true;
+  const loadQuartersForYear = (financialYear: string) => {
+    const fromYear = masterYears.find((item) => item.financialYear === financialYear)?.fromYear;
+    if (!fromYear) {
+      setMasterQuarters([]);
+      return;
+    }
     setQuartersLoading(true);
-    const fromYear = masterYears.find((item) => item.financialYear === selectedFinancialYear)?.fromYear;
+    setMasterQuarters([]);
     void AppraisalApi.getMasterQuarters(fromYear)
       .then(setMasterQuarters)
-      .catch(() => {
-        quartersLoaded.current = false;
-        setMasterQuarters([]);
-      })
+      .catch(() => setMasterQuarters([]))
       .finally(() => setQuartersLoading(false));
   };
 
   const quarterOptions = useMemo(() => {
-    const seen = new Set<string>();
-    const options: { value: string; label: string }[] = [];
-    const selected = masterYears.find((year) => year.financialYear === selectedFinancialYear);
-    (selected?.quarters ?? []).forEach((item) => {
-      if (!item.quarter || seen.has(item.quarter)) return;
-      seen.add(item.quarter);
-      options.push({ value: item.quarter, label: item.quarterName || item.quarter });
-    });
-    masterQuarters.forEach((item) => {
-      if (!item.quaterLabel || seen.has(item.quaterLabel)) return;
-      seen.add(item.quaterLabel);
-      options.push({ value: item.quaterLabel, label: item.description || item.quaterLabel });
-    });
-    return options;
-  }, [masterYears, masterQuarters, selectedFinancialYear]);
+    if (!selectedFinancialYear) return [];
+    return masterQuarters
+      .filter((item) => Boolean(item.quaterLabel))
+      .map((item) => ({
+        value: item.quaterLabel,
+        label: item.quaterLabel,
+      }));
+  }, [masterQuarters, selectedFinancialYear]);
 
   const clearFieldError = (field: AssignFormField) => {
     if (errorField !== field) return;
@@ -158,14 +170,16 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   };
 
   const handleFinancialYearChange = (value: string) => {
+    periodTouched.current = true;
     setSelectedFinancialYear(value);
     setSelectedQuarter("");
-    quartersLoaded.current = false;
     clearFieldError(AssignFormField.FINANCIAL_YEAR);
+    loadQuartersForYear(value);
   };
 
-  const handleQuarterChange = (q: string) => {
-    setSelectedQuarter(q);
+  const handleQuarterChange = (quarter: string) => {
+    periodTouched.current = true;
+    setSelectedQuarter(quarter);
     clearFieldError(AssignFormField.QUARTER);
   };
 
@@ -179,6 +193,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     setSelectedFinancialYear("");
     setSelectedQuarter("");
     setFromDate(todayDisplayDate());
+    setMasterQuarters([]);
     setToDate("");
     setDescription("");
   }, []);
@@ -188,14 +203,46 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     onClose();
   };
 
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    yearsLoaded.current = true;
+    setYearsLoading(true);
+    setQuartersLoading(true);
+    void loadAppraisalPeriod()
+      .then((period) => {
+        if (cancelled) return;
+        setMasterYears(period.years);
+        if (!period.current || periodTouched.current) return;
+        setSelectedFinancialYear(period.current.financialYear);
+        setMasterQuarters(period.quarters);
+        setSelectedQuarter(period.current.quarter);
+        setFromDate(todayDisplayDate());
+      })
+      .catch(() => {
+        if (!cancelled) yearsLoaded.current = false;
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setYearsLoading(false);
+        setQuartersLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, formSession]);
+
   if (!isOpen) return null;
 
   const handleAssignClick = () => {
     if (buttonState !== AssignButtonState.IDLE) return;
+    const roster = teamMembers.length > 0 ? teamMembers : mappedEmployees;
     const targets =
-      assignmentType === AssignmentKind.ALL
-        ? mappedEmployees.map((employee) => employee.employeeId)
-        : selectedEmployees;
+      selectedEmployees.length > 0
+        ? selectedEmployees
+        : assignmentType === AssignmentKind.ALL
+          ? roster.map((employee) => employee.employeeId)
+          : [];
     if (!managerId || targets.length === 0) {
       showFieldError(AssignFormField.EMPLOYEES, AppraisalCopy.selectMappedEmployee);
       return;
@@ -212,8 +259,14 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       showFieldError(AssignFormField.QUARTER, AppraisalCopy.invalidQuarter);
       return;
     }
-    if (!toDate || !toIsoDate(toDate)) {
+    const assignedIso = toIsoDate(fromDate);
+    const deadlineIso = toIsoDate(toDate);
+    if (!deadlineIso || !assignedIso) {
       showFieldError(AssignFormField.DEADLINE, AppraisalCopy.selectDates);
+      return;
+    }
+    if (deadlineIso <= assignedIso) {
+      showFieldError(AssignFormField.DEADLINE, AppraisalCopy.deadlineAfterAssigned);
       return;
     }
 
@@ -221,7 +274,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     setErrorField(null);
     setSubmitSummary({
       people: targets.map((employeeId) => {
-        const match = mappedEmployees.find((employee) => employee.employeeId === employeeId);
+        const match = roster.find((employee) => employee.employeeId === employeeId);
         return {
           employeeId,
           employeeName: match?.employeeName || employeeId,
@@ -398,11 +451,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
 
           {/* Searchable employee selector - full length search bar */}
           <SearchDropdown
-            placeholder={
-              assignmentType === AssignmentKind.ALL
-                ? "All team members selected (Entire Team)"
-                : "Select one or more team members..."
-            }
+            placeholder="Select one or more team members..."
             searchPlaceholder="Search employees by name, role or ID..."
             allowClear={true}
             defaultValue=""
@@ -438,12 +487,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
           ) : null}
 
-          {/* Info / Warning Box */}
-          {assignmentType === AssignmentKind.ALL ? (
-            <div className="assign-modal-warning-box mt-1.5 py-1.5 px-3 rounded-xl border border-blue-200/80 bg-blue-50/80 text-blue-900 text-[11px] leading-relaxed font-medium">
-              Review access will be granted to all reporting team members in your department.
-            </div>
-          ) : employeeOptions.length === 0 ? (
+          {employeeOptions.length === 0 ? (
             <div className="assign-modal-warning-box mt-1.5 py-1.5 px-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-[11px] leading-relaxed font-normal">
               No mapped team members found for your manager account. Please contact an Administrator to map employees.
             </div>
@@ -493,7 +537,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               options={quarterOptions}
               value={selectedQuarter}
               onChange={handleQuarterChange}
-              onOpen={loadQuarters}
+              disabled={!selectedFinancialYear}
               loading={quartersLoading && quarterOptions.length === 0}
               className="w-full"
               buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${
@@ -528,6 +572,12 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               value={toDate}
               onChange={(value) => {
                 setToDate(value);
+                const deadlineIso = toIsoDate(value);
+                const assignedIso = toIsoDate(fromDate);
+                if (deadlineIso && assignedIso && deadlineIso <= assignedIso) {
+                  showFieldError(AssignFormField.DEADLINE, AppraisalCopy.deadlineAfterAssigned);
+                  return;
+                }
                 clearFieldError(AssignFormField.DEADLINE);
               }}
               placeholder="dd-mm-yyyy"

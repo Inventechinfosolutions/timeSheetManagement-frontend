@@ -100,37 +100,20 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
     return AVATAR_PALETTES[idx];
   };
 
-  const STATUS_LABELS: Record<string, string> = {
-    NOT_STARTED: "Not Started",
-    DRAFT: "In Progress",
-    IN_PROGRESS: "In Progress",
-    SUBMITTED: "Submitted",
-    UNDER_REVIEW: "Under Review",
-    EDIT_REQUESTED: "Under Review",
-    EDIT_GRANTED: "In Progress",
-    COMPLETED: "Completed",
-  };
-
   const renderStatusBadge = (status: string) => {
     const raw = (status || "").trim();
     const normalized = raw.toLowerCase().replace(/_/g, " ");
     let badgeClass = "qr-status-not-started";
 
-    if (normalized === "not started" || normalized === "pending") {
-      badgeClass = "qr-status-not-started";
-    } else if (
-      normalized === "in progress" ||
-      normalized === "under review" ||
-      normalized === "awaiting review"
-    ) {
+    if (normalized.includes("progress") || normalized === "draft" || normalized.includes("requested")) {
       badgeClass = "qr-status-in-progress";
-    } else if (normalized === "submitted") {
+    } else if (normalized.includes("submitted") || normalized.includes("received")) {
       badgeClass = "qr-status-submitted";
-    } else if (normalized === "completed" || normalized === "reviewed") {
+    } else if (normalized.includes("completed") || normalized === "reviewed") {
       badgeClass = "qr-status-completed";
     }
 
-    const label = STATUS_LABELS[raw] || raw;
+    const label = normalized.replace(/\b\w/g, (letter) => letter.toUpperCase());
 
     return (
       <span className={`qr-status-badge ${badgeClass}`}>
@@ -234,9 +217,8 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               <th className="text-left min-w-[160px]">Role</th>
               <th className="text-center min-w-[90px]">Quarter</th>
               <th className="text-center min-w-[125px]">Financial Year</th>
-              <th className="text-center min-w-[105px]">From Date</th>
-              <th className="text-center min-w-[105px]">To Date</th>
-              <th className="text-center min-w-[105px]">Assign On</th>
+              <th className="text-center min-w-[120px]">Assigned Date</th>
+              <th className="text-center min-w-[105px]">Deadline</th>
               <th className="text-center min-w-[110px]">Assign By</th>
               <th className="text-center min-w-[105px]">Final Rating</th>
               <th className="text-center min-w-[130px]">Status</th>
@@ -291,19 +273,14 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                     <span className="qr-fy-pill">{record.financialYear}</span>
                   </td>
 
-                  {/* 6. From Date */}
-                  <td className="text-center">
-                    <span className="qr-date-chip">{record.fromDate}</span>
-                  </td>
-
-                  {/* 7. To Date */}
-                  <td className="text-center">
-                    <span className="qr-date-chip">{record.toDate}</span>
-                  </td>
-
-                  {/* 8. Assign On */}
+                  {/* Assigned date */}
                   <td className="text-center">
                     <span className="qr-date-chip">{record.assignedOn}</span>
+                  </td>
+
+                  {/* Deadline */}
+                  <td className="text-center">
+                    <span className="qr-date-chip">{record.toDate}</span>
                   </td>
 
                   {/* 9. Assign By */}

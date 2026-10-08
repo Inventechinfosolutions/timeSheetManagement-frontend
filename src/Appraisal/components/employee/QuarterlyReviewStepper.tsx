@@ -7,9 +7,9 @@ import {
   Send,
   AlertCircle,
 } from "lucide-react";
-import { ReviewFormData, QuarterlyReviewAssignment } from "../../types/appraisal.types";
+import { ReviewFormData, QuarterlyReviewAssignment, StoredPerformanceFile } from "../../types/appraisal.types";
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
-import { AppraisalApi, readApiError, toPerformancePayload } from "../../services/appraisal.api";
+import { AppraisalApi, readApiError, toPerformancePayload, toReviewFormData } from "../../services/appraisal.api";
 import { QuaterlyEnum } from "../../enums/appraisal.enums";
 import OverviewStep from "./steps/OverviewStep";
 import AchievementsStep from "./steps/AchievementsStep";
@@ -59,6 +59,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const [formData, setFormData] = useState<ReviewFormData>(initialFormData || emptyReviewFormData);
   const [performanceId, setPerformanceId] = useState<number | null>(assignment.performanceId ?? null);
+  const formDataRef = useRef(formData);
+  const performanceIdRef = useRef(performanceId);
+  formDataRef.current = formData;
+  performanceIdRef.current = performanceId;
   const [saving, setSaving] = useState<boolean>(false);
   const [saveError, setSaveError] = useState<string>("");
   const [submitted, setSubmitted] = useState<boolean>(false);
@@ -172,21 +176,12 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         if (!firstFieldId) firstFieldId = "field-overview";
       }
     } else if (stepNum === 2) {
-      const title = (data.projectTitle || data.majorAchievements || "").trim();
-      const desc = (data.projectDescription || data.kpisMet || "").trim();
-      const challenge = (data.projectChallenge || data.challengesOvercome || "").trim();
-
-      if (!title) {
-        stepErrors.projectTitle = "Project title is required.";
-        if (!firstFieldId) firstFieldId = "field-projectTitle";
-      }
-      if (!desc) {
-        stepErrors.projectDescription = "Project description is required.";
-        if (!firstFieldId) firstFieldId = "field-projectDescription";
-      }
-      if (!challenge) {
-        stepErrors.projectChallenge = "Challenge overcome is required.";
-        if (!firstFieldId) firstFieldId = "field-projectChallenge";
+      const savedProjects = (data.projects || []).filter(
+        (project) => project.title.trim() && project.description.trim() && project.challenge.trim(),
+      );
+      if (savedProjects.length === 0) {
+        stepErrors.projects = "Add at least one project.";
+        if (!firstFieldId) firstFieldId = "field-projects";
       }
     } else if (stepNum === 3) {
       const ratings = data.teamRatings || {};
@@ -207,14 +202,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         }
       }
     } else if (stepNum === 4) {
-      const goals = (
-        data.learningGoals ||
-        data.nextQuarterLearningGoals ||
-        data.skillsAcquired ||
-        ""
-      ).trim();
-      if (!goals) {
-        stepErrors.learningGoals = "Continuous learning goals are required.";
+      const goals = (data.learningGoalItems || []).filter((goal) => goal.trim());
+      if (goals.length === 0) {
+        stepErrors.learningGoals = "Add at least one learning goal.";
         if (!firstFieldId) firstFieldId = "field-learningGoals";
       }
     } else if (stepNum === 5) {
@@ -248,7 +238,49 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     };
   };
 
-  const persistStep = async (): Promise<boolean> => {
+  const ensurePerformanceId = async (): Promise<number> => {
+    if (performanceIdRef.current) {
+      return performanceIdRef.current;
+    }
+    const quarter = quarterValue(assignment.quarter);
+    if (!assignment.employeeId || !quarter || !assignment.financialYear) {
+      throw new Error("This quarter is missing an employee, quarter, or financial year.");
+    }
+    const created = await AppraisalApi.createPerformance(
+      toPerformancePayload(
+        assignment.employeeId,
+        quarter,
+        assignment.financialYear,
+        formDataRef.current,
+      ),
+    );
+    performanceIdRef.current = created.id;
+    setPerformanceId(created.id);
+    return created.id;
+  };
+
+  const uploadAttachment = async (file: File): Promise<StoredPerformanceFile> => {
+    try {
+      const id = await ensurePerformanceId();
+      return await AppraisalApi.uploadPerformanceAttachment(id, file);
+    } catch (error) {
+      throw new Error(error instanceof Error && error.message && !("isAxiosError" in error) ? error.message : readApiError(error));
+    }
+  };
+
+  const removeAttachment = async (objectKey: string): Promise<void> => {
+    const id = performanceIdRef.current;
+    if (!id || !objectKey) {
+      return;
+    }
+    try {
+      await AppraisalApi.removePerformanceAttachment(id, objectKey);
+    } catch (error) {
+      throw new Error(readApiError(error));
+    }
+  };
+
+  const persistStep = async (asDraft = false): Promise<boolean> => {
     const quarter = quarterValue(assignment.quarter);
     if (!assignment.employeeId || !quarter || !assignment.financialYear) {
       setSaveError("This quarter is missing an employee, quarter, or financial year.");
@@ -263,12 +295,18 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     setSaving(true);
     setSaveError("");
     try {
+      if (asDraft) {
+        const saved = await AppraisalApi.savePerformanceDraft(payload);
+        performanceIdRef.current = saved.id;
+        setPerformanceId(saved.id);
+        return true;
+      }
       if (!performanceId) {
         const created = await AppraisalApi.createPerformance(payload);
+        performanceIdRef.current = created.id;
         setPerformanceId(created.id);
         return true;
       }
-      await AppraisalApi.getPerformanceById(performanceId);
       await AppraisalApi.updatePerformance(performanceId, payload);
       return true;
     } catch (error) {
@@ -276,6 +314,25 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       return false;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const loadFreshForm = async (): Promise<boolean> => {
+    const id = performanceIdRef.current;
+    if (!id) {
+      return true;
+    }
+    try {
+      const performance = await AppraisalApi.getPerformanceById(id);
+      const fresh = toReviewFormData(performance);
+      formDataRef.current = fresh;
+      performanceIdRef.current = performance.id;
+      setPerformanceId(performance.id);
+      setFormData(fresh);
+      return true;
+    } catch (error) {
+      setSaveError(readApiError(error));
+      return false;
     }
   };
 
@@ -293,22 +350,34 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (!saved) {
       return;
     }
+    const loaded = await loadFreshForm();
+    if (!loaded) {
+      return;
+    }
     setErrors({});
     goToStep(currentStep + 1, true);
   };
 
-  const handlePrev = () => {
-    if (currentStep > 1) {
-      setErrors({});
-      goToStep(currentStep - 1, true);
+  const handlePrev = async () => {
+    if (currentStep <= 1 || saving) {
+      return;
     }
+    const saved = await persistStep();
+    if (!saved) {
+      return;
+    }
+    const loaded = await loadFreshForm();
+    if (!loaded) {
+      return;
+    }
+    setErrors({});
+    goToStep(currentStep - 1, true);
   };
 
-  const handleStepClick = (targetStep: number) => {
-    if (targetStep === currentStep) return;
+  const handleStepClick = async (targetStep: number) => {
+    if (targetStep === currentStep || saving) return;
 
     if (targetStep > currentStep) {
-      // Validate all steps from currentStep up to targetStep - 1
       for (let s = currentStep; s < targetStep; s++) {
         const validation = validateStep(s);
         if (!validation.isValid) {
@@ -322,6 +391,14 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       }
     }
 
+    const saved = await persistStep();
+    if (!saved) {
+      return;
+    }
+    const loaded = await loadFreshForm();
+    if (!loaded) {
+      return;
+    }
     setErrors({});
     goToStep(targetStep, true);
   };
@@ -330,7 +407,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (saving) {
       return;
     }
-    const saved = await persistStep();
+    const saved = await persistStep(true);
     if (!saved) {
       return;
     }
@@ -356,12 +433,13 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       return;
     }
     const quarter = quarterValue(assignment.quarter);
-    if (!quarter) {
+    const performanceId = performanceIdRef.current;
+    if (!quarter || !performanceId) {
       return;
     }
     setSaving(true);
     try {
-      await AppraisalApi.submitPerformance({
+      await AppraisalApi.submitPerformance(performanceId, {
         employeeId: assignment.employeeId,
         quarter,
         financialYear: assignment.financialYear,
@@ -396,6 +474,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onChange={handleFieldChange}
             errors={errors}
             clearError={handleClearError}
+            onUploadAttachment={uploadAttachment}
+            onRemoveAttachment={removeAttachment}
           />
         );
       case 3:

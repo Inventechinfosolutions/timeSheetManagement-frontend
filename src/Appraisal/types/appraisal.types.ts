@@ -21,9 +21,9 @@ export interface AssignQuarterlyReviewModalProps {
   }) => void;
 }
 
-export type ReviewStatus = "not_started" | "assigned" | "in_progress" | "submitted" | "reviewed";
+export type ReviewStatus = "not_started" | "assigned" | "draft" | "in_progress" | "submitted" | "reviewed";
 
-export type ReviewAssignmentStatus = "NOT_STARTED" | "IN_PROGRESS" | "SUBMITTED" | "UNDER_REVIEW" | "COMPLETED";
+export type ReviewAssignmentStatus = "NOT_STARTED" | "ASSIGNED" | "IN_PROGRESS" | "SUBMITTED" | "UNDER_REVIEW" | "COMPLETED";
 
 export interface ManagerQuarterlyReviewRecord {
   name: string;
@@ -36,9 +36,13 @@ export interface ManagerQuarterlyReviewRecord {
   assignedOn: string;
   assignedBy: string;
   finalRating: string;
-  status: ReviewAssignmentStatus;
+  status: string;
   reviewId?: number;
   description?: string;
+  submittedOn?: string;
+  reviewStatus?: string;
+  performanceStatus?: string;
+  submission?: ReviewFormData;
 }
 
 export interface QuarterlyReviewAssignment {
@@ -51,7 +55,8 @@ export interface QuarterlyReviewAssignment {
   assignedBy: string;
   assignedDate: string;
   deadline: string;
-  status: ReviewStatus;
+  performanceDate?: string;
+  status: string;
   canEdit: boolean;
   performanceId?: number;
   description?: string;
@@ -71,6 +76,21 @@ export interface AccessRequest {
   status: "pending" | "approved" | "rejected";
 }
 
+export interface PerformanceProject {
+  title: string;
+  description: string;
+  challenge: string;
+  attachments?: StoredPerformanceFile[];
+}
+
+export interface StoredPerformanceFile {
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  objectKey: string;
+  sizeLabel?: string;
+}
+
 export interface ReviewFormData {
   // Step 1: Overview
   overview?: string;
@@ -81,9 +101,11 @@ export interface ReviewFormData {
   projectTitle?: string;
   projectDescription?: string;
   projectChallenge?: string;
+  projects?: PerformanceProject[];
   projectAttachment?: string | null;
   projectAttachmentName?: string;
   projectAttachmentSize?: string;
+  projectAttachments?: StoredPerformanceFile[];
   majorAchievements: string;
   kpisMet: string;
   challengesOvercome: string;
@@ -107,6 +129,7 @@ export interface ReviewFormData {
   };
   // Step 4: Learning Goals
   learningGoals?: string;
+  learningGoalItems?: string[];
   skillsAcquired: string;
   certificationsOrCourses: string;
   nextQuarterLearningGoals: string;
@@ -127,4 +150,6 @@ export interface StepProps {
   onChange: (field: keyof ReviewFormData, value: any) => void;
   errors?: Record<string, string>;
   clearError?: (field: string) => void;
+  onUploadAttachment?: (file: File) => Promise<StoredPerformanceFile>;
+  onRemoveAttachment?: (objectKey: string) => Promise<void>;
 }

@@ -1075,7 +1075,8 @@
 .eval-textarea-field:disabled,
 .eval-textarea-field:read-only,
 .eval-textarea-readonly {
-  cursor: not-allowed !important;
+  cursor: default !important;
+  caret-color: transparent;
   pointer-events: auto !important;
   background: #F8FAFC !important;
   border-color: #CBD5E1 !important;

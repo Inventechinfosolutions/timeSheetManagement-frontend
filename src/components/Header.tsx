@@ -79,10 +79,13 @@ const Header = ({
   const leaveNotifications = rawLeaveNotifications.filter(
     (n) => n.status !== LeaveRequestStatus.CANCELLED,
   );
+  const appraisalNotices = notifications.filter((item) =>
+    String(item.type || "").startsWith("APPRAISAL_"),
+  );
 
   // Total count for the bell bubble
   const unreadCount = isApprover
-    ? leaveNotifications.length
+    ? leaveNotifications.length + appraisalNotices.filter((item) => !item.isRead).length
     : attendanceUnreadCount + employeeUpdates.length;
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -320,7 +323,13 @@ const Header = ({
           {!hideNotifications && (
             <div className="relative" ref={notificationRef}>
               <button
-                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                onClick={() => {
+                  const nextOpen = !isNotificationOpen;
+                  setIsNotificationOpen(nextOpen);
+                  if (nextOpen && entity?.employeeId && !isAdmin) {
+                    dispatch(fetchNotifications(entity.employeeId));
+                  }
+                }}
                 className={`relative p-2 rounded-xl transition-all group ${isNotificationOpen
                   ? "bg-white text-[#4318FF]"
                   : "hover:bg-white/10 text-white"
@@ -372,8 +381,9 @@ const Header = ({
                       {/* Notification List */}
                       <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
                         {isApprover ? (
-                          leaveNotifications.length > 0 ? (
-                            leaveNotifications.map((notif) => {
+                          leaveNotifications.length > 0 || appraisalNotices.length > 0 ? (
+                            <>
+                            {leaveNotifications.map((notif) => {
                               const getNotificationContent = (
                                 notif: LeaveNotification,
                               ) => {
@@ -515,7 +525,40 @@ const Header = ({
                                   </div>
                                 </div>
                               );
-                            })
+                            })}
+                            {appraisalNotices.map((notice) => (
+                              <div
+                                key={`appraisal-${notice.id}`}
+                                onClick={() => handleNotificationClick(notice.id)}
+                                className="flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative bg-blue-50/30"
+                              >
+                                <div className="relative shrink-0">
+                                  <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
+                                    <Bell size={18} />
+                                  </div>
+                                </div>
+                                <div className="flex-1 space-y-1">
+                                  <div className="flex justify-between items-start">
+                                    <p className="text-sm text-[#1B2559] leading-snug font-bold">
+                                      {notice.title}
+                                    </p>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleMarkAsRead(notice.id, "attendance");
+                                      }}
+                                      className="text-[10px] text-[#4318FF] hover:underline font-bold"
+                                    >
+                                      Dismiss
+                                    </button>
+                                  </div>
+                                  <span className="text-xs text-gray-500 font-medium line-clamp-2">
+                                    {notice.message}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                            </>
                           ) : (
                             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">

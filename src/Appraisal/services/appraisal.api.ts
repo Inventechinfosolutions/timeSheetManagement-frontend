@@ -2,7 +2,6 @@ import axios from "axios";
 import {
   EditRequestStatus,
   EmployeePerformanceStatus,
-  EmployeeReviewStatus,
   QuaterlyEnum,
   QuarterlyReviewStatus,
   RatingVisibilityStatus,
@@ -11,9 +10,9 @@ import { emptyReviewFormData } from "../constants/emptyReviewForm";
 import {
   ManagerQuarterlyReviewRecord,
   QuarterlyReviewAssignment,
-  ReviewAssignmentStatus,
+  PerformanceProject,
   ReviewFormData,
-  ReviewStatus,
+  StoredPerformanceFile,
 } from "../types/appraisal.types";
 import {
   AppraisalCopy,
@@ -56,8 +55,17 @@ export interface RevealedRating {
   quarter: QuaterlyEnum;
   financialYear: string;
   finalRating: number;
-  ratingDescription: string | null;
-  reviewedDate: string | null;
+  ratingDescription: string;
+  productivity: number;
+  qualityOfWork: number;
+  ownershipResponsibility: number;
+  communication: number;
+  teamCollaboration: number;
+  innovationProblemSolving: number;
+  performanceStrengths: string;
+  areasOfImprovement: string;
+  additionalRemarks: string;
+  passwordVerified: boolean;
 }
 
 export interface EditRequestRecord {
@@ -88,6 +96,7 @@ export interface EditRequestQuery {
 }
 
 const quarterlyReviewUrl = "/api/quarterly-review";
+const quarterlyReviewPerformanceUrl = "/api/quarterly-review&performance";
 const employeePerformanceUrl = "/api/employee-performance";
 
 interface ApiErrorBody {
@@ -136,6 +145,8 @@ export interface ManagerReviewApiRecord {
   finalRating: number | null;
   assignerId: string;
   description?: string | null;
+  submittedDate?: string | null;
+  performanceDetails?: EmployeePerformanceDetail | null;
 }
 
 export interface ManagerDashboardResponse {
@@ -170,6 +181,9 @@ export interface MasterFinancialYearOption {
   id: number;
   financialYear: string;
   fromYear: number;
+  toYear: number;
+  startDate: string;
+  endDate: string;
   isCurrent: boolean;
   quarters: MasterQuarterOption[];
 }
@@ -218,34 +232,6 @@ export const formatAppraisalDisplayDate = (value: string | null | undefined): st
   return date.toLocaleDateString("en-GB").replace(/\//g, "-");
 };
 
-const managerStatusMap: Partial<Record<QuarterlyReviewStatus, ReviewAssignmentStatus>> = {
-  [QuarterlyReviewStatus.NOT_STARTED]: QuarterlyReviewStatus.NOT_STARTED,
-  [QuarterlyReviewStatus.DRAFT]: QuarterlyReviewStatus.IN_PROGRESS,
-  [QuarterlyReviewStatus.PENDING]: QuarterlyReviewStatus.NOT_STARTED,
-  [QuarterlyReviewStatus.IN_PROGRESS]: QuarterlyReviewStatus.IN_PROGRESS,
-  [QuarterlyReviewStatus.SUBMITTED]: QuarterlyReviewStatus.SUBMITTED,
-  [QuarterlyReviewStatus.UNDER_REVIEW]: QuarterlyReviewStatus.UNDER_REVIEW,
-  [QuarterlyReviewStatus.REVIEWED]: QuarterlyReviewStatus.COMPLETED,
-  [QuarterlyReviewStatus.COMPLETED]: QuarterlyReviewStatus.COMPLETED,
-  [QuarterlyReviewStatus.REJECTED]: QuarterlyReviewStatus.NOT_STARTED,
-  [QuarterlyReviewStatus.EDIT_REQUESTED]: QuarterlyReviewStatus.UNDER_REVIEW,
-  [QuarterlyReviewStatus.EDIT_GRANTED]: QuarterlyReviewStatus.IN_PROGRESS,
-};
-
-const employeeStatusMap: Partial<Record<QuarterlyReviewStatus, ReviewStatus>> = {
-  [QuarterlyReviewStatus.NOT_STARTED]: EmployeeReviewStatus.ASSIGNED,
-  [QuarterlyReviewStatus.DRAFT]: EmployeeReviewStatus.IN_PROGRESS,
-  [QuarterlyReviewStatus.PENDING]: EmployeeReviewStatus.ASSIGNED,
-  [QuarterlyReviewStatus.IN_PROGRESS]: EmployeeReviewStatus.IN_PROGRESS,
-  [QuarterlyReviewStatus.SUBMITTED]: EmployeeReviewStatus.SUBMITTED,
-  [QuarterlyReviewStatus.UNDER_REVIEW]: EmployeeReviewStatus.SUBMITTED,
-  [QuarterlyReviewStatus.REVIEWED]: EmployeeReviewStatus.REVIEWED,
-  [QuarterlyReviewStatus.COMPLETED]: EmployeeReviewStatus.REVIEWED,
-  [QuarterlyReviewStatus.REJECTED]: EmployeeReviewStatus.NOT_STARTED,
-  [QuarterlyReviewStatus.EDIT_REQUESTED]: EmployeeReviewStatus.SUBMITTED,
-  [QuarterlyReviewStatus.EDIT_GRANTED]: EmployeeReviewStatus.IN_PROGRESS,
-};
-
 export const toManagerReviewRecord = (review: ManagerReviewApiRecord): ManagerQuarterlyReviewRecord => ({
   name: review.employeeName || review.employeeId,
   id: review.employeeId,
@@ -257,9 +243,14 @@ export const toManagerReviewRecord = (review: ManagerReviewApiRecord): ManagerQu
   assignedOn: formatAppraisalDisplayDate(review.assignedDate),
   assignedBy: review.assignerId,
   finalRating: review.finalRating == null ? "" : String(review.finalRating),
-  status: managerStatusMap[review.status] || QuarterlyReviewStatus.NOT_STARTED,
+  status: review.status,
   reviewId: review.id,
   description: review.description || "",
+  submittedOn: formatAppraisalDisplayDate(
+    review.performanceDetails?.submittedAt || review.submittedDate,
+  ),
+  reviewStatus: review.status,
+  performanceStatus: review.performanceDetails?.status,
 });
 
 export interface EmployeePerformanceDetail {
@@ -271,10 +262,10 @@ export interface EmployeePerformanceDetail {
   editRequestStatus: EditRequestStatus;
   editAllowedUntil: string | null;
   submittedAt: string | null;
+  createdAt?: string | null;
+  lastModifiedDate?: string | null;
   overview: string | null;
-  projectTitle: string | null;
-  projectDescription: string | null;
-  challenge: string | null;
+  projects?: PerformanceProject[] | string | null;
   communicationTransparency: number | null;
   crossDepartmentCollaboration: number | null;
   mentorshipKnowledgeSharing: number | null;
@@ -288,6 +279,13 @@ export interface EmployeePerformanceDetail {
   rateCompanyEnvironment: string | null;
   skillsAcquired: string | null;
   careerDevelopmentGoals: string | null;
+  attachments?: Array<{
+    fileName: string;
+    fileUrl: string;
+    fileSize: number;
+    fileType: string;
+    objectKey: string;
+  }>;
 }
 
 export interface EmployeeReviewDetail {
@@ -305,6 +303,15 @@ export interface EmployeeReviewDetail {
   assignerId: string;
   description: string | null;
   finalRating: number | null;
+  productivity?: number | string | null;
+  qualityOfWork?: number | string | null;
+  ownershipResponsibility?: number | string | null;
+  communication?: number | string | null;
+  teamCollaboration?: number | string | null;
+  innovationProblemSolving?: number | string | null;
+  performanceStrengths?: string | null;
+  areasOfImprovement?: string | null;
+  additionalRemarks?: string | null;
   performanceDetails?: EmployeePerformanceDetail | null;
 }
 
@@ -329,10 +336,14 @@ const environmentScores: Record<string, number> = {
 };
 
 export const reviewCanEdit = (review: EmployeeReviewDetail): boolean => {
-  if (editableReviewStatuses.includes(review.status)) {
+  const performance = review.performanceDetails;
+  const employeeStatus = performance?.status as QuarterlyReviewStatus | undefined;
+  if (!employeeStatus) {
+    return false;
+  }
+  if (editableReviewStatuses.includes(employeeStatus)) {
     return true;
   }
-  const performance = review.performanceDetails;
   if (!performance) {
     return false;
   }
@@ -348,6 +359,68 @@ export const reviewCanEdit = (review: EmployeeReviewDetail): boolean => {
   return new Date(performance.editAllowedUntil).getTime() > Date.now();
 };
 
+const formatStoredFileSize = (bytes: number): string => {
+  if (!bytes) {
+    return "";
+  }
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+};
+
+const readProjectList = (
+  value: EmployeePerformanceDetail["projects"],
+): PerformanceProject[] => {
+  const source = typeof value === "string" ? (() => {
+    try {
+      return JSON.parse(value) as PerformanceProject[];
+    } catch {
+      return [];
+    }
+  })() : value;
+  if (!Array.isArray(source)) {
+    return [];
+  }
+  return source
+    .filter((project) => project && (project.title || project.description || project.challenge))
+    .map((project) => ({
+      title: project.title || "",
+      description: project.description || "",
+      challenge: project.challenge || "",
+      attachments: (project.attachments || [])
+        .filter((file) => file.objectKey || file.fileName)
+        .map((file) => ({
+          fileName: file.fileName,
+          fileSize: file.fileSize || 0,
+          fileType: file.fileType || "",
+          objectKey: file.objectKey || file.fileName,
+          sizeLabel: formatStoredFileSize(file.fileSize || 0),
+        })),
+    }));
+};
+
+const readLearningGoalList = (value: string | null | undefined): string[] => {
+  if (!value?.trim()) {
+    return [];
+  }
+  const trimmed = value.trim();
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (Array.isArray(parsed)) {
+        return parsed
+          .filter((item): item is string => typeof item === "string")
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }
+    } catch {
+      return [trimmed];
+    }
+  }
+  return [trimmed];
+};
+
 export const toReviewFormData = (
   performance: EmployeePerformanceDetail | null | undefined,
 ): ReviewFormData => {
@@ -358,10 +431,15 @@ export const toReviewFormData = (
     ...emptyReviewFormData,
     overview: performance.overview || "",
     roleSummary: performance.overview || "",
-    projectTitle: performance.projectTitle || "",
-    projectDescription: performance.projectDescription || "",
-    projectChallenge: performance.challenge || "",
-    learningGoals: performance.learningGoals || "",
+    projectTitle: "",
+    projectDescription: "",
+    projectChallenge: "",
+    projects: readProjectList(performance.projects),
+    projectAttachments: [],
+    learningGoals: "",
+    learningGoalItems: readLearningGoalList(
+      performance.learningGoals || performance.skillsAcquired,
+    ),
     skillsAcquired: performance.skillsAcquired || "",
     nextQuarterLearningGoals: performance.careerDevelopmentGoals || "",
     workCultureFeedback: performance.feedbackOnWorkCulture || "",
@@ -371,9 +449,9 @@ export const toReviewFormData = (
     teamRatings: {
       communication: performance.communicationTransparency || 0,
       collaboration: performance.crossDepartmentCollaboration || 0,
-      mentorship: performance.mentorshipKnowledgeSharing || 0,
       ownership: performance.reliabilityAccountability || 0,
-      peerSupport: performance.peerSupportTeamSpirit || 0,
+      problemSolving: performance.peerSupportTeamSpirit || 0,
+      leadership: performance.mentorshipKnowledgeSharing || 0,
       adaptability: performance.adaptabilityInitiative || 0,
     },
   };
@@ -384,15 +462,16 @@ export interface PerformanceWritePayload {
   quarter: QuaterlyEnum;
   financialYear: string;
   overview?: string;
-  projectTitle?: string;
-  projectDescription?: string;
-  challenge?: string;
-  majorProjects?: string;
+  projects?: PerformanceProject[];
   responsibilitiesHandled?: string;
   deliverablesCompleted?: string;
   keyAccomplishments?: string;
   challengesFaced?: string;
   skillsAcquired?: string;
+  learningGoals?: string;
+  feedbackOnWorkCulture?: string;
+  workLifeBalance?: string;
+  suggestionsForImprovement?: string;
   plannedDeliverables?: string;
   careerDevelopmentGoals?: string;
   communicationTransparency?: number;
@@ -422,11 +501,31 @@ export const toPerformancePayload = (
   formData: ReviewFormData,
 ): PerformanceWritePayload => {
   const overview = (formData.overview || formData.roleSummary || "").trim();
-  const projectTitle = (formData.projectTitle || formData.majorAchievements || "").trim();
-  const projectDescription = (formData.projectDescription || formData.kpisMet || "").trim();
-  const challenge = (formData.projectChallenge || formData.challengesOvercome || "").trim();
-  const learning = (formData.learningGoals || formData.skillsAcquired || "").trim();
+  const projects = (formData.projects || [])
+    .filter((project) => project.title.trim() && project.description.trim() && project.challenge.trim())
+    .map((project) => ({
+      title: project.title.trim(),
+      description: project.description.trim(),
+      challenge: project.challenge.trim(),
+      attachments: (project.attachments || []).map((file) => ({
+        fileName: file.fileName,
+        fileUrl: file.objectKey,
+        fileSize: file.fileSize,
+        fileType: file.fileType,
+        objectKey: file.objectKey,
+      })),
+    }));
+  const projectTitle = projects.map((project) => project.title.trim()).join("\n");
+  const projectDescription = projects.map((project) => project.description.trim()).join("\n");
+  const challenge = projects.map((project) => project.challenge.trim()).join("\n");
+  const learningGoals = (formData.learningGoalItems || [])
+    .map((goal) => goal.trim())
+    .filter(Boolean);
+  const learning = learningGoals.join("\n");
   const nextGoals = (formData.nextQuarterLearningGoals || "").trim();
+  const workCulture = (formData.workCultureFeedback || "").trim();
+  const workLife = (formData.workLifeBalance || "").trim();
+  const suggestions = (formData.suggestionsForImprovement || formData.toolingAndResources || "").trim();
   const ratings = formData.teamRatings || {};
   const environmentScore = formData.companyEnvironmentRating || formData.managementSupportRating || 0;
   return {
@@ -434,22 +533,23 @@ export const toPerformancePayload = (
     quarter,
     financialYear,
     overview: overview || undefined,
-    projectTitle: projectTitle || undefined,
-    projectDescription: projectDescription || undefined,
-    challenge: challenge || undefined,
-    majorProjects: projectTitle || overview || undefined,
+    projects,
     responsibilitiesHandled: (formData.roleSummary || overview || "").trim() || undefined,
     deliverablesCompleted: projectDescription || undefined,
     keyAccomplishments: projectTitle || undefined,
     challengesFaced: challenge || undefined,
     skillsAcquired: learning || undefined,
+    learningGoals: learningGoals.length ? JSON.stringify(learningGoals) : undefined,
+    feedbackOnWorkCulture: workCulture || undefined,
+    workLifeBalance: workLife || undefined,
+    suggestionsForImprovement: suggestions || undefined,
     plannedDeliverables: nextGoals || learning || undefined,
     careerDevelopmentGoals: nextGoals || undefined,
     communicationTransparency: scored(ratings.communication),
     crossDepartmentCollaboration: scored(ratings.collaboration),
-    mentorshipKnowledgeSharing: scored(ratings.mentorship),
     reliabilityAccountability: scored(ratings.ownership),
-    peerSupportTeamSpirit: scored(ratings.peerSupport),
+    peerSupportTeamSpirit: scored(ratings.problemSolving),
+    mentorshipKnowledgeSharing: scored(ratings.leadership),
     adaptabilityInitiative: scored(ratings.adaptability),
     rateCompanyEnvironment: environmentRatings[environmentScore],
   };
@@ -460,16 +560,21 @@ export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyRev
   employeeId: review.employeeId,
   employeeName: review.employeeName || review.employeeId,
   designation: review.designation || "",
-  quarter: review.quarter,
-  financialYear: review.financialYear,
+  quarter: review.performanceDetails?.quarter || review.quarter,
+  financialYear: review.performanceDetails?.financialYear || review.financialYear,
   assignedBy: review.managerName || review.assignerId || "",
   assignedDate: formatAppraisalDisplayDate(review.assignedDate),
   deadline: formatAppraisalDisplayDate(review.deadlineDate),
-  status: employeeStatusMap[review.status] || EmployeeReviewStatus.NOT_STARTED,
+  performanceDate: formatAppraisalDisplayDate(
+    review.performanceDetails?.submittedAt ||
+      review.performanceDetails?.lastModifiedDate ||
+      review.performanceDetails?.createdAt,
+  ),
+  status: review.performanceDetails?.status || review.status,
   canEdit: reviewCanEdit(review),
   performanceId: review.performanceDetails?.id,
   description: review.description || "",
-  submittedAt: review.submittedDate || review.performanceDetails?.submittedAt || undefined,
+  submittedAt: review.performanceDetails?.submittedAt || undefined,
 });
 
 export const AppraisalApi = {
@@ -480,9 +585,16 @@ export const AppraisalApi = {
     return response.data;
   },
 
-  getEmployeeReviews: async (employeeId: string): Promise<EmployeeReviewListResponse> => {
-    const response = await axios.get<EmployeeReviewListResponse>(quarterlyReviewUrl, {
-      params: { employeeId },
+  getEmployeeReviews: async (
+    employeeId: string,
+    filters?: { financialYear?: string; quarter?: string },
+  ): Promise<EmployeeReviewListResponse> => {
+    const response = await axios.get<EmployeeReviewListResponse>(quarterlyReviewPerformanceUrl, {
+      params: {
+        employeeId,
+        ...(filters?.financialYear ? { financialYear: filters.financialYear } : {}),
+        ...(filters?.quarter ? { quarter: filters.quarter } : {}),
+      },
     });
     return response.data;
   },
@@ -492,8 +604,44 @@ export const AppraisalApi = {
     return response.data;
   },
 
+  uploadPerformanceAttachment: async (
+    performanceId: number,
+    file: File,
+  ): Promise<StoredPerformanceFile> => {
+    const body = new FormData();
+    body.append("file", file);
+    const response = await axios.post<{
+      fileName: string;
+      fileSize: number;
+      fileType: string;
+      objectKey: string;
+    }>(`${employeePerformanceUrl}/${performanceId}/attachments`, body, {
+      skipGlobalLoader: true,
+    });
+    const stored = response.data;
+    return {
+      fileName: stored.fileName,
+      fileSize: stored.fileSize,
+      fileType: stored.fileType,
+      objectKey: stored.objectKey,
+      sizeLabel: formatStoredFileSize(stored.fileSize),
+    };
+  },
+
+  removePerformanceAttachment: async (performanceId: number, objectKey: string): Promise<void> => {
+    await axios.delete(`${employeePerformanceUrl}/${performanceId}/attachments`, {
+      params: { objectKey },
+      skipGlobalLoader: true,
+    });
+  },
+
   createPerformance: async (payload: PerformanceWritePayload): Promise<EmployeePerformanceDetail> => {
     const response = await axios.post<EmployeePerformanceDetail>(employeePerformanceUrl, payload);
+    return response.data;
+  },
+
+  savePerformanceDraft: async (payload: PerformanceWritePayload): Promise<EmployeePerformanceDetail> => {
+    const response = await axios.post<EmployeePerformanceDetail>(`${employeePerformanceUrl}/draft`, payload);
     return response.data;
   },
 
@@ -501,19 +649,19 @@ export const AppraisalApi = {
     employeeId: string,
     quarter: string,
     financialYear: string,
+    skipGlobalLoader = false,
   ): Promise<EmployeePerformanceDetail | null> => {
-    const response = await axios.get<{ data: EmployeePerformanceDetail[] }>(employeePerformanceUrl, {
+    const response = await axios.get<EmployeeReviewListResponse>(quarterlyReviewPerformanceUrl, {
       params: { employeeId, quarter, financialYear },
+      skipGlobalLoader,
     });
-    const rows = response.data?.data || [];
-    return (
-      rows.find(
-        (row) =>
-          row.employeeId === employeeId &&
-          row.quarter === quarter &&
-          row.financialYear === financialYear,
-      ) ?? null
+    const match = (response.data?.data || []).find(
+      (row) =>
+        row.employeeId === employeeId &&
+        row.quarter === quarter &&
+        row.financialYear === financialYear,
     );
+    return match?.performanceDetails ?? null;
   },
 
   getPerformanceById: async (performanceId: number): Promise<EmployeePerformanceDetail> => {
@@ -532,12 +680,18 @@ export const AppraisalApi = {
     return response.data;
   },
 
-  submitPerformance: async (payload: {
-    employeeId: string;
-    quarter: QuaterlyEnum;
-    financialYear: string;
-  }): Promise<EmployeePerformanceDetail> => {
-    const response = await axios.post<EmployeePerformanceDetail>(`${employeePerformanceUrl}/submit`, payload);
+  submitPerformance: async (
+    performanceId: number,
+    payload: {
+      employeeId: string;
+      quarter: QuaterlyEnum;
+      financialYear: string;
+    },
+  ): Promise<EmployeePerformanceDetail> => {
+    const response = await axios.put<EmployeePerformanceDetail>(
+      `${employeePerformanceUrl}/${performanceId}/submit`,
+      payload,
+    );
     return response.data;
   },
 
@@ -559,10 +713,17 @@ export const AppraisalApi = {
     return response.data;
   },
 
-  revealRating: async (reviewId: number, password: string): Promise<RevealedRating> => {
-    const response = await axios.post<RevealedRating>(
+  revealRating: async (reviewId: number, employeeId: string, password: string): Promise<RevealedRating> => {
+    const response = await axios.get<RevealedRating>(
       `${quarterlyReviewUrl}/${reviewId}/reveal-rating`,
-      { password },
+      {
+        params: { employeeId },
+        headers: {
+          "x-appraisal-password": password,
+          "Cache-Control": "no-store",
+        },
+        skipGlobalLoader: true,
+      },
     );
     return response.data;
   },
@@ -607,14 +768,14 @@ export const AppraisalApi = {
   },
 
   getReviews: async (query: QuarterlyReviewListQuery): Promise<QuarterlyReviewSearchResponse> => {
-    const response = await axios.get<QuarterlyReviewSearchResponse>(quarterlyReviewUrl, {
+    const response = await axios.get<QuarterlyReviewSearchResponse>(quarterlyReviewPerformanceUrl, {
       params: query,
     });
     return response.data;
   },
 
   searchReviews: async (query: QuarterlyReviewSearchQuery): Promise<QuarterlyReviewSearchResponse> => {
-    const response = await axios.get<QuarterlyReviewSearchResponse>(`${quarterlyReviewUrl}/search`, {
+    const response = await axios.get<QuarterlyReviewSearchResponse>(quarterlyReviewPerformanceUrl, {
       params: query,
     });
     return response.data;
@@ -629,7 +790,20 @@ export const AppraisalApi = {
 
   updateReview: async (
     reviewId: number,
-    payload: { assignedDate?: string; deadlineDate?: string; description?: string },
+    payload: {
+      assignedDate?: string;
+      deadlineDate?: string;
+      description?: string;
+      productivity?: number;
+      qualityOfWork?: number;
+      ownershipResponsibility?: number;
+      communication?: number;
+      teamCollaboration?: number;
+      innovationProblemSolving?: number;
+      performanceStrengths?: string;
+      areasOfImprovement?: string;
+      additionalRemarks?: string;
+    },
   ): Promise<ManagerReviewApiRecord> => {
     const response = await axios.put<ManagerReviewApiRecord>(`${quarterlyReviewUrl}/${reviewId}`, payload);
     return response.data;

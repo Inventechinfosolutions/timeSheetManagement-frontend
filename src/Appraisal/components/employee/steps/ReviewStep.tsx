@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { StepProps } from "../../../types/appraisal.types";
-import { Star, FileText } from "lucide-react";
+import { Star } from "lucide-react";
 import { renderAnimatedEmojiIcon } from "./CompanyEnvironmentStep";
 
 const TEAM_CRITERIA = [
@@ -139,51 +139,30 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             </div>
           </div>
 
-          {/* Project Title */}
-          <div className="eval-stagger-item eval-stagger-3">
-            <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
-              Project Title
-            </label>
-            <div className="p-3 bg-white/80 border border-blue-100/80 rounded-xl text-sm font-bold text-[#0F172A]">
-              {formData.projectTitle || formData.majorAchievements || "No title provided"}
+          {(formData.projects || []).length === 0 ? (
+            <div className="p-3 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#64748B]">
+              No project added.
             </div>
-          </div>
-
-          {/* Description and Challenge Side-by-Side Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 eval-stagger-item eval-stagger-4">
-            {/* Project Description */}
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
-                Project Description
-              </label>
-              <div className="p-3.5 bg-white/80 border border-blue-100/80 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium flex-1">
-                {formData.projectDescription || formData.kpisMet || "No description provided."}
-                {formData.projectAttachmentName && (
-                  <div className="mt-3 pt-2.5 border-t border-blue-100 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-[#2563EB] shrink-0" />
-                    <span className="text-xs font-bold text-[#0F172A]">
-                      Attached: {formData.projectAttachmentName}
-                    </span>
-                    {formData.projectAttachmentSize && (
-                      <span className="text-[10px] text-[#64748B]">
-                        ({formData.projectAttachmentSize})
-                      </span>
-                    )}
-                  </div>
-                )}
+          ) : (
+            (formData.projects || []).map((project, index) => (
+              <div key={`${project.title}-${index}`} className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                <div className="p-3 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm font-bold text-[#0F172A]">
+                  {project.title}
+                </div>
+                <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] whitespace-pre-line">
+                  {project.description}
+                </div>
+                <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] whitespace-pre-line">
+                  {project.challenge}
+                  {(project.attachments || []).length > 0 && (
+                    <p className="text-[11px] text-[#64748B] mt-2">
+                      {(project.attachments || []).map((file) => file.fileName).join(", ")}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-
-            {/* Challenge */}
-            <div className="flex flex-col">
-              <label className="text-xs font-bold text-[#64748B] block mb-1 uppercase tracking-wider">
-                Challenge Overcome
-              </label>
-              <div className="p-3.5 bg-white/80 border border-blue-100/80 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium flex-1">
-                {formData.projectChallenge || formData.challengesOvercome || "No challenge specified."}
-              </div>
-            </div>
-          </div>
+            ))
+          )}
         </div>
 
         {/* ===================================================================
@@ -262,12 +241,22 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
             <label className="text-xs font-bold text-[#64748B] block mb-1.5 uppercase tracking-wider">
               Learning Goals
             </label>
-            <div className="p-3.5 bg-white/80 border border-blue-100/80 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
-              {formData.learningGoals ||
-                formData.nextQuarterLearningGoals ||
-                formData.skillsAcquired ||
-                "No learning goals provided."}
-            </div>
+            {(formData.learningGoalItems || []).length === 0 ? (
+              <div className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#64748B]">
+                No learning goals provided.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {(formData.learningGoalItems || []).map((goal, index) => (
+                  <div
+                    key={`${goal}-${index}`}
+                    className="p-3.5 bg-white/80 border border-[#E8B298]/40 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
+                  >
+                    {goal}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

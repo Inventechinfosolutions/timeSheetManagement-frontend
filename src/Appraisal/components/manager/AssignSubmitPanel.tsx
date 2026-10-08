@@ -28,18 +28,17 @@ export const AssignSubmitPanel: React.FC<AssignSubmitPanelProps> = ({ summary, s
   const waiting = status === AssignButtonState.ANIMATING;
 
   return (
-    <div className="space-y-3.5">
+    <div className="relative space-y-3.5">
+      {waiting ? (
+        <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-white/70 backdrop-blur-[3px]">
+          <WorksphereLogoLoader />
+        </div>
+      ) : null}
       <div className="flex flex-col items-center gap-1 py-2 text-center">
         {submitted ? (
           <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[#2563EB] text-white shadow-md shadow-blue-500/25">
             <Check className="h-5 w-5 stroke-[3]" />
           </span>
-        ) : waiting ? (
-          <div className="h-16 overflow-hidden">
-            <div className="origin-top scale-75">
-              <WorksphereLogoLoader />
-            </div>
-          </div>
         ) : null}
         <p className="text-sm font-bold text-[#0F172A]">
           {submitted ? "Assigned" : waiting ? "Assigning reviews" : "Confirm assignment"}
