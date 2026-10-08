@@ -56,6 +56,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   const [description, setDescription] = useState<string>("");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [mappedEmployees, setMappedEmployees] = useState<MappedEmployee[]>([]);
+  const [employeesLoading, setEmployeesLoading] = useState(false);
   const [teamMembers, setTeamMembers] = useState<MappedEmployee[]>([]);
   const teamApplied = useRef(false);
   const yearsLoaded = useRef(false);
@@ -102,8 +103,10 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   const loadEmployees = useCallback((search?: string) => {
     if (!managerId) {
       setMappedEmployees([]);
+      setEmployeesLoading(false);
       return;
     }
+    setEmployeesLoading(true);
     void AppraisalApi.getMappedEmployees(managerId, search)
       .then((employees) => {
         setMappedEmployees(employees);
@@ -118,7 +121,8 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
           setSelectedEmployees(employees.map((employee) => employee.employeeId));
         }
       })
-      .catch(() => setMappedEmployees([]));
+      .catch(() => setMappedEmployees([]))
+      .finally(() => setEmployeesLoading(false));
   }, [managerId, assignmentType]);
 
   const loadFinancialYears = () => {
@@ -227,10 +231,11 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
         setYearsLoading(false);
         setQuartersLoading(false);
       });
+    loadEmployees();
     return () => {
       cancelled = true;
     };
-  }, [isOpen, formSession]);
+  }, [isOpen, formSession, loadEmployees]);
 
   if (!isOpen) return null;
 
@@ -473,6 +478,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               clearFieldError(AssignFormField.EMPLOYEES);
             }}
             serverSearch
+            loading={employeesLoading}
             onSearchChange={loadEmployees}
             className="w-full"
             maxLabelWidth="min-w-0 flex-1"
@@ -485,12 +491,6 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
           />
           {errorField === AssignFormField.EMPLOYEES ? (
             <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
-          ) : null}
-
-          {employeeOptions.length === 0 ? (
-            <div className="assign-modal-warning-box mt-1.5 py-1.5 px-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-[11px] leading-relaxed font-normal">
-              No mapped team members found for your manager account. Please contact an Administrator to map employees.
-            </div>
           ) : null}
         </div>
 

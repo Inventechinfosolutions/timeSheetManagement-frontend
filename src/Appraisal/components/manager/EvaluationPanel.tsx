@@ -485,6 +485,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const [strengths, setStrengths] = useState<string>(managerEvaluation?.performanceStrengths || "");
   const [improvements, setImprovements] = useState<string>(managerEvaluation?.areasOfImprovement || "");
   const [remarks, setRemarks] = useState<string>(managerEvaluation?.additionalRemarks || "");
+  const [finalScoreText, setFinalScoreText] = useState<string>(() => {
+    const parsed = parseFloat(record.finalRating);
+    return !Number.isNaN(parsed) && parsed >= 1 && parsed <= 5 ? String(parsed) : "";
+  });
 
   const applyRevealedEvaluation = (rating: RevealedRating) => {
     const nextScores: Record<string, number> = {
@@ -504,6 +508,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     setStrengths(rating.performanceStrengths || "");
     setImprovements(rating.areasOfImprovement || "");
     setRemarks(rating.additionalRemarks || "");
+    const revealedScore = Number(rating.finalRating);
+    setFinalScoreText(
+      Number.isFinite(revealedScore) && revealedScore >= 1 && revealedScore <= 5
+        ? String(revealedScore)
+        : "",
+    );
     setIsRatingUnlocked(true);
     setIsEmailModalOpen(false);
     setRatingPassword("");
@@ -520,6 +530,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         setStrengths("");
         setImprovements("");
         setRemarks("");
+        setFinalScoreText("");
         ratingHideTimerRef.current = null;
       }, 2 * 60 * 1000);
     }
@@ -671,48 +682,48 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     );
   };
 
-  // Average score & suggested rating calculation
-  const { averageScore, suggestedRating, ratingTierClass } = useMemo(() => {
-    const values = Object.values(scores);
-    const validScores = values.filter((v) => typeof v === "number" && v > 0);
-
-    if (validScores.length === 0) {
-      return {
-        averageScore: null,
-        suggestedRating: "Pending Manager Rating",
-        ratingTierClass: "eval-tier-badge-3",
-      };
+  const averageScore = useMemo(() => {
+    const parsed = parseFloat(finalScoreText);
+    if (Number.isNaN(parsed) || parsed < 1 || parsed > 5) {
+      return null;
     }
+    return parsed;
+  }, [finalScoreText]);
 
-    const sum = validScores.reduce((acc, curr) => acc + curr, 0);
-    const avg = Number((sum / values.length).toFixed(2));
-
-    let tier = "Meets Expectations";
-    let tierClass = "eval-tier-badge-3";
-
-    if (avg >= 4.5) {
-      tier = "Exceptional Performer";
-      tierClass = "eval-tier-badge-5";
-    } else if (avg >= 3.5) {
-      tier = "Exceeds Expectations";
-      tierClass = "eval-tier-badge-4";
-    } else if (avg >= 2.5) {
-      tier = "Meets Expectations";
-      tierClass = "eval-tier-badge-3";
-    } else if (avg >= 1.5) {
-      tier = "Needs Improvement";
-      tierClass = "eval-tier-badge-2";
-    } else {
-      tier = "Unsatisfactory";
-      tierClass = "eval-tier-badge-1";
+  const suggestedRating = useMemo(() => {
+    if (averageScore === null) {
+      return "";
     }
+    if (averageScore >= 4.5) return "Exceptional Performer";
+    if (averageScore >= 3.5) return "Exceeds Expectations";
+    if (averageScore >= 2.5) return "Meets Expectations";
+    if (averageScore >= 1.5) return "Needs Improvement";
+    return "Unsatisfactory";
+  }, [averageScore]);
 
-    return {
-      averageScore: avg,
-      suggestedRating: tier,
-      ratingTierClass: tierClass,
-    };
-  }, [scores]);
+  const handleFinalScoreChange = (text: string) => {
+    if (isViewMode) return;
+    if (text === "") {
+      setFinalScoreText("");
+      clearFieldError("finalScore");
+      return;
+    }
+    if (!/^\d+(\.\d{0,2})?$/.test(text)) return;
+    const parsed = Number(text);
+    if (!Number.isFinite(parsed) || parsed < 1 || parsed > 5) return;
+    setFinalScoreText(text);
+    clearFieldError("finalScore");
+  };
+
+  const handleFinalScoreBlur = () => {
+    if (isViewMode) return;
+    const parsed = parseFloat(finalScoreText);
+    if (finalScoreText.trim() === "" || Number.isNaN(parsed) || parsed < 1 || parsed > 5) {
+      setFinalScoreText("");
+      return;
+    }
+    setFinalScoreText(String(parsed));
+  };
 
   const scoredCount = useMemo(() => {
     return Object.values(scores).filter((v) => typeof v === "number" && v > 0).length;
@@ -758,6 +769,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         newErrors[p.key] = `Please rate ${p.label}`;
       });
       firstErrorElement = document.getElementById(`eval-param-${unratedParams[0].key}`);
+    }
+
+    if (averageScore === null) {
+      newErrors.finalScore = "Enter a rating from 1 to 5.";
+      if (!firstErrorElement) {
+        firstErrorElement = document.getElementById("eval-field-final-score");
+      }
     }
 
     // 2. Check Performance Strengths
@@ -827,6 +845,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       performanceStrengths: strengths.trim(),
       areasOfImprovement: improvements.trim(),
       additionalRemarks: remarks.trim(),
+      finalRating: averageScore || undefined,
     })
       .then(() => {
         setSubmitButtonState("assigned");
@@ -973,25 +992,19 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </span>
                 <span className="eval-title-accent-line" />
               </h1>
-              <p className="text-xs sm:text-sm font-medium text-[#64748B] mt-1 flex items-center gap-1.5 eval-subtitle-anim">
-                <span>{isViewMode ? "Reviewing" : "Evaluating"}</span>
+              <p className="text-xs sm:text-sm font-medium text-[#64748B] mt-1 flex flex-wrap items-center gap-1.5 eval-subtitle-anim">
+                <span>{isViewMode ? "Assigned" : "Evaluating"}</span>
                 <span className="font-bold text-[#0F172A]">{record.name}</span>
-                <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500/40" />
-                <span>
-                  {record.quarter} {record.financialYear}
+                <span className="inline-flex items-center justify-center rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1 text-xs font-extrabold text-[#1D4ED8]">
+                  {record.quarter}
                 </span>
-                {isViewMode && (
-                  <>
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500/40" />
-                    <span className="text-blue-600 font-bold">View Mode</span>
-                  </>
-                )}
+                <span className="inline-flex items-center justify-center rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1 text-xs font-extrabold text-[#1D4ED8]">
+                  {record.financialYear}
+                </span>
               </p>
             </div>
           </div>
         </div>
-
-
 
         {isSuccess && (
           <div className="bg-blue-50/90 border border-blue-200/80 text-blue-950 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-sm animate-in fade-in">
@@ -1195,7 +1208,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   1
                 </span>
                 <h3 className="text-xs sm:text-sm font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                  Step 1: Role &amp; Quarter Overview
+                  Role &amp; Quarter Overview
                 </h3>
               </div>
             </div>
@@ -1221,7 +1234,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   2
                 </span>
                 <h3 className="text-xs sm:text-sm font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                  Step 2: Key Achievements &amp; Projects
+                  Key Achievements &amp; Projects
                 </h3>
               </div>
             </div>
@@ -1260,7 +1273,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   3
                 </span>
                 <h3 className="text-xs sm:text-sm font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                  Step 3: Teamwork &amp; Collaboration
+                  Teamwork &amp; Collaboration
                 </h3>
               </div>
             </div>
@@ -1310,7 +1323,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   4
                 </span>
                 <h3 className="text-xs sm:text-sm font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                  Step 4: Continuous Learning &amp; Goals
+                  Continuous Learning &amp; Goals
                 </h3>
               </div>
             </div>
@@ -1350,7 +1363,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   5
                 </span>
                 <h3 className="text-xs sm:text-sm font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                  Step 5: Company Environment
+                  Company Environment
                 </h3>
               </div>
                     {envInfo ? (
@@ -1718,62 +1731,77 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
 
                   {/* Calculated Average Score Banner with Circular Radial SVG Gauge */}
-                  <div className="eval-kpi-card eval-reveal-card flex items-center justify-between gap-4">
-                    <div className="space-y-1.5 flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-lg bg-blue-100/80 text-blue-600 flex items-center justify-center font-bold shrink-0">
-                          <Award className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider block">
-                            Live Performance Index
-                          </span>
-                          <span className="text-xs font-bold text-[#0F172A]">
-                            Weighted Average Score
-                          </span>
-                        </div>
+                  <div className="eval-kpi-card eval-reveal-card flex items-center gap-4">
+                    <div className="flex items-center gap-2 min-w-0 shrink-0">
+                      <div className="w-7 h-7 rounded-lg bg-blue-100/80 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                        <Award className="w-4 h-4" />
                       </div>
-                      <div className="pt-0.5">
-                        <span
-                          className={`inline-block text-xs font-bold px-3 py-1 rounded-full shadow-xs ${ratingTierClass}`}
-                        >
-                          {suggestedRating}
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider">
+                          Performance Index
                         </span>
+                        <label
+                          htmlFor="eval-field-final-score"
+                          className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider"
+                        >
+                          Final rating <span className="text-red-500">*</span>
+                        </label>
                       </div>
                     </div>
 
-                    {/* Animated Radial SVG Score Gauge */}
-                    <div className="relative w-20 h-20 shrink-0 flex items-center justify-center">
-                      <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 80 80">
-                        <circle
-                          cx="40"
-                          cy="40"
-                          r="32"
-                          stroke="#E2E8F0"
-                          strokeWidth="6"
-                          fill="transparent"
+                    <div className="flex flex-1 items-center justify-center min-w-0">
+                      <div className="flex flex-col items-center gap-1">
+                        <input
+                          id="eval-field-final-score"
+                          type="text"
+                          inputMode="decimal"
+                          placeholder=""
+                          disabled={isViewMode}
+                          readOnly={isViewMode}
+                          value={finalScoreText}
+                          onChange={(event) => handleFinalScoreChange(event.target.value)}
+                          onBlur={handleFinalScoreBlur}
+                          className={`eval-star-score-input eval-final-score-input ${fieldErrors.finalScore ? "!border-red-500" : ""} ${isViewMode ? "eval-score-input-disabled" : ""}`}
+                          aria-label="Enter final rating from 1 to 5"
+                          title="Type a rating from 1 to 5"
                         />
-                        <circle
-                          cx="40"
-                          cy="40"
-                          r="32"
-                          stroke={gaugeColor}
-                          strokeWidth="6"
-                          strokeDasharray="201.06"
-                          strokeDashoffset={gaugeOffset}
-                          strokeLinecap="round"
-                          fill="transparent"
-                          className="transition-all duration-700 ease-out"
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                        <span className="text-base font-extrabold text-[#0F172A] leading-none">
-                          {averageScore !== null ? averageScore.toFixed(1) : "—"}
-                        </span>
-                        <span className="text-[9px] font-bold text-[#64748B] mt-0.5">/ 5.0</span>
+                        {fieldErrors.finalScore ? (
+                          <span className="text-[11px] font-semibold text-red-600">{fieldErrors.finalScore}</span>
+                        ) : null}
                       </div>
                     </div>
-                  </div>
+
+                    <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
+                        <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 80 80">
+                          <circle
+                            cx="40"
+                            cy="40"
+                            r="32"
+                            stroke="#E2E8F0"
+                            strokeWidth="6"
+                            fill="transparent"
+                          />
+                          <circle
+                            cx="40"
+                            cy="40"
+                            r="32"
+                            stroke={gaugeColor}
+                            strokeWidth="6"
+                            strokeDasharray="201.06"
+                            strokeDashoffset={gaugeOffset}
+                            strokeLinecap="round"
+                            fill="transparent"
+                            className="transition-all duration-700 ease-out"
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                          <span className="text-base font-extrabold text-[#0F172A] leading-none">
+                            {averageScore !== null ? averageScore.toFixed(1) : "—"}
+                          </span>
+                          <span className="text-[9px] font-bold text-[#64748B] mt-0.5">/ 5.0</span>
+                        </div>
+                      </div>
+                    </div>
                 </>
               )}
 

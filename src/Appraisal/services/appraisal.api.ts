@@ -46,7 +46,6 @@ export interface AnnualSummaryRecord {
   q3Rating: number | string | null;
   q4Rating: number | string | null;
   annualAverageRating: number | string | null;
-  annualRatingDescription: string | null;
   passwordVerified?: boolean;
 }
 
@@ -54,7 +53,6 @@ export interface RevealedRating {
   quarter: QuaterlyEnum;
   financialYear: string;
   finalRating: number;
-  averageScore: number;
   ratingDescription: string;
   productivity: number;
   qualityOfWork: number;
@@ -277,6 +275,7 @@ export interface EmployeePerformanceDetail {
   assignedBy?: string | null;
   assignedDate?: string | null;
   deadlineDate?: string | null;
+  reviewId?: number | null;
   skillsAcquired: string | null;
   careerDevelopmentGoals: string | null;
   attachments?: Array<{
@@ -583,6 +582,7 @@ export interface EmployeePerformanceListItem extends EmployeePerformanceDetail {
   assignedBy?: string | null;
   assignedDate?: string | null;
   deadlineDate?: string | null;
+  reviewId?: number | null;
 }
 
 export const toPerformanceAssignment = (
@@ -602,6 +602,7 @@ export const toPerformanceAssignment = (
   reviewStatus: String(row.status).toUpperCase() === "COMPLETED" ? "COMPLETED" : undefined,
   canEdit: performanceCanEdit(row),
   performanceId: row.id,
+  reviewId: row.reviewId ?? undefined,
   submittedAt: row.submittedAt || undefined,
   editAllowedUntil: row.editAllowedUntil || undefined,
 });
@@ -875,6 +876,7 @@ export const AppraisalApi = {
       performanceStrengths?: string;
       areasOfImprovement?: string;
       additionalRemarks?: string;
+      finalRating?: number;
     },
   ): Promise<ManagerReviewApiRecord> => {
     const response = await axios.put<ManagerReviewApiRecord>(`${quarterlyReviewUrl}/${reviewId}`, payload);

@@ -486,6 +486,20 @@
   color: #1D4ED8;
 }
 
+.eval-final-score-input {
+  width: 4.75rem;
+  min-width: 4.75rem;
+  margin-left: 0;
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.eval-final-score-input:hover,
+.eval-final-score-input:focus {
+  background: #ffffff;
+  box-shadow: none;
+}
+
 /* Parameter Score Progress Track */
 .eval-param-track {
   width: 100%;

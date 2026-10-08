@@ -28,15 +28,11 @@ import {
   AccessRequest,
   ReviewFormData,
 } from "../../types/appraisal.types";
-import {
-  initialMockAccessRequests,
-} from "../../mockData/quarterlyReview.mock";
 import { useEmployeeAppraisal } from "../../hooks/useEmployeeAppraisal";
 import { AppraisalApi, formatAppraisalDisplayDate, readApiError, toReviewFormData } from "../../services/appraisal.api";
 import QuarterlyReviewStepper from "./QuarterlyReviewStepper";
 import EvaluationPanel from "../manager/EvaluationPanel";
 import RatingVerificationModal from "./RatingVerificationModal";
-import AnnualRatingView from "./AnnualRatingView";
 import AccessRequestModal from "./AccessRequestModal";
 import { message } from "antd";
 import {
@@ -121,7 +117,7 @@ export const AppraisalDashboard: React.FC = () => {
   } = useEmployeeAppraisal();
   const [editingForm, setEditingForm] = useState<ReviewFormData | undefined>(undefined);
   const [stepperReadOnly, setStepperReadOnly] = useState<boolean>(false);
-  const [rowRatings, setRowRatings] = useState<Record<string, { finalRating: number; averageScore: number }>>({});
+  const [rowRatings, setRowRatings] = useState<Record<string, { finalRating: number }>>({});
   const [ratingTarget, setRatingTarget] = useState<QuarterlyReviewAssignment | null>(null);
   const [ratingPassword, setRatingPassword] = useState("");
   const [showRatingPassword, setShowRatingPassword] = useState(false);
@@ -176,7 +172,6 @@ export const AppraisalDashboard: React.FC = () => {
         ...current,
         [rowId]: {
           finalRating: Number(revealed.finalRating),
-          averageScore: Number(revealed.averageScore),
         },
       }));
       if (ratingTimersRef.current[rowId] != null) {
@@ -202,12 +197,9 @@ export const AppraisalDashboard: React.FC = () => {
     const revealed = rowRatings[assignment.id];
     if (revealed) {
       return (
-        <div className="inline-flex flex-col items-center leading-tight min-w-[52px]">
-          <span className="text-sm font-extrabold text-[#0F172A]">{revealed.finalRating}</span>
-          <span className="text-[10px] font-semibold text-[#64748B]">
-            Avg {Number.isFinite(revealed.averageScore) ? revealed.averageScore.toFixed(2) : "—"}
-          </span>
-        </div>
+        <span className="text-sm font-extrabold text-[#0F172A]">
+          {Number.isFinite(revealed.finalRating) ? revealed.finalRating.toFixed(2) : "—"}
+        </span>
       );
     }
     if (!ratingReady(assignment)) {
@@ -248,8 +240,6 @@ export const AppraisalDashboard: React.FC = () => {
     additionalRemarks?: string | null;
   }>();
 
-  // Annual Rating Page and Verification states
-  const [isAnnualRatingOpen, setIsAnnualRatingOpen] = useState<boolean>(false);
   const [isRatingAuthModalOpen, setIsRatingAuthModalOpen] = useState<boolean>(false);
 
   // Comprehensive scroll to top helper that handles window, body, documentElement,
@@ -324,29 +314,25 @@ export const AppraisalDashboard: React.FC = () => {
     scrollToPageTop();
     try {
       const performance = await loadRowPerformance(assignment);
-      const reviewCompleted = (assignment.reviewStatus || "").toUpperCase() === "COMPLETED";
-      const performanceCompleted = (performance?.status || assignment.status || "").toUpperCase() === "COMPLETED";
-      if (!reviewCompleted || !performanceCompleted) {
-        setStepperReadOnly(true);
-        setEditingForm(performance ? toReviewFormData(performance) : undefined);
-        openAssignment({
-          ...assignment,
-          performanceId: performance?.id ?? assignment.performanceId,
-          assignedBy: performance?.assignedBy || assignment.assignedBy,
-          assignedDate: performance?.assignedDate
-            ? formatAppraisalDisplayDate(performance.assignedDate)
-            : assignment.assignedDate,
-          deadline: performance?.deadlineDate
-            ? formatAppraisalDisplayDate(performance.deadlineDate)
-            : assignment.deadline,
-        });
-        return;
-      }
       setViewingForm(performance ? toReviewFormData(performance) : undefined);
-      setViewingPerformanceStatus(performance?.status || "");
+      setViewingPerformanceStatus(performance?.status || assignment.status || "");
       setViewingReviewStatus(assignment.reviewStatus || "");
       setViewingEvaluation(undefined);
-      setViewingAssignment(assignment);
+      setViewingAssignment({
+        ...assignment,
+        performanceId: performance?.id ?? assignment.performanceId,
+        assignedBy: performance?.assignedBy || assignment.assignedBy,
+        assignedDate: performance?.assignedDate
+          ? formatAppraisalDisplayDate(performance.assignedDate)
+          : assignment.assignedDate,
+        deadline: performance?.deadlineDate
+          ? formatAppraisalDisplayDate(performance.deadlineDate)
+          : assignment.deadline,
+        performanceDate: performance?.submittedAt
+          ? formatAppraisalDisplayDate(performance.submittedAt)
+          : assignment.performanceDate,
+        reviewId: performance?.reviewId ?? assignment.reviewId,
+      });
     } catch (error) {
       message.error(readApiError(error));
       return;
@@ -359,14 +345,7 @@ export const AppraisalDashboard: React.FC = () => {
     setIsRatingAuthModalOpen(true);
   };
 
-  const handleVerificationSuccess = () => {
-    setIsRatingAuthModalOpen(false);
-    setIsAnnualRatingOpen(true);
-    setTimeout(scrollToPageTop, 50);
-  };
-
-  // Access Request Modal & State
-  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>(initialMockAccessRequests);
+  const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState<boolean>(false);
   const [selectedAccessAssignment, setSelectedAccessAssignment] = useState<QuarterlyReviewAssignment | null>(null);
   const [selectedAccessRemainingHours, setSelectedAccessRemainingHours] = useState<number>(24);
@@ -432,7 +411,7 @@ export const AppraisalDashboard: React.FC = () => {
 
   // Ensure scroll to top whenever entering view or edit screen
   useEffect(() => {
-    if (activeAssignment || viewingAssignment || isAnnualRatingOpen) {
+    if (activeAssignment || viewingAssignment) {
       scrollToPageTop();
       const raf = requestAnimationFrame(scrollToPageTop);
       const t = setTimeout(scrollToPageTop, 60);
@@ -441,7 +420,7 @@ export const AppraisalDashboard: React.FC = () => {
         clearTimeout(t);
       };
     }
-  }, [activeAssignment, viewingAssignment, isAnnualRatingOpen]);
+  }, [activeAssignment, viewingAssignment]);
 
   const totalItems = total;
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
@@ -568,21 +547,6 @@ export const AppraisalDashboard: React.FC = () => {
           />
         </div>
       </div>
-    );
-  }
-
-  // If annual rating view is open, render AnnualRatingView
-  if (isAnnualRatingOpen) {
-    return (
-      <AnnualRatingView
-        onBack={() => {
-          scrollToPageTop();
-          setIsAnnualRatingOpen(false);
-          setTimeout(scrollToPageTop, 50);
-        }}
-        employeeName="Current Employee"
-        employeeRole="Software Engineer"
-      />
     );
   }
 
