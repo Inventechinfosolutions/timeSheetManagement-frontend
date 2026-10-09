@@ -419,7 +419,8 @@ input[type="password"]::-webkit-password-reveal-button {
   box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.06);
   box-sizing: border-box;
   position: relative;
-  overflow-x: hidden;
+  /* Allow horizontal scroll for wide email/pasted tables (was hidden → clipped columns) */
+  overflow-x: auto;
   overflow-y: visible;
   word-wrap: break-word;
   overflow-wrap: anywhere;
@@ -521,8 +522,8 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-content-view.is-justified td,
 .notes-rich-editor.is-justified .page td,
 .notes-content-view.is-justified .page td,
-.notes-rich-editor.is-justified div:not(.a4-page-workspace):not(.a4-page-rotator),
-.notes-content-view.is-justified div:not(.a4-page-workspace):not(.a4-page-rotator) {
+.notes-rich-editor.is-justified div:not(.a4-page-workspace):not(.a4-page-rotator):not(.note-table-scroll):not(.note-table-scroll-inner),
+.notes-content-view.is-justified div:not(.a4-page-workspace):not(.a4-page-rotator):not(.note-table-scroll):not(.note-table-scroll-inner) {
   text-align: justify !important;
   text-justify: inter-word;
   hyphens: auto;
@@ -572,15 +573,16 @@ input[type="password"]::-webkit-password-reveal-button {
   min-height: 210mm;
   height: auto;
   max-height: none;
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
-.notes-rich-editor .page table,
-.notes-content-view .page table,
-.notes-rich-editor.is-landscape .page table,
-.notes-content-view.is-landscape .page table,
-.notes-rich-editor .page.is-landscape table,
-.notes-content-view .page.is-landscape table {
+/* Editor-managed / normal tables stay page-width; wide pasted tables scroll */
+.notes-rich-editor .page table:not(.note-wide-table),
+.notes-content-view .page table:not(.note-wide-table),
+.notes-rich-editor.is-landscape .page table:not(.note-wide-table),
+.notes-content-view.is-landscape .page table:not(.note-wide-table),
+.notes-rich-editor .page.is-landscape table:not(.note-wide-table),
+.notes-content-view .page.is-landscape table:not(.note-wide-table) {
   width: 100% !important;
   max-width: 100% !important;
   table-layout: fixed !important;
@@ -609,6 +611,98 @@ input[type="password"]::-webkit-password-reveal-button {
   max-width: 100%;
   height: auto;
   display: block;
+}
+
+/* Pasted screenshots / inline images — compact thumbnails; click opens full preview */
+.notes-rich-editor .page .note-inline-image,
+.notes-content-view .page .note-inline-image {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  max-width: min(100%, 280px);
+  line-height: 0;
+  margin: 2px 4px 2px 0;
+}
+
+.notes-rich-editor .page .note-inline-image img,
+.notes-content-view .page .note-inline-image img,
+.notes-rich-editor .page img:not(.docling-page-image),
+.notes-content-view .page img:not(.docling-page-image) {
+  max-width: min(100%, 280px);
+  max-height: 140px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  cursor: zoom-in;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.notes-rich-editor .page td .note-inline-image,
+.notes-content-view .page td .note-inline-image,
+.notes-rich-editor .page th .note-inline-image,
+.notes-content-view .page th .note-inline-image {
+  max-width: min(100%, 160px);
+}
+
+.notes-rich-editor .page td .note-inline-image img,
+.notes-content-view .page td .note-inline-image img,
+.notes-rich-editor .page th .note-inline-image img,
+.notes-content-view .page th .note-inline-image img,
+.notes-rich-editor .page td img:not(.docling-page-image),
+.notes-content-view .page td img:not(.docling-page-image),
+.notes-rich-editor .page th img:not(.docling-page-image),
+.notes-content-view .page th img:not(.docling-page-image) {
+  max-width: min(100%, 160px);
+  max-height: 88px;
+}
+
+.notes-rich-editor .page .note-inline-image:hover img,
+.notes-content-view .page .note-inline-image:hover img,
+.notes-rich-editor .page img:not(.docling-page-image):hover,
+.notes-content-view .page img:not(.docling-page-image):hover {
+  border-color: #4318ff;
+  box-shadow: 0 0 0 2px rgba(67, 24, 255, 0.18);
+}
+
+/* Remove (X) control — edit mode only (always visible so users can cancel) */
+.notes-rich-editor .page .note-inline-image-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 2;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+
+.notes-rich-editor .page .note-inline-image-remove:hover {
+  background: #dc2626;
+  transform: scale(1.08);
+}
+
+/* Hide remove control in view mode */
+.notes-content-view .note-inline-image-remove {
+  display: none !important;
+}
+
+.note-image-preview-modal .ant-modal-content {
+  overflow: hidden;
 }
 
 .notes-rich-editor,
@@ -745,12 +839,62 @@ input[type="password"]::-webkit-password-reveal-button {
   margin: 1.25rem 0 !important;
 }
 
-.notes-rich-editor table,
-.notes-content-view table {
+.notes-rich-editor table:not(.note-wide-table),
+.notes-content-view table:not(.note-wide-table) {
   width: 100% !important;
   table-layout: fixed !important;
   border-collapse: collapse !important;
   margin: 1rem 0 !important;
+}
+
+/* Horizontal scroll host for wide tables pasted from email / Outlook / Gmail */
+.notes-rich-editor .note-table-scroll,
+.notes-content-view .note-table-scroll {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  margin: 0.75rem 0 !important;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.notes-rich-editor .note-table-scroll-inner,
+.notes-content-view .note-table-scroll-inner {
+  display: block !important;
+  width: max-content !important;
+  min-width: 100% !important;
+  max-width: none !important;
+}
+
+.notes-rich-editor .note-table-scroll table,
+.notes-content-view .note-table-scroll table,
+.notes-rich-editor table.note-wide-table,
+.notes-content-view table.note-wide-table {
+  width: max-content !important;
+  min-width: 100% !important;
+  max-width: none !important;
+  table-layout: auto !important;
+  border-collapse: collapse !important;
+  margin: 0 !important;
+}
+
+.notes-rich-editor .note-table-scroll th,
+.notes-rich-editor .note-table-scroll td,
+.notes-content-view .note-table-scroll th,
+.notes-content-view .note-table-scroll td,
+.notes-rich-editor table.note-wide-table th,
+.notes-rich-editor table.note-wide-table td,
+.notes-content-view table.note-wide-table th,
+.notes-content-view table.note-wide-table td {
+  white-space: nowrap !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  min-width: 72px;
 }
 
 .notes-rich-editor th,

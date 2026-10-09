@@ -25,6 +25,7 @@ import {
   exportNoteToPdf,
   exportNoteToWord,
   copyNoteContentToClipboard,
+  wrapWideTablesInRoot,
 } from "../utils/notesHelpers";
 import { buildDocumentPagesHtml, isNoteLandscape, paginateToA4Sheets } from "../utils/documentLayout";
 import {
@@ -45,6 +46,7 @@ interface NoteViewProps {
   onBack: () => void;
   onPreviewAttachment: (item: NoteDocumentItem) => void;
   onDownloadAttachment: (item: NoteDocumentItem) => void;
+  onPreviewImage?: (url: string, title?: string) => void;
   onTogglePin?: (noteId: number) => void;
   onToggleArchive?: (noteId: number) => void;
   onOpenSendModal?: (note: Note) => void;
@@ -60,6 +62,7 @@ export const NoteView: React.FC<NoteViewProps> = ({
   onBack,
   onPreviewAttachment,
   onDownloadAttachment,
+  onPreviewImage,
   onTogglePin,
   onToggleArchive,
   onOpenSendModal,
@@ -95,8 +98,10 @@ export const NoteView: React.FC<NoteViewProps> = ({
 
   useLayoutEffect(() => {
     if (!showA4Content || !contentRef.current) return;
+    wrapWideTablesInRoot(contentRef.current);
     paginateToA4Sheets(contentRef.current, isLandscape, true);
     refreshAttachmentBadges(contentRef.current);
+    wrapWideTablesInRoot(contentRef.current);
   }, [activeNote.description, isLandscape, showA4Content]);
 
   const getDownloadMenuItems = (note: Note): MenuProps["items"] => [
@@ -117,6 +122,17 @@ export const NoteView: React.FC<NoteViewProps> = ({
   const handleContentViewClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement | null;
     if (!target) return;
+
+    if (target.tagName === "IMG" && onPreviewImage) {
+      const img = target as HTMLImageElement;
+      const src = img.currentSrc || img.src;
+      if (src) {
+        e.preventDefault();
+        e.stopPropagation();
+        onPreviewImage(src, img.getAttribute("alt") || img.getAttribute("title") || "Screenshot");
+        return;
+      }
+    }
 
     const downloadBtn = target.closest<HTMLElement>("[data-file-action='download']");
     if (downloadBtn) {
@@ -217,7 +233,7 @@ export const NoteView: React.FC<NoteViewProps> = ({
             <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
               <div className="flex items-center gap-1.5 font-medium text-slate-600 shrink-0">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                <span>{dayjs(activeNote.createdAt).format("MMM DD, YYYY")}</span>
+                <span>{dayjs(activeNote.createdAt).format("MMM DD, YYYY hh:mm A")}</span>
               </div>
               <span className="text-slate-300">•</span>
               <div className="flex items-center gap-1.5 font-medium text-slate-600 shrink-0">

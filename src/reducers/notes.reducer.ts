@@ -39,20 +39,25 @@ const initialState: NotesState = {
 // Fetch Notes
 export const fetchNotes = createAsyncThunk(
   "notes/fetchNotes",
-  async (params: QueryNotesParams = {}, { rejectWithValue }) => {
+  async (params: QueryNotesParams = {}, { rejectWithValue, signal }) => {
     try {
       const searchParams = new URLSearchParams();
       if (params.type) searchParams.append("type", params.type);
       if (params.projectName) searchParams.append("projectName", params.projectName);
       if (params.search) searchParams.append("search", params.search);
+      if (params.fromDate) searchParams.append("fromDate", params.fromDate);
+      if (params.toDate) searchParams.append("toDate", params.toDate);
       if (params.isPinned !== undefined) searchParams.append("isPinned", String(params.isPinned));
       if (params.isArchived !== undefined) searchParams.append("isArchived", String(params.isArchived));
 
       const queryStr = searchParams.toString();
       const url = queryStr ? `${API_BASE}?${queryStr}` : API_BASE;
-      const response = await axios.get(url);
+      const response = await axios.get(url, { signal });
       return response.data; // { data: Note[], total: number }
     } catch (error: any) {
+      if (axios.isCancel(error) || error?.code === "ERR_CANCELED" || signal.aborted) {
+        return rejectWithValue(null);
+      }
       return rejectWithValue(error.response?.data?.message || "Failed to fetch notes");
     }
   }
@@ -479,8 +484,11 @@ const notesSlice = createSlice({
         state.totalNotesCount = action.payload?.total || 0;
       })
       .addCase(fetchNotes.rejected, (state, action) => {
+        if (action.payload === null || action.meta.aborted) {
+          return;
+        }
         state.loading = false;
-        state.error = action.payload as string;
+        state.error = (action.payload as string) || "Failed to fetch notes";
       })
 
       // Stats

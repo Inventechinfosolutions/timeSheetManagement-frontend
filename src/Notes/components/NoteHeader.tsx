@@ -7,9 +7,17 @@ import type { DropdownOption } from "../../components/ui";
 interface NoteHeaderProps {
   activeTab: NoteType;
   searchQuery: string;
+  fromDate: string;
+  toDate: string;
   onTabSwitch: (tab: NoteType) => void;
+  /** Immediate keystrokes — drives client-side list filter */
+  onSearchInputChange?: (val: string) => void;
+  /** Debounced value — drives API fetch */
   onSearchChange: (val: string) => void;
   onClearSearch: () => void;
+  onFromDateChange: (value: string) => void;
+  onToDateChange: (value: string) => void;
+  onClearDates: () => void;
   onCreateProjectNote: () => void;
   onCreatePersonalNote: () => void;
 }
@@ -17,9 +25,15 @@ interface NoteHeaderProps {
 export const NoteHeader: React.FC<NoteHeaderProps> = ({
   activeTab,
   searchQuery,
+  fromDate,
+  toDate,
   onTabSwitch,
+  onSearchInputChange,
   onSearchChange,
   onClearSearch,
+  onFromDateChange,
+  onToDateChange,
+  onClearDates,
   onCreateProjectNote,
   onCreatePersonalNote,
 }) => {
@@ -86,16 +100,48 @@ export const NoteHeader: React.FC<NoteHeaderProps> = ({
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)]">
+      {/* Search and created-date filter. Both apply to parent notes and child notes. */}
+      <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)] flex flex-col lg:flex-row lg:items-center gap-3">
         <SearchBox
-          placeholder="Search by name or ID..."
+          placeholder="Search by name, ID, or child note..."
           value={searchQuery}
+          onChange={(e) => onSearchInputChange?.(e.target.value)}
           onDebounce={onSearchChange}
           onClear={onClearSearch}
           inputSize="lg"
-          containerClassName="w-full max-w-md"
+          containerClassName="w-full lg:max-w-md"
         />
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            From
+            <input
+              type="date"
+              value={fromDate}
+              max={toDate || undefined}
+              onChange={(e) => onFromDateChange(e.target.value)}
+              className="h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-700"
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+            To
+            <input
+              type="date"
+              value={toDate}
+              min={fromDate || undefined}
+              onChange={(e) => onToDateChange(e.target.value)}
+              className="h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-700"
+            />
+          </label>
+          {(fromDate || toDate) && (
+            <button
+              type="button"
+              onClick={onClearDates}
+              className="h-10 px-3 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
+            >
+              Clear dates
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

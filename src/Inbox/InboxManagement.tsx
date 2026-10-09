@@ -4,6 +4,7 @@ import {
   fetchInbox,
   fetchInboxCounts,
   markInboxAsRead,
+  toggleInboxStar,
   deleteInboxItem,
   InboxItem,
 } from '../reducers/inbox.reducer';
@@ -18,6 +19,7 @@ import {
   Edit3,
   Send,
   Inbox,
+  Star,
 } from 'lucide-react';
 import { Modal, message, Tooltip } from 'antd';
 import { PopconfirmWithTooltip } from '../components/ui/PopconfirmWithTooltip';
@@ -76,6 +78,18 @@ export const InboxManagement: React.FC = () => {
       );
     };
   }, [notesMgr.pageMode]);
+
+  const handleToggleStar = (item: InboxItem, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    dispatch(toggleInboxStar(item.inboxId))
+      .unwrap()
+      .then((result) => {
+        message.success(Number(result?.isStarred) === 1 ? 'Starred' : 'Star removed');
+      })
+      .catch((err) => {
+        message.error(err || 'Failed to update star');
+      });
+  };
 
   const handleMarkAsRead = (item: InboxItem, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -155,16 +169,45 @@ export const InboxManagement: React.FC = () => {
     }
   };
 
-  // Filter items (status tabs filter client-side for INBOX only, search filters from backend)
+  const matchesInboxSearch = (item: InboxItem, q: string) => {
+    if (!q) return true;
+    const note = item.note;
+    const plainDesc = (note?.description || "").replace(/<[^>]*>/g, " ");
+    const haystack = [
+      note?.title,
+      plainDesc,
+      note?.projectName,
+      String(note?.id ?? item.notesId ?? ""),
+      item.senderName,
+      item.receiverName,
+      item.fromMail,
+      item.toMail,
+      item.senderDesignation,
+      item.receiverDesignation,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    return haystack.includes(q);
+  };
+
+  // Search matches (before tab filter) — used for badge counts while searching
+  const searchMatchedItems = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((item) => matchesInboxSearch(item, q));
+  }, [items, debouncedSearch]);
+
+  // Tab filter (INBOX) + client search so UI stays correct even if API/races misbehave
   const filteredItems = useMemo(() => {
-    if (folder === InboxFolder.SENT) return items;
-    return items.filter((item) => {
-      // Tab filter
-      if (activeTab === InboxTab.UNREAD && item.isRead) return false;
-      if (activeTab === InboxTab.READ && !item.isRead) return false;
+    return searchMatchedItems.filter((item) => {
+      if (folder === InboxFolder.INBOX) {
+        if (activeTab === InboxTab.UNREAD && item.isRead) return false;
+        if (activeTab === InboxTab.READ && !item.isRead) return false;
+      }
       return true;
     });
-  }, [items, folder, activeTab]);
+  }, [searchMatchedItems, folder, activeTab]);
 
   const getInitials = (name?: string, email?: string) => {
     if (name && name.trim()) {
@@ -215,9 +258,21 @@ export const InboxManagement: React.FC = () => {
           onDeleteServerAttachment={notesMgr.handleDeleteAttachment}
           onPreviewAttachment={notesMgr.handlePreviewAttachment}
           onDownloadAttachment={notesMgr.handleDownloadAttachment}
+          onPreviewImage={(url, title) =>
+            notesMgr.setPreviewImageModal({
+              open: true,
+              url,
+              title: title || "Screenshot",
+            })
+          }
           onSubmit={async (e) => {
             await notesMgr.handleSubmitForm(e);
-            dispatch(fetchInbox({ folder }));
+            dispatch(
+              fetchInbox({
+                folder,
+                search: debouncedSearch.trim() || undefined,
+              })
+            );
             dispatch(fetchInboxCounts());
           }}
           onBack={() => {
@@ -262,6 +317,13 @@ export const InboxManagement: React.FC = () => {
           }}
           onPreviewAttachment={notesMgr.handlePreviewAttachment}
           onDownloadAttachment={notesMgr.handleDownloadAttachment}
+          onPreviewImage={(url, title) =>
+            notesMgr.setPreviewImageModal({
+              open: true,
+              url,
+              title: title || "Screenshot",
+            })
+          }
           onTogglePin={notesMgr.handleTogglePin}
           onToggleArchive={notesMgr.handleToggleArchive}
         />
@@ -371,7 +433,7 @@ export const InboxManagement: React.FC = () => {
             >
               <span>All Notes</span>
               <span className="text-[11px] px-1.5 py-0.2 bg-slate-200/60 rounded-full">
-                {debouncedSearch.trim() ? items.length : (counts?.inbox ?? 0)}
+                {debouncedSearch.trim() ? searchMatchedItems.length : (counts?.inbox ?? 0)}
               </span>
             </button>
 
@@ -385,11 +447,11 @@ export const InboxManagement: React.FC = () => {
             >
               <span>Unread</span>
               {(debouncedSearch.trim()
-                ? items.filter((i) => !i.isRead).length
+                ? searchMatchedItems.filter((i) => !i.isRead).length
                 : (counts?.unread ?? 0)) > 0 && (
                 <span className="text-[11px] px-1.5 py-0.2 bg-[#4318FF] text-white rounded-full">
                   {debouncedSearch.trim()
-                    ? items.filter((i) => !i.isRead).length
+                    ? searchMatchedItems.filter((i) => !i.isRead).length
                     : (counts?.unread ?? 0)}
                 </span>
               )}
@@ -406,7 +468,7 @@ export const InboxManagement: React.FC = () => {
               <span>Read</span>
               <span className="text-[11px] px-1.5 py-0.2 bg-slate-200/60 rounded-full">
                 {debouncedSearch.trim()
-                  ? items.filter((i) => i.isRead).length
+                  ? searchMatchedItems.filter((i) => i.isRead).length
                   : (counts?.read ?? 0)}
               </span>
             </button>
@@ -415,7 +477,7 @@ export const InboxManagement: React.FC = () => {
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 px-2 py-1">
             <span>Sent Messages</span>
             <span className="px-2 py-0.5 bg-[#4318FF]/10 text-[#4318FF] font-bold rounded-full text-xs">
-              {debouncedSearch.trim() ? items.length : (counts?.sent ?? 0)}
+              {debouncedSearch.trim() ? searchMatchedItems.length : (counts?.sent ?? 0)}
             </span>
           </div>
         )}
@@ -459,6 +521,7 @@ export const InboxManagement: React.FC = () => {
             const isSentMode = folder === 'SENT';
             const hasAttachments = item.note?.attachments && item.note.attachments.length > 0;
             const isUnread = !isSentMode && !item.isRead;
+            const isStarred = Number(item.isStarred) === 1;
             const isEditable = canEditNote(item.permission);
 
             const displayName = isSentMode
@@ -560,6 +623,21 @@ export const InboxManagement: React.FC = () => {
 
                     {/* Actions: Icon-only View, Edit, Delete, and Mark as read buttons */}
                     <div className="flex items-center gap-1.5 shrink-0">
+                    <Tooltip title={isStarred ? 'Remove star' : 'Star'} placement="top">
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleStar(item, e)}
+                        className={`w-8 h-8 flex items-center justify-center border rounded-lg transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${
+                          isStarred
+                            ? 'bg-amber-50 text-amber-500 border-amber-200 hover:bg-amber-100'
+                            : 'bg-slate-50 text-slate-400 border-slate-200 hover:bg-amber-50 hover:text-amber-500 hover:border-amber-200'
+                        }`}
+                        aria-label={isStarred ? 'Remove star' : 'Star'}
+                      >
+                        <Star className={`w-4 h-4 ${isStarred ? 'fill-amber-400 text-amber-500' : ''}`} />
+                      </button>
+                    </Tooltip>
+
                     {/* View Icon Button */}
                     <Tooltip title="View Note" placement="top">
                       <button
