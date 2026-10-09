@@ -41,6 +41,12 @@ const AdminLayout = () => {
     if (path.includes("/admin-dashboard/notes")) {
       return "Notes";
     }
+    if (
+      path.includes("/admin-dashboard/appraisal") ||
+      path.includes("/admin-dashboard/quarterly-review")
+    ) {
+      return "Appraisal";
+    }
     if (path.includes("/admin-dashboard/inbox")) {
       return "Inbox";
     }
@@ -70,6 +76,9 @@ const AdminLayout = () => {
         return "Leave Balance";
       case "manager-mapping":
         return "Manager Mapping";
+      case "appraisal":
+      case "quarterly-review":
+        return "Appraisal";
       case "notes":
         return "Notes";
       case "inbox":
@@ -102,6 +111,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/leave-balance");
     } else if (tabName === "Manager Mapping") {
       navigate("/admin-dashboard/manager-mapping");
+    } else if (tabName === "Appraisal" || tabName === "Quarterly Review") {
+      navigate("/admin-dashboard/appraisal");
     } else if (tabName === "Notes") {
       navigate("/admin-dashboard/notes");
     } else if (tabName === "Inbox") {
