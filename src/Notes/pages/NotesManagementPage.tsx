@@ -67,6 +67,8 @@ export const NotesManagementPage: React.FC = () => {
     handleStartView,
     handleBackToList,
     handleDoclingJsonUpload,
+    persistInlineImagesInEditor,
+    hydrateEditorInlineImages,
     handleExcelExtract,
     handleProcessUploadFiles,
     handleFileChange,
@@ -144,6 +146,8 @@ export const NotesManagementPage: React.FC = () => {
           onPreviewImage={(url, title) =>
             setPreviewImageModal({ open: true, url, title: title || "Screenshot" })
           }
+          onPersistInlineImages={persistInlineImagesInEditor}
+          onHydrateInlineImages={hydrateEditorInlineImages}
           onSubmit={handleSubmitForm}
           onBack={handleBackToList}
           autoSaveStatus={autoSaveStatus}
@@ -165,6 +169,7 @@ export const NotesManagementPage: React.FC = () => {
           onPreviewImage={(url, title) =>
             setPreviewImageModal({ open: true, url, title: title || "Screenshot" })
           }
+          onHydrateInlineImages={hydrateEditorInlineImages}
           onTogglePin={handleTogglePin}
           onToggleArchive={handleToggleArchive}
           onOpenSendModal={handleOpenSendModal}

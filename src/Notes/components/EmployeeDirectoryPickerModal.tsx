@@ -57,17 +57,14 @@ export const EmployeeDirectoryPickerModal: React.FC<EmployeeDirectoryPickerModal
     }
   }, [open]);
 
-  // Fetch when SearchBox debounce settles (via useDebounce)
+  // Fetch when SearchBox debounce settles (via useDebounce).
+  // Empty value does not wipe the list — Get All / Select All keep results;
+  // explicit clear is handled by onClear.
   const handleSearchDebounce = useCallback(
     (val: string) => {
       if (!open) return;
       const trimmed = val.trim();
-      if (!trimmed) {
-        setEmployees([]);
-        setHasSearched(false);
-        setLoading(false);
-        return;
-      }
+      if (!trimmed) return;
       setLoading(true);
       fetchEmployees(trimmed);
     },
@@ -90,29 +87,52 @@ export const EmployeeDirectoryPickerModal: React.FC<EmployeeDirectoryPickerModal
     });
   };
 
-  // Select all visible employees who are not already added
-  const handleSelectAll = () => {
-    const selectable = employees.filter(
+  /** Load entire directory (empty search) then select every selectable email */
+  const handleSelectAll = async () => {
+    let list = employees;
+    if (list.length === 0) {
+      setLoading(true);
+      setHasSearched(true);
+      try {
+        list = (await searchEmployeeDirectory("")) || [];
+        setEmployees(list);
+        setSearchTerm("");
+      } catch (err) {
+        console.error("Failed to load all employees:", err);
+        message.error("Failed to fetch employee directory");
+        setLoading(false);
+        return;
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    const selectable = list.filter(
       (emp) => emp.email && !existingSet.has(emp.email.trim().toLowerCase())
     );
 
-    const allSelected = selectable.length > 0 && selectable.every((emp) => selectedEmails.has(emp.email));
+    const allSelected =
+      selectable.length > 0 && selectable.every((emp) => selectedEmails.has(emp.email));
 
     if (allSelected) {
-      // Uncheck all visible
       setSelectedEmails((prev) => {
         const next = new Set(prev);
         selectable.forEach((emp) => next.delete(emp.email));
         return next;
       });
     } else {
-      // Check all visible
       setSelectedEmails((prev) => {
         const next = new Set(prev);
         selectable.forEach((emp) => next.add(emp.email));
         return next;
       });
     }
+  };
+
+  /** Get All — fetch every active employee without a search term */
+  const handleGetAll = async () => {
+    setSearchTerm("");
+    await fetchEmployees("");
   };
 
   // Copy email to clipboard
@@ -211,24 +231,40 @@ export const EmployeeDirectoryPickerModal: React.FC<EmployeeDirectoryPickerModal
             containerClassName="w-full"
           />
 
-          {/* Quick Bar: Select All & Count (only visible when employees are found) */}
-          {employees.length > 0 && (
-            <div className="flex items-center justify-between mt-2 px-1 text-[11px]">
-              <label className="inline-flex items-center gap-1.5 cursor-pointer select-none font-medium text-slate-600">
-                <input
-                  type="checkbox"
-                  checked={isAllSelectableChecked}
-                  onChange={handleSelectAll}
-                  disabled={selectableEmployees.length === 0}
-                  className="w-3 h-3 rounded text-[#4318FF] focus:ring-[#4318FF] cursor-pointer"
-                />
-                <span>Select All</span>
-              </label>
-              <span className="text-slate-400 font-medium">
-                {employees.length} found {selectedEmails.size > 0 && `• ${selectedEmails.size} selected`}
-              </span>
+          {/* Quick Bar: Select All / Get All always available */}
+          <div className="flex items-center justify-between mt-2 px-1 text-[11px]">
+            <label className="inline-flex items-center gap-1.5 cursor-pointer select-none font-medium text-slate-600">
+              <input
+                type="checkbox"
+                checked={isAllSelectableChecked}
+                onChange={() => {
+                  void handleSelectAll();
+                }}
+                disabled={loading}
+                className="w-3 h-3 rounded text-[#4318FF] focus:ring-[#4318FF] cursor-pointer"
+              />
+              <span>Select All</span>
+            </label>
+            <div className="flex items-center gap-2">
+              {/* <button
+                type="button"
+                onClick={() => {
+                  void handleGetAll();
+                }}
+                disabled={loading}
+                className="font-semibold text-[#4318FF] hover:underline cursor-pointer bg-transparent border-none p-0 disabled:opacity-50"
+                title="Load all active employees"
+              >
+                Get All
+              </button> */}
+              {employees.length > 0 && (
+                <span className="text-slate-400 font-medium">
+                  {employees.length} found
+                  {selectedEmails.size > 0 && ` • ${selectedEmails.size} selected`}
+                </span>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Compact Employee List */}
@@ -247,7 +283,9 @@ export const EmployeeDirectoryPickerModal: React.FC<EmployeeDirectoryPickerModal
             <div className="text-center py-10 px-4">
               <Search className="w-7 h-7 mx-auto text-slate-300 mb-1.5" />
               <p className="text-xs font-semibold text-slate-600">Type to search employees</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">Enter an employee name, ID (e.g. IIS-070), or designation</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Enter a name, ID, or designation — or use Get All / Select All
+              </p>
             </div>
           ) : employees.length === 0 ? (
             /* No results state */

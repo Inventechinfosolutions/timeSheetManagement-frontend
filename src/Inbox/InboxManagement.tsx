@@ -49,7 +49,9 @@ export const InboxManagement: React.FC = () => {
 
   const [folder, setFolder] = useState<InboxFolder>(InboxFolder.INBOX);
   const [activeTab, setActiveTab] = useState<InboxTab>(InboxTab.ALL);
-  const [searchQuery, setSearchQuery] = useState('');
+  /** Immediate text — drives client-side list filter (same as employee Notes). */
+  const [searchInput, setSearchInput] = useState('');
+  /** Debounced text — used for API fetch (same as employee Notes). */
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedInboxItem, setSelectedInboxItem] = useState<InboxItem | null>(null);
 
@@ -169,34 +171,38 @@ export const InboxManagement: React.FC = () => {
     }
   };
 
-  const matchesInboxSearch = (item: InboxItem, q: string) => {
+  /** List search = only fields shown on the card (not HTML description — that caused false hits like "rti"). */
+  const matchesInboxSearch = (item: InboxItem, query: string) => {
+    const q = query.trim().toLowerCase();
     if (!q) return true;
     const note = item.note;
-    const plainDesc = (note?.description || "").replace(/<[^>]*>/g, " ");
     const haystack = [
+      note?.id,
       note?.title,
-      plainDesc,
       note?.projectName,
-      String(note?.id ?? item.notesId ?? ""),
+      item.notesId,
       item.senderName,
       item.receiverName,
       item.fromMail,
       item.toMail,
+      item.senderId,
+      item.receiverId,
       item.senderDesignation,
       item.receiverDesignation,
+      item.senderDepartment,
+      item.receiverDepartment,
     ]
-      .filter(Boolean)
+      .filter((value) => value !== undefined && value !== null && String(value).trim() !== "")
       .join(" ")
       .toLowerCase();
-    return haystack.includes(q);
+    return q.split(/\s+/).filter(Boolean).every((token) => haystack.includes(token));
   };
 
-  // Search matches (before tab filter) — used for badge counts while searching
+  // Search matches (before tab filter) — immediate `searchInput` like Notes `searchInput`
   const searchMatchedItems = useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((item) => matchesInboxSearch(item, q));
-  }, [items, debouncedSearch]);
+    if (!searchInput.trim()) return items;
+    return items.filter((item) => matchesInboxSearch(item, searchInput));
+  }, [items, searchInput]);
 
   // Tab filter (INBOX) + client search so UI stays correct even if API/races misbehave
   const filteredItems = useMemo(() => {
@@ -204,6 +210,7 @@ export const InboxManagement: React.FC = () => {
       if (folder === InboxFolder.INBOX) {
         if (activeTab === InboxTab.UNREAD && item.isRead) return false;
         if (activeTab === InboxTab.READ && !item.isRead) return false;
+        if (activeTab === InboxTab.STARRED && Number(item.isStarred) !== 1) return false;
       }
       return true;
     });
@@ -265,6 +272,8 @@ export const InboxManagement: React.FC = () => {
               title: title || "Screenshot",
             })
           }
+          onPersistInlineImages={notesMgr.persistInlineImagesInEditor}
+          onHydrateInlineImages={notesMgr.hydrateEditorInlineImages}
           onSubmit={async (e) => {
             await notesMgr.handleSubmitForm(e);
             dispatch(
@@ -324,6 +333,7 @@ export const InboxManagement: React.FC = () => {
               title: title || "Screenshot",
             })
           }
+          onHydrateInlineImages={notesMgr.hydrateEditorInlineImages}
           onTogglePin={notesMgr.handleTogglePin}
           onToggleArchive={notesMgr.handleToggleArchive}
         />
@@ -433,7 +443,7 @@ export const InboxManagement: React.FC = () => {
             >
               <span>All Notes</span>
               <span className="text-[11px] px-1.5 py-0.2 bg-slate-200/60 rounded-full">
-                {debouncedSearch.trim() ? searchMatchedItems.length : (counts?.inbox ?? 0)}
+                {searchInput.trim() ? searchMatchedItems.length : (counts?.inbox ?? 0)}
               </span>
             </button>
 
@@ -446,11 +456,11 @@ export const InboxManagement: React.FC = () => {
               }`}
             >
               <span>Unread</span>
-              {(debouncedSearch.trim()
+              {(searchInput.trim()
                 ? searchMatchedItems.filter((i) => !i.isRead).length
                 : (counts?.unread ?? 0)) > 0 && (
                 <span className="text-[11px] px-1.5 py-0.2 bg-[#4318FF] text-white rounded-full">
-                  {debouncedSearch.trim()
+                  {searchInput.trim()
                     ? searchMatchedItems.filter((i) => !i.isRead).length
                     : (counts?.unread ?? 0)}
                 </span>
@@ -467,32 +477,60 @@ export const InboxManagement: React.FC = () => {
             >
               <span>Read</span>
               <span className="text-[11px] px-1.5 py-0.2 bg-slate-200/60 rounded-full">
-                {debouncedSearch.trim()
+                {searchInput.trim()
                   ? searchMatchedItems.filter((i) => i.isRead).length
                   : (counts?.read ?? 0)}
               </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab(InboxTab.STARRED)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === InboxTab.STARRED
+                  ? 'bg-white text-[#4318FF] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Star
+                className={`w-3.5 h-3.5 ${
+                  activeTab === InboxTab.STARRED
+                    ? 'fill-amber-400 text-amber-500'
+                    : 'text-slate-500'
+                }`}
+              />
+              <span>Starred</span>
+              {searchMatchedItems.filter((i) => Number(i.isStarred) === 1).length > 0 && (
+                <span className="text-[11px] px-1.5 py-0.2 bg-amber-100 text-amber-700 rounded-full">
+                  {searchMatchedItems.filter((i) => Number(i.isStarred) === 1).length}
+                </span>
+              )}
             </button>
           </div>
         ) : (
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 px-2 py-1">
             <span>Sent Messages</span>
             <span className="px-2 py-0.5 bg-[#4318FF]/10 text-[#4318FF] font-bold rounded-full text-xs">
-              {debouncedSearch.trim() ? searchMatchedItems.length : (counts?.sent ?? 0)}
+              {searchInput.trim() ? searchMatchedItems.length : (counts?.sent ?? 0)}
             </span>
           </div>
         )}
 
-        {/* Search Input using UI SearchBox */}
+        {/* Search — same SearchBox pattern as employee Notes */}
         <SearchBox
-          placeholder={folder === InboxFolder.SENT ? "Search sent by title, recipient, content..." : "Search inbox by title, sender, content..."}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={
+            folder === InboxFolder.SENT
+              ? "Search by name, ID, title, or recipient..."
+              : "Search by name, ID, title, or sender..."
+          }
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           onDebounce={(val) => setDebouncedSearch(val)}
           onClear={() => {
-            setSearchQuery('');
+            setSearchInput('');
             setDebouncedSearch('');
           }}
-          containerClassName="w-full sm:w-80"
+          inputSize="lg"
+          containerClassName="w-full sm:max-w-md"
         />
       </div>
 
@@ -506,12 +544,14 @@ export const InboxManagement: React.FC = () => {
             {folder === 'SENT' ? 'No sent notes found' : 'No received notes found'}
           </h3>
           <p className="text-xs text-slate-500 max-w-sm mt-1">
-            {searchQuery
+            {searchInput.trim()
               ? 'No messages match your search filter. Try clearing or changing the search keywords.'
               : folder === 'SENT'
               ? 'Notes and documents you share with teammates will appear here in your Sent box.'
-              : activeTab === 'UNREAD'
+              : activeTab === InboxTab.UNREAD
               ? 'You are all caught up! No unread notes in your inbox.'
+              : activeTab === InboxTab.STARRED
+              ? 'No starred messages yet. Click the star on a note to save it here.'
               : 'When teammates share notes with you, they will appear here in your Inbox.'}
           </p>
         </div>

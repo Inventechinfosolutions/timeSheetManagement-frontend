@@ -15,6 +15,25 @@ import {
 } from "../types/notes.types";
 
 const API_BASE = "/api/notes";
+/** Large note HTML / attachments can exceed the global 60s axios timeout. */
+const NOTE_SAVE_TIMEOUT_MS = 5 * 60 * 1000;
+
+const noteSaveErrorMessage = (error: any, fallback: string): string => {
+  const status = error?.response?.status || error?.status || 0;
+  if (status === 413) {
+    return "Note content is too large to save. Remove large pasted images or use Files & Attachments instead.";
+  }
+  if (error?.code === "ECONNABORTED" || /timeout/i.test(String(error?.message || ""))) {
+    return "Saving timed out. The note may be too large — try again or remove embedded images.";
+  }
+  const data = error?.response?.data;
+  if (typeof data === "string" && data.trim() && !data.includes("<html")) return data;
+  if (typeof data?.message === "string") return data.message;
+  if (typeof error?.message === "string" && error.message && !/^Request failed/i.test(error.message)) {
+    return error.message;
+  }
+  return fallback;
+};
 
 const initialState: NotesState = {
   notes: [],
@@ -105,7 +124,7 @@ export const fetchNoteById = createAsyncThunk(
 // Create Note (Supports Multi-part Files and Sub-notes)
 export const createNote = createAsyncThunk(
   "notes/createNote",
-  async (payload: CreateNotePayload, { rejectWithValue }) => {
+  async (payload: CreateNotePayload & { skipGlobalLoader?: boolean }, { rejectWithValue }) => {
     try {
       const formData = new FormData();
       formData.append("title", payload.title);
@@ -137,10 +156,13 @@ export const createNote = createAsyncThunk(
         });
       }
 
-      const response = await axios.post(API_BASE, formData);
+      const response = await axios.post(API_BASE, formData, {
+        timeout: NOTE_SAVE_TIMEOUT_MS,
+        skipGlobalLoader: payload.skipGlobalLoader === true,
+      });
       return response.data as Note;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || "Failed to create note");
+      return rejectWithValue(noteSaveErrorMessage(error, "Failed to create note"));
     }
   }
 );
@@ -148,7 +170,7 @@ export const createNote = createAsyncThunk(
 // Update Note
 export const updateNote = createAsyncThunk(
   "notes/updateNote",
-  async ({ id, ...data }: UpdateNotePayload, { rejectWithValue }) => {
+  async ({ id, ...data }: UpdateNotePayload & { skipGlobalLoader?: boolean }, { rejectWithValue }) => {
     try {
       const sanitized: Record<string, any> = {};
       if (data.title !== undefined) sanitized.title = data.title;
@@ -165,11 +187,15 @@ export const updateNote = createAsyncThunk(
       }
       if (data.isVertical !== undefined) sanitized.isVertical = data.isVertical;
       if (data.orderIndex !== undefined) sanitized.orderIndex = data.orderIndex;
+      // Never send `rotation` — backend DTO rejects it (use isVertical only).
 
-      const response = await axios.patch(`${API_BASE}/${id}`, sanitized);
+      const response = await axios.patch(`${API_BASE}/${id}`, sanitized, {
+        timeout: NOTE_SAVE_TIMEOUT_MS,
+        skipGlobalLoader: data.skipGlobalLoader === true,
+      });
       return response.data as Note;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || "Failed to update note");
+      return rejectWithValue(noteSaveErrorMessage(error, "Failed to update note"));
     }
   }
 );
@@ -273,7 +299,7 @@ export const toggleArchiveNote = createAsyncThunk(
 // Create Sub-Note
 export const createSubNote = createAsyncThunk(
   "notes/createSubNote",
-  async (payload: CreateSubNotePayload, { rejectWithValue }) => {
+  async (payload: CreateSubNotePayload & { skipGlobalLoader?: boolean }, { rejectWithValue }) => {
     try {
       const formData = new FormData();
       formData.append("title", payload.title);
@@ -290,10 +316,13 @@ export const createSubNote = createAsyncThunk(
         });
       }
 
-      const response = await axios.post(`${API_BASE}/${payload.parentId}/sub-notes`, formData);
+      const response = await axios.post(`${API_BASE}/${payload.parentId}/sub-notes`, formData, {
+        timeout: NOTE_SAVE_TIMEOUT_MS,
+        skipGlobalLoader: payload.skipGlobalLoader === true,
+      });
       return { parentId: payload.parentId, subNote: response.data as Note };
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || "Failed to create sub-note");
+      return rejectWithValue(noteSaveErrorMessage(error, "Failed to create sub-note"));
     }
   }
 );
@@ -310,10 +339,13 @@ export const uploadDirectNoteFiles = createAsyncThunk(
         formData.append("files", file);
       });
 
-      const response = await axios.post(`${API_BASE}/upload`, formData);
+      const response = await axios.post(`${API_BASE}/upload`, formData, {
+        timeout: NOTE_SAVE_TIMEOUT_MS,
+        skipGlobalLoader: true,
+      });
       return { noteId, uploaded: response.data };
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || "Failed to upload files");
+      return rejectWithValue(noteSaveErrorMessage(error, "Failed to upload files"));
     }
   }
 );

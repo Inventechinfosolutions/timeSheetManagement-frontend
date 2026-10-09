@@ -26,12 +26,14 @@ import {
   exportNoteToWord,
   copyNoteContentToClipboard,
   wrapWideTablesInRoot,
+  wrapNoteInlineImages,
 } from "../utils/notesHelpers";
-import { buildDocumentPagesHtml, isNoteLandscape, paginateToA4Sheets } from "../utils/documentLayout";
 import {
-  attachmentKeysInHtml,
-  refreshAttachmentBadges,
-} from "../utils/noteEditorAttachmentHelpers";
+  absorbOrphansIntoPages,
+  buildDocumentPagesHtml,
+  isNoteLandscape,
+} from "../utils/documentLayout";
+import { refreshAttachmentBadges } from "../utils/noteEditorAttachmentHelpers";
 import {
   htmlHasVisibleNoteContent,
   parseExcelWorkbookFromHtml,
@@ -47,6 +49,8 @@ interface NoteViewProps {
   onPreviewAttachment: (item: NoteDocumentItem) => void;
   onDownloadAttachment: (item: NoteDocumentItem) => void;
   onPreviewImage?: (url: string, title?: string) => void;
+  /** Resolve authorized blob URLs for inline images saved as attachment keys */
+  onHydrateInlineImages?: (root: HTMLElement) => Promise<void>;
   onTogglePin?: (noteId: number) => void;
   onToggleArchive?: (noteId: number) => void;
   onOpenSendModal?: (note: Note) => void;
@@ -63,6 +67,7 @@ export const NoteView: React.FC<NoteViewProps> = ({
   onPreviewAttachment,
   onDownloadAttachment,
   onPreviewImage,
+  onHydrateInlineImages,
   onTogglePin,
   onToggleArchive,
   onOpenSendModal,
@@ -84,25 +89,39 @@ export const NoteView: React.FC<NoteViewProps> = ({
   const showA4Content = htmlHasVisibleNoteContent(visibleDescription);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Hide Excel / table-row embeds from Files & Attachments
+  // Match edit: show Files uploads (incl. row attaches); hide Excel workbook only
   const filesSectionAttachments = (activeNote.attachments || []).filter((att) => {
     const key = att.key || att.fileKey;
     const name = att.fileName || att.name;
-    const embedded = attachmentKeysInHtml(activeNote.description);
     const excelKey = storedWorkbook?.fileKey || excelWorkbook?.fileKey;
     const excelName = storedWorkbook?.fileName || excelWorkbook?.fileName;
-    if (key && (embedded.has(String(key)) || (excelKey && key === excelKey))) return false;
+    if (key && excelKey && key === excelKey) return false;
     if (name && excelName && name === excelName) return false;
     return true;
   });
 
   useLayoutEffect(() => {
     if (!showA4Content || !contentRef.current) return;
-    wrapWideTablesInRoot(contentRef.current);
-    paginateToA4Sheets(contentRef.current, isLandscape, true);
-    refreshAttachmentBadges(contentRef.current);
-    wrapWideTablesInRoot(contentRef.current);
-  }, [activeNote.description, isLandscape, showA4Content]);
+    const root = contentRef.current;
+    // Match edit: keep saved page layout — do NOT reflow onto a next sheet
+    absorbOrphansIntoPages(root, isLandscape);
+    wrapWideTablesInRoot(root);
+    wrapNoteInlineImages(root);
+    refreshAttachmentBadges(root);
+    wrapWideTablesInRoot(root);
+    let cancelled = false;
+    (async () => {
+      if (onHydrateInlineImages) {
+        await onHydrateInlineImages(root);
+      }
+      if (cancelled || !contentRef.current) return;
+      wrapNoteInlineImages(contentRef.current);
+      wrapWideTablesInRoot(contentRef.current);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeNote.description, isLandscape, showA4Content, onHydrateInlineImages]);
 
   const getDownloadMenuItems = (note: Note): MenuProps["items"] => [
     {
@@ -390,7 +409,9 @@ export const NoteView: React.FC<NoteViewProps> = ({
           <div className="w-full flex flex-col gap-4">
             {showA4Content ? (
               <div
-                className={`a4-page-workspace w-full rounded-2xl flex justify-center items-start overflow-auto bg-slate-100/80 p-4 sm:p-8 min-h-[720px] border border-slate-200/60${isLandscape ? " is-landscape" : ""}`}
+                className={`a4-page-workspace w-full rounded-2xl flex items-start overflow-x-auto overflow-y-visible bg-slate-100/80 p-4 sm:p-8 min-h-[720px] border border-slate-200/60${
+                  isLandscape ? " is-landscape justify-start" : " justify-center"
+                }`}
               >
                 <div className="a4-page-rotator">
                   <div className="a4-page doc-pages">
@@ -413,7 +434,9 @@ export const NoteView: React.FC<NoteViewProps> = ({
               </div>
             ) : !viewerWorkbook?.sheetNames?.length ? (
               <div
-                className={`a4-page-workspace w-full rounded-2xl flex justify-center items-start overflow-auto bg-slate-100/80 p-4 sm:p-8 min-h-[720px] border border-slate-200/60${isLandscape ? " is-landscape" : ""}`}
+                className={`a4-page-workspace w-full rounded-2xl flex items-start overflow-x-auto overflow-y-visible bg-slate-100/80 p-4 sm:p-8 min-h-[720px] border border-slate-200/60${
+                  isLandscape ? " is-landscape justify-start" : " justify-center"
+                }`}
               >
                 <div className="a4-page-rotator">
                   <div className="a4-page doc-pages">

@@ -5,6 +5,11 @@ import axios from "axios";
 import dayjs from "dayjs";
 import { Note, ColorOption } from "../types/notes.types";
 import { paginateToA4Sheets } from "./documentLayout";
+import {
+  htmlHasVisibleNoteContent,
+  parseExcelWorkbookFromHtml,
+  stripExcelWorkbookStore,
+} from "./excelExtract";
 
 export const TEXT_COLORS: ColorOption[] = [
   { label: "None / Default", color: "none" },
@@ -30,22 +35,37 @@ export const HIGHLIGHT_COLORS: ColorOption[] = [
   { label: "Soft Orange", color: "#FED7AA" },
 ];
 
+/** Strip HTML/CSS/base64 noise so search does not match "#fff", style junk, etc. */
+export const plainTextForSearch = (html?: string): string => {
+  if (!html) return "";
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/data:[^"'\s>]*/gi, " ")
+    .replace(/#[0-9a-fA-F]{3,8}\b/g, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&[a-zA-Z]+;/g, " ")
+    .replace(/&#\d+;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+};
+
 export const noteMatchesSearch = (
   note: Pick<Note, "id" | "title" | "projectName" | "createdBy" | "description">,
   query: string,
 ): boolean => {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  const text = [
-    note.id,
-    note.title,
-    note.projectName,
-    note.createdBy,
-    (note.description || "").replace(/<[^>]*>/g, " "),
-  ]
+  // Short queries: title / id / names only — avoid false hits inside HTML descriptions
+  const meta = [note.id, note.title, note.projectName, note.createdBy]
     .filter((value) => value !== undefined && value !== null && String(value).trim() !== "")
     .join(" ")
     .toLowerCase();
+  if (q.length < 3) {
+    return meta.includes(q);
+  }
+  const text = `${meta} ${plainTextForSearch(note.description)}`.trim();
   return text.includes(q);
 };
 
@@ -358,6 +378,142 @@ const prepareAttachmentBadgesForPdfExport = (root: HTMLElement): void => {
   });
 };
 
+/** Same palette as backend note email template — used so download matches emailed description. */
+const TABLE_COLORS_MAP: Record<string, string> = {
+  "--tbl-black": "#000000",
+  "--tbl-dark-slate": "#1e293b",
+  "--tbl-slate-gray": "#475569",
+  "--tbl-deep-blue": "#1d4ed8",
+  "--tbl-electric-blue": "#2563eb",
+  "--tbl-teal": "#0284c7",
+  "--tbl-dark-green": "#15803d",
+  "--tbl-bold-green": "#16a34a",
+  "--tbl-bold-amber": "#d97706",
+  "--tbl-bold-orange": "#ea580c",
+  "--tbl-crimson-red": "#dc2626",
+  "--tbl-deep-red": "#b91c1c",
+  "--tbl-bold-pink": "#e11d48",
+  "--tbl-vibrant-purple": "#9333ea",
+  "--tbl-deep-purple": "#6b21a8",
+  "--tbl-white": "#FFFFFF",
+  "--tbl-gray": "#F1F5F9",
+  "--tbl-blue": "#DBEAFE",
+  "--tbl-cyan": "#A5F3FC",
+  "--tbl-green": "#DCFCE7",
+  "--tbl-lime": "#D9F99D",
+  "--tbl-yellow": "#FEF9C3",
+  "--tbl-orange": "#FED7AA",
+  "--tbl-light-red": "#FEE2E2",
+  "--tbl-purple": "#F3E8FF",
+};
+
+/**
+ * Inline table theme colors exactly like the share-email template
+ * (`inlineTableEmailColors`) so PDF/Word match what recipients see in description.
+ */
+export const inlineTableExportColors = (html: string): string => {
+  if (!html) return "";
+  let result = html;
+
+  result = result.replace(/var\((--tbl-[a-z0-9-]+)\)/gi, (match, varName) => {
+    return TABLE_COLORS_MAP[String(varName).toLowerCase()] || match;
+  });
+
+  for (const [varName, hex] of Object.entries(TABLE_COLORS_MAP)) {
+    const cls = "bg-" + varName.replace("--", "");
+    const classPattern = new RegExp(
+      `(<(td|th|tr)[^>]*?class="[^"]*?\\b${cls}\\b[^"]*"[^>]*?)>`,
+      "gi"
+    );
+    result = result.replace(classPattern, (_match, openTag: string) => {
+      let updatedTag = openTag;
+      if (!updatedTag.includes("bgcolor=")) {
+        updatedTag += ` bgcolor="${hex}"`;
+      }
+      if (updatedTag.includes('style="')) {
+        return (
+          updatedTag.replace('style="', `style="background-color: ${hex} !important; `) +
+          ">"
+        );
+      }
+      return `${updatedTag} style="background-color: ${hex} !important;">`;
+    });
+  }
+
+  result = result.replace(
+    /<(td|th|tr)([^>]*?style="[^"]*?background-color:\s*(#[0-9a-fA-F]{3,8})[^"]*"[^>]*?)>/gi,
+    (match, tag, rest) => {
+      if (match.includes("bgcolor=")) return match;
+      const hexMatch = match.match(/background-color:\s*(#[0-9a-fA-F]{3,8})/i);
+      if (hexMatch?.[1]) {
+        return `<${tag}${rest} bgcolor="${hexMatch[1]}">`;
+      }
+      return match;
+    }
+  );
+
+  return result;
+};
+
+/** Clean note HTML for PDF/Word — same description pipeline as email (no logo/header). */
+const prepareNoteDescriptionForExport = (note: Note): string => {
+  const raw = note.description || "";
+  const workbook = parseExcelWorkbookFromHtml(raw);
+  let html = stripExcelWorkbookStore(raw);
+
+  // Safety: strip any leftover URL-encoded workbook JSON blobs
+  html = html.replace(/%7B%22fileName%22%3A[\s\S]*?%7D/gi, "").trim();
+
+  const parsed = new DOMParser().parseFromString(html || "", "text/html");
+  parsed
+    .querySelectorAll(
+      ".excel-workbook-store, .note-inline-image-remove, .row-attach-upload-btn, .row-attach-add-btn, .row-attach-loading, .table-file-btn.remove, .note-table-scroll, .a4-page-workspace, .a4-page-rotator"
+    )
+    .forEach((el) => {
+      // Unwrap scroll shells so table content stays; remove edit-only controls
+      if (
+        el.classList.contains("note-table-scroll") ||
+        el.classList.contains("a4-page-workspace") ||
+        el.classList.contains("a4-page-rotator")
+      ) {
+        const parent = el.parentNode;
+        if (!parent) return;
+        while (el.firstChild) parent.insertBefore(el.firstChild, el);
+        el.remove();
+        return;
+      }
+      el.remove();
+    });
+  parsed.querySelectorAll(".note-inline-image, .note-table-scroll-inner").forEach((wrap) => {
+    const parent = wrap.parentNode;
+    if (!parent) return;
+    while (wrap.firstChild) parent.insertBefore(wrap.firstChild, wrap);
+    parent.removeChild(wrap);
+  });
+
+  const pages = Array.from(parsed.body.querySelectorAll(".page"));
+  if (pages.length > 0) {
+    html = pages.map((p) => p.innerHTML).join("");
+  } else {
+    html = parsed.body.innerHTML.trim();
+  }
+
+  // Match email: strip attach UI regex leftovers + inline tbl-* colors
+  html = stripAttachmentUiFromHtml(html);
+  html = inlineTableExportColors(html);
+
+  if (htmlHasVisibleNoteContent(html)) {
+    return html;
+  }
+
+  if (workbook?.fileName || workbook?.fileKey) {
+    const name = workbook.fileName || "Spreadsheet.xlsx";
+    return `<p style="margin:0;color:#334155;"><strong>Attached spreadsheet:</strong> ${name}</p>`;
+  }
+
+  return '<p style="color:#94a3b8;font-style:italic;margin:0;font-family:Arial,sans-serif;font-size:14.5px;">No content provided.</p>';
+};
+
 /**
  * Export Note to PDF with 100% exact visual fidelity (highlighter colors, text colors,
  * boxes, cards, tables, and HTML formatting) matching the Word export and on-screen view.
@@ -374,7 +530,8 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
       });
     }
 
-    const firstRowMatch = (note.description || "").match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
+    const exportDescription = prepareNoteDescriptionForExport(note);
+    const firstRowMatch = exportDescription.match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
     const colCount = firstRowMatch
       ? (firstRowMatch[1].match(/<t[dh][^>]*>/gi) || []).length
       : 0;
@@ -389,19 +546,17 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
 
     const wrapper = document.createElement("div");
     wrapper.setAttribute("data-pdf-export-root", "true");
-    wrapper.style.position = "absolute";
-    wrapper.style.left = "0px";
+    // Off-screen but still paintable — negative z-index often yields a blank canvas
+    wrapper.style.position = "fixed";
+    wrapper.style.left = "-10000px";
     wrapper.style.top = "0px";
-    wrapper.style.zIndex = "-99999";
+    wrapper.style.zIndex = "0";
     wrapper.style.opacity = "1";
     wrapper.style.pointerEvents = "none";
     wrapper.style.overflow = "visible";
-    wrapper.style.width = isLandscape ? "1122px" : "794px"; // 1122px for A4 Landscape, 794px for Portrait
+    wrapper.style.width = isLandscape ? "1122px" : "794px";
     wrapper.style.backgroundColor = "#FFFFFF";
     wrapper.style.boxSizing = "border-box";
-
-    const isProject = note.type === "PROJECT";
-    const projectLabel = note.projectName || "Worksphere Project";
 
     wrapper.innerHTML = `
       <style>
@@ -411,18 +566,6 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
           border-radius: 3px !important;
           box-decoration-break: clone;
           -webkit-box-decoration-break: clone;
-        }
-        .pdf-export-body blockquote {
-          display: inline-block !important;
-          width: fit-content !important;
-          max-width: 100% !important;
-          border-left: 3px solid #4318FF !important;
-          background-color: rgba(67, 24, 255, 0.06) !important;
-          padding: 2px 10px !important;
-          margin: 4px 0 !important;
-          font-style: italic !important;
-          color: #475569 !important;
-          border-radius: 0 6px 6px 0 !important;
         }
         .pdf-export-body pre {
           font-family: Consolas, Monaco, "Courier New", monospace !important;
@@ -466,24 +609,24 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
           min-width: 0 !important;
           table-layout: fixed !important;
           border-collapse: collapse !important;
-          margin: 0 !important;
-          border: 1px solid #CBD5E1 !important;
+          margin: 0 0 14px 0 !important;
         }
         .pdf-export-body table th,
         .pdf-export-body table td {
-          border: 1px solid #CBD5E1 !important;
-          padding: 6px 4px !important;
-          text-align: center !important;
+          border: 1px solid #cbd5e1 !important;
+          padding: 10px 14px !important;
           vertical-align: middle !important;
-          font-size: 11px !important;
+          font-size: 13.5px !important;
+          font-family: Arial, sans-serif !important;
+          color: #334155 !important;
           word-break: break-word !important;
           overflow-wrap: anywhere !important;
           white-space: normal !important;
         }
+        /* Do not force th background — preserve inlined email/table theme colors */
         .pdf-export-body table th {
-          background-color: #F8FAFC !important;
           font-weight: 700 !important;
-          color: #1E293B !important;
+          color: #1e293b !important;
         }
         .pdf-export-body th.excel-attachment-col,
         .pdf-export-body td.excel-attachment-cell {
@@ -558,69 +701,43 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
         .pdf-export-body .table-file-btn.remove {
           display: none !important;
         }
-        .pdf-export-body ul, .pdf-export-body ol {
-          padding-left: 20px !important;
-          margin: 6px 0 !important;
-        }
         .pdf-export-body li {
-          margin-bottom: 3px !important;
+          margin-bottom: 5px !important;
         }
+        /* Match email .note-content typography (description only — no logo/header) */
         .pdf-export-body p {
-          margin: 0 0 8px 0 !important;
-          line-height: 1.65 !important;
+          margin: 0 0 14px 0 !important;
+          line-height: 1.8 !important;
+          font-size: 14.5px !important;
+          color: #334155 !important;
+          font-family: Arial, sans-serif !important;
         }
-        .pdf-export-body h1 { font-size: 20px !important; font-weight: 700 !important; margin: 12px 0 6px 0 !important; color: #1E293B !important; }
-        .pdf-export-body h2 { font-size: 16px !important; font-weight: 700 !important; margin: 10px 0 5px 0 !important; color: #1E293B !important; }
-        .pdf-export-body h3 { font-size: 14px !important; font-weight: 600 !important; margin: 8px 0 4px 0 !important; color: #1E293B !important; }
+        .pdf-export-body h1 { font-size: 24px !important; font-weight: 700 !important; margin: 0 0 12px 0 !important; color: #0f172a !important; font-family: Arial, sans-serif !important; }
+        .pdf-export-body h2 { font-size: 20px !important; font-weight: 700 !important; margin: 0 0 10px 0 !important; color: #0f172a !important; font-family: Arial, sans-serif !important; }
+        .pdf-export-body h3 { font-size: 17px !important; font-weight: 700 !important; margin: 0 0 8px 0 !important; color: #0f172a !important; font-family: Arial, sans-serif !important; }
+        .pdf-export-body ul, .pdf-export-body ol {
+          padding-left: 24px !important;
+          margin: 0 0 14px 0 !important;
+          font-size: 14.5px !important;
+          line-height: 1.8 !important;
+          color: #334155 !important;
+        }
+        .pdf-export-body blockquote {
+          border-left: 4px solid #0a8fe7 !important;
+          margin: 0 0 14px 0 !important;
+          padding: 12px 18px !important;
+          background-color: #f0f9ff !important;
+          color: #0369a1 !important;
+          font-size: 14px !important;
+          border-radius: 0 6px 6px 0 !important;
+        }
       </style>
-      <div style="padding: 28px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1E293B; background-color: #FFFFFF; line-height: 1.6; box-sizing: border-box; width: ${baseWidthPx}px;">
-        <!-- Structured Note Card: Project & Title -->
-        <div style="background-color: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 18px 22px; margin-bottom: 22px; width: 100%; box-sizing: border-box;">
-          <!-- Project Row: Rendered via table for 100% pixel-perfect html2canvas alignment -->
-          <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 12px; border-collapse: separate; width: 100%;">
-            <tr>
-              <td style="vertical-align: middle; padding-right: 10px; white-space: nowrap; width: 110px;">
-                <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px;">
-                  PROJECT:
-                </span>
-              </td>
-              <td style="vertical-align: middle;">
-                <table cellpadding="0" cellspacing="0" border="0" style="background-color: ${isProject ? "#EEF2FF" : "#ECFDF5"}; border: 1px solid ${isProject ? "#C7D2FE" : "#A7F3D0"}; border-radius: 6px; border-collapse: separate;">
-                  <tr>
-                    <td style="padding: 4px 14px; font-size: 12px; font-weight: 700; line-height: 18px; font-family: Arial, sans-serif; color: ${isProject ? "#4318FF" : "#059669"}; vertical-align: middle; text-align: center; white-space: nowrap;">
-                      ${isProject ? projectLabel : "Personal Note"}
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-
-          <!-- Title Row: Rendered via table for perfect baseline alignment -->
-          <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: separate; width: 100%;">
-            <tr>
-              <td style="vertical-align: middle; padding-right: 10px; white-space: nowrap; width: 110px;">
-                <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px;">
-                  TITLE/SUBJECT:
-                </span>
-              </td>
-              <td style="vertical-align: middle;">
-                <span style="font-size: 18px; font-weight: 800; color: #1B2559; line-height: 24px; font-family: Arial, sans-serif; letter-spacing: -0.2px;">
-                  ${note.title || "Untitled Note"}
-                </span>
-              </td>
-            </tr>
-          </table>
-        </div>
-
-        <!-- Structured Description Section -->
-        <div style="margin-bottom: 16px; width: 100%; box-sizing: border-box;">
-          <div style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1.5px solid #E2E8F0; padding-bottom: 6px; margin-bottom: 14px; width: 100%;">
-            DESCRIPTION
-          </div>
-          <div class="pdf-export-body" style="font-size: 13.5px; line-height: 1.65; color: #1E293B; background-color: #FFFFFF; width: 100%;">
-            ${note.description && note.description.trim() ? note.description : '<p style="color: #94A3B8; font-style: italic; margin: 0;">No description provided.</p>'}
-          </div>
+      <div style="padding: 28px 32px; font-family: Arial, sans-serif; color: #1e293b; background-color: #FFFFFF; line-height: 1.8; box-sizing: border-box; width: ${baseWidthPx}px;">
+        <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0; font-family: Arial, sans-serif; line-height: 1.3;">
+          ${note.title || "Untitled Note"}
+        </h1>
+        <div class="pdf-export-body note-content" style="font-size: 14.5px; line-height: 1.8; color: #1e293b; background-color: #FFFFFF; width: 100%; font-family: Arial, sans-serif;">
+          ${exportDescription}
         </div>
       </div>
     `;
@@ -638,9 +755,14 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
       backgroundColor: "#FFFFFF",
       width: baseWidthPx,
       windowWidth: baseWidthPx,
+      foreignObjectRendering: false,
     });
 
     document.body.removeChild(wrapper);
+
+    if (!canvas.width || !canvas.height) {
+      throw new Error("PDF render produced an empty canvas");
+    }
 
     // Initialize jsPDF in A4 with correct orientation
     const pdf = new jsPDF({
@@ -767,12 +889,11 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
   const hideLoading = message.loading("Preparing Word document download...", 0);
 
   try {
-    const isProject = note.type === "PROJECT";
-    const projectLabel = note.projectName || "Worksphere Project";
+    const exportDescription = prepareNoteDescriptionForExport(note);
     const isLandscape = note.rotation === 90 || note.rotation === 270;
 
     const isHorizontal = note.isVertical === false;
-    const firstRowMatch = (note.description || "").match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
+    const firstRowMatch = exportDescription.match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
     let colCount = 0;
     if (firstRowMatch) {
       const cells = firstRowMatch[1].match(/<t[dh][^>]*>/gi);
@@ -830,32 +951,6 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
             margin-bottom: 0;
           }
           p { margin-top: 0; margin-bottom: 8pt; line-height: 1.6; }
-          table.structured-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 18pt;
-            border: 1.5pt solid #CBD5E1;
-          }
-          table.structured-table td {
-            padding: 9pt 14pt;
-            border: 1pt solid #CBD5E1;
-            vertical-align: middle;
-          }
-          .label-cell {
-            width: 110pt;
-            background-color: #F8FAFC;
-            font-size: 9.5pt;
-            font-weight: bold;
-            color: #475569;
-            text-transform: uppercase;
-            letter-spacing: 0.5pt;
-          }
-          .val-cell {
-            background-color: #FFFFFF;
-            font-size: 11pt;
-            font-weight: bold;
-            color: #1E293B;
-          }
           .desc-container {
             border: 1.5pt solid #CBD5E1;
             margin-bottom: 18pt;
@@ -908,14 +1003,15 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
           }
           table th, table td {
             border: 1pt solid #CBD5E1;
-            padding: 6pt 4pt;
-            text-align: center;
+            padding: 10pt 14pt;
             vertical-align: middle;
-            font-size: 10pt;
+            font-size: 11pt;
+            font-family: Arial, sans-serif;
+            color: #334155;
             word-break: break-word;
           }
+          /* Preserve inlined email/table theme colors (do not force gray header fill) */
           table th {
-            background-color: #F1F5F9;
             font-weight: bold;
             color: #1E293B;
           }
@@ -955,22 +1051,9 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
       </head>
       <body>
         <div class="Section1">
-          <table class="structured-table">
-            <tr>
-              <td class="label-cell">PROJECT:</td>
-              <td class="val-cell">${isProject ? projectLabel : "Personal Note"}</td>
-            </tr>
-            <tr>
-              <td class="label-cell">TITLE/SUBJECT:</td>
-              <td class="val-cell">${note.title || "Untitled Note"}</td>
-            </tr>
-          </table>
-
-          <div style="font-size: 10pt; font-weight: bold; color: #475569; text-transform: uppercase; border-bottom: 1.5pt solid #CBD5E1; padding-bottom: 4pt; margin-top: 16pt; margin-bottom: 12pt;">
-            DESCRIPTION
-          </div>
-          <div style="font-size: 11pt; line-height: 1.65; color: #1E293B;">
-            ${note.description && note.description.trim() ? note.description : '<p style="color: #94A3B8; font-style: italic; margin: 0;">No description provided.</p>'}
+          <h1 style="font-family:Arial,sans-serif;font-size:24px;font-weight:bold;color:#0f172a;line-height:1.3;margin:0 0 12pt 0;">${note.title || "Untitled Note"}</h1>
+          <div class="note-content" style="font-family:Arial,sans-serif;font-size:14.5px;line-height:1.8;color:#1e293b;margin-top:12pt;">
+            ${exportDescription}
           </div>
         </div>
       </body>
@@ -1083,11 +1166,127 @@ export const wrapWideTablesInRoot = (root: HTMLElement | null | undefined) => {
   });
 };
 
+/** Join "I\\nN\\nF\\nO" style clipboard garbage into normal text. */
+export const collapseVerticalCharPaste = (text: string): string => {
+  if (!text) return "";
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  if (lines.length < 6) return text;
+  const single = lines.filter((l) => l.length <= 1).length;
+  if (single / lines.length < 0.55) return text;
+  // Mostly one char per line → join; keep blank lines as paragraph breaks
+  const joined: string[] = [];
+  let buf = "";
+  for (const line of lines) {
+    if (line.length === 0) {
+      if (buf) joined.push(buf);
+      buf = "";
+      joined.push("");
+    } else if (line.length === 1) {
+      buf += line;
+    } else {
+      if (buf) {
+        joined.push(buf);
+        buf = "";
+      }
+      joined.push(line);
+    }
+  }
+  if (buf) joined.push(buf);
+  return joined.join("\n");
+};
+
+export const plainTextToPasteHtml = (plain: string): string => {
+  const normalized = collapseVerticalCharPaste(plain);
+  if (!normalized.trim()) return "";
+  return normalized
+    .split(/\n{2,}/)
+    .map((block) => {
+      const lines = block
+        .split("\n")
+        .map((line) => line.replace(/</g, "&lt;").replace(/>/g, "&gt;"))
+        .join("<br>");
+      return `<p style="display:block;width:100%;max-width:100%;margin:0 0 0.4em;clear:both;">${
+        lines || "<br>"
+      }</p>`;
+    })
+    .join("");
+};
+
+/** True when HTML is mostly tiny spans/divs (causes vertical overlap beside tables). */
+const isFragmentedPasteHtml = (root: ParentNode): boolean => {
+  const els = Array.from(root.querySelectorAll("span, div, p, font, b, i")).slice(0, 400);
+  if (els.length < 12) return false;
+  let tiny = 0;
+  els.forEach((el) => {
+    const t = (el.textContent || "").replace(/\s+/g, "");
+    if (t.length > 0 && t.length <= 2 && el.children.length === 0) tiny += 1;
+  });
+  return tiny / els.length > 0.45;
+};
+
+/** Strip chat/Word layout styles that clip pasted text or stack it beside tables. */
+const normalizePastedLayoutStyles = (root: ParentNode) => {
+  root.querySelectorAll<HTMLElement>("*").forEach((el) => {
+    el.style.removeProperty("margin-left");
+    el.style.removeProperty("margin-right");
+    el.style.removeProperty("padding-left");
+    el.style.removeProperty("padding-right");
+    el.style.removeProperty("text-indent");
+    el.style.removeProperty("transform");
+    el.style.removeProperty("left");
+    el.style.removeProperty("right");
+    el.style.removeProperty("top");
+    el.style.removeProperty("bottom");
+    el.style.removeProperty("position");
+    el.style.removeProperty("float");
+    el.style.removeProperty("max-width");
+    el.style.removeProperty("min-width");
+    el.style.removeProperty("writing-mode");
+    el.style.removeProperty("column-count");
+    el.style.removeProperty("column-width");
+    el.style.removeProperty("columns");
+    el.style.removeProperty("flex");
+    el.style.removeProperty("flex-direction");
+    el.style.removeProperty("grid-template-columns");
+    const display = (el.style.display || "").toLowerCase();
+    if (
+      display.includes("flex") ||
+      display.includes("grid") ||
+      display === "inline-block" ||
+      display === "inline"
+    ) {
+      if (!["SPAN", "A", "B", "I", "STRONG", "EM", "U", "S", "CODE", "LABEL"].includes(el.tagName)) {
+        el.style.display = "block";
+      } else {
+        el.style.removeProperty("display");
+      }
+    }
+    const w = el.style.width;
+    if (w && (w.includes("px") || w.includes("vw") || w.includes("%") || parseFloat(w) > 0)) {
+      // Tiny widths force one-char-per-line wrapping beside tables
+      const px = parseFloat(w);
+      if (w.includes("%") || px > 100 || px < 40) {
+        el.style.removeProperty("width");
+      }
+    }
+    el.style.maxWidth = "100%";
+    if (["DIV", "P", "SECTION", "ARTICLE", "LI"].includes(el.tagName)) {
+      el.style.clear = "both";
+    }
+    if (el.tagName === "PRE" || el.tagName === "CODE") {
+      el.style.whiteSpace = "pre-wrap";
+      el.style.wordBreak = "break-word";
+      el.style.maxWidth = "100%";
+    }
+  });
+};
+
 /**
- * Prepare HTML pasted from email/Word/Outlook for the note editor:
- * unwrap A4 shells, keep full tables, enable horizontal scroll wrappers.
+ * Prepare HTML pasted from email/Word/Outlook/chat for the note editor:
+ * unwrap A4 shells, keep full tables, strip layout that clips text.
+ * Pass plainText to fall back when HTML is fragmented (avoids vertical overlap).
  */
-export const preparePastedHtmlForNote = (html?: string): string => {
+export const preparePastedHtmlForNote = (html?: string, plainText?: string): string => {
   if (!html || !html.trim()) return "";
   const flat = sanitizeNoteHtmlForClipboard(html);
   if (!flat) return "";
@@ -1095,6 +1294,13 @@ export const preparePastedHtmlForNote = (html?: string): string => {
   const parsed = new DOMParser().parseFromString(flat, "text/html");
   // Drop scripts / Word conditional noise that can truncate paste
   parsed.querySelectorAll("script, style, meta, link").forEach((el) => el.remove());
+
+  // Fragmented / OCR-style HTML → use plain text so it lays out neatly with tables
+  if (plainText && isFragmentedPasteHtml(parsed.body)) {
+    return plainTextToPasteHtml(plainText);
+  }
+
+  normalizePastedLayoutStyles(parsed.body);
 
   parsed.querySelectorAll("table").forEach((tableEl) => {
     const table = tableEl as HTMLTableElement;
@@ -1105,6 +1311,10 @@ export const preparePastedHtmlForNote = (html?: string): string => {
     const wrap = parsed.createElement("div");
     wrap.className = "note-table-scroll";
     wrap.setAttribute("contenteditable", "false");
+    wrap.setAttribute(
+      "style",
+      "display:block;width:100%;max-width:100%;clear:both;margin:0.5em 0;"
+    );
     const inner = parsed.createElement("div");
     inner.className = "note-table-scroll-inner";
     inner.setAttribute("contenteditable", "true");
@@ -1153,6 +1363,156 @@ export const copyNoteContentToClipboard = async (
     navigator.clipboard.writeText(textContent);
     message.success("Page copied to clipboard!");
   }
+};
+
+/** Dispatched on the editor DOM before bulk HTML mutations (e.g. Docling import). */
+export const NOTE_EDITOR_CHECKPOINT_EVENT = "note-editor-checkpoint";
+
+const INLINE_FILE_KEY_ATTR = "data-inline-file-key";
+
+/** Convert a data:image URL into a File for MinIO upload. */
+export const dataUrlToFile = (dataUrl: string, fileName?: string): File | null => {
+  try {
+    const match = /^data:([^;,]+)?(;base64)?,(.*)$/i.exec(dataUrl);
+    if (!match) return null;
+    const mime = (match[1] || "image/png").trim();
+    const isBase64 = Boolean(match[2]);
+    const data = match[3] || "";
+    let bytes: Uint8Array;
+    if (isBase64) {
+      const binary = atob(data);
+      bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    } else {
+      const decoded = decodeURIComponent(data);
+      bytes = new Uint8Array(decoded.length);
+      for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+    }
+    const ext = mime.split("/")[1]?.split("+")[0] || "png";
+    const name = fileName || `inline-image-${Date.now()}.${ext}`;
+    const buffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength
+    ) as ArrayBuffer;
+    return new File([buffer], name, { type: mime });
+  } catch {
+    return null;
+  }
+};
+
+export const getInlineImageFileKey = (img: HTMLImageElement): string | null => {
+  const attr = img.getAttribute(INLINE_FILE_KEY_ATTR);
+  if (attr) return attr;
+  const src = img.getAttribute("src") || "";
+  const match = /\/api\/notes\/attachments\/([^/?#]+)\/(?:view|download)/i.exec(src);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+};
+
+/**
+ * Upload embedded data:image sources and normalize blob/preview srcs so saved
+ * description HTML stays small (keys + view URLs instead of base64).
+ */
+export const rewriteInlineDataImagesInHtml = async (
+  html: string,
+  upload: (file: File) => Promise<string | null | undefined>,
+  toPreviewUrl: (key: string) => string
+): Promise<string> => {
+  if (!html || !html.trim()) return html || "";
+  const needsRewrite =
+    /data:image\//i.test(html) ||
+    html.includes("blob:") ||
+    html.includes(INLINE_FILE_KEY_ATTR) ||
+    /\/api\/notes\/attachments\//i.test(html);
+  if (!needsRewrite) return html;
+
+  const parsed = new DOMParser().parseFromString(html, "text/html");
+  const images = Array.from(parsed.querySelectorAll("img"));
+  let changed = false;
+
+  for (const img of images) {
+    const src = img.getAttribute("src") || "";
+    const existingKey = getInlineImageFileKey(img);
+
+    if (src.startsWith("data:image")) {
+      const file = dataUrlToFile(src, img.getAttribute("alt") || undefined);
+      if (!file) continue;
+      const key = await upload(file);
+      if (!key) continue;
+      img.setAttribute(INLINE_FILE_KEY_ATTR, key);
+      img.setAttribute("src", toPreviewUrl(key));
+      changed = true;
+      continue;
+    }
+
+    if (src.startsWith("blob:") && !existingKey) {
+      try {
+        const res = await fetch(src);
+        const blob = await res.blob();
+        const ext = (blob.type.split("/")[1] || "png").split("+")[0];
+        const file = new File(
+          [blob],
+          img.getAttribute("alt") || `inline-image-${Date.now()}.${ext}`,
+          { type: blob.type || "image/png" }
+        );
+        const key = await upload(file);
+        if (!key) continue;
+        img.setAttribute(INLINE_FILE_KEY_ATTR, key);
+        img.setAttribute("src", toPreviewUrl(key));
+        changed = true;
+        try {
+          URL.revokeObjectURL(src);
+        } catch {
+          /* ignore */
+        }
+      } catch {
+        /* leave blob src — save may still fail if not uploaded */
+      }
+      continue;
+    }
+
+    if (existingKey) {
+      const canonical = toPreviewUrl(existingKey);
+      if (img.getAttribute(INLINE_FILE_KEY_ATTR) !== existingKey) {
+        img.setAttribute(INLINE_FILE_KEY_ATTR, existingKey);
+        changed = true;
+      }
+      if (src.startsWith("blob:") || src !== canonical) {
+        img.setAttribute("src", canonical);
+        changed = true;
+      }
+    }
+  }
+
+  return changed ? parsed.body.innerHTML : html;
+};
+
+/**
+ * Resolve authorized blob URLs for inline images that were saved as attachment keys.
+ * Keeps data-inline-file-key so the next save can re-canonicalize srcs.
+ */
+export const hydrateInlineImagesInRoot = async (
+  root: HTMLElement | null | undefined,
+  fetchBlobUrl: (key: string, fileName?: string) => Promise<string | null>
+): Promise<void> => {
+  if (!root) return;
+  const images = Array.from(root.querySelectorAll<HTMLImageElement>("img"));
+  await Promise.all(
+    images.map(async (img) => {
+      const key = getInlineImageFileKey(img);
+      if (!key) return;
+      const src = img.getAttribute("src") || "";
+      if (src.startsWith("blob:") || src.startsWith("data:")) return;
+      try {
+        const blobUrl = await fetchBlobUrl(key, img.getAttribute("alt") || undefined);
+        if (blobUrl) {
+          img.setAttribute(INLINE_FILE_KEY_ATTR, key);
+          img.src = blobUrl;
+        }
+      } catch {
+        // leave preview URL — may still work if cookies auth the view route
+      }
+    })
+  );
 };
 
 /**
@@ -1296,14 +1656,16 @@ export interface DirectoryEmployee {
   designation: string;
 }
 
+/** Empty/omitted search returns all active employees (backend Get All / Select All). */
 export const searchEmployeeDirectory = async (search?: string): Promise<DirectoryEmployee[]> => {
   try {
     const params = new URLSearchParams();
     if (search && search.trim()) {
       params.append('search', search.trim());
     }
+    const qs = params.toString();
     const res = await axios.get<DirectoryEmployee[]>(
-      `/api/employee-details/search-directory?${params.toString()}`,
+      `/api/employee-details/search-directory${qs ? `?${qs}` : ''}`,
       {
         headers: { 'x-skip-loader': 'true' },
       }
