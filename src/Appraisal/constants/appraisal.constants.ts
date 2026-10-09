@@ -36,6 +36,26 @@ export const AppraisalCopy = {
 export const MANAGER_MAPPING_LIST_PATH = "/api/manager-mapping/all";
 export const MASTER_FINANCIAL_YEAR_PATH = "/api/master-financialyear";
 export const MASTER_QUARTER_PATH = "/api/master-quaterly";
+export const QUARTERLY_REVIEW_URL = "/api/quarterly-review";
+export const QUARTERLY_REVIEW_PERFORMANCE_URL = "/api/quarterly-review&performance";
+export const EMPLOYEE_PERFORMANCE_URL = "/api/employee-performance";
+
+export const ENVIRONMENT_SCORES: Record<string, number> = {
+  ONE_STAR: 1,
+  TWO_STAR: 2,
+  THREE_STAR: 3,
+  FOUR_STAR: 4,
+  FIVE_STAR: 5,
+};
+
+export const ENVIRONMENT_RATINGS: Record<number, string> = {
+  1: "ONE_STAR",
+  2: "TWO_STAR",
+  3: "THREE_STAR",
+  4: "FOUR_STAR",
+  5: "FIVE_STAR",
+};
 
 export const editGrantedBody = (deadline: string): string =>
   `You can edit until ${deadline}.`;
+

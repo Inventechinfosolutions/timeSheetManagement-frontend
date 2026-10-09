@@ -7,7 +7,7 @@ import {
   AppraisalApi,
   EditRequestRecord,
   readApiError,
-} from "../../services/appraisal.api";
+} from "../../reducers/appraisal.reducer";
 
 interface GrantEditModalProps {
   isOpen: boolean;

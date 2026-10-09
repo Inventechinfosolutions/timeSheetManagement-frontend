@@ -14,7 +14,7 @@ import {
   readApiError,
   toManagerReviewRecord,
   toReviewFormData,
-} from "../../services/appraisal.api";
+} from "../../reducers/appraisal.reducer";
 import { message } from "antd";
 import {
   AppraisalFilterAll,
@@ -577,6 +577,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
                   highlightedId={highlightedRowId}
                   onEdit={handleEditRecord}
                   onView={handleViewRecord}
+                  onRefresh={() => setReloadKey((k) => k + 1)}
                   page={tablePage}
                   totalCount={tableTotal}
                   defaultPageSize={QUARTERLY_REVIEW_TABLE_PAGE_SIZE}

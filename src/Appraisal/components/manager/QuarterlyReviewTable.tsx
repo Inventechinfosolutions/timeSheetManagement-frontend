@@ -1,13 +1,17 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Star, Pencil, Eye, ShieldCheck, UserCheck } from "lucide-react";
+import { Star, Pencil, Eye, ShieldCheck, UserCheck, Check, X, Calendar, Clock, AlertCircle } from "lucide-react";
 import { ManagerQuarterlyReviewRecord } from "../../types/appraisal.types";
 import { Pagination } from "../../../components/ui";
+import { useAppSelector } from "../../../hooks";
+import { AppraisalApi, readApiError } from "../../reducers/appraisal.reducer";
+import { message } from "antd";
 import "./QuarterlyReviewTable.css";
 
 interface QuarterlyReviewTableProps {
   data: ManagerQuarterlyReviewRecord[];
   onEdit?: (record: ManagerQuarterlyReviewRecord) => void;
   onView?: (record: ManagerQuarterlyReviewRecord) => void;
+  onRefresh?: () => void;
   className?: string;
   highlightedId?: string | null;
   defaultPageSize?: number;
@@ -32,6 +36,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   data,
   onEdit,
   onView,
+  onRefresh,
   className = "",
   highlightedId = null,
   defaultPageSize = 10,
@@ -41,6 +46,16 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   totalCount,
   onPageChange,
 }) => {
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const managerId = currentUser?.employeeId || currentUser?.loginId || "";
+
+  const [decisionModalOpen, setDecisionModalOpen] = useState(false);
+  const [decisionRecord, setDecisionRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
+  const [decisionIsApprove, setDecisionIsApprove] = useState<boolean>(true);
+  const [decisionDeadline, setDecisionDeadline] = useState<string>("");
+  const [decisionRemarks, setDecisionRemarks] = useState<string>("");
+  const [decisionSubmitting, setDecisionSubmitting] = useState<boolean>(false);
+
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = defaultPageSize;
   const isServerPage = typeof onPageChange === "function";
@@ -170,7 +185,51 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
     document.body.scrollTop = 0;
   };
 
+  const handleOpenDecision = (record: ManagerQuarterlyReviewRecord, isApprove: boolean) => {
+    setDecisionRecord(record);
+    setDecisionIsApprove(isApprove);
+    const d = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    setDecisionDeadline(localIso);
+    setDecisionRemarks("");
+    setDecisionModalOpen(true);
+  };
+
+  const handleConfirmDecision = async () => {
+    if (!decisionRecord) return;
+    const performanceId = decisionRecord.performanceId;
+    if (!performanceId) {
+      message.error("Performance record ID not found.");
+      return;
+    }
+    setDecisionSubmitting(true);
+    try {
+      await AppraisalApi.respondEdit({
+        performanceId,
+        managerId,
+        approved: decisionIsApprove,
+        editAllowedUntil: decisionIsApprove && decisionDeadline ? new Date(decisionDeadline).toISOString() : undefined,
+        responseNote: decisionRemarks.trim() || undefined,
+      });
+      message.success(
+        decisionIsApprove
+          ? `Edit access granted to ${decisionRecord.name}!`
+          : `Edit request rejected.`
+      );
+      setDecisionModalOpen(false);
+      onRefresh?.();
+    } catch (error) {
+      message.error(readApiError(error));
+    } finally {
+      setDecisionSubmitting(false);
+    }
+  };
+
   const renderAction = (record: ManagerQuarterlyReviewRecord) => {
+    const isEditRequested =
+      record.status.toUpperCase() === "REQUESTED_FOR_EDIT" ||
+      record.performanceStatus?.toUpperCase() === "REQUESTED_FOR_EDIT";
+
     return (
       <div className="qr-actions-container">
         <button
@@ -185,18 +244,42 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
         >
           <Eye className="w-4 h-4" />
         </button>
-        <button
-          type="button"
-          onClick={() => {
-            scrollToTop();
-            onEdit?.(record);
-          }}
-          className="qr-action-icon-btn qr-action-btn-edit"
-          title={`Edit evaluation for ${record.name}`}
-          aria-label={`Edit evaluation for ${record.name}`}
-        >
-          <Pencil className="w-4 h-4" />
-        </button>
+
+        {isEditRequested ? (
+          <>
+            <button
+              type="button"
+              onClick={() => handleOpenDecision(record, true)}
+              className="qr-action-icon-btn qr-action-btn-approve"
+              title={`Approve edit request for ${record.name}`}
+              aria-label={`Approve edit request for ${record.name}`}
+            >
+              <Check className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenDecision(record, false)}
+              className="qr-action-icon-btn qr-action-btn-reject"
+              title={`Reject edit request for ${record.name}`}
+              aria-label={`Reject edit request for ${record.name}`}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              scrollToTop();
+              onEdit?.(record);
+            }}
+            className="qr-action-icon-btn qr-action-btn-edit"
+            title={`Edit evaluation for ${record.name}`}
+            aria-label={`Edit evaluation for ${record.name}`}
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+        )}
       </div>
     );
   };
@@ -335,6 +418,149 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               showTotal={false}
               activeClassName="!bg-[#2563EB] !text-white shadow-xs font-black shadow-[#2563EB]/25"
             />
+          </div>
+        </div>
+      )}
+
+      {/* Manager Decision Modal (Approve / Reject) */}
+      {decisionModalOpen && decisionRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
+            {/* Modal Header */}
+            <div
+              className={`p-5 flex items-center justify-between border-b ${
+                decisionIsApprove
+                  ? "bg-emerald-50/80 border-emerald-100"
+                  : "bg-rose-50/80 border-rose-100"
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center ${
+                    decisionIsApprove
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-rose-100 text-rose-700"
+                  }`}
+                >
+                  {decisionIsApprove ? (
+                    <Check className="w-5 h-5" />
+                  ) : (
+                    <X className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    {decisionIsApprove
+                      ? "Approve Edit Request"
+                      : "Reject Edit Request"}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    {decisionRecord.name} • {decisionRecord.id} •{" "}
+                    {decisionRecord.quarter} {decisionRecord.financialYear}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDecisionModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {/* Employee's request reason */}
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Employee's Stated Reason
+                </div>
+                <p className="text-sm text-slate-700 italic">
+                  "{decisionRecord.editRequestReason || "No specific reason provided."}"
+                </p>
+              </div>
+
+              {decisionIsApprove ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Edit Access Valid Until (Deadline){" "}
+                    <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={decisionDeadline}
+                    onChange={(e) => setDecisionDeadline(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    The employee will be permitted to edit and resubmit their self-assessment until this deadline. When the deadline passes, editing is locked automatically.
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-50 border border-amber-200/60 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span>
+                    Rejecting this request will keep the self-assessment locked in its current submitted state.
+                  </span>
+                </div>
+              )}
+
+              {/* Manager Remarks note */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Manager Remarks (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  value={decisionRemarks}
+                  onChange={(e) => setDecisionRemarks(e.target.value)}
+                  placeholder={
+                    decisionIsApprove
+                      ? "Optional remarks or instructions for the employee..."
+                      : "Provide a reason for rejection..."
+                  }
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDecisionModalOpen(false)}
+                disabled={decisionSubmitting}
+                className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDecision}
+                disabled={
+                  decisionSubmitting || (decisionIsApprove && !decisionDeadline)
+                }
+                className={`px-5 py-2 text-sm font-bold text-white rounded-xl shadow-md transition-all flex items-center gap-1.5 ${
+                  decisionIsApprove
+                    ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/25 disabled:opacity-50"
+                    : "bg-rose-600 hover:bg-rose-700 shadow-rose-600/25 disabled:opacity-50"
+                }`}
+              >
+                {decisionSubmitting ? (
+                  "Processing..."
+                ) : decisionIsApprove ? (
+                  <>
+                    <Check className="w-4 h-4" /> Grant Edit Access
+                  </>
+                ) : (
+                  <>
+                    <X className="w-4 h-4" /> Confirm Rejection
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

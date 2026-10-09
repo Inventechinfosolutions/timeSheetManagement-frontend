@@ -99,6 +99,7 @@
   background: #2563EB !important;
   border-bottom: 2px solid #1D4ED8 !important;
 }
+
 .qr-header-indigo .qr-sticky-action-th,
 .qr-header-navy .qr-sticky-action-th,
 .qr-header-purple .qr-sticky-action-th,
@@ -326,6 +327,7 @@
   color: #B45309;
   border: 1px solid #FDE68A;
 }
+
 .qr-status-not-started .qr-status-dot,
 .qr-status-pending .qr-status-dot {
   background: #F59E0B;
@@ -338,6 +340,7 @@
   color: #1D4ED8;
   border: 1px solid #BFDBFE;
 }
+
 .qr-status-in-progress .qr-status-dot,
 .qr-status-awaiting-review .qr-status-dot {
   background: #3B82F6;
@@ -350,6 +353,7 @@
   color: #4338CA;
   border: 1px solid #C7D2FE;
 }
+
 .qr-status-submitted .qr-status-dot {
   background: #6366F1;
 }
@@ -361,16 +365,20 @@
   color: #047857;
   border: 1px solid #A7F3D0;
 }
+
 .qr-status-completed .qr-status-dot,
 .qr-status-reviewed .qr-status-dot {
   background: #10B981;
 }
 
 @keyframes qrDotPulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.35);
     opacity: 0.65;
@@ -415,8 +423,40 @@
 }
 
 .qr-action-btn-edit:active,
-.qr-action-btn-view:active {
+.qr-action-btn-view:active,
+.qr-action-btn-approve:active,
+.qr-action-btn-reject:active {
   transform: scale(0.94);
+}
+
+.qr-action-btn-approve {
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.08);
+}
+
+.qr-action-btn-approve:hover {
+  background: #059669;
+  color: #FFFFFF;
+  border-color: #059669;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.28);
+}
+
+.qr-action-btn-reject {
+  background: #FEF2F2;
+  color: #DC2626;
+  border: 1px solid #FECACA;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.08);
+}
+
+.qr-action-btn-reject:hover {
+  background: #DC2626;
+  color: #FFFFFF;
+  border-color: #DC2626;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.28);
 }
 
 /* Sticky Action Column Body Cell */
@@ -490,18 +530,21 @@
       inset 4px 0 0 #2563EB,
       0 4px 20px rgba(37, 99, 235, 0.22) !important;
   }
+
   30% {
     background-color: rgba(37, 99, 235, 0.14) !important;
     box-shadow:
       inset 4px 0 0 #2563EB,
       0 6px 24px rgba(37, 99, 235, 0.25) !important;
   }
+
   65% {
     background-color: rgba(37, 99, 235, 0.07) !important;
     box-shadow:
       inset 2px 0 0 rgba(37, 99, 235, 0.5),
       0 3px 12px rgba(37, 99, 235, 0.12) !important;
   }
+
   100% {
     background-color: inherit;
     box-shadow:

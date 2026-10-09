@@ -13,7 +13,7 @@ import {
   AppraisalApi,
   MasterFinancialYearOption,
   readApiError,
-} from "../../services/appraisal.api";
+} from "../../reducers/appraisal.reducer";
 import { loadAppraisalPeriod } from "../../utils/appraisalHelpers";
 
 interface RatingVerificationModalProps {

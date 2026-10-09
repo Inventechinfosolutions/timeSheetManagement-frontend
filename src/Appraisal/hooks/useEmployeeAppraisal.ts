@@ -6,7 +6,7 @@ import {
   MasterFinancialYearOption,
   MasterQuarterRecord,
   toPerformanceAssignment,
-} from "../services/appraisal.api";
+} from "../reducers/appraisal.reducer";
 import { useAppSelector } from "../../hooks";
 import { AppraisalFilterAll } from "../enums/appraisal.enums";
 import { loadAppraisalPeriod } from "../utils/appraisalHelpers";

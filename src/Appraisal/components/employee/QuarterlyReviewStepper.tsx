@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Send,
+  AlertCircle,
 } from "lucide-react";
 import {
   animateStepSlide,
@@ -13,7 +14,7 @@ import {
 } from "../../animations/appraisalAnimations";
 import { ReviewFormData, QuarterlyReviewAssignment, StoredPerformanceFile } from "../../types/appraisal.types";
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
-import { AppraisalApi, readApiError, toPerformancePayload, toReviewFormData } from "../../services/appraisal.api";
+import { AppraisalApi, readApiError, toPerformancePayload, toReviewFormData } from "../../reducers/appraisal.reducer";
 import { QuaterlyEnum } from "../../enums/appraisal.enums";
 import OverviewStep from "./steps/OverviewStep";
 import AchievementsStep from "./steps/AchievementsStep";
@@ -60,6 +61,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   onBack,
   onSubmitSuccess,
 }) => {
+  const isLocked = readOnly || assignment.canEdit === false;
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [exitingStep, setExitingStep] = useState<number | null>(null);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
@@ -378,9 +380,11 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     setSaving(true);
     setSaveError("");
     try {
-      const existingId = performanceIdRef.current;
+      const existingId = performanceIdRef.current || assignment.performanceId;
       if (existingId) {
         await AppraisalApi.updatePerformance(existingId, payload);
+        performanceIdRef.current = existingId;
+        setPerformanceId(existingId);
         return true;
       }
       const saved = asDraft
@@ -526,7 +530,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   };
 
   const handleSaveAndExit = async () => {
-    if (readOnly) {
+    if (isLocked) {
       onBack();
       return;
     }
@@ -550,7 +554,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   };
 
   const handleSubmit = async () => {
-    if (saving) {
+    if (isLocked || saving) {
       return;
     }
     let currentData = formData;
@@ -664,6 +668,17 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
   return (
     <div ref={topRef} className="w-full max-w-5xl mx-auto space-y-6 font-sans">
+      {assignment.canEdit === false && (
+        <div className="p-4 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-center gap-3 text-amber-900 text-sm font-semibold shadow-xs">
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+          <span>
+            {assignment.status.toUpperCase() === "EDIT_GRANTED"
+              ? "Your edit deadline granted by your manager has expired. This review is locked."
+              : "This review is currently locked for editing."}
+          </span>
+        </div>
+      )}
+
       {/* Top Header Card */}
       <Card className="rounded-3xl p-5 sm:p-6 manager-review-glass-card">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -827,7 +842,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
               <div className="flex items-center gap-3">
                 {saveError ? <p className="text-xs font-bold text-red-600">{saveError}</p> : null}
-                {!readOnly && (
+                {!isLocked && (
                 <Button
                   variant="ghost"
                   size="md"
@@ -839,7 +854,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                 </Button>
                 )}
 
-                {readOnly && currentStep === 6 ? null : currentStep < 6 ? (
+                {isLocked && currentStep === 6 ? null : currentStep < 6 ? (
                   <Button
                     variant="primary"
                     size="md"

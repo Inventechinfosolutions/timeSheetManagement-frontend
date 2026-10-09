@@ -28,7 +28,7 @@ import {
 } from "../../types/appraisal.types";
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
 import { EmployeePerformanceStatus, QuarterlyReviewStatus } from "../../enums/appraisal.enums";
-import { AppraisalApi, formatAppraisalDisplayDate, readApiError, RevealedRating } from "../../services/appraisal.api";
+import { AppraisalApi, formatAppraisalDisplayDate, readApiError, RevealedRating } from "../../reducers/appraisal.reducer";
 import { DatePicker } from "../../../components/ui";
 import { message } from "antd";
 import "./EvaluationPanel.css";

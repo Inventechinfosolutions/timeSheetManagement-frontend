@@ -29,7 +29,7 @@ import {
   ReviewFormData,
 } from "../../types/appraisal.types";
 import { useEmployeeAppraisal } from "../../hooks/useEmployeeAppraisal";
-import { AppraisalApi, formatAppraisalDisplayDate, readApiError, toReviewFormData } from "../../services/appraisal.api";
+import { AppraisalApi, formatAppraisalDisplayDate, readApiError, toReviewFormData } from "../../reducers/appraisal.reducer";
 import QuarterlyReviewStepper from "./QuarterlyReviewStepper";
 import EvaluationPanel from "../manager/EvaluationPanel";
 import RatingVerificationModal from "./RatingVerificationModal";
@@ -360,20 +360,17 @@ export const AppraisalDashboard: React.FC = () => {
       remainingHours: 0,
       tooltip: "",
     };
-    const twoDayMs = 48 * 60 * 60 * 1000;
-    if (assignment.status.toUpperCase() !== "SUBMITTED" || !assignment.submittedAt) {
-      return hidden;
-    }
-    const submittedTime = new Date(assignment.submittedAt).getTime();
-    if (Number.isNaN(submittedTime) || Date.now() - submittedTime > twoDayMs) {
-      return hidden;
-    }
 
-    const remainingHours = Math.max(1, Math.round((twoDayMs - (Date.now() - submittedTime)) / (3600 * 1000)));
-    const isAlreadyRequested = accessRequests.some(
-      (req) => req.assignmentId === assignment.id || (req.quarter === assignment.quarter && req.financialYear === assignment.financialYear)
-    );
-    if (isAlreadyRequested) {
+    const statusUpper = assignment.status.toUpperCase();
+    const isPending =
+      statusUpper === "REQUESTED_FOR_EDIT" ||
+      accessRequests.some(
+        (req) =>
+          req.assignmentId === assignment.id ||
+          (req.quarter === assignment.quarter && req.financialYear === assignment.financialYear)
+      );
+
+    if (isPending) {
       return {
         visible: true,
         eligible: false,
@@ -383,6 +380,11 @@ export const AppraisalDashboard: React.FC = () => {
       };
     }
 
+    if (!assignment.canRequestEdit) {
+      return hidden;
+    }
+
+    const remainingHours = assignment.remainingRequestHours ?? 24;
     return {
       visible: true,
       eligible: true,
@@ -403,12 +405,26 @@ export const AppraisalDashboard: React.FC = () => {
     setSelectedAccessAssignment(null);
   };
 
-  const handleSubmitAccessRequest = (newRequest: AccessRequest) => {
-    setAccessRequests((prev) => [newRequest, ...prev]);
-    message.success(
-      `Access request for ${newRequest.quarter} successfully routed to ${newRequest.recipientRole}!`,
-      2.5
-    );
+  const handleSubmitAccessRequest = async (newRequest: AccessRequest) => {
+    try {
+      if (selectedAccessAssignment) {
+        await AppraisalApi.requestEdit({
+          performanceId: selectedAccessAssignment.performanceId,
+          reviewId: selectedAccessAssignment.reviewId,
+          employeeId: selectedAccessAssignment.employeeId,
+          reason: newRequest.description,
+        });
+        reloadAssignments();
+      }
+      setAccessRequests((prev) => [newRequest, ...prev]);
+      message.success(
+        `Access request for ${newRequest.quarter} successfully routed to ${newRequest.recipientRole}!`,
+        2.5
+      );
+      handleCloseAccessRequest();
+    } catch (error) {
+      message.error(readApiError(error));
+    }
   };
 
   // Ensure scroll to top whenever entering view or edit screen
@@ -528,8 +544,8 @@ export const AppraisalDashboard: React.FC = () => {
 
     return (
       <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE]">
-        
-        
+
+
 
         <div className="relative z-10">
           <EvaluationPanel
@@ -558,8 +574,8 @@ export const AppraisalDashboard: React.FC = () => {
   if (activeAssignment) {
     return (
       <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE]">
-        
-        
+
+
 
         <div className="relative z-10">
           <QuarterlyReviewStepper
@@ -587,8 +603,8 @@ export const AppraisalDashboard: React.FC = () => {
 
   return (
     <div className="w-full relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
-      
-      
+
+
 
       {/* FOREGROUND CONTENT (z-10 layer for crisp interactivity and clarity) */}
       <div className="relative z-10 flex-1 flex flex-col min-h-0">
@@ -624,10 +640,10 @@ export const AppraisalDashboard: React.FC = () => {
               <div className="flex items-center gap-3">
                 <div
                   className={`employee-header-stat-icon-wrap ${deadlineInfo && deadlineInfo.days < 0
-                      ? "bg-[#FEF2F2] border border-red-200 text-[#DC2626]"
-                      : deadlineInfo && deadlineInfo.days <= 3
-                        ? "bg-[#FFFBEB] border border-amber-200 text-[#D97706]"
-                        : "bg-white/90 border border-white/90 text-[#0F172A]"
+                    ? "bg-[#FEF2F2] border border-red-200 text-[#DC2626]"
+                    : deadlineInfo && deadlineInfo.days <= 3
+                      ? "bg-[#FFFBEB] border border-amber-200 text-[#D97706]"
+                      : "bg-white/90 border border-white/90 text-[#0F172A]"
                     }`}
                 >
                   <CalendarClock className="w-5 h-5 stroke-[2.2]" />
@@ -814,8 +830,8 @@ export const AppraisalDashboard: React.FC = () => {
                                 <td className="text-center">
                                   <span
                                     className={`qr-assigned-by-pill ${assignment.assignedBy.toLowerCase() === "admin"
-                                        ? "qr-assigned-by-admin"
-                                        : ""
+                                      ? "qr-assigned-by-admin"
+                                      : ""
                                       }`}
                                   >
                                     {assignment.assignedBy.toLowerCase() === "admin" ? (
@@ -863,15 +879,15 @@ export const AppraisalDashboard: React.FC = () => {
                                       <Eye className="w-4 h-4" />
                                     </button>
                                     {assignment.canEdit && (
-                                    <button
-                                      type="button"
-                                      onClick={() => handleOpenEdit(assignment)}
-                                      className="qr-action-icon-btn qr-action-btn-edit"
-                                      title={`Edit review for ${assignment.quarter}`}
-                                      aria-label={`Edit review for ${assignment.quarter}`}
-                                    >
-                                      <Pencil className="w-4 h-4" />
-                                    </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenEdit(assignment)}
+                                        className="qr-action-icon-btn qr-action-btn-edit"
+                                        title={`Edit review for ${assignment.quarter}`}
+                                        aria-label={`Edit review for ${assignment.quarter}`}
+                                      >
+                                        <Pencil className="w-4 h-4" />
+                                      </button>
                                     )}
 
                                     {(() => {
@@ -888,13 +904,12 @@ export const AppraisalDashboard: React.FC = () => {
                                             elig.eligible &&
                                             handleOpenAccessRequest(assignment, elig.remainingHours)
                                           }
-                                          className={`qr-action-icon-btn qr-action-btn-access ${
-                                            elig.alreadyRequested
+                                          className={`qr-action-icon-btn qr-action-btn-access ${elig.alreadyRequested
                                               ? "qr-action-btn-access-requested"
                                               : elig.eligible
-                                              ? "qr-action-btn-access-enabled"
-                                              : "qr-action-btn-access-disabled"
-                                          }`}
+                                                ? "qr-action-btn-access-enabled"
+                                                : "qr-action-btn-access-disabled"
+                                            }`}
                                           title={elig.tooltip}
                                           aria-label={
                                             elig.alreadyRequested
@@ -962,8 +977,8 @@ export const AppraisalDashboard: React.FC = () => {
                             <span>Assigned by:</span>
                             <span
                               className={`qr-assigned-by-pill ${assignment.assignedBy.toLowerCase() === "admin"
-                                  ? "qr-assigned-by-admin"
-                                  : ""
+                                ? "qr-assigned-by-admin"
+                                : ""
                                 }`}
                             >
                               {assignment.assignedBy.toLowerCase() === "admin" ? (
@@ -1005,14 +1020,14 @@ export const AppraisalDashboard: React.FC = () => {
                             View
                           </button>
                           {assignment.canEdit && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEdit(assignment)}
-                            className="qr-action-btn-edit flex-1 justify-center py-2 text-xs"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            Edit
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(assignment)}
+                              className="qr-action-btn-edit flex-1 justify-center py-2 text-xs"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                              Edit
+                            </button>
                           )}
 
                           {(() => {
@@ -1026,13 +1041,12 @@ export const AppraisalDashboard: React.FC = () => {
                                   elig.eligible &&
                                   handleOpenAccessRequest(assignment, elig.remainingHours)
                                 }
-                                className={`qr-action-icon-btn qr-action-btn-access !h-8 !w-8 justify-center shrink-0 ${
-                                  elig.alreadyRequested
+                                className={`qr-action-icon-btn qr-action-btn-access !h-8 !w-8 justify-center shrink-0 ${elig.alreadyRequested
                                     ? "qr-action-btn-access-requested"
                                     : elig.eligible
-                                    ? "qr-action-btn-access-enabled"
-                                    : "qr-action-btn-access-disabled"
-                                }`}
+                                      ? "qr-action-btn-access-enabled"
+                                      : "qr-action-btn-access-disabled"
+                                  }`}
                                 title={elig.tooltip}
                                 aria-label={
                                   elig.alreadyRequested

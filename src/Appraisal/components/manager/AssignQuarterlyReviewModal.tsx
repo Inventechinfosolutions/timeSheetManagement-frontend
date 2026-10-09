@@ -8,7 +8,7 @@ import {
   MasterFinancialYearOption,
   MasterQuarterRecord,
   readApiError,
-} from "../../services/appraisal.api";
+} from "../../reducers/appraisal.reducer";
 import { AppraisalCopy } from "../../constants/appraisal.constants";
 import { AssignButtonState, AssignFormField, AssignmentKind, QuaterlyEnum } from "../../enums/appraisal.enums";
 import {

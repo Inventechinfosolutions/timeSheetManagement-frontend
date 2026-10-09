@@ -7,7 +7,7 @@ import {
   AppraisalApi,
   EditRequestRecord,
   readApiError,
-} from "../../services/appraisal.api";
+} from "../../reducers/appraisal.reducer";
 
 export const EditNoticePopup: React.FC = () => {
   const currentUser = useAppSelector((state) => state.user.currentUser);
