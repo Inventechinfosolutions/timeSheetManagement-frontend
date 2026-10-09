@@ -290,7 +290,7 @@ export const toManagerReviewRecord = (
   reviewId: review.id,
   description: review.description || "",
   submittedOn: formatAppraisalDisplayDate(
-    review.performanceDetails?.submittedAt || review.submittedDate,
+    review.performanceDetails?.submittedAt,
   ),
   reviewStatus: review.status,
   performanceStatus: review.performanceDetails?.status,
@@ -326,7 +326,7 @@ export const toPerformanceAssignment = (
   assignedBy: row.assignedBy || "",
   assignedDate: formatAppraisalDisplayDate(row.assignedDate),
   deadline: formatAppraisalDisplayDate(row.deadlineDate),
-  performanceDate: formatAppraisalDisplayDate(row.submittedAt || row.lastModifiedDate || row.createdAt),
+  performanceDate: formatAppraisalDisplayDate(row.submittedAt),
   status: row.status,
   reviewStatus: String(row.status).toUpperCase() === "COMPLETED" ? "COMPLETED" : undefined,
   canEdit: performanceCanEdit(row),
@@ -350,9 +350,7 @@ export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyRev
   assignedDate: formatAppraisalDisplayDate(review.assignedDate),
   deadline: formatAppraisalDisplayDate(review.deadlineDate),
   performanceDate: formatAppraisalDisplayDate(
-    review.performanceDetails?.submittedAt ||
-    review.performanceDetails?.lastModifiedDate ||
-    review.performanceDetails?.createdAt,
+    review.performanceDetails?.submittedAt,
   ),
   status: review.performanceDetails?.status || review.status,
   reviewStatus: review.status,

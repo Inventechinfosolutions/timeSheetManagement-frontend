@@ -18,6 +18,7 @@ import {
   X,
   AlertCircle,
   ArrowRight,
+  Star,
 } from "lucide-react";
 import {
   animateKeyIconBounce,
@@ -34,6 +35,7 @@ import QuarterlyReviewStepper from "./QuarterlyReviewStepper";
 import EvaluationPanel from "../manager/EvaluationPanel";
 import RatingVerificationModal from "./RatingVerificationModal";
 import AccessRequestModal from "./AccessRequestModal";
+import { RevealedRatingModal, RevealedRatingData } from "./RevealedRatingModal";
 import { message } from "antd";
 import {
   Card,
@@ -117,13 +119,49 @@ export const AppraisalDashboard: React.FC = () => {
   } = useEmployeeAppraisal();
   const [editingForm, setEditingForm] = useState<ReviewFormData | undefined>(undefined);
   const [stepperReadOnly, setStepperReadOnly] = useState<boolean>(false);
-  const [rowRatings, setRowRatings] = useState<Record<string, { finalRating: number }>>({});
+  interface ActiveRatingSession {
+    finalRating: number;
+    expiresAt: number;
+    quarter: string;
+    financialYear: string;
+    reviewId: number;
+  }
+
+  const [rowRatings, setRowRatings] = useState<Record<string, ActiveRatingSession>>({});
+  const [revealedModalData, setRevealedModalData] = useState<RevealedRatingData | null>(null);
   const [ratingTarget, setRatingTarget] = useState<QuarterlyReviewAssignment | null>(null);
   const [ratingPassword, setRatingPassword] = useState("");
   const [showRatingPassword, setShowRatingPassword] = useState(false);
   const [ratingError, setRatingError] = useState("");
   const [unlockingRating, setUnlockingRating] = useState(false);
   const ratingTimersRef = useRef<Record<string, number>>({});
+  const [, setTicker] = useState(0);
+
+  // Live timer tick for active revealed ratings & auto-invalidation after 2 minutes
+  useEffect(() => {
+    const hasActive = Object.values(rowRatings).some((r) => r.expiresAt > Date.now());
+    if (!hasActive) return;
+
+    const intervalId = window.setInterval(() => {
+      setTicker((prev) => prev + 1);
+      const now = Date.now();
+      setRowRatings((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        for (const [key, session] of Object.entries(next)) {
+          if (session.expiresAt <= now) {
+            delete next[key];
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [rowRatings]);
 
   useEffect(() => {
     const timers = ratingTimersRef.current;
@@ -168,12 +206,21 @@ export const AppraisalDashboard: React.FC = () => {
         return;
       }
       const rowId = ratingTarget.id;
+      const scoreNum = Number(revealed.finalRating);
+      const expiresAt = Date.now() + 2 * 60 * 1000; // 2 minutes auto-timeout
+      const sessionData: ActiveRatingSession = {
+        finalRating: scoreNum,
+        expiresAt,
+        quarter: ratingTarget.quarter,
+        financialYear: ratingTarget.financialYear,
+        reviewId: ratingTarget.reviewId,
+      };
+
       setRowRatings((current) => ({
         ...current,
-        [rowId]: {
-          finalRating: Number(revealed.finalRating),
-        },
+        [rowId]: sessionData,
       }));
+
       if (ratingTimersRef.current[rowId] != null) {
         window.clearTimeout(ratingTimersRef.current[rowId]);
       }
@@ -185,6 +232,17 @@ export const AppraisalDashboard: React.FC = () => {
         });
         delete ratingTimersRef.current[rowId];
       }, 2 * 60 * 1000);
+
+      // Open celebratory modern 3D rating modal
+      setRevealedModalData({
+        reviewId: ratingTarget.reviewId,
+        rowId,
+        quarter: ratingTarget.quarter,
+        financialYear: ratingTarget.financialYear,
+        finalRating: scoreNum,
+        expiresAt,
+      });
+
       closeRatingModal();
     } catch (error) {
       setRatingError(readApiError(error));
@@ -193,18 +251,27 @@ export const AppraisalDashboard: React.FC = () => {
     }
   };
 
-  const renderRowRating = (assignment: QuarterlyReviewAssignment) => {
-    const revealed = rowRatings[assignment.id];
-    if (revealed) {
-      return (
-        <span className="text-sm font-extrabold text-[#0F172A]">
-          {Number.isFinite(revealed.finalRating) ? revealed.finalRating.toFixed(2) : "—"}
-        </span>
-      );
+  const handleCloseRevealedModal = () => {
+    if (revealedModalData) {
+      const rowId = revealedModalData.rowId;
+      if (ratingTimersRef.current[rowId] != null) {
+        window.clearTimeout(ratingTimersRef.current[rowId]);
+        delete ratingTimersRef.current[rowId];
+      }
+      setRowRatings((prev) => {
+        const next = { ...prev };
+        delete next[rowId];
+        return next;
+      });
     }
+    setRevealedModalData(null);
+  };
+
+  const renderRowRating = (assignment: QuarterlyReviewAssignment) => {
     if (!ratingReady(assignment)) {
       return <span className="text-xs text-[#94A3B8]">—</span>;
     }
+
     return (
       <button
         type="button"
@@ -1179,6 +1246,12 @@ export const AppraisalDashboard: React.FC = () => {
         assignment={selectedAccessAssignment}
         remainingHours={selectedAccessRemainingHours}
         onSubmit={handleSubmitAccessRequest}
+      />
+
+      {/* 3D CELEBRATORY REVEALED RATING MODAL */}
+      <RevealedRatingModal
+        data={revealedModalData}
+        onClose={handleCloseRevealedModal}
       />
 
     </div>

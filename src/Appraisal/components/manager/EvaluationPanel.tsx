@@ -883,7 +883,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       EmployeePerformanceStatus.APPROVED_FOR_EDITING,
       EmployeePerformanceStatus.ALLOWED_TO_EDIT,
       EmployeePerformanceStatus.COMPLETED,
-    ].some((s) => s.toUpperCase() === normalizedPerfStatus) || Boolean(record.submittedOn);
+    ].some((s) => s.toUpperCase() === normalizedPerfStatus);
 
   const toIsoDate = (value: string): string | undefined => {
     const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value.trim());
@@ -1100,7 +1100,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 EMPLOYEE PERFORMANCE SUBMITTED DATE
               </span>
               <span className="text-sm font-extrabold text-[#0F172A] block">
-                {employeeSubmitted ? record.submittedOn || "—" : "Not submitted"}
+                {employeeSubmitted && record.submittedOn ? record.submittedOn : "Not submitted"}
               </span>
             </div>
           </div>

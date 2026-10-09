@@ -591,10 +591,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
                   </div>
 
                   <h3 className="text-xl font-bold text-[#0F172A]">
-                    No submissions found
+                    No data found
                   </h3>
                   <p className="text-sm text-[#64748B] max-w-sm mt-1.5 leading-relaxed font-normal">
-                    There are currently no employee quarterly review submissions matching your filters.
+                    There are currently no employee quarterly reviews matching your filters.
                   </p>
                 </div>
               ) : null}
