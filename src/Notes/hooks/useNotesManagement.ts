@@ -20,6 +20,7 @@ import {
   toggleArchiveNote,
   downloadNoteAttachment,
   previewNoteAttachment,
+  getNoteAttachmentPreviewUrl,
   setActiveTab,
   setSelectedProject,
   setSearchQuery,
@@ -51,6 +52,10 @@ import {
   wrapWideTablesInRoot,
   noteMatchesSearch,
   noteMatchesCreatedDate,
+  rewriteInlineDataImagesInHtml,
+  hydrateInlineImagesInRoot,
+  wrapNoteInlineImages,
+  NOTE_EDITOR_CHECKPOINT_EVENT,
 } from "../utils/notesHelpers";
 import {
   parseExcelFile,
@@ -180,7 +185,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   });
 
   const [isDraggingModalFile, setIsDraggingModalFile] = useState(false);
-  const [textColor, setTextColor] = useState("#1B2559");
   const [highlightColor, setHighlightColor] = useState("transparent");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -191,6 +195,14 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   const [isExtractingExcel, setIsExtractingExcel] = useState(false);
 
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Always open Notes on Project Notes (Redux tab survives route changes)
+  useEffect(() => {
+    if (!loadList) return;
+    dispatch(setActiveTab("PROJECT"));
+    dispatch(setSelectedProject(""));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadList]);
 
   // searchQuery is already debounced via SearchBox (useDebounce)
   useEffect(() => {
@@ -396,6 +408,52 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     };
   };
 
+  /** Upload a single inline image without listing it under Files & Attachments. */
+  const uploadInlineImageFile = async (file: File): Promise<string | null> => {
+    const res = await dispatch(uploadDirectNoteFiles({ files: [file] })).unwrap();
+    const uploaded = Array.isArray(res.uploaded) ? res.uploaded[0] : res.uploaded;
+    return uploaded?.key || uploaded?.fileKey || null;
+  };
+
+  const persistInlineImagesInHtml = async (html: string): Promise<string> => {
+    return rewriteInlineDataImagesInHtml(
+      html,
+      uploadInlineImageFile,
+      getNoteAttachmentPreviewUrl
+    );
+  };
+
+  const hydrateEditorInlineImages = async (root?: HTMLElement | null) => {
+    const target = root || editorRef.current;
+    if (!target) return;
+    await hydrateInlineImagesInRoot(target, async (key, fileName) => {
+      const response = await dispatch(
+        previewNoteAttachment({ key, fileName })
+      ).unwrap();
+      const blob = new Blob([response.data], {
+        type: response.headers?.["content-type"] || "image/*",
+      });
+      return URL.createObjectURL(blob);
+    });
+    wrapNoteInlineImages(target);
+  };
+
+  /** After paste/import: upload any data:images in the live editor DOM. */
+  const persistInlineImagesInEditor = async (shouldCancel?: () => boolean) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const next = await persistInlineImagesInHtml(editor.innerHTML);
+    if (shouldCancel?.()) return;
+    if (next !== editor.innerHTML) {
+      editor.innerHTML = next;
+      await hydrateEditorInlineImages(editor);
+      if (shouldCancel?.()) return;
+      setFormData((prev) => ({ ...prev, description: next }));
+    } else {
+      wrapNoteInlineImages(editor);
+    }
+  };
+
   async function handleExcelExtract(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -509,11 +567,19 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       editorRef.current?.innerHTML ||
       stripExcelWorkbookStore(formData.description) ||
       "";
+    const withoutBase64 = await persistInlineImagesInHtml(
+      richHtml || formData.description || ""
+    );
+    if (editorRef.current && withoutBase64 !== editorRef.current.innerHTML) {
+      editorRef.current.innerHTML = withoutBase64;
+      await hydrateEditorInlineImages(editorRef.current);
+    }
     if (!formData.excelWorkbook) {
-      return richHtml || formData.description || "";
+      setFormData((prev) => ({ ...prev, description: withoutBase64 }));
+      return withoutBase64;
     }
     const saved = await persistExcelToMinio(formData.excelWorkbook);
-    const merged = embedExcelWorkbookInHtml(richHtml, saved);
+    const merged = embedExcelWorkbookInHtml(withoutBase64, saved);
     setFormData((prev) => ({
       ...prev,
       excelWorkbook: saved,
@@ -734,6 +800,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
           editorRef.current.innerHTML =
             stripExcelWorkbookStore(detailedNote.description) ||
             (workbook ? "" : detailedNote.description || "");
+          await hydrateEditorInlineImages(editorRef.current);
         }
       }
     } catch (err) {
@@ -931,10 +998,13 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       const withWorkbook = (html: string) =>
         existingWorkbook ? embedExcelWorkbookInHtml(html, existingWorkbook) : html;
 
-      if (editorRef.current) {
-        editorRef.current.innerHTML = mergedVisible;
-        requestAnimationFrame(() => {
-          if (!editorRef.current) return;
+      // Undo checkpoint before bulk import mutation
+      editorRef.current?.dispatchEvent(new CustomEvent(NOTE_EDITOR_CHECKPOINT_EVENT));
+
+      const applyImportedHtml = async (html: string) => {
+        let finalVisible = html;
+        if (editorRef.current) {
+          editorRef.current.innerHTML = html;
           const landscape = isNoteLandscape(formData);
           justifyImportedContent(editorRef.current, {
             landscape,
@@ -945,25 +1015,25 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
           paginateToA4Sheets(editorRef.current, landscape, true);
           removeEmptyPages(editorRef.current);
           wrapWideTablesInRoot(editorRef.current);
-          const finalVisible = editorRef.current.innerHTML || mergedVisible;
-          setFormData((prev) => ({
-            ...prev,
-            description: withWorkbook(finalVisible),
-            title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
-            rotation: prev.rotation || 0,
-            // Preserve spreadsheet if user already imported Excel
-            excelWorkbook: prev.excelWorkbook ?? existingWorkbook,
-          }));
-        });
-      }
+          finalVisible = editorRef.current.innerHTML || html;
+          // Upload Docling/base64 images out of description before autosave can fire
+          finalVisible = await persistInlineImagesInHtml(finalVisible);
+          editorRef.current.innerHTML = finalVisible;
+          await hydrateEditorInlineImages(editorRef.current);
+        } else {
+          finalVisible = await persistInlineImagesInHtml(html);
+        }
 
-      setFormData((prev) => ({
-        ...prev,
-        description: withWorkbook(mergedVisible),
-        title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
-        rotation: prev.rotation || 0,
-        excelWorkbook: prev.excelWorkbook ?? existingWorkbook,
-      }));
+        setFormData((prev) => ({
+          ...prev,
+          description: withWorkbook(finalVisible),
+          title: prev.title || file.name.replace(/\.[^/.]+$/, ""),
+          rotation: prev.rotation || 0,
+          excelWorkbook: prev.excelWorkbook ?? existingWorkbook,
+        }));
+      };
+
+      await applyImportedHtml(mergedVisible);
 
       if (!hasContent) {
         message.warning({
@@ -1155,7 +1225,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
               description: currentDescription,
               attachmentKeys: formData.attachmentKeys,
               files: formData.files.length > 0 ? formData.files : undefined,
-              rotation: formData.rotation || 0,
+              skipGlobalLoader: true,
             })
           ).unwrap();
 
@@ -1186,9 +1256,9 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
               isPinned: formData.isPinned,
               isAutoSave: formData.isAutoSave,
               isVertical: formData.isVertical !== false,
-              rotation: formData.rotation || 0,
               attachmentKeys: formData.attachmentKeys,
               files: formData.files.length > 0 ? formData.files : undefined,
+              skipGlobalLoader: true,
             })
           ).unwrap();
 
@@ -1219,7 +1289,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
             isPinned: formData.isPinned,
             autoSave: formData.isAutoSave,
             isVertical: formData.isVertical !== false,
-            rotation: formData.rotation || 0,
+            skipGlobalLoader: true,
           })
         ).unwrap();
 
@@ -1240,6 +1310,11 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     } catch (err) {
       console.warn("Auto-save error:", err);
       setAutoSaveStatus("error");
+      const msg =
+        typeof err === "string"
+          ? err
+          : (err as any)?.message || "Auto-save failed — note may be too large";
+      message.error(msg);
     } finally {
       isSavingRef.current = false;
     }
@@ -1359,7 +1434,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
               description: currentDescription,
               attachmentKeys: formData.attachmentKeys,
               files: formData.files.length > 0 ? formData.files : undefined,
-              rotation: formData.rotation || 0,
             })
           ).unwrap();
 
@@ -1375,7 +1449,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
               isPinned: formData.isPinned,
               isAutoSave: formData.isAutoSave,
               isVertical: formData.isVertical !== false,
-              rotation: formData.rotation || 0,
               attachmentKeys: formData.attachmentKeys,
               files: formData.files.length > 0 ? formData.files : undefined,
             })
@@ -1392,7 +1465,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
             isPinned: formData.isPinned,
             autoSave: formData.isAutoSave,
             isVertical: formData.isVertical !== false,
-            rotation: formData.rotation || 0,
           })
         ).unwrap();
 
@@ -1424,7 +1496,11 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       dispatch(fetchProjectsList());
       handleBackToList();
     } catch (err: any) {
-      message.error(err || "Failed to save note");
+      const msg =
+        typeof err === "string"
+          ? err
+          : err?.message || err?.payload || "Failed to save note";
+      message.error(msg);
     }
   };
 
@@ -1788,8 +1864,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     setFormData,
     isDraggingModalFile,
     setIsDraggingModalFile,
-    textColor,
-    setTextColor,
     highlightColor,
     setHighlightColor,
     fileInputRef,
@@ -1810,6 +1884,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     handleStartView,
     handleBackToList,
     handleDoclingJsonUpload,
+    persistInlineImagesInEditor,
+    hydrateEditorInlineImages,
     handleExcelExtract,
     handleProcessUploadFiles,
     handleFileChange,

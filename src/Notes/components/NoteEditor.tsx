@@ -20,7 +20,6 @@ import {
   ListOrdered,
   Quote,
   Link as LinkIcon,
-  Palette,
   Highlighter,
   Heading1,
   Heading2,
@@ -34,20 +33,21 @@ import { Toggle } from "../../components/ui";
 import { Note, NotesFormData, NoteDocumentItem, AutoSaveStatus } from "../types/notes.types";
 import { NoteAttachmentChip } from "./NoteAttachmentChip";
 import {
-  TEXT_COLORS,
   HIGHLIGHT_COLORS,
   justifyImportedContent,
   preparePastedHtmlForNote,
+  plainTextToPasteHtml,
+  collapseVerticalCharPaste,
   sanitizeNoteHtmlForClipboard,
   wrapNoteInlineImages,
   wrapWideTablesInRoot,
+  NOTE_EDITOR_CHECKPOINT_EVENT,
 } from "../utils/notesHelpers";
 import { FONT_SIZES, BOLD_DARK_COLORS, LIGHT_SHADING_COLORS } from "../utils/noteEditorConstants";
 import { descriptionFromExcelWorkbook } from "../utils/excelExtract";
 import {
   applyLandscapeToPages,
-  paginateToA4Sheets,
-  removeEmptyPages,
+  absorbOrphansIntoPages,
 } from "../utils/documentLayout";
 import {
   embedExcelWorkbookInHtml,
@@ -68,8 +68,6 @@ interface NoteEditorProps {
   showSaveToast: boolean;
   isDraggingModalFile: boolean;
   setIsDraggingModalFile: (val: boolean) => void;
-  textColor: string;
-  setTextColor: (val: string) => void;
   highlightColor: string;
   setHighlightColor: (val: string) => void;
   isImportingDocling: boolean;
@@ -92,6 +90,10 @@ interface NoteEditorProps {
   onDownloadAttachment: (item: NoteDocumentItem) => void;
   /** Open full-size preview for inline/pasted screenshots */
   onPreviewImage?: (url: string, title?: string) => void;
+  /** Upload data:image blobs out of the editor after paste. `shouldCancel` aborts write-back if user undid. */
+  onPersistInlineImages?: (shouldCancel?: () => boolean) => Promise<void>;
+  /** Resolve keyed inline images to blob URLs when the editor mounts HTML */
+  onHydrateInlineImages?: (root: HTMLElement) => Promise<void>;
   onSubmit: (e: React.FormEvent) => void;
   onBack: () => void;
   autoSaveStatus?: AutoSaveStatus;
@@ -109,8 +111,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   showSaveToast,
   isDraggingModalFile,
   setIsDraggingModalFile,
-  textColor,
-  setTextColor,
   highlightColor,
   setHighlightColor,
   isImportingDocling,
@@ -132,6 +132,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   onPreviewAttachment,
   onDownloadAttachment,
   onPreviewImage,
+  onPersistInlineImages,
+  onHydrateInlineImages,
   onSubmit,
   onBack,
   autoSaveStatus = "idle",
@@ -158,6 +160,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   const isHistoryNavigatingRef = useRef(false);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTypingSessionRef = useRef(false);
+  /** Bumped on each paste / undo so async post-paste uploads don't overwrite Undo. */
+  const pasteGenerationRef = useRef(0);
+  /** After paste, block A4 reflow so content stays on the cursor page (not the next sheet). */
+  const skipPaginationUntilRef = useRef(0);
   const hydratedNoteKeyRef = useRef<string>("");
   const toolbarSentinelRef = useRef<HTMLDivElement | null>(null);
   const [toolbarStuck, setToolbarStuck] = useState(false);
@@ -178,19 +184,24 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   const showA4Editor =
     !formData.excelWorkbook || htmlHasVisibleNoteContent(formData.description);
 
-  // Table-row / Excel embeds stay in Description — hide them from Files & Attachments
-  const embeddedAttachmentKeys = useMemo(() => {
-    const keys = attachmentKeysInHtml(formData.description);
-    if (formData.excelWorkbook?.fileKey) keys.add(formData.excelWorkbook.fileKey);
-    if (formData.excelWorkbook?.fileName) {
-      keys.add(`name:${formData.excelWorkbook.fileName}`);
-    }
+  // Excel workbook stays out of Files; row attaches promoted to attachmentKeys show there.
+  const excelEmbedKeys = useMemo(() => {
+    const keys = new Set<string>();
+    if (formData.excelWorkbook?.fileKey) keys.add(String(formData.excelWorkbook.fileKey));
+    if (formData.excelWorkbook?.fileName) keys.add(`name:${formData.excelWorkbook.fileName}`);
     return keys;
-  }, [formData.description, formData.excelWorkbook]);
+  }, [formData.excelWorkbook]);
+
+  const filesSectionKeys = useMemo(
+    () => new Set((formData.attachmentKeys || []).map(String)),
+    [formData.attachmentKeys]
+  );
 
   const isFilesOnlyAttachment = (key?: string | null, name?: string | null) => {
-    if (key && embeddedAttachmentKeys.has(String(key))) return false;
-    if (name && embeddedAttachmentKeys.has(`name:${name}`)) return false;
+    if (key && excelEmbedKeys.has(String(key))) return false;
+    if (name && excelEmbedKeys.has(`name:${name}`)) return false;
+    if (key && filesSectionKeys.has(String(key))) return true;
+    if (key && attachmentKeysInHtml(formData.description).has(String(key))) return false;
     return true;
   };
 
@@ -208,7 +219,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       editorRef.current.innerHTML = visible;
     }
     wrapNoteInlineImages(editorRef.current);
-  }, [showA4Editor, formData.excelWorkbook, activeNote?.id]);
+    const root = editorRef.current;
+    if (onHydrateInlineImages && root) {
+      void onHydrateInlineImages(root);
+    }
+  }, [showA4Editor, formData.excelWorkbook, activeNote?.id, onHydrateInlineImages]);
 
   /** Push pre-change HTML onto the undo stack (call before mutating, or with prior HTML). */
   const pushUndoHtml = (html: string) => {
@@ -226,10 +241,12 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     pushUndoHtml(editorRef.current.innerHTML);
   };
 
-  const handleEditorInputWrapper = () => {
+  const handleEditorInputWrapper = (opts?: { skipPagination?: boolean }) => {
     if (isHistoryNavigatingRef.current) return;
     if (editorRef.current) wrapNoteInlineImages(editorRef.current);
-    onEditorInput();
+    const skipPagination =
+      Boolean(opts?.skipPagination) || Date.now() < skipPaginationUntilRef.current;
+    onEditorInput(skipPagination ? { skipPagination: true } : undefined);
     setHasContent(checkHasContent());
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
     typingTimerRef.current = setTimeout(() => {
@@ -238,6 +255,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         lastKnownHtmlRef.current = editorRef.current.innerHTML;
       }
     }, 700);
+  };
+
+  /** Paste must not trigger the delayed A4 split that moves content to the next page. */
+  const markPasteSkipPagination = () => {
+    skipPaginationUntilRef.current = Date.now() + 2500;
   };
 
   // Capture HTML *before* each edit so Undo always has a real previous state
@@ -258,50 +280,199 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       }
     };
 
+    /** Caret/selection is inside an editable table cell (not Attach / SL). */
+    const getActiveTableCell = (): HTMLTableCellElement | null => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return null;
+      const node = sel.anchorNode;
+      const el =
+        node?.nodeType === Node.ELEMENT_NODE
+          ? (node as HTMLElement)
+          : node?.parentElement;
+      if (!el || !editor.contains(el)) return null;
+      const cell = el.closest("td, th") as HTMLTableCellElement | null;
+      if (!cell || !editor.contains(cell)) return null;
+      if (
+        cell.classList.contains("excel-attachment-cell") ||
+        cell.classList.contains("excel-sl-col") ||
+        cell.classList.contains("excel-attachment-col")
+      ) {
+        return null;
+      }
+      return cell;
+    };
+
+    /** Paste into a cell only — plain/inline text, never nested tables or page shells. */
+    const cellSafePasteHtml = (html: string, plain: string): string => {
+      const source = plain?.trim()
+        ? plain
+        : (() => {
+            if (!html?.trim()) return "";
+            const parsed = new DOMParser().parseFromString(html, "text/html");
+            parsed.querySelectorAll("script, style, meta, link").forEach((n) => n.remove());
+            return parsed.body.innerText || parsed.body.textContent || "";
+          })();
+      if (!source) return "";
+      return collapseVerticalCharPaste(source)
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .split("\n")
+        .map((line) => line.replace(/</g, "&lt;").replace(/>/g, "&gt;"))
+        .join("<br>");
+    };
+
+    const getCursorPage = (): HTMLElement | null => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return null;
+      const node = sel.anchorNode;
+      const el =
+        node?.nodeType === Node.ELEMENT_NODE
+          ? (node as HTMLElement)
+          : node?.parentElement;
+      if (!el || !editor.contains(el)) return null;
+      return el.closest(".page") as HTMLElement | null;
+    };
+
     const onPaste = (e: ClipboardEvent) => {
       if (isHistoryNavigatingRef.current) return;
+      // Checkpoint before paste so Undo restores pre-paste content
+      isTypingSessionRef.current = false;
       pushUndoHtml(editor.innerHTML);
-      isTypingSessionRef.current = true;
 
       const html = e.clipboardData?.getData("text/html");
       const plain = e.clipboardData?.getData("text/plain") || "";
-      const hasPageShell = Boolean(
-        html && /class=["'][^"']*\bpage\b|a4-page/i.test(html)
-      );
-      const hasTable = Boolean(html && /<table[\s>]/i.test(html));
+      const activeCell = getActiveTableCell();
+      const cursorPage = getCursorPage();
 
-      // Email/Word tables + note page shells need cleanup so columns aren't clipped
-      if (!html || (!hasPageShell && !hasTable)) {
-        requestAnimationFrame(() => {
-          if (!editorRef.current) return;
-          wrapWideTablesInRoot(editorRef.current);
+      // Image-only clipboard (screenshots) — no HTML/plain text
+      const imageFiles: File[] = [];
+      const items = e.clipboardData?.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          if (item.type.startsWith("image/")) {
+            const file = item.getAsFile();
+            if (file) imageFiles.push(file);
+          }
+        }
+      }
+      if ((!html || !html.trim()) && !plain.trim() && imageFiles.length > 0) {
+        e.preventDefault();
+        const imgs = imageFiles
+          .map((file) => {
+            const url = URL.createObjectURL(file);
+            return `<img src="${url}" alt="${file.name || "Screenshot"}" />`;
+          })
+          .join("");
+        document.execCommand("insertHTML", false, imgs);
+        isTypingSessionRef.current = true;
+        markPasteSkipPagination();
+        const pasteGen = ++pasteGenerationRef.current;
+        requestAnimationFrame(async () => {
+          if (!editorRef.current || isHistoryNavigatingRef.current) return;
+          const landscape = editorRef.current.classList.contains("is-landscape");
+          // Keep paste on the cursor's page — do not reflow onto the next sheet
+          absorbOrphansIntoPages(editorRef.current, landscape, cursorPage);
           wrapNoteInlineImages(editorRef.current);
-          handleEditorInputWrapper();
+          handleEditorInputWrapper({ skipPagination: true });
+          if (onPersistInlineImages) {
+            try {
+              await onPersistInlineImages(
+                () =>
+                  isHistoryNavigatingRef.current ||
+                  pasteGenerationRef.current !== pasteGen
+              );
+            } catch (err) {
+              console.warn("Inline image upload after paste failed:", err);
+            }
+          }
+          // Undo during upload must win — restore pre-paste snapshot
+          if (
+            editorRef.current &&
+            (isHistoryNavigatingRef.current || pasteGenerationRef.current !== pasteGen) &&
+            lastKnownHtmlRef.current
+          ) {
+            editorRef.current.innerHTML = lastKnownHtmlRef.current;
+          }
         });
         return;
       }
 
+      // Table cell paste: insert only into this cell (no nested tables / page HTML)
+      if (activeCell) {
+        e.preventDefault();
+        const cellHtml = cellSafePasteHtml(html || "", plain);
+        if (cellHtml) {
+          document.execCommand("insertHTML", false, cellHtml);
+        } else if (plain) {
+          document.execCommand("insertText", false, collapseVerticalCharPaste(plain));
+        }
+        isTypingSessionRef.current = true;
+        markPasteSkipPagination();
+        requestAnimationFrame(() => {
+          if (!editorRef.current || isHistoryNavigatingRef.current) return;
+          handleEditorInputWrapper({ skipPagination: true });
+        });
+        return;
+      }
+
+      // Always sanitize paste — native chat/HTML paste clips text on the left in landscape
       e.preventDefault();
-      const clean = hasTable
-        ? preparePastedHtmlForNote(html)
-        : sanitizeNoteHtmlForClipboard(html);
+      let clean = "";
+      if (html && html.trim()) {
+        clean =
+          preparePastedHtmlForNote(html, plain) || sanitizeNoteHtmlForClipboard(html);
+      }
+      if (!clean && plain) {
+        clean = plainTextToPasteHtml(plain);
+      }
       if (!clean) {
-        document.execCommand("insertText", false, plain);
+        document.execCommand("insertText", false, collapseVerticalCharPaste(plain));
       } else {
         document.execCommand("insertHTML", false, clean);
       }
-      requestAnimationFrame(() => {
-        if (!editorRef.current) return;
-        wrapWideTablesInRoot(editorRef.current);
-        wrapNoteInlineImages(editorRef.current);
+      isTypingSessionRef.current = true;
+      markPasteSkipPagination();
+      const pasteGen = ++pasteGenerationRef.current;
+      requestAnimationFrame(async () => {
+        if (!editorRef.current || isHistoryNavigatingRef.current) return;
         const landscape = editorRef.current.classList.contains("is-landscape");
-        removeEmptyPages(editorRef.current);
-        paginateToA4Sheets(editorRef.current, landscape, true);
-        removeEmptyPages(editorRef.current);
+        // Stay at cursor page: pull orphans into that page, skip A4 reflow (avoids next-page jump)
+        absorbOrphansIntoPages(editorRef.current, landscape, cursorPage);
         wrapWideTablesInRoot(editorRef.current);
         wrapNoteInlineImages(editorRef.current);
-        handleEditorInputWrapper();
+        editorRef.current.querySelectorAll<HTMLElement>(".page").forEach((page) => {
+          page.scrollLeft = 0;
+        });
+        const workspace = editorRef.current.closest(".a4-page-workspace") as HTMLElement | null;
+        if (workspace) workspace.scrollLeft = 0;
+        handleEditorInputWrapper({ skipPagination: true });
+        if (onPersistInlineImages) {
+          try {
+            await onPersistInlineImages(
+              () =>
+                isHistoryNavigatingRef.current ||
+                pasteGenerationRef.current !== pasteGen
+            );
+          } catch (err) {
+            console.warn("Inline image upload after paste failed:", err);
+          }
+        }
+        // Undo during upload must win — restore pre-paste snapshot
+        if (
+          editorRef.current &&
+          (isHistoryNavigatingRef.current || pasteGenerationRef.current !== pasteGen) &&
+          lastKnownHtmlRef.current
+        ) {
+          editorRef.current.innerHTML = lastKnownHtmlRef.current;
+        }
       });
+    };
+
+    const onExternalCheckpoint = () => {
+      if (isHistoryNavigatingRef.current) return;
+      isTypingSessionRef.current = false;
+      pushUndoHtml(editor.innerHTML);
     };
 
     const onClickImage = (e: MouseEvent) => {
@@ -332,13 +503,15 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     editor.addEventListener("beforeinput", onBeforeInput);
     editor.addEventListener("paste", onPaste);
     editor.addEventListener("click", onClickImage, true);
+    editor.addEventListener(NOTE_EDITOR_CHECKPOINT_EVENT, onExternalCheckpoint);
     return () => {
       editor.removeEventListener("beforeinput", onBeforeInput);
       editor.removeEventListener("paste", onPaste);
       editor.removeEventListener("click", onClickImage, true);
+      editor.removeEventListener(NOTE_EDITOR_CHECKPOINT_EVENT, onExternalCheckpoint);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [formData.excelWorkbook, activeNote?.id, onPreviewImage]);
+  }, [formData.excelWorkbook, activeNote?.id, onPreviewImage, onPersistInlineImages]);
 
   // Reset undo history when opening a different note (not on auto-save refreshes)
   useEffect(() => {
@@ -679,10 +852,12 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   const handleUndo = () => {
     if (!editorRef.current) return;
     editorRef.current.focus();
+    // Invalidate in-flight paste image uploads so they cannot rewrite after undo
+    pasteGenerationRef.current += 1;
 
     const currentHtml = editorRef.current.innerHTML;
-    // Drop no-op tops that match the live editor
-    while (
+    // Drop a single no-op top that matches the live editor (don't drain the stack)
+    if (
       undoHistoryRef.current.length > 0 &&
       undoHistoryRef.current[undoHistoryRef.current.length - 1] === currentHtml
     ) {
@@ -698,20 +873,22 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       if (prevHtml !== undefined) {
         editorRef.current.innerHTML = prevHtml;
         lastKnownHtmlRef.current = prevHtml;
+        lastClearedHtmlRef.current = null;
         const undoRange = document.createRange();
         const undoSel = window.getSelection();
         undoRange.selectNodeContents(editorRef.current);
         undoRange.collapse(false);
         undoSel?.removeAllRanges();
         undoSel?.addRange(undoRange);
-        setFormData((prev) => ({ ...prev, description: editorRef.current?.innerHTML || "" }));
-        onEditorInput();
+        // skipPagination: re-paginating after restore was wiping the undo result
+        onEditorInput({ skipPagination: true });
         setHasContent(checkHasContent());
         message.info("Undo last action");
       }
-      requestAnimationFrame(() => {
+      // Keep history flag set long enough that delayed pagination/input handlers skip
+      setTimeout(() => {
         isHistoryNavigatingRef.current = false;
-      });
+      }, 450);
       return;
     }
 
@@ -736,15 +913,12 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
-        // Only intercept when we have custom history; otherwise allow native undo
-        if (undoHistoryRef.current.length > 0 || lastClearedHtmlRef.current) {
-          e.preventDefault();
-          handleUndo();
-        }
+        e.preventDefault();
+        handleUndo();
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -918,12 +1092,13 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               {/* Rich Text Toolbar — sticks + elevates on scroll */}
               <div
                 data-notes-toolbar
-                className={`flex flex-nowrap items-center gap-0.5 sm:gap-1 p-1.5 px-2 text-slate-700 select-none shrink-0 sticky top-0 z-30 overflow-x-auto transition-all duration-200 ${
+                className={`flex items-center gap-1.5 p-1.5 px-2 text-slate-700 select-none shrink-0 sticky top-0 z-30 transition-all duration-200 ${
                   toolbarStuck
                     ? "bg-white/95 backdrop-blur-md border-b border-[#4318FF]/25 shadow-[0_8px_24px_rgba(67,24,255,0.12)] ring-1 ring-[#4318FF]/10 rounded-b-xl"
                     : "bg-white border-b border-slate-100"
                 }`}
               >
+              <div className="flex flex-nowrap items-center gap-0.5 sm:gap-1 flex-1 min-w-0 overflow-x-auto">
                 {/* Bold */}
                 <button
                   type="button"
@@ -1427,72 +1602,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 
                 <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
 
-                {/* Text Color Palette */}
-                <Popover
-                  trigger="click"
-                  placement="bottom"
-                  content={
-                    <div className="p-2 space-y-2.5 w-56 select-none">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                          Text Color
-                        </span>
-                        <button
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            runToolbarCommand("foreColor", "#1B2559");
-                            setTextColor("none");
-                          }}
-                          className="text-[11px] text-[#4318FF] hover:underline font-semibold cursor-pointer"
-                        >
-                          Reset
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-6 gap-1.5">
-                        {TEXT_COLORS.map((c) => (
-                          <button
-                            key={`tx-c-${c.color}`}
-                            type="button"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              if (c.color === "none") {
-                                runToolbarCommand("foreColor", "#1B2559");
-                                setTextColor("none");
-                              } else {
-                                runToolbarCommand("foreColor", c.color);
-                                setTextColor(c.color);
-                              }
-                            }}
-                            className={`w-7 h-7 rounded-lg border flex items-center justify-center transition cursor-pointer ${
-                              textColor === c.color
-                                ? "ring-2 ring-[#4318FF] scale-110 border-white shadow-xs"
-                                : "border-slate-200 hover:scale-105"
-                            }`}
-                            style={{
-                              backgroundColor: c.color === "none" ? "#FFFFFF" : c.color,
-                            }}
-                            title={c.label}
-                          >
-                            {c.color === "none" && (
-                              <span className="text-[10px] font-bold text-slate-400">∅</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  }
-                >
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
-                    title="Font Color"
-                  >
-                    <Palette className="w-4 h-4 text-slate-700" />
-                  </button>
-                </Popover>
-
                 {/* Text Highlighter Palette */}
                 <Popover
                   trigger="click"
@@ -1556,7 +1665,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 
                 <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
 
-                {/* Import PDF / Word */}
+                {/* Temporarily hidden: Import PDF / Word
                 <input
                   type="file"
                   ref={doclingJsonInputRef}
@@ -1581,8 +1690,9 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     {isImportingDocling ? "Importing..." : "PDF / Doc"}
                   </span>
                 </button>
+                */}
 
-                {/* Import Excel */}
+                {/* Temporarily hidden: Import Excel
                 <input
                   type="file"
                   ref={excelExtractInputRef}
@@ -1590,9 +1700,9 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   accept=".xlsx,.xls,.csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                   className="hidden"
                 />
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => excelExtractInputRef?.current?.click()}
                   disabled={isImportingDocling || isExtractingExcel}
                   className="h-8 px-2 shrink-0 flex items-center gap-1 rounded-lg text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition cursor-pointer disabled:opacity-50"
@@ -1606,7 +1716,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   <span className="whitespace-nowrap">
                     {isExtractingExcel ? "Importing..." : "Excel"}
                   </span>
-                  </button>
+                </button>
+                */}
 
                 {/* Landscape / Portrait page */}
                 <button
@@ -1681,20 +1792,46 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   title={isCopied ? "Copied" : "Copy all sheet content"}
                 >
                   {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                  </button>
+                </button>
+              </div>
+
+                {/* Save pinned at the end of the DESCRIPTION toolbar */}
+                <div className="h-5 w-px bg-slate-200 shrink-0 hidden sm:block" />
+                <button
+                  type="submit"
+                  disabled={actionLoading}
+                  className="h-8 px-3 sm:px-4 shrink-0 ml-auto flex items-center gap-1 rounded-xl text-xs font-semibold text-white bg-[#4318FF] hover:bg-[#320fe0] shadow-sm shadow-[#4318FF]/25 transition cursor-pointer disabled:opacity-50"
+                  title={
+                    parentNoteContext
+                      ? "Save Sub-Note"
+                      : isProjectNote
+                        ? "Save Project Note"
+                        : "Save Personal Note"
+                  }
+                >
+                  {actionLoading
+                    ? "Saving..."
+                    : parentNoteContext
+                      ? "Save Sub-Note"
+                      : isProjectNote
+                        ? "Save Project Note"
+                        : "Save Personal Note"}
+                </button>
               </div>
 
               {/* A4 workspace (kept when content exists) + Excel grid viewer (appended, never replaces) */}
               <div className="w-full flex flex-col gap-4">
                 {showA4Editor && (
                   <div
-                    className={`a4-page-workspace w-full flex justify-center items-start bg-slate-100/80 p-4 sm:p-8 min-h-[720px]${isLandscape ? " is-landscape" : ""}`}
+                    className={`a4-page-workspace w-full flex items-start bg-slate-100/80 p-4 sm:p-8 min-h-[720px] overflow-x-auto${
+                      isLandscape ? " is-landscape justify-start" : " justify-center"
+                    }`}
                   >
                     <div className="a4-page-rotator">
                       <div className="a4-page doc-pages">
-                        <div
-                          ref={editorRef}
-                          contentEditable
+                    <div
+                      ref={editorRef}
+                      contentEditable
                           onInput={handleEditorInputWrapper}
                           onKeyDown={(e) => {
                             // Enter = next line on the same page (never split into a new A4 sheet)
@@ -1709,6 +1846,19 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                                 ? (node as HTMLElement)
                                 : node?.parentElement;
                             if (!el || !editorRef.current.contains(el)) return;
+
+                            // Inside a table cell: keep Enter in this cell only (line break)
+                            const tableCell = el.closest("td, th") as HTMLTableCellElement | null;
+                            if (
+                              tableCell &&
+                              editorRef.current.contains(tableCell) &&
+                              !tableCell.classList.contains("excel-attachment-cell")
+                            ) {
+                              e.preventDefault();
+                              document.execCommand("insertHTML", false, "<br>");
+                              handleEditorInputWrapper();
+                              return;
+                            }
 
                             const page = el.closest(".page") as HTMLElement | null;
                             const block = el.closest(
@@ -1741,12 +1891,12 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                               handleEditorInputWrapper();
                             }
                           }}
-                          data-placeholder="Write your notes, key updates, documentation, or action items here..."
+                      data-placeholder="Write your notes, key updates, documentation, or action items here..."
                           className={`notes-rich-editor doc-pages-editor outline-none text-slate-800 text-sm sm:text-base leading-relaxed${isLandscape ? " is-landscape" : ""}`}
-                        />
-                      </div>
-                    </div>
+                    />
                   </div>
+                </div>
+              </div>
                 )}
 
                 {formData.excelWorkbook && (
@@ -1857,21 +2007,21 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     isFilesOnlyAttachment(att.key || att.fileKey, att.fileName || att.name)
                   )
                   .map((att) => (
-                    <NoteAttachmentChip
-                      key={`server-att-${att.id || att.key || att.fileKey}`}
-                      item={{
-                        id: att.id,
-                        key: att.key || att.fileKey,
-                        name: att.fileName || att.name || "Attachment",
-                        size: att.fileSize,
-                      }}
-                      onPreview={onPreviewAttachment}
-                      onDownload={onDownloadAttachment}
+                  <NoteAttachmentChip
+                    key={`server-att-${att.id || att.key || att.fileKey}`}
+                    item={{
+                      id: att.id,
+                      key: att.key || att.fileKey,
+                      name: att.fileName || att.name || "Attachment",
+                      size: att.fileSize,
+                    }}
+                    onPreview={onPreviewAttachment}
+                    onDownload={onDownloadAttachment}
                       onDelete={() =>
                         onDeleteServerAttachment(activeNote.id, att.key || att.fileKey)
                       }
-                    />
-                  ))}
+                  />
+                ))}
 
               {formData.attachments
                 .map((item, idx) => ({ item, idx }))
@@ -1879,18 +2029,18 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   isFilesOnlyAttachment(item.key || item.fileKey, item.name || item.fileName)
                 )
                 .map(({ item, idx }) => (
-                  <NoteAttachmentChip
-                    key={`form-att-${item.key || idx}`}
-                    item={item}
-                    onPreview={onPreviewAttachment}
-                    onDownload={onDownloadAttachment}
-                    onDelete={() => onRemoveAttachment(idx)}
-                  />
-                ))}
+                <NoteAttachmentChip
+                  key={`form-att-${item.key || idx}`}
+                  item={item}
+                  onPreview={onPreviewAttachment}
+                  onDownload={onDownloadAttachment}
+                  onDelete={() => onRemoveAttachment(idx)}
+                />
+              ))}
             </div>
           </div>
 
-          {/* Bottom Actions: Cancel & Save */}
+          {/* Bottom Actions: Cancel (Save is in the Description toolbar) */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100 pr-16 sm:pr-20 md:pr-24">
             <button
               type="button"
@@ -1898,19 +2048,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               className="px-5 py-2.5 bg-transparent hover:bg-slate-100 text-slate-600 font-semibold text-xs md:text-sm rounded-xl transition cursor-pointer"
             >
               Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={actionLoading}
-              className="px-7 py-2.5 bg-[#4318FF] hover:bg-[#320fe0] text-white font-semibold text-xs md:text-sm rounded-xl shadow-md shadow-[#4318FF]/20 hover:shadow-lg transition cursor-pointer disabled:opacity-50"
-            >
-              {actionLoading
-                ? "Saving..."
-                : parentNoteContext
-                ? "Save Sub-Note"
-                : isProjectNote
-                ? "Save Project Note"
-                : "Save Personal Note"}
             </button>
           </div>
         </form>

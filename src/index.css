@@ -437,11 +437,33 @@ input[type="password"]::-webkit-password-reveal-button {
   float: none !important;
 }
 
+.notes-rich-editor .page > *,
+.notes-content-view .page > * {
+  max-width: 100% !important;
+  box-sizing: border-box;
+}
+
+.notes-rich-editor .page .note-inserted-table,
+.notes-content-view .page .note-inserted-table,
+.notes-rich-editor .page .note-table-scroll,
+.notes-content-view .page .note-table-scroll {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  clear: both !important;
+  float: none !important;
+  margin: 0.5em 0 !important;
+}
+
 .notes-rich-editor .page table,
 .notes-content-view .page table,
 .notes-rich-editor table,
 .notes-content-view table {
   display: table !important;
+  clear: both !important;
+  float: none !important;
+  margin-top: 0.35em;
+  margin-bottom: 0.35em;
 }
 
 .notes-rich-editor .page thead,
@@ -562,7 +584,7 @@ input[type="password"]::-webkit-password-reveal-button {
   margin-bottom: 0;
 }
 
-/* A4 landscape: 297mm wide, at least 210mm tall. Extra content goes to the next sheet. */
+/* A4 landscape: 297mm × 210mm. Extra content paginates to the next sheet. */
 .notes-rich-editor.is-landscape .page,
 .notes-content-view.is-landscape .page,
 .notes-rich-editor .page.is-landscape,
@@ -573,7 +595,33 @@ input[type="password"]::-webkit-password-reveal-button {
   min-height: 210mm;
   height: auto;
   max-height: none;
-  overflow-x: auto;
+  overflow-x: hidden;
+  overflow-y: visible;
+}
+
+/* Pasted chat/code blocks must wrap inside the sheet — never push content off the left */
+.notes-rich-editor .page pre,
+.notes-content-view .page pre,
+.notes-rich-editor .page code,
+.notes-content-view .page code {
+  max-width: 100% !important;
+  white-space: pre-wrap !important;
+  word-break: break-word !important;
+  overflow-wrap: anywhere !important;
+  box-sizing: border-box !important;
+}
+
+.notes-rich-editor .page p,
+.notes-content-view .page p,
+.notes-rich-editor .page h1,
+.notes-content-view .page h1,
+.notes-rich-editor .page h2,
+.notes-content-view .page h2,
+.notes-rich-editor .page h3,
+.notes-content-view .page h3 {
+  max-width: 100% !important;
+  margin-left: 0 !important;
+  text-indent: 0 !important;
 }
 
 /* Editor-managed / normal tables stay page-width; wide pasted tables scroll */
@@ -1008,8 +1056,12 @@ input[type="password"]::-webkit-password-reveal-button {
   width: 100%;
 }
 
+/* Landscape sheets are 297mm — wider than most viewports. Align left + allow
+   horizontal scroll so the left edge (and first characters) are never clipped. */
 .a4-page-workspace.is-landscape {
-  justify-content: flex-start;
+  justify-content: flex-start !important;
+  overflow-x: auto !important;
+  overflow-y: visible;
 }
 
 .a4-page-rotator {
@@ -1022,8 +1074,8 @@ input[type="password"]::-webkit-password-reveal-button {
 }
 
 .a4-page-workspace.is-landscape .a4-page-rotator {
-  margin-left: auto;
-  margin-right: auto;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
 }
 
 .a4-page-rotator.rot-0,

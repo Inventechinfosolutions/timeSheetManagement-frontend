@@ -1,0 +1,624 @@
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Calendar,
+  Clock,
+  ClipboardList,
+  RotateCcw,
+} from "lucide-react";
+import { AssignmentType, ManagerQuarterlyReviewRecord } from "../../types/appraisal.types";
+import { useAppSelector } from "../../../hooks";
+import {
+  AppraisalApi,
+  MasterFinancialYearOption,
+  MasterQuarterRecord,
+  readApiError,
+  toManagerReviewRecord,
+  toReviewFormData,
+} from "../../reducers/appraisal.reducer";
+import { message } from "antd";
+import {
+  AppraisalFilterAll,
+  QuaterlyEnum,
+  QuarterlyReviewStatus,
+} from "../../enums/appraisal.enums";
+import CreateReviewAssignmentModal from "./CreateReviewAssignmentModal";
+import AssignQuarterlyReviewModal from "./AssignQuarterlyReviewModal";
+import { QuarterlyReviewTable } from "./QuarterlyReviewTable";
+import EvaluationPanel, { EvaluationData } from "./EvaluationPanel";
+import { QUARTERLY_REVIEW_TABLE_PAGE_SIZE } from "../../constants/appraisal.constants";
+import { loadAppraisalPeriod } from "../../utils/appraisalHelpers";
+import { WorksphereLogoLoader } from "../../../components/ApiLoadingSpinner";
+import {
+  Button,
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  SearchBox,
+  Dropdown,
+} from "../../../components/ui";
+import "./ManagerQuarterlyReview.css";
+
+export const ManagerQuarterlyReview: React.FC = () => {
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const managerId = currentUser?.employeeId || currentUser?.loginId || "";
+  // Modal flow state (for visual presentation / prototyping)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [assignFormKey, setAssignFormKey] = useState(0);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [masterYears, setMasterYears] = useState<MasterFinancialYearOption[]>([]);
+  const [masterQuarters, setMasterQuarters] = useState<MasterQuarterRecord[]>([]);
+  const [yearsLoading, setYearsLoading] = useState(false);
+  const [assignmentType, setAssignmentType] = useState<AssignmentType | null>(null);
+
+  const [assignments, setAssignments] = useState<ManagerQuarterlyReviewRecord[]>([]);
+  const [tablePage, setTablePage] = useState(1);
+  const [tableTotal, setTableTotal] = useState(0);
+  const [tableLoading, setTableLoading] = useState(false);
+
+  // Active record being evaluated/viewed in the Appraisal Review Evaluation Panel
+  const [evaluatingRecord, setEvaluatingRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
+  const [evaluationMode, setEvaluationMode] = useState<"edit" | "view">("edit");
+
+  const scrollToTop = () => {
+    // 1. Scroll main elements (the scrollable container in SidebarLayout)
+    const mainElements = document.querySelectorAll("main");
+    mainElements.forEach((m) => {
+      m.scrollTop = 0;
+      if (typeof m.scrollTo === "function") {
+        m.scrollTo({ top: 0, left: 0, behavior: "instant" });
+      }
+    });
+
+    // 2. Scroll any large container with overflow-y-auto
+    const overflowElements = document.querySelectorAll("[class*='overflow-y-auto']");
+    overflowElements.forEach((el) => {
+      if (el.scrollHeight > 600) {
+        el.scrollTop = 0;
+        if (typeof el.scrollTo === "function") {
+          el.scrollTo({ top: 0, left: 0, behavior: "instant" });
+        }
+      }
+    });
+
+    // 3. Scroll window and documentElement
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+
+  const triggerScrollToTop = () => {
+    scrollToTop();
+    requestAnimationFrame(scrollToTop);
+    setTimeout(scrollToTop, 20);
+    setTimeout(scrollToTop, 60);
+    setTimeout(scrollToTop, 150);
+  };
+
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
+
+  useEffect(() => {
+    if (!evaluatingRecord) {
+      triggerScrollToTop();
+    }
+  }, [evaluatingRecord]);
+
+  const handleBackToDashboard = () => {
+    triggerScrollToTop();
+    setEvaluatingRecord(null);
+    triggerScrollToTop();
+  };
+
+  const openRecordFromApi = async (
+    item: ManagerQuarterlyReviewRecord,
+    mode: "edit" | "view",
+  ) => {
+    if (!item.reviewId) {
+      message.error("This review cannot be opened.");
+      return;
+    }
+    triggerScrollToTop();
+    try {
+      const review = await AppraisalApi.getReviewById(item.reviewId);
+      const record = toManagerReviewRecord(review);
+      setEvaluationMode(mode);
+      setEvaluatingRecord({
+        ...record,
+        submission: toReviewFormData(review.performanceDetails),
+      });
+      triggerScrollToTop();
+    } catch (error) {
+      message.error(readApiError(error));
+    }
+  };
+
+  const handleEditRecord = (item: ManagerQuarterlyReviewRecord) => {
+    void openRecordFromApi(item, "edit");
+  };
+
+  const handleViewRecord = (item: ManagerQuarterlyReviewRecord) => {
+    void openRecordFromApi(item, "view");
+  };
+
+  const handleEvaluationSubmit = (recordId: string, evaluation: EvaluationData) => {
+    setAssignments((prev) =>
+      prev.map((rec) => {
+        if (rec.id === recordId || rec.name === evaluatingRecord?.name) {
+          return {
+            ...rec,
+            status: QuarterlyReviewStatus.COMPLETED,
+            finalRating: evaluation.averageScore.toFixed(1),
+            managerEvaluation: {
+              ...rec.managerEvaluation,
+              productivity: evaluation.scores.productivity,
+              qualityOfWork: evaluation.scores.qualityOfWork,
+              ownershipResponsibility: evaluation.scores.ownership,
+              communication: evaluation.scores.communication,
+              teamCollaboration: evaluation.scores.teamCollaboration,
+              innovationProblemSolving: evaluation.scores.innovation,
+              performanceStrengths: evaluation.strengths,
+              areasOfImprovement: evaluation.improvements,
+              additionalRemarks: evaluation.remarks,
+            },
+          };
+        }
+        return rec;
+      })
+    );
+
+    setHighlightedRowId(recordId);
+    setTimeout(() => {
+      setHighlightedRowId(null);
+    }, 2500);
+    scrollToTop();
+    setEvaluatingRecord(null);
+    setTimeout(scrollToTop, 40);
+  };
+
+  // Briefly highlighted row ID after an assignment completes
+  const [highlightedRowId, setHighlightedRowId] = useState<string | null>(null);
+
+  // Visual filter state
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [financialYear, setFinancialYear] = useState<string>("");
+  const [quarter, setQuarter] = useState<string>(AppraisalFilterAll.ALL);
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [defaultsReady, setDefaultsReady] = useState(false);
+  const yearsLoaded = useRef(false);
+  const yearChosen = useRef(false);
+  const defaultYear = useRef("");
+
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() ||
+      statusFilter ||
+      (quarter && quarter !== AppraisalFilterAll.ALL) ||
+      (financialYear && financialYear !== defaultYear.current)
+  );
+
+  const handleOpenCreateModal = () => {
+    setAssignmentType(null);
+    setIsCreateModalOpen(true);
+  };
+
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+  };
+
+  const handleContinueToAssign = (type: AssignmentType) => {
+    setAssignmentType(type);
+    setIsCreateModalOpen(false);
+    setAssignFormKey((current) => current + 1);
+    setIsAssignModalOpen(true);
+  };
+
+  const handleCloseAssignModal = () => {
+    setIsAssignModalOpen(false);
+    setAssignFormKey((current) => current + 1);
+  };
+
+  const handleAssignSuccess = () => {
+    setReloadKey((current) => current + 1);
+  };
+
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setDebouncedSearch("");
+    yearChosen.current = false;
+    setFinancialYear(defaultYear.current);
+    setQuarter(AppraisalFilterAll.ALL);
+    setStatusFilter("");
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    yearsLoaded.current = true;
+    setYearsLoading(true);
+    void loadAppraisalPeriod()
+      .then((period) => {
+        if (cancelled) return;
+        setMasterYears(period.years);
+        setMasterQuarters(period.quarters);
+        const currentYear = period.current?.financialYear || "";
+        defaultYear.current = currentYear;
+        if (currentYear && !yearChosen.current) {
+          setFinancialYear(currentYear);
+        }
+        setDefaultsReady(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        yearsLoaded.current = false;
+        setMasterYears([]);
+        setDefaultsReady(true);
+      })
+      .finally(() => {
+        if (!cancelled) setYearsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const loadFinancialYears = () => {
+    if (yearsLoaded.current) return;
+    yearsLoaded.current = true;
+    setYearsLoading(true);
+    void AppraisalApi.getMasterFinancialYears()
+      .then(setMasterYears)
+      .catch(() => {
+        yearsLoaded.current = false;
+        setMasterYears([]);
+      })
+      .finally(() => setYearsLoading(false));
+  };
+
+  const tableFilters = `${debouncedSearch}|${financialYear}|${quarter}|${statusFilter}`;
+  const [appliedTableFilters, setAppliedTableFilters] = useState(tableFilters);
+  if (appliedTableFilters !== tableFilters) {
+    setAppliedTableFilters(tableFilters);
+    setTablePage(1);
+  }
+
+  useEffect(() => {
+    if (!defaultsReady || !managerId) {
+      if (!managerId) {
+        setAssignments([]);
+        setTableTotal(0);
+      }
+      return;
+    }
+    let cancelled = false;
+    setTableLoading(true);
+    const selectedYear =
+      financialYear && financialYear !== AppraisalFilterAll.ALL ? financialYear : undefined;
+    const selectedQuarter =
+      quarter && quarter !== AppraisalFilterAll.ALL ? (quarter as QuaterlyEnum) : undefined;
+    const selectedStatus =
+      !statusFilter || statusFilter === AppraisalFilterAll.ALL
+        ? undefined
+        : (statusFilter as QuarterlyReviewStatus);
+    const query = {
+      assignerId: managerId,
+      page: tablePage,
+      limit: QUARTERLY_REVIEW_TABLE_PAGE_SIZE,
+      financialYear: selectedYear,
+      quarter: selectedQuarter,
+      status: selectedStatus,
+    };
+    const searchText = debouncedSearch.trim();
+    const request = searchText
+      ? AppraisalApi.searchReviews({ ...query, q: searchText })
+      : AppraisalApi.getReviews(query);
+
+    void request
+      .then((result) => {
+        if (cancelled) return;
+        setAssignments(
+          (result.data || []).map((review) => ({
+            ...toManagerReviewRecord(review),
+            submission: review.performanceDetails
+              ? toReviewFormData(review.performanceDetails)
+              : undefined,
+          })),
+        );
+        setTableTotal(result.total ?? 0);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setAssignments([]);
+        setTableTotal(0);
+      })
+      .finally(() => {
+        if (!cancelled) setTableLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [defaultsReady, managerId, debouncedSearch, financialYear, quarter, statusFilter, reloadKey, tablePage]);
+
+  const financialYearOptions = masterYears.map((year) => ({
+    value: year.financialYear,
+    label: year.financialYear,
+  }));
+
+  const quarterOptions = (() => {
+    const seen = new Set<string>();
+    const options: { value: string; label: string }[] = [
+      { value: AppraisalFilterAll.ALL, label: "Quarter" },
+    ];
+    masterYears.forEach((year) => {
+      year.quarters?.forEach((item) => {
+        if (!item.quarter || seen.has(item.quarter)) return;
+        seen.add(item.quarter);
+        options.push({ value: item.quarter, label: item.quarterName || item.quarter });
+      });
+    });
+    masterQuarters.forEach((item) => {
+      if (!item.quaterLabel || seen.has(item.quaterLabel)) return;
+      seen.add(item.quaterLabel);
+      options.push({ value: item.quaterLabel, label: item.quaterLabel });
+    });
+    return options;
+  })();
+
+  const statusOptions = [
+    { value: AppraisalFilterAll.ALL, label: "Status" },
+    { value: QuarterlyReviewStatus.NOT_STARTED, label: "Not Started" },
+    { value: QuarterlyReviewStatus.ASSIGNED, label: "Assigned" },
+    { value: "PERFORMANCE_RECEIVED", label: "Performance Received" },
+    { value: QuarterlyReviewStatus.COMPLETED, label: "Completed" },
+  ];
+
+  if (evaluatingRecord) {
+    return (
+      <div className="w-full min-h-screen relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 pt-1 sm:pt-1.5 pb-8 bg-[#F4F7FE]">
+        
+        
+        <div className="relative z-10">
+          <EvaluationPanel
+            key={`${evaluatingRecord.reviewId || evaluatingRecord.id}-${evaluationMode}`}
+            record={evaluatingRecord}
+            submissionData={evaluatingRecord.submission}
+            managerEvaluation={evaluatingRecord.managerEvaluation}
+            mode={evaluationMode}
+            onBack={handleBackToDashboard}
+            onSubmitEvaluation={handleEvaluationSubmit}
+            onAssignmentSaved={(patch) => {
+              setEvaluatingRecord((current) =>
+                current
+                  ? {
+                      ...current,
+                      fromDate: patch.assignedDate,
+                      assignedOn: patch.assignedDate,
+                      toDate: patch.deadline,
+                      description: patch.description,
+                    }
+                  : current,
+              );
+              setAssignments((current) =>
+                current.map((item) =>
+                  item.reviewId === patch.reviewId
+                    ? {
+                        ...item,
+                        fromDate: patch.assignedDate,
+                        assignedOn: patch.assignedDate,
+                        toDate: patch.deadline,
+                        description: patch.description,
+                      }
+                    : item,
+                ),
+              );
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
+      {/* LUXURY BACKGROUND CANVAS (All SVGs & animations managed and loaded via ManagerQuarterlyReview.css) */}
+      
+
+      {/* FOREGROUND CONTENT (z-10 layer for crisp interactivity and clarity) */}
+      <div className="relative z-10 flex-1 flex flex-col min-h-0">
+        {/* Page Header */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
+              <span className="manager-review-title-anim">Manager Appraisal</span>
+            </h1>
+            <p className="text-sm mt-1 font-normal w-fit">
+              <span className="manager-review-subtitle-anim">
+                Review, evaluate, and provide ratings for quarterly appraisal submissions from your team members.
+              </span>
+            </p>
+          </div>
+
+          {/* Create Button at top of card with animated SVG icon */}
+          <div className="flex w-full sm:w-auto gap-2">
+          <Button
+            variant="primary"
+            size="lg"
+            leftIcon={
+              <span className="manager-create-icon-wrap" aria-hidden="true">
+                <svg
+                  className="manager-create-icon-svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9.5"
+                    className="manager-create-svg-circle"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeDasharray="4 3"
+                    opacity="0.8"
+                  />
+                  <path
+                    d="M12 7V17M7 12H17"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="manager-create-svg-plus"
+                  />
+                </svg>
+              </span>
+            }
+            onClick={handleOpenCreateModal}
+            className="w-full sm:w-auto font-bold manager-review-create-btn shrink-0"
+          >
+            Create
+          </Button>
+          </div>
+        </div>
+
+        {/* Main Section Card */}
+        <Card className="w-full p-5 sm:p-7 manager-review-glass-card min-h-[calc(100vh-230px)]">
+          <CardHeader className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
+            <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title whitespace-nowrap shrink-0">
+              Appraisals
+            </CardTitle>
+
+            {/* Filters beside title */}
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar flex-nowrap py-1 manager-review-filters-bar flex-1 justify-start xl:justify-end">
+              <div className="w-32 sm:w-36 md:w-40 xl:w-44 shrink-0 filter-item-stagger-1">
+                <SearchBox
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onClear={() => setSearchTerm("")}
+                  onDebounce={setDebouncedSearch}
+                  placeholder="Search..."
+                  variant="outlined"
+                  inputSize="md"
+                  containerClassName="w-full rounded-xl manager-review-search-box"
+                  className="text-xs manager-review-search-input"
+                  allowClear
+                />
+              </div>
+
+              <Dropdown
+                className="shrink-0 filter-item-stagger-2"
+                placeholder="Financial Year"
+                allowClear={true}
+                defaultValue=""
+                prefixIcon={<Calendar size={14} className="filter-icon-fy" />}
+                options={financialYearOptions}
+                value={financialYear}
+                onChange={(value) => {
+                  yearChosen.current = true;
+                  setFinancialYear(value);
+                }}
+                onOpen={loadFinancialYears}
+                loading={yearsLoading}
+                maxLabelWidth="max-w-[124px]"
+                buttonClassName="manager-review-filter-btn filter-btn-fy rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[172px]"
+              />
+
+              <Dropdown
+                className="shrink-0 filter-item-stagger-3"
+                placeholder="Quarters"
+                allowClear={false}
+                defaultValue=""
+                prefixIcon={<Clock size={14} className="filter-icon-quarters" />}
+                options={quarterOptions}
+                value={quarter}
+                onChange={(value) => setQuarter(value || AppraisalFilterAll.ALL)}
+                maxLabelWidth="max-w-[100px]"
+                buttonClassName="manager-review-filter-btn filter-btn-quarters rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[150px]"
+              />
+
+              <Dropdown
+                className="shrink-0 filter-item-stagger-5"
+                placeholder="Status"
+                allowClear={true}
+                defaultValue=""
+                prefixIcon={<ClipboardList size={14} className="filter-icon-status" />}
+                options={statusOptions}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                maxLabelWidth="max-w-[80px]"
+                contentWidth
+                buttonClassName="manager-review-filter-btn filter-btn-status rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[124px]"
+              />
+
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearFilters}
+                  className="manager-review-clear-btn shrink-0 p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-xs font-medium flex items-center gap-1 border border-blue-200/80 bg-white/90 text-blue-600 hover:text-blue-700 hover:bg-blue-50/80 shadow-xs"
+                  title="Clear all filters"
+                >
+                  <RotateCcw size={13} className="filter-clear-icon shrink-0" />
+                  <span className="hidden 2xl:inline text-xs">Clear</span>
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+
+          <CardContent className="p-0">
+            <div className="relative min-h-[16rem]">
+              {tableLoading ? (
+                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-[2px]">
+                  <WorksphereLogoLoader />
+                </div>
+              ) : null}
+              {assignments.length > 0 ? (
+                <QuarterlyReviewTable
+                  data={assignments}
+                  highlightedId={highlightedRowId}
+                  onEdit={handleEditRecord}
+                  onView={handleViewRecord}
+                  onRefresh={() => setReloadKey((k) => k + 1)}
+                  page={tablePage}
+                  totalCount={tableTotal}
+                  defaultPageSize={QUARTERLY_REVIEW_TABLE_PAGE_SIZE}
+                  onPageChange={setTablePage}
+                />
+              ) : !tableLoading ? (
+                <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
+                  <div className="relative mb-5">
+                    <div className="manager-review-empty-glow" />
+                    <div className="manager-review-empty-illustration" />
+                  </div>
+
+                  <h3 className="text-xl font-bold text-[#0F172A]">
+                    No submissions found
+                  </h3>
+                  <p className="text-sm text-[#64748B] max-w-sm mt-1.5 leading-relaxed font-normal">
+                    There are currently no employee quarterly review submissions matching your filters.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+
+        <CreateReviewAssignmentModal
+          isOpen={isCreateModalOpen}
+          onClose={handleCloseCreateModal}
+          onContinue={handleContinueToAssign}
+          initialType={null}
+        />
+
+        <AssignQuarterlyReviewModal
+          key={assignFormKey}
+          isOpen={isAssignModalOpen}
+          onClose={handleCloseAssignModal}
+          assignmentType={assignmentType}
+          onAssign={handleAssignSuccess}
+        />
+      </div>
+    </div>
+  );
+};
+
+export default ManagerQuarterlyReview;

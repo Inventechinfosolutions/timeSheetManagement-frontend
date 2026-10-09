@@ -11,6 +11,7 @@ import {
   LogOut,
   FileText,
   Inbox,
+  ClipboardCheck,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
@@ -83,6 +84,9 @@ const SidebarLayout = ({
         return "Request Management";
       case "leave-balance":
         return "Leave Balance";
+      case "quarterly-review":
+      case "appraisal":
+        return "Appraisal";
       case "notes":
       case "employee-notes":
         return "Employee Notes";
@@ -132,6 +136,7 @@ const SidebarLayout = ({
     { name: "Dashboard", icon: LayoutGrid },
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet History", icon: Eye },
+    { name: "Appraisal", icon: ClipboardCheck },
     { name: "Request Management", icon: Calendar },
     { name: "Employee Notes", icon: FileText },
     { name: "Inbox", icon: Inbox },
