@@ -1098,12 +1098,13 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               {/* Rich Text Toolbar — sticks + elevates on scroll */}
               <div
                 data-notes-toolbar
-                className={`flex flex-nowrap items-center gap-0.5 sm:gap-1 p-1.5 px-2 text-slate-700 select-none shrink-0 sticky top-0 z-30 overflow-x-auto transition-all duration-200 ${
+                className={`flex items-center gap-1.5 p-1.5 px-2 text-slate-700 select-none shrink-0 sticky top-0 z-30 transition-all duration-200 ${
                   toolbarStuck
                     ? "bg-white/95 backdrop-blur-md border-b border-[#4318FF]/25 shadow-[0_8px_24px_rgba(67,24,255,0.12)] ring-1 ring-[#4318FF]/10 rounded-b-xl"
                     : "bg-white border-b border-slate-100"
                 }`}
               >
+              <div className="flex flex-nowrap items-center gap-0.5 sm:gap-1 flex-1 min-w-0 overflow-x-auto">
                 {/* Bold */}
                 <button
                   type="button"
@@ -1864,14 +1865,14 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                 >
                   {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                 </button>
+              </div>
 
-                <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
-
-                {/* Save — same action as bottom Save Project/Personal Note */}
+                {/* Save pinned at the end of the DESCRIPTION toolbar */}
+                <div className="h-5 w-px bg-slate-200 shrink-0 hidden sm:block" />
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="h-8 px-3 shrink-0 flex items-center gap-1 rounded-xl text-xs font-semibold text-white bg-[#4318FF] hover:bg-[#320fe0] shadow-sm shadow-[#4318FF]/25 transition cursor-pointer disabled:opacity-50"
+                  className="h-8 px-3 sm:px-4 shrink-0 ml-auto flex items-center gap-1 rounded-xl text-xs font-semibold text-white bg-[#4318FF] hover:bg-[#320fe0] shadow-sm shadow-[#4318FF]/25 transition cursor-pointer disabled:opacity-50"
                   title={
                     parentNoteContext
                       ? "Save Sub-Note"
