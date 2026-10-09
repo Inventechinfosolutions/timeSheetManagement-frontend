@@ -235,7 +235,7 @@ export const justifyImportedContent = (
 
     if (!NO_JUSTIFY_ALIGN_TAGS.has(el.tagName)) {
       el.style.textAlign = "justify";
-      el.style.textJustify = "inter-word";
+      (el.style as any).textJustify = "inter-word";
       el.style.hyphens = "auto";
     } else if (el.tagName.startsWith("H")) {
       el.style.textAlign = "left";
@@ -245,7 +245,7 @@ export const justifyImportedContent = (
 
   root.classList.add("is-justified");
   root.style.textAlign = "justify";
-  root.style.textJustify = "inter-word";
+  (root.style as any).textJustify = "inter-word";
   root.style.whiteSpace = "normal";
   root.style.letterSpacing = "normal";
   root.style.wordSpacing = "normal";
@@ -515,6 +515,220 @@ const prepareNoteDescriptionForExport = (note: Note): string => {
 };
 
 /**
+ * Dynamically prepares all content inside the PDF export container:
+ * - Header card: aligned grid with unified baseline for project badge and title.
+ * - Table alignments: SL column centered with #f1f5f9, data cells cleanly left-aligned
+ *   while dynamically preserving any custom user alignments (center, right, justify).
+ * - Strikethrough (s, strike, del, line-through): tight glyph line-height so the strike line
+ *   renders dead-center through text without floating above in html2canvas.
+ * - Lists (ul, ol, li): inline paragraph unwrapping so bullets and numbers stay on the same baseline.
+ * - Highlights and cell shading: zero paragraph margins inside cells for pixel-perfect vertical centering.
+ * - Inline quotes (.notes-inline-quote, blockquote): purple left-accent bar and soft lavender background.
+ */
+const preparePdfExportDom = (root: HTMLElement): void => {
+  // 1. Process attachment badges
+  prepareAttachmentBadgesForPdfExport(root);
+
+  // 2. Process all tables dynamically
+  const tables = root.querySelectorAll<HTMLTableElement>("table");
+  tables.forEach((table) => {
+    const firstRow = table.rows[0];
+    const firstCellText = firstRow?.cells[0]?.textContent?.trim() || "";
+    const isFirstColSl =
+      firstCellText === "SL" ||
+      firstRow?.cells[0]?.classList.contains("excel-sl-col") ||
+      table.querySelector(".excel-sl-col") !== null;
+
+    Array.from(table.rows).forEach((row) => {
+      Array.from(row.cells).forEach((cell, colIdx) => {
+        const isSl =
+          cell.classList.contains("excel-sl-col") ||
+          (isFirstColSl && colIdx === 0);
+
+        if (isSl) {
+          cell.classList.add("excel-sl-col");
+          cell.style.setProperty("text-align", "center", "important");
+          cell.style.setProperty("vertical-align", "top", "important");
+          cell.style.setProperty("background-color", "#f1f5f9", "important");
+          cell.style.setProperty("color", "#475569", "important");
+          cell.style.setProperty("font-weight", "600", "important");
+          cell.style.setProperty("font-size", "13px", "important");
+          cell.style.setProperty("width", "44px", "important");
+          cell.style.setProperty("min-width", "44px", "important");
+          cell.style.setProperty("max-width", "44px", "important");
+          cell.style.setProperty("padding", "8px 4px", "important");
+          return;
+        }
+
+        if (
+          cell.classList.contains("excel-attachment-col") ||
+          cell.classList.contains("excel-attachment-cell")
+        ) {
+          return;
+        }
+
+        // Dynamically resolve cell alignment: preserve custom alignment or default to left
+        const cellInlineAlign = cell.style.textAlign;
+        const cellAttrAlign = cell.getAttribute("align");
+        const styledChild = cell.querySelector<HTMLElement>(
+          "[style*='text-align'], [align], .text-center, .text-right, .text-left, .text-justify"
+        );
+        let dynamicAlign = cellInlineAlign || cellAttrAlign || "";
+
+        if (!dynamicAlign && styledChild) {
+          dynamicAlign =
+            styledChild.style.textAlign ||
+            styledChild.getAttribute("align") ||
+            (styledChild.classList.contains("text-center") ? "center" : "") ||
+            (styledChild.classList.contains("text-right") ? "right" : "") ||
+            (styledChild.classList.contains("text-justify") ? "justify" : "") ||
+            (styledChild.classList.contains("text-left") ? "left" : "");
+        }
+
+        if (dynamicAlign && dynamicAlign !== "inherit") {
+          cell.style.setProperty("text-align", dynamicAlign, "important");
+        } else {
+          cell.style.setProperty("text-align", "left", "important");
+        }
+
+        // Align cell to top with 8px padding: avoids html2canvas baseline-shift bug that drops text below background boxes
+        cell.style.setProperty("vertical-align", "top", "important");
+        cell.style.setProperty("padding", "8px 12px", "important");
+
+        // Cell background fill preservation & child content normalization
+        const cellBg = cell.style.backgroundColor;
+        if (cellBg && cellBg !== "transparent" && cellBg !== "inherit") {
+          cell.style.setProperty("background-color", cellBg, "important");
+        }
+
+        cell.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6, p, div").forEach((el) => {
+          el.style.setProperty("background-color", "transparent", "important");
+          el.style.setProperty("margin", "0", "important");
+          el.style.setProperty("padding", "0", "important");
+          el.style.setProperty("line-height", "1.35", "important");
+        });
+      });
+    });
+  });
+
+  // 3. Strikethrough fix: Use Unicode combining stroke overlay (\u0336) on text characters
+  // so the strike line is drawn by the font rasterizer dead-center through each character,
+  // completely avoiding html2canvas's buggy misplaced text-decoration lines and absolute spans.
+  root
+    .querySelectorAll<HTMLElement>(
+      "s, strike, del, [style*='line-through']"
+    )
+    .forEach((el) => {
+      el.style.setProperty("display", "inline", "important");
+      el.style.setProperty("vertical-align", "baseline", "important");
+      el.style.setProperty("line-height", "inherit", "important");
+      el.style.setProperty("text-decoration", "none", "important");
+      el.querySelectorAll(".pdf-export-strike-line, .pdf-strike-line").forEach((l) => l.remove());
+
+      const strikeWalk = (node: Node) => {
+        if (node.nodeType === Node.TEXT_NODE && node.nodeValue) {
+          if (!node.nodeValue.includes("\u0336")) {
+            node.nodeValue = node.nodeValue
+              .split("")
+              .map((c) => (c === " " || c === "\u00A0" ? c : c + "\u0336"))
+              .join("");
+          }
+        } else {
+          node.childNodes.forEach(strikeWalk);
+        }
+      };
+      strikeWalk(el);
+    });
+
+  // 4. Inline quotes & blockquotes
+  root
+    .querySelectorAll<HTMLElement>(".notes-inline-quote, blockquote")
+    .forEach((quote) => {
+      quote.style.setProperty("display", "inline-block", "important");
+      quote.style.setProperty("border-left", "3px solid #4318FF", "important");
+      quote.style.setProperty("background-color", "#EEF2FF", "important");
+      quote.style.setProperty("padding", "2px 8px", "important");
+      quote.style.setProperty("margin", "0 2px", "important");
+      quote.style.setProperty("font-style", "italic", "important");
+      quote.style.setProperty("color", "#475569", "important");
+      quote.style.setProperty("border-radius", "0 4px 4px 0", "important");
+      quote.style.setProperty("vertical-align", "middle", "important");
+      quote.style.setProperty("line-height", "1.15", "important");
+      quote.querySelectorAll<HTMLElement>("p").forEach((p) => {
+        p.style.setProperty("display", "inline", "important");
+        p.style.setProperty("background", "transparent", "important");
+        p.style.setProperty("margin", "0", "important");
+        p.style.setProperty("padding", "0", "important");
+      });
+    });
+
+  // 5. Lists (ul, ol, li): remove native list markers which html2canvas detaches onto separate lines.
+  // Insert explicit inline marker spans so bullets and numbers stay on the EXACT same baseline as the text.
+  root.querySelectorAll<HTMLElement>("ul, ol").forEach((list) => {
+    const isOrdered = list.tagName.toLowerCase() === "ol";
+    list.style.setProperty("list-style", "none", "important");
+    list.style.setProperty("list-style-type", "none", "important");
+    list.style.setProperty("padding-left", "0", "important");
+    list.style.setProperty("margin", "0", "important");
+    list.style.setProperty("text-align", "left", "important");
+
+    const items = Array.from(list.children).filter(
+      (c) => c.tagName.toLowerCase() === "li"
+    ) as HTMLElement[];
+
+    items.forEach((li, idx) => {
+      li.style.setProperty("list-style", "none", "important");
+      li.style.setProperty("list-style-type", "none", "important");
+      li.style.setProperty("display", "block", "important");
+      li.style.setProperty("margin", "0", "important");
+      li.style.setProperty("padding", "0", "important");
+      li.style.setProperty("line-height", "1.4", "important");
+      li.style.setProperty("text-align", "left", "important");
+
+      li.querySelectorAll<HTMLElement>("p, div").forEach((lp) => {
+        lp.style.setProperty("display", "inline", "important");
+        lp.style.setProperty("margin", "0", "important");
+        lp.style.setProperty("padding", "0", "important");
+        lp.style.setProperty("line-height", "inherit", "important");
+      });
+
+      if (!li.querySelector(".pdf-export-list-marker")) {
+        const marker = document.createElement("span");
+        marker.className = "pdf-export-list-marker";
+        marker.style.setProperty("display", "inline", "important");
+        marker.style.setProperty("margin-right", "5px", "important");
+        marker.style.setProperty("font-weight", isOrdered ? "normal" : "bold", "important");
+        marker.style.setProperty("line-height", "inherit", "important");
+        marker.style.setProperty("vertical-align", "baseline", "important");
+        marker.textContent = isOrdered ? `${idx + 1}. ` : "• ";
+        li.insertBefore(marker, li.firstChild);
+      }
+    });
+  });
+
+  // 6. Highlights: clean inline-block text highlight for identification with text centered horizontally & vertically inside the color pill
+  root
+    .querySelectorAll<HTMLElement>(
+      "mark, span[style*='background-color'], font[style*='background-color']"
+    )
+    .forEach((mark) => {
+      if (
+        !mark.classList.contains("notes-inline-quote") &&
+        mark.tagName !== "TD" &&
+        mark.tagName !== "TH"
+      ) {
+        mark.style.setProperty("display", "inline-block", "important");
+        mark.style.setProperty("vertical-align", "middle", "important");
+        mark.style.setProperty("line-height", "1.15", "important");
+        mark.style.setProperty("padding", "2px 6px", "important");
+        mark.style.setProperty("border-radius", "4px", "important");
+        mark.style.setProperty("box-sizing", "border-box", "important");
+        mark.style.setProperty("text-align", "center", "important");
+      }
+    });
+};
+
+/**
  * Export Note to PDF with 100% exact visual fidelity (highlighter colors, text colors,
  * boxes, cards, tables, and HTML formatting) matching the Word export and on-screen view.
  */
@@ -558,14 +772,58 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
     wrapper.style.backgroundColor = "#FFFFFF";
     wrapper.style.boxSizing = "border-box";
 
+    const isProject = note.type === "PROJECT";
+    const projectLabel = note.projectName || "Worksphere Project";
+
     wrapper.innerHTML = `
       <style>
+        .pdf-export-body {
+          color: #1E293B !important;
+          line-height: 1.65 !important;
+        }
         .pdf-export-body mark, 
-        .pdf-export-body span[style*="background-color"] {
-          padding: 2px 5px !important;
-          border-radius: 3px !important;
-          box-decoration-break: clone;
-          -webkit-box-decoration-break: clone;
+        .pdf-export-body span[style*="background-color"],
+        .pdf-export-body font[style*="background-color"] {
+          display: inline-block !important;
+          vertical-align: middle !important;
+          line-height: 1.15 !important;
+          padding: 2px 6px !important;
+          border-radius: 4px !important;
+          box-sizing: border-box !important;
+          text-align: center !important;
+        }
+        .pdf-export-body .notes-inline-quote,
+        .pdf-export-body blockquote {
+          display: inline-block !important;
+          width: fit-content !important;
+          max-width: 100% !important;
+          box-sizing: border-box !important;
+          border-left: 3px solid #4318FF !important;
+          background-color: #EEF2FF !important;
+          padding: 2px 8px !important;
+          margin: 0 2px !important;
+          font-style: italic !important;
+          color: #475569 !important;
+          border-radius: 0 4px 4px 0 !important;
+          vertical-align: middle !important;
+          line-height: 1.15 !important;
+        }
+        .pdf-export-body .notes-inline-quote p,
+        .pdf-export-body blockquote p {
+          display: inline !important;
+          margin: 0 !important;
+          background: transparent !important;
+          border: none !important;
+          padding: 0 !important;
+        }
+        .pdf-export-body s,
+        .pdf-export-body strike,
+        .pdf-export-body del,
+        .pdf-export-body [style*="line-through"] {
+          display: inline !important;
+          vertical-align: baseline !important;
+          line-height: inherit !important;
+          text-decoration: none !important;
         }
         .pdf-export-body pre {
           font-family: Consolas, Monaco, "Courier New", monospace !important;
@@ -609,24 +867,54 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
           min-width: 0 !important;
           table-layout: fixed !important;
           border-collapse: collapse !important;
-          margin: 0 0 14px 0 !important;
+          margin: 8px 0 !important;
+          border: 1px solid #E2E8F0 !important;
         }
         .pdf-export-body table th,
         .pdf-export-body table td {
-          border: 1px solid #cbd5e1 !important;
-          padding: 10px 14px !important;
-          vertical-align: middle !important;
-          font-size: 13.5px !important;
-          font-family: Arial, sans-serif !important;
-          color: #334155 !important;
+          border: 1px solid #E2E8F0 !important;
+          padding: 8px 12px !important;
+          text-align: left;
+          vertical-align: top !important;
+          font-size: 13px !important;
+          line-height: 1.4 !important;
           word-break: break-word !important;
           overflow-wrap: anywhere !important;
           white-space: normal !important;
+          box-sizing: border-box !important;
         }
         /* Do not force th background — preserve inlined email/table theme colors */
         .pdf-export-body table th {
           font-weight: 700 !important;
           color: #1e293b !important;
+        }
+        .pdf-export-body table td h1,
+        .pdf-export-body table th h1,
+        .pdf-export-body table td h2,
+        .pdf-export-body table th h2,
+        .pdf-export-body table td h3,
+        .pdf-export-body table th h3,
+        .pdf-export-body table td p,
+        .pdf-export-body table th p {
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1.35 !important;
+          background: transparent !important;
+        }
+        .pdf-export-body table th.excel-sl-col,
+        .pdf-export-body table td.excel-sl-col {
+          width: 44px !important;
+          min-width: 44px !important;
+          max-width: 44px !important;
+          padding: 8px 4px !important;
+          text-align: center !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          vertical-align: top !important;
+          background-color: #f1f5f9 !important;
+          color: #475569 !important;
+          font-weight: 600 !important;
+          font-size: 13px !important;
         }
         .pdf-export-body th.excel-attachment-col,
         .pdf-export-body td.excel-attachment-cell {
@@ -703,6 +991,51 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
         }
         .pdf-export-body li {
           margin-bottom: 5px !important;
+        .pdf-export-body ul,
+        .pdf-export-body ol {
+          list-style: none !important;
+          list-style-type: none !important;
+          padding-left: 0 !important;
+          margin: 4px 0 !important;
+          text-align: left !important;
+        }
+        .pdf-export-body li {
+          list-style: none !important;
+          list-style-type: none !important;
+          display: block !important;
+          margin-bottom: 2px !important;
+          line-height: 1.4 !important;
+          text-align: left !important;
+        }
+        .pdf-export-body li p {
+          display: inline !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .pdf-export-body .pdf-export-list-marker {
+          display: inline !important;
+          margin-right: 5px !important;
+          line-height: inherit !important;
+          vertical-align: baseline !important;
+        }
+        .pdf-export-body table td ul,
+        .pdf-export-body table th ul,
+        .pdf-export-body table td ol,
+        .pdf-export-body table th ol {
+          list-style: none !important;
+          list-style-type: none !important;
+          padding-left: 0 !important;
+          margin: 0 !important;
+          text-align: left !important;
+        }
+        .pdf-export-body table td li,
+        .pdf-export-body table th li {
+          list-style: none !important;
+          list-style-type: none !important;
+          display: block !important;
+          text-align: left !important;
+          margin: 0 !important;
+          line-height: 1.4 !important;
         }
         /* Match email .note-content typography (description only — no logo/header) */
         .pdf-export-body p {
@@ -731,13 +1064,74 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
           font-size: 14px !important;
           border-radius: 0 6px 6px 0 !important;
         }
+        .pdf-export-body img {
+          max-width: 100% !important;
+          height: auto !important;
+          display: block;
+        }
+        .pdf-export-body h1 { font-size: 20px !important; font-weight: 700 !important; margin: 12px 0 6px 0 !important; color: #1E293B !important; }
+        .pdf-export-body h2 { font-size: 16px !important; font-weight: 700 !important; margin: 10px 0 5px 0 !important; color: #1E293B !important; }
+        .pdf-export-body h3 { font-size: 14px !important; font-weight: 600 !important; margin: 8px 0 4px 0 !important; color: #1E293B !important; }
+
+        /* Dynamic alignment classes and attributes */
+        .pdf-export-body .text-center,
+        .pdf-export-body [align="center"],
+        .pdf-export-body [style*="text-align: center"],
+        .pdf-export-body [style*="text-align:center"] {
+          text-align: center !important;
+        }
+        .pdf-export-body .text-right,
+        .pdf-export-body [align="right"],
+        .pdf-export-body [style*="text-align: right"],
+        .pdf-export-body [style*="text-align:right"] {
+          text-align: right !important;
+        }
+        .pdf-export-body .text-left,
+        .pdf-export-body [align="left"],
+        .pdf-export-body [style*="text-align: left"],
+        .pdf-export-body [style*="text-align:left"] {
+          text-align: left !important;
+        }
+        .pdf-export-body .text-justify,
+        .pdf-export-body [align="justify"],
+        .pdf-export-body [style*="text-align: justify"],
+        .pdf-export-body [style*="text-align:justify"],
+        .pdf-export-body .is-justified,
+        .pdf-export-body .is-justified p,
+        .pdf-export-body .is-justified td {
+          text-align: justify !important;
+          text-justify: inter-word !important;
+        }
       </style>
-      <div style="padding: 28px 32px; font-family: Arial, sans-serif; color: #1e293b; background-color: #FFFFFF; line-height: 1.8; box-sizing: border-box; width: ${baseWidthPx}px;">
-        <h1 style="font-size: 24px; font-weight: 700; color: #0f172a; margin: 0 0 16px 0; font-family: Arial, sans-serif; line-height: 1.3;">
-          ${note.title || "Untitled Note"}
-        </h1>
-        <div class="pdf-export-body note-content" style="font-size: 14.5px; line-height: 1.8; color: #1e293b; background-color: #FFFFFF; width: 100%; font-family: Arial, sans-serif;">
-          ${exportDescription}
+      <div style="padding: 28px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1E293B; background-color: #FFFFFF; line-height: 1.6; box-sizing: border-box; width: ${baseWidthPx}px;">
+        <!-- Header: Project (No box) & Title -->
+        <div style="margin-bottom: 20px; width: 100%; box-sizing: border-box;">
+          <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;">
+              PROJECT:
+            </span>
+            <span style="font-size: 14px; font-weight: 700; color: #1B2559; line-height: 20px; text-transform: uppercase;">
+              ${isProject ? projectLabel : "Personal Note"}
+            </span>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;">
+              TITLE/SUBJECT:
+            </span>
+            <span style="font-size: 16px; font-weight: 800; color: #1B2559; line-height: 22px;">
+              ${note.title || "Untitled Note"}
+            </span>
+          </div>
+        </div>
+
+        <!-- Structured Description Section -->
+        <div style="margin-bottom: 16px; width: 100%; box-sizing: border-box;">
+          <div style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1.5px solid #E2E8F0; padding-bottom: 6px; margin-bottom: 14px; width: 100%;">
+            DESCRIPTION
+          </div>
+          <div class="notes-content-view doc-pages-editor pdf-export-body" style="font-size: 13.5px; line-height: 1.65; color: #1E293B; background-color: #FFFFFF; width: 100%;">
+            ${exportDescription && exportDescription.trim() ? exportDescription : '<p style="color: #94A3B8; font-style: italic; margin: 0;">No description provided.</p>'}
+          </div>
         </div>
       </div>
     `;
@@ -745,8 +1139,8 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
     document.body.appendChild(wrapper);
 
     wrapper.style.width = `${baseWidthPx}px`;
-    // Force editor-like truncated names — CSS ellipsis alone is unreliable in html2canvas
-    prepareAttachmentBadgesForPdfExport(wrapper);
+    // Dynamically prepare all content (alignments, SL col, badges, quotes, lists, highlights, strikethrough)
+    preparePdfExportDom(wrapper);
 
     const canvas = await html2canvas(wrapper, {
       scale: 2,
@@ -922,7 +1316,7 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
         <title>${note.title || "Note"}</title>
         <style>
           @page Section1 {
-            size: ${isLandscape ? "841.9pt 595.3pt" : "595.3pt 841.9pt"};
+            size: ${isLandscape || isWide ? `${pageWidthPt}pt ${pageHeightPt}pt` : "595.3pt 841.9pt"};
             margin: 1.0in 1.0in 1.0in 1.0in;
             mso-header-margin: 35.4pt;
             mso-footer-margin: 35.4pt;
@@ -976,6 +1370,7 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
             padding: 2pt 4pt;
             border-radius: 2pt;
           }
+          .notes-inline-quote,
           blockquote {
             display: inline-block;
             width: fit-content;
@@ -1003,7 +1398,8 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
           }
           table th, table td {
             border: 1pt solid #CBD5E1;
-            padding: 10pt 14pt;
+            padding: 6pt 8pt;
+            text-align: left;
             vertical-align: middle;
             font-size: 11pt;
             font-family: Arial, sans-serif;
@@ -1014,6 +1410,13 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
           table th {
             font-weight: bold;
             color: #1E293B;
+          }
+          table th.excel-sl-col, table td.excel-sl-col {
+            width: 44px;
+            text-align: center;
+            background-color: #F1F5F9;
+            color: #475569;
+            font-weight: bold;
           }
           th.excel-attachment-col, td.excel-attachment-cell {
             width: 260px;
