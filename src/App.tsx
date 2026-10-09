@@ -135,7 +135,6 @@ const AdminTabWrapper = () => {
       return <LeaveManagement />;
     case "appraisal":
     case "quarterly-review":
-      return <ManagerQuarterlyReviewPage />;
     case "my-appraisal":
     case "my-quarterly-review":
       return <EmployeeAppraisalPage />;
