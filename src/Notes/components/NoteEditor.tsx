@@ -20,7 +20,6 @@ import {
   ListOrdered,
   Quote,
   Link as LinkIcon,
-  Palette,
   Highlighter,
   Heading1,
   Heading2,
@@ -34,7 +33,6 @@ import { Toggle } from "../../components/ui";
 import { Note, NotesFormData, NoteDocumentItem, AutoSaveStatus } from "../types/notes.types";
 import { NoteAttachmentChip } from "./NoteAttachmentChip";
 import {
-  TEXT_COLORS,
   HIGHLIGHT_COLORS,
   justifyImportedContent,
   preparePastedHtmlForNote,
@@ -70,8 +68,6 @@ interface NoteEditorProps {
   showSaveToast: boolean;
   isDraggingModalFile: boolean;
   setIsDraggingModalFile: (val: boolean) => void;
-  textColor: string;
-  setTextColor: (val: string) => void;
   highlightColor: string;
   setHighlightColor: (val: string) => void;
   isImportingDocling: boolean;
@@ -115,8 +111,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   showSaveToast,
   isDraggingModalFile,
   setIsDraggingModalFile,
-  textColor,
-  setTextColor,
   highlightColor,
   setHighlightColor,
   isImportingDocling,
@@ -1607,72 +1601,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                 </Popover>
 
                 <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
-
-                {/* Text Color Palette */}
-                <Popover
-                  trigger="click"
-                  placement="bottom"
-                  content={
-                    <div className="p-2 space-y-2.5 w-56 select-none">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                          Text Color
-                        </span>
-                        <button
-                          type="button"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            runToolbarCommand("foreColor", "#1B2559");
-                            setTextColor("none");
-                          }}
-                          className="text-[11px] text-[#4318FF] hover:underline font-semibold cursor-pointer"
-                        >
-                          Reset
-                        </button>
-                      </div>
-                      <div className="grid grid-cols-6 gap-1.5">
-                        {TEXT_COLORS.map((c) => (
-                          <button
-                            key={`tx-c-${c.color}`}
-                            type="button"
-                            onMouseDown={(e) => {
-                              e.preventDefault();
-                              if (c.color === "none") {
-                                runToolbarCommand("foreColor", "#1B2559");
-                                setTextColor("none");
-                              } else {
-                                runToolbarCommand("foreColor", c.color);
-                                setTextColor(c.color);
-                              }
-                            }}
-                            className={`w-7 h-7 rounded-lg border flex items-center justify-center transition cursor-pointer ${
-                              textColor === c.color
-                                ? "ring-2 ring-[#4318FF] scale-110 border-white shadow-xs"
-                                : "border-slate-200 hover:scale-105"
-                            }`}
-                            style={{
-                              backgroundColor: c.color === "none" ? "#FFFFFF" : c.color,
-                            }}
-                            title={c.label}
-                          >
-                            {c.color === "none" && (
-                              <span className="text-[10px] font-bold text-slate-400">∅</span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  }
-                >
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
-                    title="Font Color"
-                  >
-                    <Palette className="w-4 h-4 text-slate-700" />
-                  </button>
-                </Popover>
 
                 {/* Text Highlighter Palette */}
                 <Popover

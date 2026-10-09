@@ -596,7 +596,8 @@ export const useNoteTable = ({
         clearExpandMode();
         return;
       }
-      handleEditorInputWrapper();
+      // Width-only change — A4 reflow would incorrectly push rows to the next page
+      handleEditorInputWrapper({ skipPagination: true });
       requestAnimationFrame(syncHandle);
     };
 
@@ -1079,7 +1080,8 @@ export const useNoteTable = ({
           } applied`
     );
 
-    handleEditorInputWrapper();
+    // Style-only change — A4 reflow would incorrectly push table rows to the next page
+    handleEditorInputWrapper({ skipPagination: true });
   };
 
   return {

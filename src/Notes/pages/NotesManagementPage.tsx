@@ -45,8 +45,6 @@ export const NotesManagementPage: React.FC = () => {
     setFormData,
     isDraggingModalFile,
     setIsDraggingModalFile,
-    textColor,
-    setTextColor,
     highlightColor,
     setHighlightColor,
     fileInputRef,
@@ -121,8 +119,6 @@ export const NotesManagementPage: React.FC = () => {
           showSaveToast={showSaveToast}
           isDraggingModalFile={isDraggingModalFile}
           setIsDraggingModalFile={setIsDraggingModalFile}
-          textColor={textColor}
-          setTextColor={setTextColor}
           highlightColor={highlightColor}
           setHighlightColor={setHighlightColor}
           isImportingDocling={isImportingDocling}

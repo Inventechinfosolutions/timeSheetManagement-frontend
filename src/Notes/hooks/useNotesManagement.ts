@@ -185,7 +185,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   });
 
   const [isDraggingModalFile, setIsDraggingModalFile] = useState(false);
-  const [textColor, setTextColor] = useState("#1B2559");
   const [highlightColor, setHighlightColor] = useState("transparent");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1865,8 +1864,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     setFormData,
     isDraggingModalFile,
     setIsDraggingModalFile,
-    textColor,
-    setTextColor,
     highlightColor,
     setHighlightColor,
     fileInputRef,
