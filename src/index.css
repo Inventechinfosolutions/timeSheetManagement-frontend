@@ -1628,3 +1628,104 @@ button[class*="bg-tbl-"]:active {
 .notes-content-view .table-file-btn.remove {
   display: none !important;
 }
+
+/* Birthday celebration */
+@keyframes birthday-confetti-fall {
+  0% {
+    transform: translate3d(0, -10vh, 0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(var(--confetti-drift, 0px), 110vh, 0) rotate(var(--confetti-spin, 720deg));
+    opacity: 0.9;
+  }
+}
+
+@keyframes birthday-balloon-float {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(-4deg);
+  }
+  50% {
+    transform: translate3d(0, -14px, 0) rotate(4deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(-4deg);
+  }
+}
+
+@keyframes birthday-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.85) translateY(24px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.02) translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes birthday-cake-bounce {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.05);
+  }
+}
+
+@keyframes birthday-shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+.birthday-confetti-piece {
+  position: absolute;
+  top: 0;
+  animation-name: birthday-confetti-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+.birthday-balloon {
+  animation: birthday-balloon-float 4s ease-in-out infinite;
+}
+
+.birthday-card-enter {
+  animation: birthday-pop-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.birthday-cake {
+  animation: birthday-cake-bounce 2.2s ease-in-out infinite;
+}
+
+.birthday-shimmer-text {
+  background: linear-gradient(90deg, #4318ff 0%, #e312dc 25%, #ffb547 50%, #e312dc 75%, #4318ff 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: birthday-shimmer 4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .birthday-confetti-piece,
+  .birthday-balloon,
+  .birthday-card-enter,
+  .birthday-cake,
+  .birthday-shimmer-text {
+    animation: none;
+  }
+
+  .birthday-confetti-piece {
+    display: none;
+  }
+}

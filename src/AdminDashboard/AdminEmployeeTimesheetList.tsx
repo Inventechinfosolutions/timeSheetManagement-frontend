@@ -25,13 +25,14 @@ import Toast from "../components/Toast";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { SearchBox } from "../components/ui";
 import { MonthStatus, UserType } from "../enums";
-import { isAdminAccess } from "../utils/roleAccess";
+import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
 
 const AdminEmployeeTimesheetList = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = useAppSelector((state: RootState) => state.user.currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
+  const canEditTimesheet = !isReceptionist && !isCeoUser(currentUser);
   const isAdminOrManager =
     isAdminAccess(currentUser) ||
     currentUser?.userType === UserType.MANAGER ||
@@ -533,7 +534,7 @@ const AdminEmployeeTimesheetList = () => {
                         >
                           <Eye size={16} />
                         </button>
-                        {!isReceptionist && (
+                        {canEditTimesheet && (
                           <button
                             onClick={() => handleViewTimesheet(emp.id)}
                             className="inline-flex items-center gap-2 bg-transparent border-none cursor-pointer text-[#4318FF] text-sm font-bold hover:underline transition-all hover:scale-105 active:scale-95"
@@ -557,7 +558,7 @@ const AdminEmployeeTimesheetList = () => {
                 employees={currentItems}
                 onViewTimesheet={handleViewTimesheet}
                 onViewWorkingDetails={handleViewWorkingDetails}
-                showEditButton={!isReceptionist}
+                showEditButton={canEditTimesheet}
               />
             ) : null}
           </div>

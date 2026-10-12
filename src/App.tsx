@@ -17,6 +17,8 @@ import { mainComponentConfigs } from "./mainComponentConfigs";
 import EmployeeLayout from "./navigation/EmployeeLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { UserType } from "./enums";
+import { useAppSelector } from "./hooks";
+import { isCeoUser } from "./utils/roleAccess";
 
 // Lazy load authentication components
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
@@ -90,8 +92,15 @@ const EmployeeTabWrapper = () => {
   }
 };
 
+const CEO_BLOCKED_ADMIN_TABS = ["registration", "employees"];
+
 const AdminTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
+  const isCeo = useAppSelector((state) => isCeoUser(state.user.currentUser));
+
+  if (isCeo && tab && CEO_BLOCKED_ADMIN_TABS.includes(tab)) {
+    return <Navigate to="/admin-dashboard" replace />;
+  }
 
   switch (tab) {
     case "registration":

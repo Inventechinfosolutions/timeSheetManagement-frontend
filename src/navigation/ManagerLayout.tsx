@@ -1,5 +1,6 @@
 import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import SidebarLayout from "../AdminDashboard/SidebarLayout";
+import BirthdayWish from "../components/BirthdayWish";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { fetchNotifications } from "../reducers/notification.reducer";
 import {
@@ -184,6 +185,7 @@ const ManagerLayout = () => {
       title="Manager"
     >
       <Outlet />
+      <BirthdayWish />
     </SidebarLayout>
   );
 };

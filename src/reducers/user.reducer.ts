@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import axios from 'axios';
 import { Storage } from '../utils/storage-util';
+import { clearBirthdayWishSeen } from '../utils/birthdayWish';
 
 import { UserStatus, UserType } from '../enums';
 
@@ -311,6 +312,7 @@ const userSlice = createSlice({
         // Clear stored token
         Storage.session.remove('TimeSheet-authenticationToken');
         localStorage.removeItem('userLoginId');
+        clearBirthdayWishSeen();
       })
       .addCase(logoutUser.rejected, (state, action) => {
         state.loading = false;
@@ -323,6 +325,7 @@ const userSlice = createSlice({
 
         Storage.session.remove('TimeSheet-authenticationToken');
         localStorage.removeItem('userLoginId');
+        clearBirthdayWishSeen();
       })
 
       // CHANGE PASSWORD
