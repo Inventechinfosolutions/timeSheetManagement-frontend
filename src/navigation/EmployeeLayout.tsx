@@ -2,6 +2,7 @@ import { Outlet, useParams, useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../hooks";
 import { logoutUser } from "../reducers/user.reducer";
 import SidebarLayout from "../EmployeeDashboard/SidebarLayout";
+import BirthdayWish from "../components/BirthdayWish";
 
 const EmployeeLayout = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -18,10 +19,28 @@ const EmployeeLayout = () => {
       case "leave-management": return "Request Management";
       case "leave-balance": return "Leave Balance";
       case "quarterly-review": return "Quarterly Review";
+      case "my-timesheet":
+        return "My Timesheet";
+      case "timesheet-view":
+        return "Timesheet History";
+      case "my-profile":
+        return "Account Settings";
+      case "change-password":
+        return "Change Password";
+      case "leave-management":
+        return "Request Management";
+      case "leave-balance":
+        return "Leave Balance";
+      case "quarterly-review":
+      case "appraisal":
+        return "Appraisal";
       case "notes":
-      case "employee-notes": return "Employee Notes";
-      case "inbox": return "Inbox";
-      default: return "Dashboard";
+      case "employee-notes":
+        return "Employee Notes";
+      case "inbox":
+        return "Inbox";
+      default:
+        return "Dashboard";
     }
   };
 
@@ -35,6 +54,9 @@ const EmployeeLayout = () => {
         break;
       case "Quarterly Review":
         navigate("/employee-dashboard/quarterly-review");
+      case "Appraisal":
+      case "Quarterly Review":
+        navigate("/employee-dashboard/appraisal");
         break;
       case "Account Settings":
         navigate("/employee-dashboard/my-profile");
@@ -71,6 +93,7 @@ const EmployeeLayout = () => {
       onLogout={handleLogout}
     >
       <Outlet />
+      <BirthdayWish />
     </SidebarLayout>
   );
 };

@@ -22,6 +22,7 @@ import {
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { TimesheetEntry } from "../types";
 import { AttendanceStatus, UserType, Department } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 import {
   generateMonthlyEntries,
   generateRangeEntries,
@@ -55,7 +56,7 @@ const MobileResponsiveCalendarPage = ({
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
 
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = isAdminAccess(currentUser);
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&
@@ -377,6 +378,12 @@ const MobileResponsiveCalendarPage = ({
             } else if (entry?.status === AttendanceStatus.FULL_DAY) {
               colorClass =
                 "bg-green-100 border border-green-600 text-black font-bold";
+            } else if (entry?.status === AttendanceStatus.LOCKED) {
+              colorClass =
+                "bg-purple-100 border border-purple-500 text-black font-bold";
+            } else if (entry?.status === AttendanceStatus.NOT_UPDATED) {
+              colorClass =
+                "bg-[#FEF3C7] border border-[#FFB020] text-[#92400E] font-bold";
             } else if (
               entry?.status === AttendanceStatus.HALF_DAY ||
               isPendingUpdate
@@ -482,7 +489,7 @@ const MobileResponsiveCalendarPage = ({
               },
               {
                 label: AttendanceStatus.NOT_UPDATED,
-                className: "bg-white border border-gray-300",
+                className: "bg-[#FEF3C7] border border-[#FFB020]",
                 icon: true,
               },
             ].map((item) => (

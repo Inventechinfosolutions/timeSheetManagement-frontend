@@ -35,6 +35,10 @@ export const employeeComponentConfigs = [
     Component: ChangePassword,
   },
   {
+    path: "/employee-dashboard/appraisal",
+    Component: EmployeeAppraisalPage,
+  },
+  {
     path: "/employee-dashboard/quarterly-review",
     Component: EmployeeAppraisalPage,
   },

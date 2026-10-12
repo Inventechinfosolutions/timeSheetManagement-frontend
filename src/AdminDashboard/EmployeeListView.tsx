@@ -35,12 +35,14 @@ import {
   CreditCard,
   Eye,
   Calendar,
+  Cake,
   Download,
 } from "lucide-react";
 import EmployeeListMobileCard from "./EmployeeListMobileCard";
 import Toast from "../components/Toast";
 import { SearchBox } from "../components/ui";
 import { UserType, EmploymentType, UserStatus } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 
 const EmployeeListView = () => {
   const navigate = useNavigate();
@@ -84,6 +86,7 @@ const EmployeeListView = () => {
     employmentType: "" as "" | EmploymentType,
     gender: "" as "" | "MALE" | "FEMALE",
     joiningDate: "",
+    dateOfBirth: "",
   });
   const [fieldErrors, setFieldErrors] = useState({
     fullName: "",
@@ -95,6 +98,7 @@ const EmployeeListView = () => {
     employmentType: "",
     gender: "",
     joiningDate: "",
+    dateOfBirth: "",
   });
   const [generalError, setGeneralError] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
@@ -204,7 +208,7 @@ const EmployeeListView = () => {
     lastLoggedIn: emp.lastLoggedIn,
     lastLinkSentAt: emp.lastLinkSentAt,
     isActive: emp.userStatus !== UserStatus.INACTIVE,
-    isAdmin: emp.userType === UserType.ADMIN,
+    isAdmin: isAdminAccess(emp),
   }));
 
   const currentItems = employees.filter((emp) => {
@@ -319,6 +323,11 @@ const EmployeeListView = () => {
       case "department":
         // No specific validation beyond required
         break;
+      case "dateOfBirth":
+        if (value && value > new Date().toISOString().slice(0, 10)) {
+          error = "Date of birth cannot be in the future";
+        }
+        break;
       default:
         break;
     }
@@ -351,7 +360,8 @@ const EmployeeListView = () => {
     setGeneralError("");
     setShowSuccess(false);
 
-    const submitData = { ...formData };
+    const { dateOfBirth, ...rest } = formData;
+    const submitData = dateOfBirth ? { ...rest, dateOfBirth } : rest;
 
     try {
       const resultAction = await dispatch(createEntity(submitData));
@@ -399,6 +409,7 @@ const EmployeeListView = () => {
       employmentType: "",
       gender: "",
       joiningDate: "",
+      dateOfBirth: "",
     });
     setFieldErrors({
       fullName: "",
@@ -410,6 +421,7 @@ const EmployeeListView = () => {
       employmentType: "",
       gender: "",
       joiningDate: "",
+      dateOfBirth: "",
     });
     setGeneralError("");
     setShowSuccess(false);
@@ -714,7 +726,10 @@ const EmployeeListView = () => {
                 </button>
 
                 <button
-                  onClick={() => setIsCreateModalOpen(true)}
+                  onClick={() => {
+                    dispatch(fetchRoles());
+                    setIsCreateModalOpen(true);
+                  }}
                   className="flex items-center justify-center gap-2 px-6 py-2.5 bg-[#4318FF] text-white rounded-xl font-black text-xs transition-all shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transform hover:-translate-y-0.5 active:scale-95 tracking-widest uppercase"
                 >
                   <UserPlus size={18} />
@@ -1028,6 +1043,7 @@ ${
                     <li>email</li>
                     <li>employmentType</li>
                     <li>joiningDate</li>
+                    <li>dateOfBirth (optional)</li>
                     <li>gender</li>
                     <li>role</li>
                   </ul>
@@ -1555,27 +1571,52 @@ ${
                     </div>
                   </div>
 
-                  {/* Date of Joining */}
-                  <div className="space-y-2 mt-4">
-                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                      Date of Joining <span className="text-red-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="date"
-                        name="joiningDate"
-                        className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
-                        value={formData.joiningDate}
-                        onChange={handleFormChange}
-                        required
-                      />
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    {/* Date of Joining */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                        Date of Joining <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="date"
+                          name="joiningDate"
+                          className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
+                          value={formData.joiningDate}
+                          onChange={handleFormChange}
+                          required
+                        />
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                      </div>
+                      {fieldErrors.joiningDate && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {fieldErrors.joiningDate}
+                        </p>
+                      )}
                     </div>
-                    {fieldErrors.joiningDate && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {fieldErrors.joiningDate}
-                      </p>
-                    )}
+
+                    {/* Date of Birth */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-gray-600 uppercase tracking-wide">
+                        Date of Birth
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="date"
+                          name="dateOfBirth"
+                          max={new Date().toISOString().slice(0, 10)}
+                          className="w-full pl-10 pr-3 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none transition-all text-sm appearance-none bg-white"
+                          value={formData.dateOfBirth}
+                          onChange={handleFormChange}
+                        />
+                        <Cake className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                      </div>
+                      {fieldErrors.dateOfBirth && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {fieldErrors.dateOfBirth}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Email - Full Width */}

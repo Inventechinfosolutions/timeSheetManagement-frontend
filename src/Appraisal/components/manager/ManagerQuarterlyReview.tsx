@@ -191,9 +191,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
   const hasActiveFilters = Boolean(
     searchTerm.trim() ||
-      statusFilter ||
-      (quarter && quarter !== AppraisalFilterAll.ALL) ||
-      (financialYear && financialYear !== defaultYear.current)
+    statusFilter ||
+    (quarter && quarter !== AppraisalFilterAll.ALL) ||
+    (financialYear && financialYear !== defaultYear.current)
   );
 
   const handleOpenCreateModal = () => {
@@ -373,8 +373,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
   if (evaluatingRecord) {
     return (
       <div className="w-full min-h-screen relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 pt-1 sm:pt-1.5 pb-8 bg-[#F4F7FE]">
-        
-        
+
+
         <div className="relative z-10">
           <EvaluationPanel
             key={`${evaluatingRecord.reviewId || evaluatingRecord.id}-${evaluationMode}`}
@@ -388,24 +388,24 @@ export const ManagerQuarterlyReview: React.FC = () => {
               setEvaluatingRecord((current) =>
                 current
                   ? {
-                      ...current,
-                      fromDate: patch.assignedDate,
-                      assignedOn: patch.assignedDate,
-                      toDate: patch.deadline,
-                      description: patch.description,
-                    }
+                    ...current,
+                    fromDate: patch.assignedDate,
+                    assignedOn: patch.assignedDate,
+                    toDate: patch.deadline,
+                    description: patch.description,
+                  }
                   : current,
               );
               setAssignments((current) =>
                 current.map((item) =>
                   item.reviewId === patch.reviewId
                     ? {
-                        ...item,
-                        fromDate: patch.assignedDate,
-                        assignedOn: patch.assignedDate,
-                        toDate: patch.deadline,
-                        description: patch.description,
-                      }
+                      ...item,
+                      fromDate: patch.assignedDate,
+                      assignedOn: patch.assignedDate,
+                      toDate: patch.deadline,
+                      description: patch.description,
+                    }
                     : item,
                 ),
               );
@@ -419,7 +419,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   return (
     <div className="w-full relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
       {/* LUXURY BACKGROUND CANVAS (All SVGs & animations managed and loaded via ManagerQuarterlyReview.css) */}
-      
+
 
       {/* FOREGROUND CONTENT (z-10 layer for crisp interactivity and clarity) */}
       <div className="relative z-10 flex-1 flex flex-col min-h-0">
@@ -438,45 +438,45 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
           {/* Create Button at top of card with animated SVG icon */}
           <div className="flex w-full sm:w-auto gap-2">
-          <Button
-            variant="primary"
-            size="lg"
-            leftIcon={
-              <span className="manager-create-icon-wrap" aria-hidden="true">
-                <svg
-                  className="manager-create-icon-svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9.5"
-                    className="manager-create-svg-circle"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeDasharray="4 3"
-                    opacity="0.8"
-                  />
-                  <path
-                    d="M12 7V17M7 12H17"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="manager-create-svg-plus"
-                  />
-                </svg>
-              </span>
-            }
-            onClick={handleOpenCreateModal}
-            className="w-full sm:w-auto font-bold manager-review-create-btn shrink-0"
-          >
-            Create
-          </Button>
+            <Button
+              variant="primary"
+              size="lg"
+              leftIcon={
+                <span className="manager-create-icon-wrap" aria-hidden="true">
+                  <svg
+                    className="manager-create-icon-svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9.5"
+                      className="manager-create-svg-circle"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeDasharray="4 3"
+                      opacity="0.8"
+                    />
+                    <path
+                      d="M12 7V17M7 12H17"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="manager-create-svg-plus"
+                    />
+                  </svg>
+                </span>
+              }
+              onClick={handleOpenCreateModal}
+              className="w-full sm:w-auto font-bold manager-review-create-btn shrink-0"
+            >
+              Create
+            </Button>
           </div>
         </div>
 

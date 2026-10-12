@@ -35,6 +35,7 @@ import {
   LeaveRequestType,
   HalfDayType,
 } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 import {
   Home,
   MapPin,
@@ -114,7 +115,7 @@ const LeaveManagement = () => {
     currentUser?.employeeId ||
     currentUser?.loginId;
 
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = isAdminAccess(currentUser);
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&

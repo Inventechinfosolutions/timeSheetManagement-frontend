@@ -39,6 +39,7 @@ import {
   LeaveRequestType,
   UserType,
 } from "../enums";
+import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
 import "./Header.css";
 import InventLogo from "../assets/invent-logo.svg";
 import workspherelogo from "../assets/worksphere_white.svg";
@@ -59,7 +60,8 @@ const Header = ({
     useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
   // Permissions
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isCeo = isCeoUser(currentUser);
+  const isAdmin = isAdminAccess(currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isManager = currentUser?.userType === UserType.MANAGER;
   const isApprover = isAdmin || isManager || isReceptionist;
@@ -214,7 +216,9 @@ const Header = ({
   };
 
   // Get first letter of name for avatar fallback
-  const avatarLetter = isAdmin
+  const avatarLetter = isCeo
+    ? "C"
+    : isAdmin
     ? "A"
     : isReceptionist
       ? "R"
@@ -1000,14 +1004,18 @@ const Header = ({
                   </div>
                   <div className="flex flex-col items-start translate-y-[1px]">
                     <span className="text-[12px] md:text-sm font-bold text-white transition-colors leading-none">
-                      {isAdmin
+                      {isCeo
+                        ? "CEO"
+                        : isAdmin
                         ? "Admin"
                         : isReceptionist
                           ? "Receptionist"
                           : currentUser?.aliasLoginName?.split(" ")[0] || "User"}
                     </span>
                     <span className="text-[9.5px] md:text-[11px] text-blue-100/80 leading-none mt-1">
-                      {isAdmin
+                      {isCeo
+                        ? "Chief Executive"
+                        : isAdmin
                         ? "Administrator"
                         : isReceptionist
                           ? "View only"
@@ -1027,7 +1035,14 @@ const Header = ({
               {/* Dropdown Menu */}
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-[0px_20px_50px_0px_#111c440d] border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  {isAdmin ? (
+                  {isCeo ? (
+                    <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                      <p className="text-sm font-bold text-[#1B2559]">CEO</p>
+                      <p className="text-xs text-[#667eea] font-medium">
+                        Chief Executive
+                      </p>
+                    </div>
+                  ) : isAdmin ? (
                     <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
                       <p className="text-sm font-bold text-[#1B2559]">Admin</p>
                       <p className="text-xs text-[#667eea] font-medium">

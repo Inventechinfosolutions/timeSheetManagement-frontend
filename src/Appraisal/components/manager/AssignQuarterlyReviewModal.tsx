@@ -381,22 +381,20 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
         type="button"
         disabled={buttonState === AssignButtonState.ANIMATING || buttonState === AssignButtonState.ASSIGNED}
         onClick={buttonState === AssignButtonState.CONFIRM ? handleConfirmClick : handleAssignClick}
-        className={`assign-modal-submit-btn ${
-          buttonState === AssignButtonState.ANIMATING
+        className={`assign-modal-submit-btn ${buttonState === AssignButtonState.ANIMATING
             ? "assign-btn-animating"
             : buttonState === AssignButtonState.ASSIGNED
-            ? "assign-btn-assigned"
-            : ""
-        }`}
+              ? "assign-btn-assigned"
+              : ""
+          }`}
       >
         <span className="assign-btn-icon-wrapper">
           {buttonState === AssignButtonState.ASSIGNED ? (
             <Check className="w-4 h-4 text-white stroke-[3] assign-icon-check" />
           ) : (
             <Send
-              className={`w-4 h-4 fill-white -rotate-12 ${
-                buttonState === AssignButtonState.ANIMATING ? "assign-icon-launching" : ""
-              }`}
+              className={`w-4 h-4 fill-white -rotate-12 ${buttonState === AssignButtonState.ANIMATING ? "assign-icon-launching" : ""
+                }`}
             />
           )}
         </span>
@@ -429,182 +427,178 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       {buttonState !== AssignButtonState.IDLE && submitSummary ? (
         <AssignSubmitPanel summary={submitSummary} status={buttonState} error={assignError} />
       ) : (
-      <div key={formSession} className="space-y-3.5 h-[340px] flex flex-col justify-between min-h-0">
-        {/* SELECT EMPLOYEES */}
-        <div className="assign-modal-form-section">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-[11px] font-bold tracking-wider text-[#0F172A] uppercase">
-              SELECT EMPLOYEES
-              <span className="ml-2 normal-case tracking-normal text-blue-600 font-semibold">
-                Selected ({selectedEmployees.length})
-              </span>
-            </label>
-            {assignmentType !== AssignmentKind.ALL && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSelectedEmployees(employeeOptions.map((employee) => employee.value));
-                  clearFieldError(AssignFormField.EMPLOYEES);
-                }}
-                className="!p-0 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-transparent hover:underline !shadow-none assign-select-all-btn"
-              >
-                Select All ({employeeOptions.length})
-              </Button>
-            )}
-          </div>
-
-          {/* Searchable employee selector - full length search bar */}
-          <SearchDropdown
-            placeholder="Select one or more team members..."
-            searchPlaceholder="Search employees by name, role or ID..."
-            allowClear={true}
-            defaultValue=""
-            options={employeeOptions}
-            value=""
-            onChange={() => undefined}
-            multiple
-            values={selectedEmployees}
-            onToggle={(employeeId) => {
-              setSelectedEmployees((current) =>
-                current.includes(employeeId)
-                  ? current.filter((id) => id !== employeeId)
-                  : [...current, employeeId],
-              );
-              clearFieldError(AssignFormField.EMPLOYEES);
-            }}
-            onClear={() => {
-              setSelectedEmployees([]);
-              clearFieldError(AssignFormField.EMPLOYEES);
-            }}
-            serverSearch
-            loading={employeesLoading}
-            onSearchChange={loadEmployees}
-            className="w-full"
-            maxLabelWidth="min-w-0 flex-1"
-            menuClassName="shadow-2xl"
-            buttonClassName={`w-full justify-between bg-white border rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] shadow-none assign-input-control assign-input-dropdown ${
-              errorField === AssignFormField.EMPLOYEES
-                ? "is-error !border-red-500"
-                : "border-blue-400 ring-2 ring-blue-500/15"
-            }`}
-          />
-          {errorField === AssignFormField.EMPLOYEES ? (
-            <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
-          ) : null}
-        </div>
-
-        {/* FINANCIAL YEAR & QUARTER (2-Column Grid) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          {/* FINANCIAL YEAR * */}
+        <div key={formSession} className="space-y-3.5 h-[340px] flex flex-col justify-between min-h-0">
+          {/* SELECT EMPLOYEES */}
           <div className="assign-modal-form-section">
-            <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
-              FINANCIAL YEAR <span className="text-red-500">*</span>
-            </label>
-            <Dropdown
-              placeholder="Select financial year"
-              allowClear={false}
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] font-bold tracking-wider text-[#0F172A] uppercase">
+                SELECT EMPLOYEES
+                <span className="ml-2 normal-case tracking-normal text-blue-600 font-semibold">
+                  Selected ({selectedEmployees.length})
+                </span>
+              </label>
+              {assignmentType !== AssignmentKind.ALL && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedEmployees(employeeOptions.map((employee) => employee.value));
+                    clearFieldError(AssignFormField.EMPLOYEES);
+                  }}
+                  className="!p-0 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-transparent hover:underline !shadow-none assign-select-all-btn"
+                >
+                  Select All ({employeeOptions.length})
+                </Button>
+              )}
+            </div>
+
+            {/* Searchable employee selector - full length search bar */}
+            <SearchDropdown
+              placeholder="Select one or more team members..."
+              searchPlaceholder="Search employees by name, role or ID..."
+              allowClear={true}
               defaultValue=""
-              options={masterYears.map((year) => ({
-                value: year.financialYear,
-                label: year.financialYear,
-              }))}
-              value={selectedFinancialYear}
-              onChange={handleFinancialYearChange}
-              onOpen={loadFinancialYears}
-              loading={yearsLoading}
+              options={employeeOptions}
+              value=""
+              onChange={() => undefined}
+              multiple
+              values={selectedEmployees}
+              onToggle={(employeeId) => {
+                setSelectedEmployees((current) =>
+                  current.includes(employeeId)
+                    ? current.filter((id) => id !== employeeId)
+                    : [...current, employeeId],
+                );
+                clearFieldError(AssignFormField.EMPLOYEES);
+              }}
+              onClear={() => {
+                setSelectedEmployees([]);
+                clearFieldError(AssignFormField.EMPLOYEES);
+              }}
+              serverSearch
+              loading={employeesLoading}
+              onSearchChange={loadEmployees}
               className="w-full"
-              buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${
-                errorField === AssignFormField.FINANCIAL_YEAR
+              maxLabelWidth="min-w-0 flex-1"
+              menuClassName="shadow-2xl"
+              buttonClassName={`w-full justify-between bg-white border rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.EMPLOYEES
                   ? "is-error !border-red-500"
-                  : "border-blue-200/70"
-              }`}
+                  : "border-blue-400 ring-2 ring-blue-500/15"
+                }`}
             />
-            {errorField === AssignFormField.FINANCIAL_YEAR ? (
+            {errorField === AssignFormField.EMPLOYEES ? (
               <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
             ) : null}
           </div>
 
-          {/* QUARTER * */}
-          <div className="assign-modal-form-section">
-            <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
-              QUARTER <span className="text-red-500">*</span>
-            </label>
-            <Dropdown
-              placeholder="Select quarter"
-              allowClear={false}
-              defaultValue=""
-              options={quarterOptions}
-              value={selectedQuarter}
-              onChange={handleQuarterChange}
-              disabled={!selectedFinancialYear}
-              loading={quartersLoading && quarterOptions.length === 0}
-              className="w-full"
-              buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${
-                errorField === AssignFormField.QUARTER
-                  ? "is-error !border-red-500"
-                  : "border-blue-200/70"
-              }`}
-            />
-            {errorField === AssignFormField.QUARTER ? (
-              <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
-            ) : null}
-          </div>
-        </div>
+          {/* FINANCIAL YEAR & QUARTER (2-Column Grid) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* FINANCIAL YEAR * */}
+            <div className="assign-modal-form-section">
+              <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
+                FINANCIAL YEAR <span className="text-red-500">*</span>
+              </label>
+              <Dropdown
+                placeholder="Select financial year"
+                allowClear={false}
+                defaultValue=""
+                options={masterYears.map((year) => ({
+                  value: year.financialYear,
+                  label: year.financialYear,
+                }))}
+                value={selectedFinancialYear}
+                onChange={handleFinancialYearChange}
+                onOpen={loadFinancialYears}
+                loading={yearsLoading}
+                className="w-full"
+                buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.FINANCIAL_YEAR
+                    ? "is-error !border-red-500"
+                    : "border-blue-200/70"
+                  }`}
+              />
+              {errorField === AssignFormField.FINANCIAL_YEAR ? (
+                <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+              ) : null}
+            </div>
 
-        {/* ASSIGNED DATE (today) & TO (DEADLINE) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          <div className="assign-modal-form-section">
-            <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
-              ASSIGNED DATE
-            </label>
-            <div className="ui-date-field flex w-full items-center rounded-xl border border-blue-200/70 bg-white px-3.5 py-2.5 text-sm assign-input-control">
-              <span className="font-mono text-[#0F172A]">{fromDate}</span>
+            {/* QUARTER * */}
+            <div className="assign-modal-form-section">
+              <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
+                QUARTER <span className="text-red-500">*</span>
+              </label>
+              <Dropdown
+                placeholder="Select quarter"
+                allowClear={false}
+                defaultValue=""
+                options={quarterOptions}
+                value={selectedQuarter}
+                onChange={handleQuarterChange}
+                disabled={!selectedFinancialYear}
+                loading={quartersLoading && quarterOptions.length === 0}
+                className="w-full"
+                buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.QUARTER
+                    ? "is-error !border-red-500"
+                    : "border-blue-200/70"
+                  }`}
+              />
+              {errorField === AssignFormField.QUARTER ? (
+                <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+              ) : null}
             </div>
           </div>
 
-          {/* TO (DEADLINE) * */}
+          {/* ASSIGNED DATE (today) & TO (DEADLINE) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="assign-modal-form-section">
+              <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
+                ASSIGNED DATE
+              </label>
+              <div className="ui-date-field flex w-full items-center rounded-xl border border-blue-200/70 bg-white px-3.5 py-2.5 text-sm assign-input-control">
+                <span className="font-mono text-[#0F172A]">{fromDate}</span>
+              </div>
+            </div>
+
+            {/* TO (DEADLINE) * */}
+            <div className="assign-modal-form-section">
+              <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
+                TO (DEADLINE) <span className="text-red-500">*</span>
+              </label>
+              <DatePicker
+                value={toDate}
+                onChange={(value) => {
+                  setToDate(value);
+                  const deadlineIso = toIsoDate(value);
+                  const assignedIso = toIsoDate(fromDate);
+                  if (deadlineIso && assignedIso && deadlineIso <= assignedIso) {
+                    showFieldError(AssignFormField.DEADLINE, AppraisalCopy.deadlineAfterAssigned);
+                    return;
+                  }
+                  clearFieldError(AssignFormField.DEADLINE);
+                }}
+                placeholder="dd-mm-yyyy"
+                className={`assign-input-control ${errorField === AssignFormField.DEADLINE ? "is-error !border-red-500" : ""
+                  }`}
+              />
+              {errorField === AssignFormField.DEADLINE ? (
+                <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+              ) : null}
+            </div>
+          </div>
+
+          {/* DESCRIPTION * */}
           <div className="assign-modal-form-section">
             <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
-              TO (DEADLINE) <span className="text-red-500">*</span>
+              DESCRIPTION <span className="text-red-500">*</span>
             </label>
-            <DatePicker
-              value={toDate}
-              onChange={(value) => {
-                setToDate(value);
-                const deadlineIso = toIsoDate(value);
-                const assignedIso = toIsoDate(fromDate);
-                if (deadlineIso && assignedIso && deadlineIso <= assignedIso) {
-                  showFieldError(AssignFormField.DEADLINE, AppraisalCopy.deadlineAfterAssigned);
-                  return;
-                }
-                clearFieldError(AssignFormField.DEADLINE);
-              }}
-              placeholder="dd-mm-yyyy"
-              className={`assign-input-control ${
-                errorField === AssignFormField.DEADLINE ? "is-error !border-red-500" : ""
-              }`}
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add instructions, focus areas, or deadline remarks for the employee(s)..."
+              className="w-full px-3.5 py-2.5 bg-white border border-blue-200/70 rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[80px] assign-input-control assign-input-textarea custom-scrollbar"
             />
-            {errorField === AssignFormField.DEADLINE ? (
-              <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
-            ) : null}
           </div>
         </div>
-
-        {/* DESCRIPTION * */}
-        <div className="assign-modal-form-section">
-          <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
-            DESCRIPTION <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Add instructions, focus areas, or deadline remarks for the employee(s)..."
-            className="w-full px-3.5 py-2.5 bg-white border border-blue-200/70 rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[80px] assign-input-control assign-input-textarea custom-scrollbar"
-          />
-        </div>
-      </div>
       )}
     </Modal>
   );

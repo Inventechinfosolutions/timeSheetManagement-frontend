@@ -4,12 +4,17 @@ import { logoutUser } from './user.reducer';
 
 const apiUrl = '/api/employee-details';
 
+// Optional fields that can be explicitly cleared by sending null.
+const CLEARABLE_KEYS = new Set(['dateOfBirth']);
+
 const cleanEntity = (entity: any) => {
   const cleaned: any = {};
   Object.keys(entity).forEach((key) => {
     // Treat empty strings, null, and undefined as null or omit them
     if (entity[key] !== null && entity[key] !== undefined && entity[key] !== '') {
       cleaned[key] = entity[key];
+    } else if (CLEARABLE_KEYS.has(key) && entity[key] !== undefined) {
+      cleaned[key] = null;
     }
   });
   return cleaned;
@@ -67,12 +72,13 @@ export const getEntities = createAsyncThunk<
     order?: string;
     includeSelf?: boolean;
     userStatus?: string;
+    role?: string;
     skipGlobalLoader?: boolean;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_entity_list',
-  async ({ search, department, page, limit, sort, order, includeSelf, userStatus, skipGlobalLoader }, { rejectWithValue }) => {
+  async ({ search, department, page, limit, sort, order, includeSelf, userStatus, role, skipGlobalLoader }, { rejectWithValue }) => {
     try {
       const params: any = {
         search: search || '',
@@ -88,6 +94,7 @@ export const getEntities = createAsyncThunk<
       if (order) params.order = order;
       if (includeSelf) params.includeSelf = includeSelf;
       if (userStatus) params.userStatus = userStatus;
+      if (role) params.role = role;
 
       const queryParams = new URLSearchParams(params);
       const response = await axios.get(`${apiUrl}?${queryParams.toString()}`, {

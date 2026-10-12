@@ -12,6 +12,9 @@ import {
   Search,
   Inbox,
   Mail,
+  ChevronDown,
+  ChevronUp,
+  Users,
 } from "lucide-react";
 import { Note } from "../types/notes.types";
 import { getCleanDescriptionSnippet, sendNoteContent } from "../utils/notesHelpers";
@@ -48,6 +51,8 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
   const [isSending, setIsSending] = useState(false);
   const isSendingRef = useRef(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  /** Compact recipients list — expand to view / remove all */
+  const [emailsExpanded, setEmailsExpanded] = useState(false);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -71,6 +76,7 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
       setRecipientEmails([]);
       setEmailInput("");
       setEmailError("");
+      setEmailsExpanded(false);
       setCanView(true);
       setCanEdit(false);
       setCanDelete(false);
@@ -346,7 +352,7 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
 
         {/* Scrollable Content Body with Compact Spacing */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar bg-white">
-          {/* Email Field */}
+          {/* Email Field — compact summary; expand to view all */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
               <label className="text-xs font-bold text-[#2B3674] ml-1 block">
@@ -362,56 +368,121 @@ export const NoteSendModal: React.FC<NoteSendModalProps> = ({
                 <span>Get Email Id's</span>
               </button>
             </div>
-            <div className="flex flex-wrap gap-2 items-center">
-              {recipientEmails.map((email) => (
-                <span
-                  key={email}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-gray-200 text-gray-700 text-xs font-medium"
-                >
-                  <span>{email}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeRecipientEmail(email)}
-                    className="text-gray-500 hover:text-red-600 focus:outline-none cursor-pointer"
-                    aria-label={`Remove ${email}`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
 
-              <input
-                type="text"
-                value={emailInput}
-                onChange={(e) => {
-                  setEmailInput(e.target.value);
-                  if (emailError) setEmailError("");
-                }}
-                onKeyDown={(e) => {
-                  if (
-                    e.key === "Enter" ||
-                    e.key === "," ||
-                    e.key === " "
-                  ) {
-                    e.preventDefault();
-                    addRecipientEmail(emailInput);
-                  }
-                }}
-                onBlur={() => {
-                  if (emailInput.trim()) {
-                    addRecipientEmail(emailInput);
-                  }
-                }}
-                placeholder="Add email and press Enter"
-                className="min-w-[180px] flex-1 px-3 py-1.5 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
-              />
+            <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+              {recipientEmails.length > 0 && (
+                <div className="px-3 py-2 border-b border-slate-100 bg-slate-50/80">
+                  <div className="flex items-center justify-between gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEmailsExpanded((v) => !v)}
+                      className="flex items-center gap-2 min-w-0 flex-1 text-left cursor-pointer bg-transparent border-none p-0"
+                      title={emailsExpanded ? "Hide recipients" : "View all recipients"}
+                    >
+                      <span className="w-7 h-7 rounded-lg bg-[#4318FF]/10 text-[#4318FF] flex items-center justify-center shrink-0">
+                        <Users className="w-3.5 h-3.5" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-xs font-bold text-[#1B2559]">
+                          {recipientEmails.length}{" "}
+                          {recipientEmails.length === 1 ? "recipient" : "recipients"}
+                        </span>
+                        {!emailsExpanded && (
+                          <span className="block text-[11px] text-slate-500 truncate max-w-[240px] sm:max-w-[320px]">
+                            {recipientEmails.slice(0, 2).join(", ")}
+                            {recipientEmails.length > 2
+                              ? ` +${recipientEmails.length - 2} more`
+                              : ""}
+                          </span>
+                        )}
+                      </span>
+                      {emailsExpanded ? (
+                        <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                      )}
+                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setEmailsExpanded((v) => !v)}
+                        className="px-2 py-1 rounded-lg text-[11px] font-semibold text-[#4318FF] bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 transition cursor-pointer"
+                      >
+                        {emailsExpanded ? "Hide" : "View all"}
+                      </button>
+                      {recipientEmails.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRecipientEmails([]);
+                            setEmailsExpanded(false);
+                          }}
+                          className="px-2 py-1 rounded-lg text-[11px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-100 transition cursor-pointer"
+                          title="Clear all recipients"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
-              {emailError && (
-                <p className="text-red-500 text-xs mt-1 ml-1 w-full">
-                  {emailError}
-                </p>
+                  {emailsExpanded && (
+                    <div className="mt-2 max-h-40 overflow-y-auto custom-scrollbar flex flex-wrap gap-1.5 pt-1 border-t border-slate-100">
+                      {recipientEmails.map((email) => (
+                        <span
+                          key={email}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 text-[11px] font-medium max-w-full"
+                        >
+                          <span className="truncate" title={email}>
+                            {email}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeRecipientEmail(email)}
+                            className="text-slate-400 hover:text-red-600 focus:outline-none cursor-pointer shrink-0"
+                            aria-label={`Remove ${email}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
+
+              <div className="px-3 py-2">
+                <input
+                  type="text"
+                  value={emailInput}
+                  onChange={(e) => {
+                    setEmailInput(e.target.value);
+                    if (emailError) setEmailError("");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === "," || e.key === " ") {
+                      e.preventDefault();
+                      addRecipientEmail(emailInput);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (emailInput.trim()) {
+                      addRecipientEmail(emailInput);
+                    }
+                  }}
+                  placeholder={
+                    recipientEmails.length > 0
+                      ? "Add another email and press Enter"
+                      : "Add email and press Enter"
+                  }
+                  className="w-full px-1 py-1 bg-transparent text-gray-700 text-sm placeholder-gray-400 focus:outline-none"
+                />
+              </div>
             </div>
+
+            {emailError && (
+              <p className="text-red-500 text-xs mt-1 ml-1">{emailError}</p>
+            )}
           </div>
 
           {/* Delivery channel: Inbox (app) and/or Email — both allowed */}

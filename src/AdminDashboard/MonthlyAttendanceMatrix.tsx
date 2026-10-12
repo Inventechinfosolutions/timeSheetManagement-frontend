@@ -21,6 +21,7 @@ import {
 } from "../reducers/employeeAttendance.reducer";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { UserType } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 import { message } from "antd";
 import {
   Tooltip,
@@ -90,11 +91,11 @@ const MonthlyAttendanceMatrix: React.FC = () => {
     Boolean(currentUser?.role && currentUser.role.toUpperCase().includes("MNG"));
   const basePath = isManager ? "/manager-dashboard" : "/admin-dashboard";
 
-  // Check role: ADMIN, MANAGER, and RECEPTIONIST allowed
+  // Check role: ADMIN, CEO, MANAGER, and RECEPTIONIST allowed
   useEffect(() => {
     if (currentUser) {
       const allowed =
-        currentUser.userType === UserType.ADMIN ||
+        isAdminAccess(currentUser) ||
         currentUser.userType === UserType.MANAGER ||
         currentUser.userType === UserType.RECEPTIONIST ||
         (currentUser.role && currentUser.role.toUpperCase().includes("MNG"));

@@ -102,7 +102,11 @@ const isTrivialOverflowNode = (el: HTMLElement): boolean => {
 };
 
 /** Keep typed content inside .page sheets (Enter must not create orphans outside the page). */
-export const absorbOrphansIntoPages = (root: HTMLElement, landscape: boolean) => {
+export const absorbOrphansIntoPages = (
+  root: HTMLElement,
+  landscape: boolean,
+  preferredPage?: HTMLElement | null
+) => {
   let pages = Array.from(root.querySelectorAll(":scope > .page")) as HTMLElement[];
   if (pages.length === 0) {
     const sheet = createSheet(1, landscape);
@@ -121,7 +125,10 @@ export const absorbOrphansIntoPages = (root: HTMLElement, landscape: boolean) =>
 
   if (orphans.length === 0) return;
 
-  const target = pages[pages.length - 1];
+  // Prefer the page under the caret — never dump paste onto the last/next page
+  const target =
+    (preferredPage && pages.includes(preferredPage) ? preferredPage : null) ||
+    pages[pages.length - 1];
   orphans.forEach((node) => {
     target.appendChild(node);
   });

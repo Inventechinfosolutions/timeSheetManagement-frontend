@@ -23,6 +23,7 @@ import {
   X,
   AlertCircle,
   Calendar,
+  Cake,
 } from "lucide-react";
 import { getManagerMappingByEmployeeId } from "../reducers/managerMapping.reducer";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
@@ -65,6 +66,7 @@ const EmployeeDetailsView = () => {
     employmentType: "" as "" | EmploymentType,
     gender: "" as "" | "MALE" | "FEMALE",
     joiningDate: "",
+    dateOfBirth: "",
     email: "",
     status: "",
   });
@@ -143,6 +145,9 @@ const EmployeeDetailsView = () => {
         gender: (employee.gender as "" | "MALE" | "FEMALE") || "",
         joiningDate: employee.joiningDate
           ? dayjs(employee.joiningDate).format("YYYY-MM-DD")
+          : "",
+        dateOfBirth: employee.dateOfBirth
+          ? dayjs(employee.dateOfBirth).format("YYYY-MM-DD")
           : "",
         email: employee.email || "",
         status: employee.status || "",
@@ -228,6 +233,11 @@ const EmployeeDetailsView = () => {
       return;
     }
 
+    if (editedData.dateOfBirth && dayjs(editedData.dateOfBirth).isAfter(dayjs(), "day")) {
+      setValidationError("Date of birth cannot be in the future");
+      return;
+    }
+
     // Validate that if employment type is modified, employee ID and designation must be modified too
     if (employee && editedData.employmentType !== employee.employmentType) {
       const originalEmployeeId = String(employee.employeeId || employee.id || "");
@@ -249,7 +259,10 @@ const EmployeeDetailsView = () => {
     try {
       const oldEmployeeId = employee.employeeId || employee.id;
       await dispatch(
-        updateEntity({ employeeId: oldEmployeeId, entity: editedData }),
+        updateEntity({
+          employeeId: oldEmployeeId,
+          entity: { ...editedData, dateOfBirth: editedData.dateOfBirth || null },
+        }),
       ).unwrap();
       setIsEditing(false);
       setShowConfirm(false);
@@ -294,6 +307,9 @@ const EmployeeDetailsView = () => {
       gender: (employee.gender as "" | "MALE" | "FEMALE") || "",
       joiningDate: employee.joiningDate
         ? dayjs(employee.joiningDate).format("YYYY-MM-DD")
+        : "",
+      dateOfBirth: employee.dateOfBirth
+        ? dayjs(employee.dateOfBirth).format("YYYY-MM-DD")
         : "",
       email: employee.email || "",
       status: employee.status || "",
@@ -750,6 +766,42 @@ const EmployeeDetailsView = () => {
               />
               <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center">
                 <Calendar className="text-blue-500 w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Date of Birth */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+              Date of Birth
+            </label>
+            <div className="relative group">
+              <input
+                type="date"
+                disabled={!isEditing}
+                max={dayjs().format("YYYY-MM-DD")}
+                value={
+                  isEditing
+                    ? editedData.dateOfBirth
+                    : employee.dateOfBirth
+                      ? dayjs(employee.dateOfBirth).format("YYYY-MM-DD")
+                      : ""
+                }
+                onChange={(e) => {
+                  setEditedData({
+                    ...editedData,
+                    dateOfBirth: e.target.value,
+                  });
+                  if (validationError) setValidationError("");
+                }}
+                className={`w-full pl-11 pr-4 py-2.5 border-2 rounded-xl text-[#1B2559] text-sm font-semibold transition-all ${
+                  isEditing
+                    ? "border-gray-200 focus:ring-2 focus:ring-[#4318FF] focus:border-transparent outline-none bg-white"
+                    : "border-gray-100 bg-gray-50/50"
+                }`}
+              />
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-pink-50 flex items-center justify-center">
+                <Cake className="text-pink-500 w-4 h-4" />
               </div>
             </div>
           </div>

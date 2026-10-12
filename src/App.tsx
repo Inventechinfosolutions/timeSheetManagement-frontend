@@ -17,6 +17,8 @@ import { mainComponentConfigs } from "./mainComponentConfigs";
 import EmployeeLayout from "./navigation/EmployeeLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { UserType } from "./enums";
+import { useAppSelector } from "./hooks";
+import { isCeoUser } from "./utils/roleAccess";
 
 // Lazy load authentication components
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
@@ -57,8 +59,9 @@ import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
 import MonthlyAttendanceMatrix from "./AdminDashboard/MonthlyAttendanceMatrix";
 import NotesManagement from "./Notes/NotesManagement";
 import ManagerQuarterlyReviewPage from "./Appraisal/pages/ManagerQuarterlyReviewPage";
-import EmployeeAppraisalPage from "./Appraisal/pages/EmployeeAppraisalPage";
 import InboxManagement from "./Inbox/InboxManagement";
+import EmployeeAppraisalPage from "./Appraisal/pages/EmployeeAppraisalPage";
+import AttendenceEditRequests from "./AdminDashboard/AttendenceEditRequests";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -78,6 +81,7 @@ const EmployeeTabWrapper = () => {
       return <LeaveManagement />;
     case "leave-balance":
       return <LeaveBalance />;
+    case "appraisal":
     case "quarterly-review":
       return <EmployeeAppraisalPage />;
     case "notes":
@@ -90,8 +94,15 @@ const EmployeeTabWrapper = () => {
   }
 };
 
+const CEO_BLOCKED_ADMIN_TABS = ["registration", "employees"];
+
 const AdminTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
+  const isCeo = useAppSelector((state) => isCeoUser(state.user.currentUser));
+
+  if (isCeo && tab && CEO_BLOCKED_ADMIN_TABS.includes(tab)) {
+    return <Navigate to="/admin-dashboard" replace />;
+  }
 
   switch (tab) {
     case "registration":
@@ -137,6 +148,11 @@ const AdminTabWrapper = () => {
       return <ManagerQuarterlyReviewPage />;
     case "my-quarterly-review":
       return <EmployeeAppraisalPage />;
+    case "appraisal":
+    case "my-appraisal":
+      return <EmployeeAppraisalPage />;
+    case "edit-access":
+      return <AttendenceEditRequests />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
@@ -293,7 +309,7 @@ function AppContent() {
                 <Route
                   path="/admin-dashboard"
                   element={
-                    <ProtectedRoute allowedRoles={[UserType.ADMIN, UserType.RECEPTIONIST]}>
+                    <ProtectedRoute allowedRoles={[UserType.ADMIN, UserType.CEO, UserType.RECEPTIONIST]}>
                       <AdminLayout />
                     </ProtectedRoute>
                   }

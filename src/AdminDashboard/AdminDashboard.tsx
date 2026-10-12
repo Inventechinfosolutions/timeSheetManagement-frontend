@@ -1,14 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import dayjs from "dayjs";
 import Chart from "react-apexcharts";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { RootState } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
   Users,
-  Search,
-  TrendingUp,
+  Briefcase,
   Filter,
   ChevronDown,
   Download,
@@ -17,22 +16,47 @@ import {
   ChevronRight,
   Calendar,
   ArrowLeft,
-  ChevronLeft,
   Building2,
+  ChevronUp,
+  RefreshCw,
+  UserCheck,
+  Plane,
+  ClipboardCheck,
+  UserPlus,
 } from "lucide-react";
 import { downloadAttendancePdfReport } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { saveAs } from "file-saver";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
+import { fetchAdminDashboardSummary } from "../reducers/adminDashboard.reducer";
 import { SearchBox } from "../components/ui";
+import { getAllLeaveRequests } from "../reducers/leaveRequest.reducer";
+import { isCeoUser } from "../utils/roleAccess";
+import TodaySnapshotCard from "./dashboard/TodaySnapshotCard";
+import PendingApprovalsCard from "./dashboard/PendingApprovalsCard";
+import EventsScroller from "./dashboard/EventsScroller";
+import PendingApprovalsTable from "./dashboard/PendingApprovalsTable";
+import { DashboardScope } from "../types/adminDashboard.types";
 
 const AdminDashboard = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const basePath = location.pathname.startsWith("/manager-dashboard")
     ? "/manager-dashboard"
     : "/admin-dashboard";
+  const isManagerView = basePath === "/manager-dashboard";
+  const dashboardScope: DashboardScope = isManagerView ? "manager" : "admin";
   const dispatch = useAppDispatch();
+
+  const {
+    scope: summaryScope,
+    summary: storedSummary,
+    loading: summaryLoading,
+    error: summaryError,
+  } = useAppSelector((state: RootState) => state.adminDashboard);
+  const summary = summaryScope === dashboardScope ? storedSummary : null;
+  const refreshSummary = () => dispatch(fetchAdminDashboardSummary({ scope: dashboardScope }));
 
   // Root States
   const { entities, totalItems } = useAppSelector(
@@ -45,6 +69,8 @@ const AdminDashboard = () => {
   const { departments } = useAppSelector(
     (state: RootState) => state.masterDepartments,
   );
+  const { currentUser } = useAppSelector((state: RootState) => state.user);
+  const isCeo = isCeoUser(currentUser);
 
   // Time-related constants
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -81,6 +107,33 @@ const AdminDashboard = () => {
     dayjs(lastDay).format("YYYY-MM-DD"),
   );
   const [isExporting, setIsExporting] = useState(false);
+  const [managerLeave, setManagerLeave] = useState<any[]>([]);
+  const [managerLeaveLoading, setManagerLeaveLoading] = useState(false);
+  const [expandedManagers, setExpandedManagers] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  const toggleManagerExpanded = (employeeId: string) => {
+    setExpandedManagers((prev) => {
+      const next = new Set(prev);
+      if (next.has(employeeId)) next.delete(employeeId);
+      else next.add(employeeId);
+      return next;
+    });
+  };
+
+  const requestStatusClass = (status?: string) => {
+    const s = String(status || "").toLowerCase();
+    if (s.includes("approved") && !s.includes("cancellation"))
+      return "bg-emerald-50 text-emerald-700 border-emerald-100";
+    if (s.includes("rejected"))
+      return "bg-rose-50 text-rose-700 border-rose-100";
+    if (s.includes("pending") || s.includes("applied"))
+      return "bg-amber-50 text-amber-700 border-amber-100";
+    if (s.includes("cancel"))
+      return "bg-orange-50 text-orange-700 border-orange-100";
+    return "bg-slate-50 text-slate-600 border-slate-100";
+  };
 
   // Effects
   useEffect(() => {
@@ -105,6 +158,35 @@ const AdminDashboard = () => {
       dispatch(fetchDepartments());
     }
   }, [dispatch, holidays.length, departments.length]);
+
+  useEffect(() => {
+    dispatch(fetchAdminDashboardSummary({ scope: dashboardScope }));
+  }, [dispatch, dashboardScope]);
+
+  useEffect(() => {
+    if (!isCeo) return;
+    setManagerLeaveLoading(true);
+    dispatch(
+      getAllLeaveRequests({
+        month: currentMonth,
+        year: currentYear,
+        role: "MANAGER",
+        page: 1,
+        limit: 200,
+      }),
+    ).then((action: any) => {
+      if (getAllLeaveRequests.fulfilled.match(action)) {
+        const payload = action.payload;
+        const rows = Array.isArray(payload)
+          ? payload
+          : payload?.data || [];
+        setManagerLeave(Array.isArray(rows) ? rows : []);
+      } else {
+        setManagerLeave([]);
+      }
+      setManagerLeaveLoading(false);
+    });
+  }, [dispatch, isCeo, currentMonth, currentYear]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -280,8 +362,13 @@ const AdminDashboard = () => {
     const avgPerDept =
       departmentCount > 0 ? Math.round(totalEmployees / departmentCount) : 0;
 
+    const managerCount = globalEntities.filter(
+      (employee: any) => String(employee.role || "").toUpperCase() === "MANAGER",
+    ).length;
+
     return {
       totalEmployees,
+      managerCount,
       departmentCount,
       topDept,
       avgPerDept,
@@ -290,15 +377,104 @@ const AdminDashboard = () => {
     };
   }, [entities, globalStatsCache, departments, totalItems, basePath]);
 
-  const statCards = [
-    {
-      label: "Total Employees",
-      value: dashboardStats.totalEmployees,
-      sub: "Active workforce",
-      icon: Users,
-      color: "bg-linear-to-r from-[#4318FF] to-[#868CFF]",
-    },
-  ];
+  const managers = useMemo(() => {
+    const globalEntities = globalStatsCache
+      ? globalStatsCache.entities
+      : entities;
+    return globalEntities.filter(
+      (employee: any) => String(employee.role || "").toUpperCase() === "MANAGER",
+    );
+  }, [entities, globalStatsCache]);
+
+  const todayCounts = summary?.today.counts;
+  const statCards: {
+    label: string;
+    value: string | number;
+    sub: string;
+    icon: typeof Users;
+    color: string;
+    onClick?: () => void;
+  }[] = [
+        {
+          label: "Total Employees",
+          value: summary?.totalEmployees ?? dashboardStats.totalEmployees,
+          sub: isManagerView ? "" : "Active workforce",
+          icon: Users,
+          color: "bg-linear-to-r from-[#4318FF] to-[#868CFF]",
+          onClick: isManagerView ? () => navigate(`${basePath}/employees`) : undefined,
+        },
+        ...(isCeo && !isManagerView
+          ? [
+              {
+                label: "Managers",
+                value: dashboardStats.managerCount,
+                sub: "Active managers",
+                icon: Briefcase,
+                color: "bg-linear-to-r from-[#7551FF] to-[#6AD2FF]",
+              },
+            ]
+          : []),
+        {
+          label: "Working Today",
+          value: todayCounts
+            ? todayCounts.office +
+              todayCounts.wfh +
+              todayCounts.clientVisit +
+              todayCounts.halfDay
+            : "–",
+          sub: "Office, WFH & client visits",
+          icon: UserCheck,
+          color: "bg-linear-to-r from-[#01B574] to-[#4ADE80]",
+        },
+        {
+          label: "On Leave Today",
+          value: todayCounts?.onLeave ?? "–",
+          sub: `${todayCounts?.notUpdated ?? 0} not updated yet`,
+          icon: Plane,
+          color: "bg-linear-to-r from-[#EE5D50] to-[#FF8A80]",
+        },
+        {
+          label: "Pending Approvals",
+          value: summary?.pendingApprovals.total ?? "–",
+          sub: isManagerView ? "Awaiting your decision" : "Awaiting a decision",
+          icon: ClipboardCheck,
+          color: "bg-linear-to-r from-[#FFB547] to-[#FFD180]",
+          onClick: () => navigate(`${basePath}/requests`),
+        },
+      ];
+
+  const departmentCard = (
+    <div className="bg-white p-5 md:p-6 rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 h-full">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="p-2 rounded-lg bg-[#F4F7FE] text-[#4318FF]">
+          <Building2 size={18} />
+        </div>
+        <div>
+          <h4 className="text-base font-bold text-[#2B3674]">
+            {isManagerView ? "Team by Department" : "Department Breakdown"}
+          </h4>
+          <p className="text-xs text-gray-400">
+            {isManagerView ? "Your team members by department" : "Employee count by department"}
+          </p>
+        </div>
+      </div>
+      <div className="h-[380px] w-full flex items-center justify-center">
+        {dashboardStats.deptBreakdown.length > 0 ? (
+          <Chart
+            options={chartData.options}
+            series={chartData.series}
+            type="donut"
+            height="100%"
+            width="100%"
+          />
+        ) : (
+          <div className="text-center text-gray-400 text-sm">
+            No department data available
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   const chartColors = [
     "#4318FF",
@@ -317,26 +493,50 @@ const AdminDashboard = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-[#2B3674]">
-            {dashboardStats.isManagerView
-              ? "Employee Dashboard"
-              : "Admin Dashboard"}
+            {isManagerView
+              ? "My Team Dashboard"
+              : isCeo
+                ? "CEO Dashboard"
+                : "Admin Dashboard"}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Workforce overview for{" "}
-            {selectedDate.toLocaleString("default", {
-              month: "long",
-              year: "numeric",
-            })}
+            {dayjs().format("dddd, D MMMM YYYY")} ·{" "}
+            {isManagerView
+              ? summary
+                ? `${summary.totalEmployees} team ${summary.totalEmployees === 1 ? "member" : "members"}`
+                : "Team overview"
+              : "Organisation overview"}
           </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {summary?.generatedAt && (
+            <span className="text-xs text-gray-400">
+              Updated {dayjs(summary.generatedAt).format("h:mm A")}
+            </span>
+          )}
+          <button
+            onClick={refreshSummary}
+            disabled={summaryLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-100 text-[#2B3674] font-bold text-sm hover:shadow-md transition-all disabled:opacity-60"
+          >
+            <RefreshCw
+              size={16}
+              className={`text-[#4318FF] ${summaryLoading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="flex flex-wrap gap-4 mb-6">
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 ${statCards.length > 4 ? "lg:grid-cols-3 xl:grid-cols-5" : "xl:grid-cols-4"}`}
+      >
         {statCards.map((card) => (
           <div
             key={card.label}
-            className="w-full sm:w-[320px] bg-white rounded-2xl p-4 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] hover:shadow-md transition-all group"
+            onClick={card.onClick}
+            className={`bg-white rounded-2xl p-4 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] hover:shadow-md transition-all group ${card.onClick ? "cursor-pointer" : ""}`}
           >
             <div className="flex justify-between items-start mb-3">
               <div
@@ -344,9 +544,7 @@ const AdminDashboard = () => {
               >
                 <card.icon size={18} />
               </div>
-              <span
-                className={`font-black text-[#2B3674] text-right leading-tight ${card.isText ? "text-sm max-w-[120px] truncate" : "text-2xl"}`}
-              >
+              <span className="font-black text-[#2B3674] text-right leading-tight text-2xl">
                 {card.value}
               </span>
             </div>
@@ -358,49 +556,235 @@ const AdminDashboard = () => {
         ))}
       </div>
 
-      {/* Analytics Section */}
-      <div className="mb-4">
-        <h3 className="text-lg font-bold text-[#2B3674]">
-          Workforce Analytics
-        </h3>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Department distribution across your organization
-        </p>
-      </div>
+      {summaryError && !summary && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-[#EE5D50]">
+          <span>Couldn't load today's dashboard data: {summaryError}</span>
+          <button onClick={refreshSummary} className="font-bold underline">
+            Try again
+          </button>
+        </div>
+      )}
 
-      <div className="mb-10">
-        {/* Donut Chart */}
-        <div className="max-w-3xl bg-white p-5 md:p-6 rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-[#F4F7FE] text-[#4318FF]">
-              <Building2 size={18} />
+      {!summary && summaryLoading && (
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+          <div className="xl:col-span-2 h-[460px] rounded-2xl bg-white animate-pulse" />
+          <div className="h-[460px] rounded-2xl bg-white animate-pulse" />
+        </div>
+      )}
+
+      {summary && isManagerView && summary.totalEmployees === 0 && (
+        <div className="mb-10 bg-white rounded-2xl p-10 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 flex flex-col items-center text-center">
+          <span className="w-16 h-16 rounded-2xl bg-[#4318FF]/10 text-[#4318FF] flex items-center justify-center mb-4">
+            <UserPlus size={28} />
+          </span>
+          <h3 className="text-lg font-bold text-[#2B3674]">No employees are mapped to you yet</h3>
+          <p className="text-sm text-gray-500 mt-1 max-w-md">
+            Once an administrator assigns team members to you in Manager Mapping, their attendance,
+            requests and celebrations will show up here.
+          </p>
+        </div>
+      )}
+
+      {summary && !(isManagerView && summary.totalEmployees === 0) && (
+        <>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+            <div className="xl:col-span-2">
+              <TodaySnapshotCard
+                today={summary.today}
+                totalEmployees={summary.totalEmployees}
+                scope={dashboardScope}
+                basePath={basePath}
+              />
             </div>
+            <EventsScroller
+              events={summary.events.items}
+              windowDays={summary.events.windowDays}
+              subtitle={isManagerView ? "Team birthdays, anniversaries & holidays" : undefined}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+            <div className="xl:col-span-2">
+              <PendingApprovalsCard
+                data={summary.pendingApprovals}
+                basePath={basePath}
+                isTeam={isManagerView}
+              />
+            </div>
+            {departmentCard}
+          </div>
+
+          {isManagerView ? (
+            <div className="mb-10">
+              <PendingApprovalsTable items={summary.pendingApprovals.items ?? []} basePath={basePath} />
+            </div>
+          ) : (
+            <div className="mb-4" />
+          )}
+        </>
+      )}
+
+      {isCeo && !isManagerView && (
+        <div className="mb-8 bg-white rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
             <div>
-              <h4 className="text-base font-bold text-[#2B3674]">
-                Department Breakdown
-              </h4>
-              <p className="text-xs text-gray-400">
-                Employee count by department
+              <h3 className="text-lg font-bold text-[#2B3674]">Manager Activity</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Click a manager to show or hide their leave requests this month
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => navigate("/admin-dashboard/work-management")}
+              className="text-sm font-semibold text-[#4318FF] hover:underline"
+            >
+              View all requests
+            </button>
           </div>
-          <div className="h-[360px] w-full flex items-center justify-center">
-            {dashboardStats.deptBreakdown.length > 0 ? (
-              <Chart
-                options={chartData.options}
-                series={chartData.series}
-                type="donut"
-                height="100%"
-                width="100%"
-              />
-            ) : (
-              <div className="text-center text-gray-400 text-sm">
-                No department data available
+          <div className="divide-y divide-gray-50">
+            {managerLeaveLoading ? (
+              <div className="px-5 py-6 text-sm text-gray-400">
+                Loading manager activity...
               </div>
+            ) : managers.length === 0 ? (
+              <div className="px-5 py-6 text-sm text-gray-400">
+                No managers found
+              </div>
+            ) : (
+              managers.map((manager: any) => {
+                const employeeId = String(manager.employeeId);
+                const leaves = managerLeave.filter(
+                  (request) => request.employeeId === manager.employeeId,
+                );
+                const isExpanded = expandedManagers.has(employeeId);
+                const requestCount = leaves.length;
+                const preview =
+                  leaves[0]?.requestType ||
+                  leaves[0]?.title ||
+                  "No leave this month";
+
+                return (
+                  <div key={employeeId} className="bg-white">
+                    <div className="px-5 py-3.5 flex items-center gap-3 hover:bg-[#F4F7FE]/70 transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => toggleManagerExpanded(employeeId)}
+                        className="min-w-0 flex-1 flex items-center gap-3 text-left"
+                        aria-expanded={isExpanded}
+                      >
+                        <span
+                          className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border transition-colors ${
+                            isExpanded
+                              ? "bg-[#4318FF]/10 border-[#4318FF]/20 text-[#4318FF]"
+                              : "bg-[#F4F7FE] border-transparent text-[#A3AED0]"
+                          }`}
+                        >
+                          {isExpanded ? (
+                            <ChevronUp size={16} />
+                          ) : (
+                            <ChevronDown size={16} />
+                          )}
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span className="font-semibold text-[#2B3674] truncate">
+                              {manager.fullName || employeeId}
+                            </span>
+                            <span className="text-[11px] font-medium text-gray-400">
+                              {employeeId}
+                            </span>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                                requestCount > 0
+                                  ? "bg-[#4318FF]/10 text-[#4318FF]"
+                                  : "bg-slate-100 text-slate-500"
+                              }`}
+                            >
+                              {requestCount > 0
+                                ? `${requestCount} request${requestCount === 1 ? "" : "s"}`
+                                : "No requests"}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-gray-500">
+                            <span>{manager.department || "—"}</span>
+                            {!isExpanded && (
+                              <>
+                                <span className="text-gray-300">·</span>
+                                <span className="truncate text-gray-600">
+                                  {preview}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(`/admin-dashboard/timesheet/${employeeId}`)
+                        }
+                        className="shrink-0 text-sm font-semibold text-[#4318FF] hover:underline px-2 py-1"
+                      >
+                        Open timesheet
+                      </button>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="px-5 pb-4 pl-[3.75rem]">
+                        {requestCount === 0 ? (
+                          <div className="rounded-xl border border-dashed border-gray-200 bg-[#F8FAFC] px-4 py-3 text-sm text-gray-500">
+                            No leave, WFH, or client visit this month.
+                          </div>
+                        ) : (
+                          <ul className="space-y-2">
+                            {leaves.map((request: any, index: number) => (
+                              <li
+                                key={`${employeeId}-${request?.id || index}`}
+                                className="rounded-xl border border-gray-100 bg-[#F8FAFC] px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-semibold text-[#2B3674]">
+                                    {request?.requestType ||
+                                      request?.title ||
+                                      "Request"}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    {request?.fromDate
+                                      ? `${dayjs(request.fromDate).format("MMM D")} – ${dayjs(request.toDate || request.fromDate).format("MMM D, YYYY")}`
+                                      : "Dates not set"}
+                                  </p>
+                                </div>
+                                <span
+                                  className={`shrink-0 inline-flex self-start sm:self-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${requestStatusClass(request?.status)}`}
+                                >
+                                  {request?.status || "—"}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              `/admin-dashboard/employee-details/${employeeId}`,
+                            )
+                          }
+                          className="mt-3 text-xs font-semibold text-[#4318FF] hover:underline"
+                        >
+                          View manager profile
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Export Modal */}
       {isExportModalOpen && (

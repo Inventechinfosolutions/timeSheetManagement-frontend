@@ -12,12 +12,14 @@ import {
   FileText,
   ClipboardCheck,
   Inbox,
+  ClipboardCheck,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
 import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
 import { UserType } from "../enums";
+import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import ScrollNavigator from "../components/ScrollNavigator";
 import Header from "../components/Header";
@@ -86,6 +88,8 @@ const SidebarLayout = ({
         return "Leave Balance";
       case "quarterly-review":
         return "Quarterly Review";
+      case "appraisal":
+        return "Appraisal";
       case "notes":
       case "employee-notes":
         return "Employee Notes";
@@ -136,6 +140,7 @@ const SidebarLayout = ({
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet History", icon: Eye },
     { name: "Quarterly Review", icon: ClipboardCheck },
+    { name: "Appraisal", icon: ClipboardCheck },
     { name: "Request Management", icon: Calendar },
     { name: "Employee Notes", icon: FileText },
     { name: "Inbox", icon: Inbox },
@@ -208,11 +213,13 @@ const SidebarLayout = ({
               <AlarmClock className="w-6 h-6 text-white" />
             </div>
             <span className="text-xl font-bold text-white tracking-tight">
-              {currentUser?.userType === UserType.ADMIN
-                ? "Admin"
-                : currentUser?.userType === UserType.MANAGER
-                  ? "Manager"
-                  : "Employee"}
+              {isCeoUser(currentUser)
+                ? "CEO"
+                : isAdminAccess(currentUser)
+                  ? "Admin"
+                  : currentUser?.userType === UserType.MANAGER
+                    ? "Manager"
+                    : "Employee"}
             </span>
           </div>
           {/* Branding & Lock Toggle - Desktop Only */}
@@ -242,11 +249,13 @@ const SidebarLayout = ({
                   {entity?.employeeId || "EMP001"}
                 </span>
                 <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                  {currentUser?.userType === UserType.ADMIN
-                    ? "Admin"
-                    : currentUser?.userType === UserType.MANAGER
-                      ? "Manager"
-                      : "Employee"}
+                  {isCeoUser(currentUser)
+                    ? "CEO"
+                    : isAdminAccess(currentUser)
+                      ? "Admin"
+                      : currentUser?.userType === UserType.MANAGER
+                        ? "Manager"
+                        : "Employee"}
                 </span>
               </div>
             </div>
@@ -376,8 +385,8 @@ const SidebarLayout = ({
           <Footer className="sidebar-footer" />
           {(derivedActiveTab === "Employee Notes" ||
             derivedActiveTab === "Inbox") && (
-            <ScrollNavigator targetRef={mainContentRef} />
-          )}
+              <ScrollNavigator targetRef={mainContentRef} />
+            )}
         </main>
       </div>
     </div>

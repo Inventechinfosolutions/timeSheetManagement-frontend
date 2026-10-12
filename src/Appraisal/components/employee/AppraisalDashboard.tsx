@@ -276,10 +276,17 @@ export const AppraisalDashboard: React.FC = () => {
   };
 
   const renderRowRating = (assignment: QuarterlyReviewAssignment) => {
+    const revealed = rowRatings[assignment.id];
+    if (revealed) {
+      return (
+        <span className="text-sm font-extrabold text-[#0F172A]">
+          {Number.isFinite(revealed.finalRating) ? revealed.finalRating.toFixed(2) : "—"}
+        </span>
+      );
+    }
     if (!ratingReady(assignment)) {
       return <span className="text-xs text-[#94A3B8]">—</span>;
     }
-
     return (
       <button
         type="button"
@@ -1261,7 +1268,6 @@ export const AppraisalDashboard: React.FC = () => {
         data={revealedModalData}
         onClose={handleCloseRevealedModal}
       />
-
     </div>
   );
 };

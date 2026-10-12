@@ -109,6 +109,7 @@ export const getAllLeaveRequests = createAsyncThunk(
       month?: string;
       year?: string;
       requestType?: string;
+      role?: string;
       page?: number;
       limit?: number
     } = {},
@@ -124,6 +125,9 @@ export const getAllLeaveRequests = createAsyncThunk(
       if (filters.year) params.append("year", filters.year);
       if (filters.requestType && filters.requestType !== "All") {
         params.append("requestType", filters.requestType);
+      }
+      if (filters.role && filters.role !== "All") {
+        params.append("role", filters.role);
       }
       if (filters.page) params.append("page", filters.page.toString());
       if (filters.limit) params.append("limit", filters.limit.toString());
@@ -145,6 +149,7 @@ export const downloadLeaveRequestsExcel = async (filters: {
   month?: string;
   year?: string;
   requestType?: string;
+  role?: string;
 } = {}) => {
   const params: Record<string, string> = {};
   if (filters.employeeId) params.employeeId = filters.employeeId;
@@ -157,6 +162,9 @@ export const downloadLeaveRequestsExcel = async (filters: {
   if (filters.year) params.year = filters.year;
   if (filters.requestType && filters.requestType !== "All") {
     params.requestType = filters.requestType;
+  }
+  if (filters.role && filters.role !== "All") {
+    params.role = filters.role;
   }
 
   const response = await axios.get(`${apiUrl}/download-excel`, {

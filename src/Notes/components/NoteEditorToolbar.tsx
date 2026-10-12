@@ -8,7 +8,6 @@ import {
   Table as TableIcon,
   Paperclip,
   PaintBucket,
-  Palette,
   Highlighter,
   FileCode,
   FileSpreadsheet,
@@ -24,7 +23,6 @@ import {
   FONT_SIZES,
   BOLD_DARK_COLORS,
   LIGHT_SHADING_COLORS,
-  TEXT_COLORS,
   HIGHLIGHT_COLORS,
 } from "../utils";
 
@@ -56,9 +54,7 @@ export interface NoteEditorToolbarProps {
   fillMode: "bg" | "text";
   setFillMode: (mode: "bg" | "text") => void;
   onApplyFillColor: (color: string, mode: "bg" | "text") => void;
-  // Text & Hilite Color
-  textColor: string;
-  setTextColor: (val: string) => void;
+  // Hilite Color
   highlightColor: string;
   setHighlightColor: (val: string) => void;
   onExecuteCommand: (command: string, value?: string) => void;
@@ -106,8 +102,6 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
   fillMode,
   setFillMode,
   onApplyFillColor,
-  textColor,
-  setTextColor,
   highlightColor,
   setHighlightColor,
   onExecuteCommand,
@@ -708,82 +702,6 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
       </Popover>
 
       <div className="h-4 w-px bg-slate-200 mx-0.5" />
-
-      {/* Text Color Palette */}
-      <Popover
-        trigger="click"
-        placement="bottom"
-        content={
-          <div className="p-2 space-y-2.5 w-56 select-none">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                Text Color
-              </span>
-              <button
-                type="button"
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  saveUndoSnapshot();
-                  onExecuteCommand("foreColor", "#1B2559");
-                  setTextColor("none");
-                  handleEditorInputWrapper();
-                }}
-                className="text-[11px] text-[#4318FF] hover:underline font-semibold cursor-pointer"
-              >
-                Reset
-              </button>
-            </div>
-            <div className="grid grid-cols-6 gap-1.5">
-              {TEXT_COLORS.map((c) => (
-                <button
-                  key={`tx-c-${c.color}`}
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    saveUndoSnapshot();
-                    if (c.color === "none") {
-                      onExecuteCommand("foreColor", "#1B2559");
-                      setTextColor("none");
-                    } else {
-                      onExecuteCommand("foreColor", c.color);
-                      setTextColor(c.color);
-                    }
-                    handleEditorInputWrapper();
-                  }}
-                  className={`w-7 h-7 rounded-lg border flex items-center justify-center transition cursor-pointer ${
-                    textColor === c.color
-                      ? "ring-2 ring-[#4318FF] scale-110 border-white shadow-xs"
-                      : "border-slate-200 hover:scale-105"
-                  }`}
-                  style={{
-                    backgroundColor: c.color === "none" ? "#FFFFFF" : c.color,
-                  }}
-                  title={c.label}
-                >
-                  {c.color === "none" && (
-                    <span className="text-[10px] font-bold text-slate-400">∅</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        }
-      >
-        <button
-          type="button"
-          onMouseDown={(e) => e.preventDefault()}
-          className="h-8 px-2 flex items-center gap-1 rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
-          title="Font Color"
-        >
-          <Palette className="w-4 h-4 text-slate-700" />
-          <span
-            className="w-3.5 h-1.5 rounded-full shrink-0 border border-slate-200 shadow-2xs"
-            style={{
-              backgroundColor: textColor === "none" ? "#1B2559" : textColor,
-            }}
-          />
-        </button>
-      </Popover>
 
       {/* Text Highlighter Palette */}
       <Popover
