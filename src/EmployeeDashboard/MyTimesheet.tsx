@@ -1755,11 +1755,23 @@ const MyTimesheet = ({
     currentEmployeeId !== ownEmployeeId
   );
   const canRaiseOnBehalf = (isAdmin || isManager) && viewingOtherEmployee;
+  // Employees may only request access for the current month; managers/admins raising on behalf are not limited.
+  const editAccessCurrentMonthOnly = !canRaiseOnBehalf;
   const showEditAccessButton =
     !!currentEmployeeId &&
     currentEmployeeId.toLowerCase() !== "admin" &&
     ((isMyRoute || isManagerView || canRaiseOnBehalf) &&
-      (!effectiveReadOnly || canRaiseOnBehalf));
+      (!effectiveReadOnly || canRaiseOnBehalf)) &&
+    (!editAccessCurrentMonthOnly || dayjs(now).isSame(dayjs(), "month"));
+
+  const openEditAccessModal = () => {
+    if (editAccessCurrentMonthOnly && !dayjs(now).isSame(dayjs(), "month")) {
+      const today = new Date();
+      setNow(new Date(today.getFullYear(), today.getMonth(), 1));
+      setManuallyEditedIndices(new Set());
+    }
+    setShowEditAccessModal(true);
+  };
 
   const handleSubmitEditAccess = async (dates: string[]) => {
     try {
@@ -1896,7 +1908,7 @@ const MyTimesheet = ({
         blockers={blockers}
         department={entity?.department || entity?.department_name || ""}
         onEditAccess={
-          showEditAccessButton ? () => setShowEditAccessModal(true) : undefined
+          showEditAccessButton ? openEditAccessModal : undefined
         }
       />
       <EditAccessModal
@@ -1908,6 +1920,7 @@ const MyTimesheet = ({
         submitting={editAccessSubmitting}
         onSubmit={handleSubmitEditAccess}
         onMonthChange={setNow}
+        currentMonthOnly={editAccessCurrentMonthOnly}
         subtitle={
           canRaiseOnBehalf
             ? `On behalf of ${entity?.fullName || currentEmployeeId}`
@@ -1994,6 +2007,7 @@ const MyTimesheet = ({
         submitting={editAccessSubmitting}
         onSubmit={handleSubmitEditAccess}
         onMonthChange={setNow}
+        currentMonthOnly={editAccessCurrentMonthOnly}
         subtitle={
           canRaiseOnBehalf
             ? `On behalf of ${entity?.fullName || currentEmployeeId}`
@@ -2081,7 +2095,7 @@ const MyTimesheet = ({
 
             {showEditAccessButton && (
               <button
-                onClick={() => setShowEditAccessModal(true)}
+                onClick={openEditAccessModal}
                 className="flex items-center justify-center gap-1.5 px-3 py-2 text-[#7C3AED] rounded-xl font-bold text-[10px] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5 bg-[#F3E8FF] border border-[#7C3AED]/20"
                 title="Raise an Access Request for Locked days"
               >
@@ -2559,7 +2573,7 @@ const MyTimesheet = ({
                   >
                     {day.date}
                   </div>
-                  {(displayStatus === AttendanceStatus.LOCKED ||
+                  {((displayStatus === AttendanceStatus.LOCKED && !canRaiseOnBehalf) ||
                     isBlocked ||
                     (!isAdmin &&
                       !isManager &&
