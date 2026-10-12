@@ -25,6 +25,7 @@ import Toast from "../components/Toast";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { SearchBox } from "../components/ui";
 import { MonthStatus, UserType } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 
 const AdminEmployeeTimesheetList = () => {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ const AdminEmployeeTimesheetList = () => {
   const currentUser = useAppSelector((state: RootState) => state.user.currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isAdminOrManager =
-    currentUser?.userType === UserType.ADMIN ||
+    isAdminAccess(currentUser) ||
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role && currentUser.role.toUpperCase().includes("MNG"));
   const canViewAttendanceMatrix = isAdminOrManager || isReceptionist;

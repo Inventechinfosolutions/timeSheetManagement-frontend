@@ -3,6 +3,7 @@ import SidebarLayout from "../AdminDashboard/SidebarLayout";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
 import { UserType } from "../enums";
+import { isCeoUser } from "../utils/roleAccess";
 
 const AdminLayout = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -10,6 +11,7 @@ const AdminLayout = () => {
   const location = useLocation();
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
+  const isCeo = isCeoUser(currentUser);
 
   // Determine active tab based on path parameter or current URL
   const getActiveTab = () => {
@@ -84,13 +86,13 @@ const AdminLayout = () => {
       case "inbox":
         return "Inbox";
       default:
-        return "Admin Dashboard";
+        return isCeo ? "CEO Dashboard" : "Admin Dashboard";
     }
   };
 
   const dispatch = useAppDispatch();
   const handleTabChange = (tabName: string) => {
-    if (tabName === "Admin Dashboard") {
+    if (tabName === "Admin Dashboard" || tabName === "CEO Dashboard") {
       dispatch(fetchUnreadNotifications());
       navigate("/admin-dashboard");
     } else if (tabName === "User & Role Management") {
@@ -124,7 +126,7 @@ const AdminLayout = () => {
     <SidebarLayout
       activeTab={getActiveTab()}
       onTabChange={handleTabChange}
-      title={isReceptionist ? "Receptionist" : "Admin"}
+      title={isReceptionist ? "Receptionist" : isCeo ? "CEO" : "Admin"}
     >
       <Outlet />
     </SidebarLayout>

@@ -18,6 +18,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
 import { UserType } from "../enums";
+import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import ScrollNavigator from "../components/ScrollNavigator";
 import Header from "../components/Header";
@@ -209,7 +210,9 @@ const SidebarLayout = ({
               <AlarmClock className="w-6 h-6 text-white" />
             </div>
             <span className="text-xl font-bold text-white tracking-tight">
-              {currentUser?.userType === UserType.ADMIN
+              {isCeoUser(currentUser)
+                ? "CEO"
+                : isAdminAccess(currentUser)
                 ? "Admin"
                 : currentUser?.userType === UserType.MANAGER
                   ? "Manager"
@@ -243,7 +246,9 @@ const SidebarLayout = ({
                   {entity?.employeeId || "EMP001"}
                 </span>
                 <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                  {currentUser?.userType === UserType.ADMIN
+                  {isCeoUser(currentUser)
+                    ? "CEO"
+                    : isAdminAccess(currentUser)
                     ? "Admin"
                     : currentUser?.userType === UserType.MANAGER
                       ? "Manager"

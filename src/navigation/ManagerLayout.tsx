@@ -6,7 +6,7 @@ import {
   fetchEmployeeUpdates,
   fetchUnreadNotifications,
 } from "../reducers/leaveNotification.reducer";
-import { UserType } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 
 const ManagerLayout = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -125,7 +125,7 @@ const ManagerLayout = () => {
   const dispatch = useAppDispatch();
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = isAdminAccess(currentUser);
 
   const handleTabChange = (tabName: string) => {
     // Refresh notifications when switching to primary dashboards

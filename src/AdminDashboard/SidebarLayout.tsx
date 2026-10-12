@@ -106,13 +106,16 @@ const SidebarLayout = ({
   );
 
   // Receptionist: hide Request Management from sidebar
-  const visibleAdminSidebarItems = useMemo(
-    () =>
+  const visibleAdminSidebarItems = useMemo(() => {
+    const items =
       title === "Receptionist"
         ? adminSidebarItems.filter((i) => i.name !== "Request Management")
-        : adminSidebarItems,
-    [title, adminSidebarItems],
-  );
+        : adminSidebarItems;
+    if (title !== "CEO") return items;
+    return items.map((item) =>
+      item.name === "Admin Dashboard" ? { ...item, name: "CEO Dashboard" } : item,
+    );
+  }, [title, adminSidebarItems]);
 
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
@@ -152,7 +155,11 @@ const SidebarLayout = ({
       case "my-profile":
         return "Account Settings";
       default:
-        return title === "Manager" ? "My Dashboard" : "Admin Dashboard";
+        return title === "Manager"
+          ? "My Dashboard"
+          : title === "CEO"
+            ? "CEO Dashboard"
+            : "Admin Dashboard";
     }
   }, [tab, activeTab, title]);
 

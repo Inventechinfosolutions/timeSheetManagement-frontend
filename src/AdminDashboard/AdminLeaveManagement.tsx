@@ -48,6 +48,7 @@ import {
   HalfDayType,
   UserStatus,
 } from "../enums";
+import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
 import {
   Home,
   MapPin,
@@ -115,6 +116,7 @@ const AdminLeaveManagement = () => {
     return t;
   };
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
+  const isCeo = isCeoUser(currentUser);
   const {
     entities = [] as LeaveRequest[],
     totalItems,
@@ -289,6 +291,7 @@ const AdminLeaveManagement = () => {
         month: selectedMonth,
         year: selectedYear,
         status: filterStatus,
+        role: isCeo ? "MANAGER" : undefined,
       }),
     );
     dispatch(getLeaveStats({ employeeId: empId }));
@@ -473,10 +476,17 @@ const AdminLeaveManagement = () => {
         limit: 20,
         includeSelf: true,
         skipGlobalLoader: true,
+        role: isCeo ? "MANAGER" : undefined,
+        userStatus: isCeo ? "ACTIVE" : undefined,
       }),
     ).then((action: any) => {
       if (action.payload && action.payload.data) {
-        const newDetails = action.payload.data;
+        const newDetails = (action.payload.data as any[]).filter((employee) => {
+          if (!isCeo) return true;
+          const role = String(employee.role || "").toUpperCase();
+          const status = String(employee.userStatus || "").toUpperCase();
+          return role === "MANAGER" && status === "ACTIVE";
+        });
         const totalServerItems =
           action.payload.totalItems || action.payload.total || 0;
 
@@ -500,7 +510,7 @@ const AdminLeaveManagement = () => {
         }
       }
     });
-  }, [dispatch, debouncedSearchTerm, empPage]);
+  }, [dispatch, debouncedSearchTerm, empPage, isCeo]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
@@ -1728,7 +1738,7 @@ const AdminLeaveManagement = () => {
     // Receptionist is view-only: no cancel (isReceptionist from component scope)
     const isAdminOrManager =
       !isReceptionist &&
-      (currentUser?.userType === UserType.ADMIN ||
+      (isAdminAccess(currentUser) ||
         currentUser?.userType === UserType.MANAGER);
 
     // Original policy: next day 10am

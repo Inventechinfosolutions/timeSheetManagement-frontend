@@ -58,6 +58,7 @@ import {
   LeaveRequestType,
   UserType,
 } from "../enums";
+import { isCeoUser } from "../utils/roleAccess";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { message, Select, Modal } from "antd";
@@ -75,6 +76,7 @@ const Requests = () => {
   const { entities, loading } = useAppSelector((state) => state.leaveRequest);
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
+  const ceoRequestRole = isCeoUser(currentUser) ? "MANAGER" : undefined;
 
   // Configure AntD message position to be below the header
   useEffect(() => {
@@ -374,6 +376,7 @@ const Requests = () => {
         year: selectedYear,
         requestType: selectedRequestType,
         status: selectedStatus,
+        role: ceoRequestRole,
         page: currentPage,
         limit: itemsPerPage,
       }),
@@ -387,6 +390,7 @@ const Requests = () => {
     selectedYear,
     selectedRequestType,
     selectedStatus,
+    ceoRequestRole,
   ]);
 
   useEffect(() => {
@@ -436,6 +440,7 @@ const Requests = () => {
         year: selectedYear,
         requestType: selectedRequestType,
         status: selectedStatus,
+        role: ceoRequestRole,
         page: currentPage,
         limit: itemsPerPage,
       }));
@@ -456,6 +461,7 @@ const Requests = () => {
         year: selectedYear,
         requestType: selectedRequestType,
         status: selectedStatus,
+        role: ceoRequestRole,
       });
       const stamp = dayjs().format("YYYY-MM-DD");
       saveAs(blob, `Employee_Requests_${stamp}.xlsx`);
@@ -483,6 +489,7 @@ const Requests = () => {
       if (selectedMonth && selectedMonth !== "All") params.set("month", selectedMonth);
       if (selectedYear && selectedYear !== "All") params.set("year", selectedYear);
       if (selectedRequestType && selectedRequestType !== "All") params.set("requestType", selectedRequestType);
+      if (ceoRequestRole) params.set("role", ceoRequestRole);
       const response = await import("axios").then((m) =>
         m.default.get(`/api/leave-requests?${params.toString()}`),
       );
@@ -669,6 +676,7 @@ const Requests = () => {
               year: selectedYear,
               requestType: selectedRequestType,
               status: selectedStatus,
+              role: ceoRequestRole,
               page: currentPage,
               limit: itemsPerPage,
             }),
@@ -987,6 +995,7 @@ const Requests = () => {
           year: selectedYear,
           requestType: selectedRequestType,
           status: selectedStatus,
+          role: ceoRequestRole,
           page: currentPage,
           limit: itemsPerPage,
         }),
