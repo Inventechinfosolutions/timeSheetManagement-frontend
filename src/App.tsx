@@ -60,6 +60,7 @@ import MonthlyAttendanceMatrix from "./AdminDashboard/MonthlyAttendanceMatrix";
 import NotesManagement from "./Notes/NotesManagement";
 import InboxManagement from "./Inbox/InboxManagement";
 import EmployeeAppraisalPage from "./Appraisal/pages/EmployeeAppraisalPage";
+import AttendenceEditRequests from "./AdminDashboard/AttendenceEditRequests";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -147,6 +148,8 @@ const AdminTabWrapper = () => {
     case "my-appraisal":
     case "my-quarterly-review":
       return <EmployeeAppraisalPage />;
+    case "edit-access":
+      return <AttendenceEditRequests />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }
