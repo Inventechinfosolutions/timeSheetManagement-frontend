@@ -53,7 +53,7 @@ const AdminLayout = () => {
       return "Inbox";
     }
     if (path.includes("/admin-dashboard/edit-access")) {
-      return "Edit Access";
+      return "Access Ticket";
     }
     if (
       path.includes("/admin-dashboard/manager-mapping") ||
@@ -89,7 +89,7 @@ const AdminLayout = () => {
       case "inbox":
         return "Inbox";
       case "edit-access":
-        return "Edit Access";
+        return "Access Ticket";
       default:
         return isCeo ? "CEO Dashboard" : "Admin Dashboard";
     }
@@ -124,7 +124,7 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/notes");
     } else if (tabName === "Inbox") {
       navigate("/admin-dashboard/inbox");
-    } else if (tabName === "Edit Access") {
+    } else if (tabName === "Access Ticket" || tabName === "Edit Access") {
       navigate("/admin-dashboard/edit-access");
     }
   };
