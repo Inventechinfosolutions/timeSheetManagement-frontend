@@ -33,6 +33,7 @@ import { submitLeaveRequest } from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
   generateMonthlyEntries,
+  isLockedAttendance,
   isEditableMonth,
   getBadgeLocation,
 } from "../utils/attendanceUtils";
@@ -451,15 +452,18 @@ const MyTimesheet = ({
     d.setHours(0, 0, 0, 0);
 
     const dateStr = dayjs(d).format("YYYY-MM-DD");
-    const viewingOwnTimesheet = isMyRoute || isManagerView;
     const recordForDay = records.find((r) => {
       const rDate = new Date(r.workingDate);
       return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
     });
+    const localForDay = localEntries.find(
+      (e) => dayjs(e.fullDate).format("YYYY-MM-DD") === dateStr,
+    );
     const isLockedDay =
-      recordForDay?.status === AttendanceStatus.LOCKED;
+      isLockedAttendance(recordForDay) || isLockedAttendance(localForDay);
     if (
-      viewingOwnTimesheet &&
+      !isAdmin &&
+      !isManager &&
       isLockedDay &&
       !approvedDates.includes(dateStr)
     ) {
@@ -531,14 +535,14 @@ const MyTimesheet = ({
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
     const dateStr = dayjs(d).format("YYYY-MM-DD");
-    const viewingOwnTimesheet = isMyRoute || isManagerView;
     const recordForDay = records.find((r) => {
       const rDate = new Date(r.workingDate);
       return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
     });
     if (
-      viewingOwnTimesheet &&
-      recordForDay?.status === AttendanceStatus.LOCKED &&
+      !isAdmin &&
+      !isManager &&
+      isLockedAttendance(recordForDay) &&
       !approvedDates.includes(dateStr)
     ) {
       return "Date is Locked. Raise an Access Request to update it.";
@@ -613,7 +617,17 @@ const MyTimesheet = ({
 
   const handleHoursInput = (entryIndex: number, val: string) => {
     if (effectiveReadOnly) return;
-    if (isDateBlocked(localEntries[entryIndex].fullDate)) return;
+    const hoursEntry = localEntries[entryIndex];
+    const hoursDateStr = dayjs(hoursEntry.fullDate).format("YYYY-MM-DD");
+    if (
+      !isAdmin &&
+      !isManager &&
+      isLockedAttendance(hoursEntry) &&
+      !approvedDates.includes(hoursDateStr)
+    ) {
+      return;
+    }
+    if (isDateBlocked(hoursEntry.fullDate)) return;
 
     // Reject non-numeric characters immediately (allows digits and at most one dot)
     if (val !== "" && !/^\d*\.?\d*$/.test(val)) return;
@@ -896,6 +910,14 @@ const MyTimesheet = ({
     const payload: any[] = [];
     localEntries.forEach((entry, idx) => {
       if (isDateBlocked(entry.fullDate)) return;
+      if (
+        !isAdmin &&
+        !isManager &&
+        isLockedAttendance(entry) &&
+        !approvedDates.includes(dayjs(entry.fullDate).format("YYYY-MM-DD"))
+      ) {
+        return;
+      }
 
       const currentTotal = entry.totalHours;
       const originalTotal = baseEntries[idx]?.totalHours;
@@ -2232,6 +2254,11 @@ const MyTimesheet = ({
                 : "";
 
             const isBlocked = isDateBlocked(day.fullDate);
+            const isEmployeeLockedDay =
+              !isAdmin &&
+              !isManager &&
+              isLockedAttendance(day) &&
+              !approvedDates.includes(calendarDateStr);
 
             // Disable editing for approved Leave days only
             // WFH and Client Visit days are editable (they are present, not leave)
@@ -2266,7 +2293,8 @@ const MyTimesheet = ({
                 isCurrentOrNextMonth ||
                 isEditableMonth(day.fullDate) ||
                 day.status === AttendanceStatus.ABSENT) &&
-              !isBlocked;
+              !isBlocked &&
+              !isEmployeeLockedDay;
 
             // Helper to get consistent styles for any status string
             const getStatusStyles = (
@@ -2531,8 +2559,8 @@ const MyTimesheet = ({
                   >
                     {day.date}
                   </div>
-                  {/* Show lock if blocked by admin OR if the month is locked for non-admins */}
-                  {(isBlocked ||
+                  {(displayStatus === AttendanceStatus.LOCKED ||
+                    isBlocked ||
                     (!isAdmin &&
                       !isManager &&
                       !isCurrentOrNextMonth &&
@@ -2565,17 +2593,24 @@ const MyTimesheet = ({
                     <input
                       type="text"
                       disabled={!isEditable || isError}
+                      readOnly={!isEditable}
                       className={`w-full h-6 text-center font-medium bg-transparent transition-all focus:outline-none focus:ring-0
                         ${
                           !isEditable
-                            ? "text-gray-400 cursor-not-allowed"
+                            ? "text-gray-400 cursor-not-allowed pointer-events-none"
                             : isError
                               ? "text-red-500 text-[10px] font-bold animate-pulse"
                               : "text-gray-800 text-xl md:text-2xl group-hover:scale-105 focus:scale-105"
                         }`}
                       placeholder="-"
                       value={isError ? inputError.message : inputValue}
-                      onChange={(e) => handleHoursInput(idx, e.target.value)}
+                      onChange={(e) => {
+                        if (!isEditable) return;
+                        handleHoursInput(idx, e.target.value);
+                      }}
+                      onKeyDown={(e) => {
+                        if (!isEditable) e.preventDefault();
+                      }}
                       onBlur={() => handleInputBlur(idx)}
                     />
                     {isEditable && !isError && (

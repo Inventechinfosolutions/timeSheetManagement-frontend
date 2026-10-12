@@ -2,6 +2,22 @@ import { AttendanceStatus, WorkLocation as OfficeLocation, WorkLocationKeyword }
 import { EmployeeAttendance } from '../reducers/employeeAttendance.reducer';
 import { TimesheetEntry } from '../types';
 
+export const isLockedStatus = (value?: string | null) =>
+  String(value || "").toLowerCase() === AttendanceStatus.LOCKED.toLowerCase();
+
+export const isLockedAttendance = (record?: {
+  status?: string | null;
+  firstHalf?: string | null;
+  secondHalf?: string | null;
+  first_half?: string | null;
+  second_half?: string | null;
+} | null) =>
+  isLockedStatus(record?.status) ||
+  isLockedStatus(record?.firstHalf) ||
+  isLockedStatus(record?.secondHalf) ||
+  isLockedStatus(record?.first_half) ||
+  isLockedStatus(record?.second_half);
+
 /**
  * Checks if a given date falls within the current editable week (Mon-Fri).
  * Returns true if the date is in the current week (Mon-Fri) and today is not past Friday 11:59 PM.
