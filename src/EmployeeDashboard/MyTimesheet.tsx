@@ -20,6 +20,7 @@ import {
   HalfDayType,
   Department,
 } from "../enums";
+import { blockedByLabel, isAdminAccess } from "../utils/roleAccess";
 import {
   updateAttendanceRecord,
   submitBulkAttendance,
@@ -100,7 +101,7 @@ const MyTimesheet = ({
 
   const { blockers } = useAppSelector((state) => state.timesheetBlocker);
 
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = isAdminAccess(currentUser);
   const isManager = !!(
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&
@@ -510,7 +511,7 @@ const MyTimesheet = ({
     // 2. Manual Blocker
     const blocker = getBlocker(date);
     if (blocker) {
-      const by = blocker.blockedBy === UserType.ADMIN ? "Admin" : "Manager";
+      const by = blockedByLabel(blocker.blockedBy);
       return `Blocked by ${by}${blocker.reason ? ": " + blocker.reason : ""}`;
     }
 
@@ -2470,7 +2471,7 @@ const MyTimesheet = ({
             const blockedTip = blocker ? (
               <div style={{ textAlign: "left", lineHeight: 1.4 }}>
                 <div style={{ fontWeight: 600 }}>
-                  Blocked by {blocker.blockedBy === UserType.ADMIN ? "Admin" : "Manager"}
+                  Blocked by {blockedByLabel(blocker.blockedBy)}
                 </div>
                 {blocker.reason && <div>Reason: {blocker.reason}</div>}
               </div>

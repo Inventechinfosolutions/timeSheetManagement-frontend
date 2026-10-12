@@ -23,6 +23,7 @@ import {
 } from "../reducers/timesheetBlocker.reducer";
 import Toast from "../components/Toast";
 import { UserType, AttendanceStatus } from "../enums";
+import { isCeoUser } from "../utils/roleAccess";
 
 const AdminEmployeeTimesheetWrapper = () => {
   const { employeeId, date: urlDate } = useParams<{ employeeId: string; date?: string }>();
@@ -150,7 +151,11 @@ const AdminEmployeeTimesheetWrapper = () => {
           blockedFrom: fromDate,
           blockedTo: toDate,
           reason: reason || "Timesheet Locked",
-          blockedBy: currentUser?.userType === UserType.ADMIN ? "Admin" : "Manager",
+          blockedBy: isCeoUser(currentUser)
+            ? UserType.CEO
+            : currentUser?.userType === UserType.ADMIN
+              ? UserType.ADMIN
+              : UserType.MANAGER,
         }),
       ).unwrap();
 

@@ -41,6 +41,7 @@ import EmployeeListMobileCard from "./EmployeeListMobileCard";
 import Toast from "../components/Toast";
 import { SearchBox } from "../components/ui";
 import { UserType, EmploymentType, UserStatus } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 
 const EmployeeListView = () => {
   const navigate = useNavigate();
@@ -204,7 +205,7 @@ const EmployeeListView = () => {
     lastLoggedIn: emp.lastLoggedIn,
     lastLinkSentAt: emp.lastLinkSentAt,
     isActive: emp.userStatus !== UserStatus.INACTIVE,
-    isAdmin: emp.userType === UserType.ADMIN,
+    isAdmin: isAdminAccess(emp),
   }));
 
   const currentItems = employees.filter((emp) => {
@@ -1423,6 +1424,7 @@ ${
                               const normalized = r.toUpperCase().trim();
                               return (
                                 normalized !== "ADMIN" &&
+                                normalized !== "CEO" &&
                                 normalized !== "RECEPTIONIST" &&
                                 normalized !== "TEAM LEAD" &&
                                 normalized !== "TEAMLEAD"

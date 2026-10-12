@@ -27,6 +27,7 @@ import {
   downloadAttendancePdfReport,
 } from "../reducers/employeeAttendance.reducer";
 import { AttendanceStatus, UserType, Department } from "../enums";
+import { blockedByLabel, isAdminAccess } from "../utils/roleAccess";
 
 interface CalendarProps {
   now?: Date;
@@ -125,7 +126,7 @@ const Calendar = ({
     (state: RootState) => state.timesheetBlocker,
   );
 
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = isAdminAccess(currentUser);
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&
@@ -357,7 +358,7 @@ const Calendar = ({
     // 2. Manual Blocker
     const blocker = getBlocker(date);
     if (blocker) {
-      const by = blocker.blockedBy === UserType.ADMIN ? "Admin" : "Manager";
+      const by = blockedByLabel(blocker.blockedBy);
       return `Blocked by ${by}${blocker.reason ? ": " + blocker.reason : ""}`;
     }
 
@@ -935,7 +936,7 @@ const Calendar = ({
                     } else {
                       const dateStr = dayjs(targetDate).format("YYYY-MM-DD");
                       const isPrivilegedUser =
-                        currentUser?.userType === UserType.ADMIN ||
+                        isAdminAccess(currentUser) ||
                         currentUser?.userType === UserType.MANAGER ||
                         currentUser?.userType === UserType.TEAMLEAD;
 
@@ -1158,7 +1159,7 @@ const Calendar = ({
               const blockedTip = blocker ? (
                 <div style={{ textAlign: "left", lineHeight: 1.4 }}>
                   <div style={{ fontWeight: 600 }}>
-                    Blocked by {blocker.blockedBy === UserType.ADMIN ? "Admin" : "Manager"}
+                    Blocked by {blockedByLabel(blocker.blockedBy)}
                   </div>
                   {blocker.reason && <div>Reason: {blocker.reason}</div>}
                 </div>

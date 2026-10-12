@@ -294,7 +294,7 @@ function AppContent() {
                 <Route
                   path="/admin-dashboard"
                   element={
-                    <ProtectedRoute allowedRoles={[UserType.ADMIN, UserType.RECEPTIONIST]}>
+                    <ProtectedRoute allowedRoles={[UserType.ADMIN, UserType.CEO, UserType.RECEPTIONIST]}>
                       <AdminLayout />
                     </ProtectedRoute>
                   }

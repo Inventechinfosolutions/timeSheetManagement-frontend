@@ -1,14 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import dayjs from "dayjs";
 import Chart from "react-apexcharts";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { RootState } from "../store";
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
   Users,
-  Search,
-  TrendingUp,
+  Briefcase,
   Filter,
   ChevronDown,
   Download,
@@ -17,17 +16,20 @@ import {
   ChevronRight,
   Calendar,
   ArrowLeft,
-  ChevronLeft,
   Building2,
+  ChevronUp,
 } from "lucide-react";
 import { downloadAttendancePdfReport } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { saveAs } from "file-saver";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { SearchBox } from "../components/ui";
+import { getAllLeaveRequests } from "../reducers/leaveRequest.reducer";
+import { isCeoUser } from "../utils/roleAccess";
 
 const AdminDashboard = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const basePath = location.pathname.startsWith("/manager-dashboard")
     ? "/manager-dashboard"
@@ -45,6 +47,8 @@ const AdminDashboard = () => {
   const { departments } = useAppSelector(
     (state: RootState) => state.masterDepartments,
   );
+  const { currentUser } = useAppSelector((state: RootState) => state.user);
+  const isCeo = isCeoUser(currentUser);
 
   // Time-related constants
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -81,6 +85,33 @@ const AdminDashboard = () => {
     dayjs(lastDay).format("YYYY-MM-DD"),
   );
   const [isExporting, setIsExporting] = useState(false);
+  const [managerLeave, setManagerLeave] = useState<any[]>([]);
+  const [managerLeaveLoading, setManagerLeaveLoading] = useState(false);
+  const [expandedManagers, setExpandedManagers] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  const toggleManagerExpanded = (employeeId: string) => {
+    setExpandedManagers((prev) => {
+      const next = new Set(prev);
+      if (next.has(employeeId)) next.delete(employeeId);
+      else next.add(employeeId);
+      return next;
+    });
+  };
+
+  const requestStatusClass = (status?: string) => {
+    const s = String(status || "").toLowerCase();
+    if (s.includes("approved") && !s.includes("cancellation"))
+      return "bg-emerald-50 text-emerald-700 border-emerald-100";
+    if (s.includes("rejected"))
+      return "bg-rose-50 text-rose-700 border-rose-100";
+    if (s.includes("pending") || s.includes("applied"))
+      return "bg-amber-50 text-amber-700 border-amber-100";
+    if (s.includes("cancel"))
+      return "bg-orange-50 text-orange-700 border-orange-100";
+    return "bg-slate-50 text-slate-600 border-slate-100";
+  };
 
   // Effects
   useEffect(() => {
@@ -105,6 +136,31 @@ const AdminDashboard = () => {
       dispatch(fetchDepartments());
     }
   }, [dispatch, holidays.length, departments.length]);
+
+  useEffect(() => {
+    if (!isCeo) return;
+    setManagerLeaveLoading(true);
+    dispatch(
+      getAllLeaveRequests({
+        month: currentMonth,
+        year: currentYear,
+        role: "MANAGER",
+        page: 1,
+        limit: 200,
+      }),
+    ).then((action: any) => {
+      if (getAllLeaveRequests.fulfilled.match(action)) {
+        const payload = action.payload;
+        const rows = Array.isArray(payload)
+          ? payload
+          : payload?.data || [];
+        setManagerLeave(Array.isArray(rows) ? rows : []);
+      } else {
+        setManagerLeave([]);
+      }
+      setManagerLeaveLoading(false);
+    });
+  }, [dispatch, isCeo, currentMonth, currentYear]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -280,8 +336,13 @@ const AdminDashboard = () => {
     const avgPerDept =
       departmentCount > 0 ? Math.round(totalEmployees / departmentCount) : 0;
 
+    const managerCount = globalEntities.filter(
+      (employee: any) => String(employee.role || "").toUpperCase() === "MANAGER",
+    ).length;
+
     return {
       totalEmployees,
+      managerCount,
       departmentCount,
       topDept,
       avgPerDept,
@@ -289,6 +350,15 @@ const AdminDashboard = () => {
       isManagerView,
     };
   }, [entities, globalStatsCache, departments, totalItems, basePath]);
+
+  const managers = useMemo(() => {
+    const globalEntities = globalStatsCache
+      ? globalStatsCache.entities
+      : entities;
+    return globalEntities.filter(
+      (employee: any) => String(employee.role || "").toUpperCase() === "MANAGER",
+    );
+  }, [entities, globalStatsCache]);
 
   const statCards = [
     {
@@ -298,6 +368,17 @@ const AdminDashboard = () => {
       icon: Users,
       color: "bg-linear-to-r from-[#4318FF] to-[#868CFF]",
     },
+    ...(isCeo
+      ? [
+          {
+            label: "Managers",
+            value: dashboardStats.managerCount,
+            sub: "Active managers",
+            icon: Briefcase,
+            color: "bg-linear-to-r from-[#01B574] to-[#6AD2FF]",
+          },
+        ]
+      : []),
   ];
 
   const chartColors = [
@@ -319,7 +400,9 @@ const AdminDashboard = () => {
           <h1 className="text-2xl font-bold text-[#2B3674]">
             {dashboardStats.isManagerView
               ? "Employee Dashboard"
-              : "Admin Dashboard"}
+              : isCeo
+                ? "CEO Dashboard"
+                : "Admin Dashboard"}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             Workforce overview for{" "}
@@ -357,6 +440,168 @@ const AdminDashboard = () => {
           </div>
         ))}
       </div>
+
+      {isCeo && (
+        <div className="mb-8 bg-white rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-bold text-[#2B3674]">Manager Activity</h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Click a manager to show or hide their leave requests this month
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/admin-dashboard/work-management")}
+              className="text-sm font-semibold text-[#4318FF] hover:underline"
+            >
+              View all requests
+            </button>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {managerLeaveLoading ? (
+              <div className="px-5 py-6 text-sm text-gray-400">
+                Loading manager activity...
+              </div>
+            ) : managers.length === 0 ? (
+              <div className="px-5 py-6 text-sm text-gray-400">
+                No managers found
+              </div>
+            ) : (
+              managers.map((manager: any) => {
+                const employeeId = String(manager.employeeId);
+                const leaves = managerLeave.filter(
+                  (request) => request.employeeId === manager.employeeId,
+                );
+                const isExpanded = expandedManagers.has(employeeId);
+                const requestCount = leaves.length;
+                const preview =
+                  leaves[0]?.requestType ||
+                  leaves[0]?.title ||
+                  "No leave this month";
+
+                return (
+                  <div key={employeeId} className="bg-white">
+                    <div className="px-5 py-3.5 flex items-center gap-3 hover:bg-[#F4F7FE]/70 transition-colors">
+                      <button
+                        type="button"
+                        onClick={() => toggleManagerExpanded(employeeId)}
+                        className="min-w-0 flex-1 flex items-center gap-3 text-left"
+                        aria-expanded={isExpanded}
+                      >
+                        <span
+                          className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center border transition-colors ${
+                            isExpanded
+                              ? "bg-[#4318FF]/10 border-[#4318FF]/20 text-[#4318FF]"
+                              : "bg-[#F4F7FE] border-transparent text-[#A3AED0]"
+                          }`}
+                        >
+                          {isExpanded ? (
+                            <ChevronUp size={16} />
+                          ) : (
+                            <ChevronDown size={16} />
+                          )}
+                        </span>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span className="font-semibold text-[#2B3674] truncate">
+                              {manager.fullName || employeeId}
+                            </span>
+                            <span className="text-[11px] font-medium text-gray-400">
+                              {employeeId}
+                            </span>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                                requestCount > 0
+                                  ? "bg-[#4318FF]/10 text-[#4318FF]"
+                                  : "bg-slate-100 text-slate-500"
+                              }`}
+                            >
+                              {requestCount > 0
+                                ? `${requestCount} request${requestCount === 1 ? "" : "s"}`
+                                : "No requests"}
+                            </span>
+                          </div>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-gray-500">
+                            <span>{manager.department || "—"}</span>
+                            {!isExpanded && (
+                              <>
+                                <span className="text-gray-300">·</span>
+                                <span className="truncate text-gray-600">
+                                  {preview}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(`/admin-dashboard/timesheet/${employeeId}`)
+                        }
+                        className="shrink-0 text-sm font-semibold text-[#4318FF] hover:underline px-2 py-1"
+                      >
+                        Open timesheet
+                      </button>
+                    </div>
+
+                    {isExpanded && (
+                      <div className="px-5 pb-4 pl-[3.75rem]">
+                        {requestCount === 0 ? (
+                          <div className="rounded-xl border border-dashed border-gray-200 bg-[#F8FAFC] px-4 py-3 text-sm text-gray-500">
+                            No leave, WFH, or client visit this month.
+                          </div>
+                        ) : (
+                          <ul className="space-y-2">
+                            {leaves.map((request: any, index: number) => (
+                              <li
+                                key={`${employeeId}-${request?.id || index}`}
+                                className="rounded-xl border border-gray-100 bg-[#F8FAFC] px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-semibold text-[#2B3674]">
+                                    {request?.requestType ||
+                                      request?.title ||
+                                      "Request"}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    {request?.fromDate
+                                      ? `${dayjs(request.fromDate).format("MMM D")} – ${dayjs(request.toDate || request.fromDate).format("MMM D, YYYY")}`
+                                      : "Dates not set"}
+                                  </p>
+                                </div>
+                                <span
+                                  className={`shrink-0 inline-flex self-start sm:self-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${requestStatusClass(request?.status)}`}
+                                >
+                                  {request?.status || "—"}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              `/admin-dashboard/employee-details/${employeeId}`,
+                            )
+                          }
+                          className="mt-3 text-xs font-semibold text-[#4318FF] hover:underline"
+                        >
+                          View manager profile
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Analytics Section */}
       <div className="mb-4">

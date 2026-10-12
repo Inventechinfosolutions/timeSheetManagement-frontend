@@ -22,6 +22,7 @@ import {
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { TimesheetEntry } from "../types";
 import { AttendanceStatus, UserType, Department } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 import {
   generateMonthlyEntries,
   generateRangeEntries,
@@ -55,7 +56,7 @@ const MobileResponsiveCalendarPage = ({
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
 
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = isAdminAccess(currentUser);
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { AttendanceStatus, UserType } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 import { fetchEmployeeDashboard } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
@@ -241,7 +242,7 @@ const TodayAttendance = ({
 
       const targetDate = new Date(timestamp);
       const isPrivilegedUser =
-        currentUser?.userType === UserType.ADMIN ||
+        isAdminAccess(currentUser) ||
         currentUser?.userType === UserType.MANAGER ||
         currentUser?.userType === UserType.TEAMLEAD;
 
