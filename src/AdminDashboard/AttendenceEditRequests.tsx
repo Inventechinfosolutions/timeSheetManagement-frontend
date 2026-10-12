@@ -24,6 +24,7 @@ import { updateLockType } from "../reducers/managerMapping.reducer";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { WorksphereLogoLoader } from "../components/ApiLoadingSpinner";
 import { UserType } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 
 const STATUS_OPTIONS = ["All", "Pending", "Approved", "Rejected"] as const;
 const LOCK_TYPE_OPTIONS = ["All", "Weekly", "Monthly"] as const;
@@ -48,7 +49,7 @@ const AttendenceEditRequests = () => {
     useAppSelector((state) => state.attendenceEditRequest);
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const { departments } = useAppSelector((state) => state.masterDepartments);
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = isAdminAccess(currentUser);
   const isManager = !!(
     !isAdmin &&
     (currentUser?.userType === UserType.MANAGER ||
@@ -163,7 +164,7 @@ const AttendenceEditRequests = () => {
     setActingId(id);
     try {
       await dispatch(approveEditAccessRequest(id)).unwrap();
-      message.success("Edit Access approved");
+      message.success("Access Ticket approved");
       dispatch(fetchEditRequestsForReview(reviewQuery()));
     } catch (err: any) {
       message.error(err?.message || "Failed to approve request");
@@ -179,7 +180,7 @@ const AttendenceEditRequests = () => {
       await dispatch(
         rejectEditAccessRequest({ id: rejectId, reason: rejectReason }),
       ).unwrap();
-      message.success("Edit Access rejected");
+      message.success("Access Ticket rejected");
       setRejectId(null);
       setRejectReason("");
       dispatch(fetchEditRequestsForReview(reviewQuery()));
@@ -198,7 +199,7 @@ const AttendenceEditRequests = () => {
         <div className="flex flex-col gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#2B3674]">
-              {isManager ? "Access Ticket" : "Edit Access"}
+              Access Ticket
             </h1>
             <p className="text-xs sm:text-sm text-gray-500 mt-1">
               Review Locked-day edit requests from mapped employees.
@@ -707,7 +708,7 @@ const AttendenceEditRequests = () => {
 
       <Modal
         open={rejectId !== null}
-        title="Reject Edit Access"
+        title="Reject Access Ticket"
         onCancel={() => {
           setRejectId(null);
           setRejectReason("");

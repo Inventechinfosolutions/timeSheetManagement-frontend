@@ -98,7 +98,7 @@ const SidebarLayout = ({
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Request Management", icon: Calendar },
       { name: "Appraisal", icon: ClipboardCheck },
-      { name: "Edit Access", icon: Unlock },
+      { name: "Access Ticket", icon: Unlock },
       { name: "Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
       { name: "Manager Mapping", icon: Users },
@@ -151,7 +151,7 @@ const SidebarLayout = ({
       case "my-quarterly-review":
         return "My Appraisal";
       case "edit-access":
-        return title === "Manager" ? "Access Ticket" : "Edit Access";
+        return "Access Ticket";
 
       case "notes":
         return "Notes";
