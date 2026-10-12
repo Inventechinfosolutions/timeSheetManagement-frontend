@@ -2,6 +2,7 @@ import { Outlet, useParams, useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../hooks";
 import { logoutUser } from "../reducers/user.reducer";
 import SidebarLayout from "../EmployeeDashboard/SidebarLayout";
+import BirthdayWish from "../components/BirthdayWish";
 
 const EmployeeLayout = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -83,6 +84,7 @@ const EmployeeLayout = () => {
       onLogout={handleLogout}
     >
       <Outlet />
+      <BirthdayWish />
     </SidebarLayout>
   );
 };

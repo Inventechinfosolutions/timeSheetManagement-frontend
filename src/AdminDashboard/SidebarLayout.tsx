@@ -112,9 +112,11 @@ const SidebarLayout = ({
         ? adminSidebarItems.filter((i) => i.name !== "Request Management")
         : adminSidebarItems;
     if (title !== "CEO") return items;
-    return items.map((item) =>
-      item.name === "Admin Dashboard" ? { ...item, name: "CEO Dashboard" } : item,
-    );
+    return items
+      .filter((item) => item.name !== "Employee Directory")
+      .map((item) =>
+        item.name === "Admin Dashboard" ? { ...item, name: "CEO Dashboard" } : item,
+      );
   }, [title, adminSidebarItems]);
 
   // Determine active tab from URL if not explicitly provided

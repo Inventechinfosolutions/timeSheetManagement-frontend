@@ -348,7 +348,6 @@ const Registration = () => {
                           const normalized = role.toUpperCase().trim();
                           return (
                             normalized !== "ADMIN" &&
-                            normalized !== "CEO" &&
                             normalized !== "RECEPTIONIST" &&
                             normalized !== "TEAM LEAD" &&
                             normalized !== "TEAMLEAD"

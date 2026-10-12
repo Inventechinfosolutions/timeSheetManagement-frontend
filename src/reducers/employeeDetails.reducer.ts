@@ -4,12 +4,17 @@ import { logoutUser } from './user.reducer';
 
 const apiUrl = '/api/employee-details';
 
+// Optional fields that can be explicitly cleared by sending null.
+const CLEARABLE_KEYS = new Set(['dateOfBirth']);
+
 const cleanEntity = (entity: any) => {
   const cleaned: any = {};
   Object.keys(entity).forEach((key) => {
     // Treat empty strings, null, and undefined as null or omit them
     if (entity[key] !== null && entity[key] !== undefined && entity[key] !== '') {
       cleaned[key] = entity[key];
+    } else if (CLEARABLE_KEYS.has(key) && entity[key] !== undefined) {
+      cleaned[key] = null;
     }
   });
   return cleaned;
