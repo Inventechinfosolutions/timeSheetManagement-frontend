@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Star, Pencil, Eye, ShieldCheck, UserCheck, Check, X, Calendar, Clock, AlertCircle } from "lucide-react";
+import { Star, Pencil, Eye, ShieldCheck, UserCheck, Check, X, Calendar, Clock, AlertCircle, Lock, RotateCcw } from "lucide-react";
 import { ManagerQuarterlyReviewRecord } from "../../types/appraisal.types";
 import { Pagination } from "../../../components/ui";
 import { useAppSelector } from "../../../hooks";
@@ -55,6 +55,14 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   const [decisionDeadline, setDecisionDeadline] = useState<string>("");
   const [decisionRemarks, setDecisionRemarks] = useState<string>("");
   const [decisionSubmitting, setDecisionSubmitting] = useState<boolean>(false);
+
+  // Unlock / Re-assign State
+  const [reassignModalOpen, setReassignModalOpen] = useState(false);
+  const [reassignRecord, setReassignRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
+  const [reassignDeadline, setReassignDeadline] = useState<string>("");
+  const [reassignTodayDate, setReassignTodayDate] = useState<string>("");
+  const [reassignReason, setReassignReason] = useState<string>("");
+  const [reassignSubmitting, setReassignSubmitting] = useState<boolean>(false);
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = defaultPageSize;
@@ -117,6 +125,14 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
 
   const renderStatusBadge = (status: string) => {
     const raw = (status || "").trim();
+    if (raw.toUpperCase() === "NOT_UPDATED") {
+      return (
+        <span className="qr-status-badge qr-status-locked" title="Locked due to expired deadline (+48h grace period)">
+          <Lock className="w-3 h-3 text-rose-500 mr-0.5" />
+          Locked
+        </span>
+      );
+    }
     const normalized = raw.toLowerCase().replace(/_/g, " ");
     let badgeClass = "qr-status-not-started";
 
@@ -225,7 +241,53 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
     }
   };
 
+  const handleOpenReassign = (record: ManagerQuarterlyReviewRecord) => {
+    setReassignRecord(record);
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+    setReassignTodayDate(todayStr);
+
+    const futureDate = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
+    setReassignDeadline(futureDate.toISOString().split("T")[0]);
+    setReassignReason("");
+    setReassignModalOpen(true);
+  };
+
+  const handleConfirmReassign = async () => {
+    if (!reassignRecord) return;
+    if (!reassignDeadline) {
+      message.error("Please pick a new deadline date.");
+      return;
+    }
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (reassignDeadline <= todayStr) {
+      message.error("The new deadline must be tomorrow or later.");
+      return;
+    }
+
+    setReassignSubmitting(true);
+    try {
+      await AppraisalApi.reassignReview({
+        reviewId: reassignRecord.id,
+        deadlineDate: reassignDeadline,
+        reassignedDate: reassignTodayDate || todayStr,
+        reason: reassignReason.trim() || undefined,
+      });
+      message.success(`Appraisal re-assigned and access granted to ${reassignRecord.name}!`);
+      setReassignModalOpen(false);
+      onRefresh?.();
+    } catch (error) {
+      message.error(readApiError(error));
+    } finally {
+      setReassignSubmitting(false);
+    }
+  };
+
   const renderAction = (record: ManagerQuarterlyReviewRecord) => {
+    const isLocked =
+      record.status.toUpperCase() === "NOT_UPDATED" ||
+      record.performanceStatus?.toUpperCase() === "NOT_UPDATED";
+
     const isEditRequested =
       record.status.toUpperCase() === "REQUESTED_FOR_EDIT" ||
       record.performanceStatus?.toUpperCase() === "REQUESTED_FOR_EDIT";
@@ -245,7 +307,17 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
           <Eye className="w-4 h-4" />
         </button>
 
-        {isEditRequested ? (
+        {isLocked ? (
+          <button
+            type="button"
+            onClick={() => handleOpenReassign(record)}
+            className="qr-action-icon-btn qr-action-btn-reassign"
+            title={`Unlock & Re-assign appraisal for ${record.name}`}
+            aria-label={`Unlock & Re-assign appraisal for ${record.name}`}
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+        ) : isEditRequested ? (
           <>
             <button
               type="button"
@@ -557,6 +629,131 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                 ) : (
                   <>
                     <X className="w-4 h-4" /> Confirm Rejection
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Unlock / Re-assign Appraisal Modal */}
+      {reassignModalOpen && reassignRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-scale-up">
+            {/* Modal Header */}
+            <div className="p-5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-inner">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold leading-tight">
+                    Unlock & Re-assign Appraisal
+                  </h3>
+                  <p className="text-xs text-emerald-100 font-medium">
+                    Grant fresh access with a new submission deadline
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReassignModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 hover:text-white transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-4">
+              {/* Employee Summary Card */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Employee</span>
+                  <span className="font-bold text-slate-800">
+                    {reassignRecord.name}{" "}
+                    <span className="text-slate-400 font-normal">
+                      ({reassignRecord.id})
+                    </span>
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Review Period</span>
+                  <span className="font-semibold text-slate-700">
+                    {reassignRecord.quarter} • FY {reassignRecord.financialYear}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 font-medium">Missed Deadline</span>
+                  <span className="font-semibold text-rose-600">
+                    {reassignRecord.deadline || "Expired"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200">
+                  <span className="text-slate-500 font-medium">Re-assigned On</span>
+                  <span className="font-bold text-emerald-600 flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    {reassignTodayDate} (Today)
+                  </span>
+                </div>
+              </div>
+
+              {/* New Deadline Date input */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                  New Submission Deadline <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+                  value={reassignDeadline}
+                  onChange={(e) => setReassignDeadline(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
+                />
+                <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                  Status will change to Assigned. Employee can edit & submit until this new date (+48h grace).
+                </p>
+              </div>
+
+              {/* Remarks / Reason */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Re-assign Remarks (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  value={reassignReason}
+                  onChange={(e) => setReassignReason(e.target.value)}
+                  placeholder="e.g. Extended deadline granted per employee request..."
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setReassignModalOpen(false)}
+                disabled={reassignSubmitting}
+                className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 rounded-xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmReassign}
+                disabled={reassignSubmitting || !reassignDeadline}
+                className="px-5 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/25 transition-all flex items-center gap-1.5 disabled:opacity-50"
+              >
+                {reassignSubmitting ? (
+                  "Re-assigning..."
+                ) : (
+                  <>
+                    <RotateCcw className="w-4 h-4" /> Re-assign & Grant Access
                   </>
                 )}
               </button>

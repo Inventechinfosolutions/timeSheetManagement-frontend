@@ -69,6 +69,14 @@ const renderQuarterBadge = (quarter: string) => {
 
 const renderStatusBadge = (status: string) => {
   const raw = (status || "").trim();
+  if (raw.toUpperCase() === "NOT_UPDATED") {
+    return (
+      <span className="qr-status-badge qr-status-locked" title="Locked due to expired deadline (+48h grace period)">
+        <Lock className="w-3 h-3 text-rose-500 mr-0.5 inline" />
+        Locked
+      </span>
+    );
+  }
   const normalized = raw.toLowerCase().replace(/_/g, " ");
   let badgeClass = "qr-status-not-started";
 

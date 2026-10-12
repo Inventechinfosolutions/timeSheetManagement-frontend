@@ -263,6 +263,24 @@ export const AppraisalApi = {
     return response.data;
   },
 
+  reassignReview: async (payload: {
+    reviewId: number | string;
+    deadlineDate: string;
+    reassignedDate?: string;
+    reason?: string;
+  }): Promise<EmployeeReviewDetail> => {
+    const response = await axios.post<EmployeeReviewDetail>(
+      `${QUARTERLY_REVIEW_URL}/${payload.reviewId}/reassign`,
+      {
+        deadlineDate: payload.deadlineDate,
+        reassignedDate: payload.reassignedDate,
+        reason: payload.reason,
+      },
+    );
+    return response.data;
+  },
+
+
   getMasterFinancialYears: async (): Promise<MasterFinancialYearOption[]> => {
     const response = await axios.get<MasterFinancialYearOption[]>(MASTER_FINANCIAL_YEAR_PATH, {
       skipGlobalLoader: true,

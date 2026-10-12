@@ -86,10 +86,19 @@ export const formatStoredFileSize = (bytes: number): string => {
 // PERMISSION CHECKERS
 // ==========================================
 export const reviewCanEdit = (review: EmployeeReviewDetail): boolean => {
+  if (
+    review.status?.toUpperCase() === "NOT_UPDATED" ||
+    review.performanceDetails?.status?.toUpperCase() === "NOT_UPDATED"
+  ) {
+    return false;
+  }
   return Boolean(review.canEdit ?? review.performanceDetails?.canEdit ?? false);
 };
 
 export const performanceCanEdit = (row: EmployeePerformanceDetail): boolean => {
+  if (row.status?.toUpperCase() === "NOT_UPDATED") {
+    return false;
+  }
   return Boolean(row.canEdit ?? false);
 };
 

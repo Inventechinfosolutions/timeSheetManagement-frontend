@@ -371,6 +371,18 @@
   background: #10B981;
 }
 
+/* 5. Locked / Not Updated */
+.qr-status-locked {
+  background: #FFF1F2;
+  color: #BE123C;
+  border: 1px solid #FECDD3;
+}
+
+.qr-status-locked .qr-status-dot {
+  background: #F43F5E;
+}
+
+
 @keyframes qrDotPulse {
 
   0%,
@@ -458,6 +470,22 @@
   transform: translateY(-2px) scale(1.05);
   box-shadow: 0 4px 14px rgba(220, 38, 38, 0.28);
 }
+
+.qr-action-btn-reassign {
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.08);
+}
+
+.qr-action-btn-reassign:hover {
+  background: #059669;
+  color: #FFFFFF;
+  border-color: #059669;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.28);
+}
+
 
 /* Sticky Action Column Body Cell */
 .qr-sticky-action-td {

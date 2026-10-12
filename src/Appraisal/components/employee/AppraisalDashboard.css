@@ -414,3 +414,14 @@
   z-index: 10;
   margin: 0 auto;
 }
+
+/* Locked status badge */
+.qr-status-locked {
+  background: #FFF1F2 !important;
+  color: #BE123C !important;
+  border: 1px solid #FECDD3 !important;
+}
+
+.qr-status-locked .qr-status-dot {
+  background: #F43F5E !important;
+}
