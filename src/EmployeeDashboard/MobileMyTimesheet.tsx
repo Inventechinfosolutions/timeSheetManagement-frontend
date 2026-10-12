@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronLeft, ChevronRight, Save, Lock, Rocket } from "lucide-react";
+import { ChevronLeft, ChevronRight, Save, Lock, Rocket, Unlock } from "lucide-react";
 
 import { TimesheetEntry } from "../types";
 import { TimesheetBlocker } from "../reducers/timesheetBlocker.reducer";
@@ -12,6 +12,7 @@ interface MobileMyTimesheetProps {
   onHoursInput: (index: number, value: string) => void;
   onSave: () => void;
   onAutoUpdate?: () => void;
+  onEditAccess?: () => void;
   monthTotalHours: number;
   currentMonthName: string;
   loading: boolean;
@@ -40,6 +41,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
   onHoursInput,
   onSave,
   onAutoUpdate,
+  onEditAccess,
   monthTotalHours,
   currentMonthName,
   loading,
@@ -96,6 +98,15 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
         </div>
       {(!readOnly || isAdmin || (isManager && !isManagerView)) && (
           <div className="flex gap-2">
+             {onEditAccess && (
+              <button
+                onClick={onEditAccess}
+                className="flex items-center justify-center p-3 bg-[#F3E8FF] text-[#7C3AED] border border-[#7C3AED]/20 rounded-2xl shadow-sm active:scale-95 transition-all"
+                title="Raise an Access Request for Locked days"
+              >
+                <Unlock size={18} strokeWidth={2.5} />
+              </button>
+            )}
              {onAutoUpdate && (
               <button
                 onClick={onAutoUpdate}
@@ -159,7 +170,8 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
               let isDeptBlocked = false;
               // if (dayOfWeek === 0) isDeptBlocked = true; // REMOVED: Allow Sunday editing
 
-              const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (isStatusLeave || isDeptBlocked));
+              const isStatusLocked = entry.status === AttendanceStatus.LOCKED;
+              const isBlocked = !!manualBlocker || isDateBlocked(entry.fullDate) || (!isAdmin && !isManager && (isStatusLeave || isStatusLocked || isDeptBlocked));
               
               const isEditable =
                 (isAdmin || !readOnly) &&
@@ -188,14 +200,16 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                   "bg-orange-100 border border-orange-600 text-black font-bold";
               } else if (entry.status === AttendanceStatus.LEAVE) {
                 bg = "bg-red-200 border border-red-600 text-black font-bold";
+              } else if (entry.status === AttendanceStatus.LOCKED) {
+                bg = "bg-purple-100 border border-purple-500 text-black font-bold";
               } else if (isHolidayDate || entry.status === AttendanceStatus.HOLIDAY) {
                 bg = "bg-blue-100 border border-blue-500 text-black font-bold";
               } else if (entry.isWeekend) {
                 bg = "bg-pink-100 border border-pink-400 text-black font-bold";
-              } else if (
-                entry.status === AttendanceStatus.NOT_UPDATED ||
-                entry.status === AttendanceStatus.PENDING
-              ) {
+              } else if (entry.status === AttendanceStatus.NOT_UPDATED) {
+                bg =
+                  "bg-[#FEF3C7] border border-[#FFB020] text-[#92400E] font-bold";
+              } else if (entry.status === AttendanceStatus.PENDING) {
                 bg = "bg-white border border-gray-300 text-gray-600 font-bold";
               }
 
@@ -276,7 +290,9 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                          <span className="text-[7px] font-black text-white leading-none uppercase tracking-tighter">
                            {manualBlocker 
                              ? (isAdmin || isManager ? "Unblock" : `Contact ${manualBlocker.blockedBy || "Admin"}`)
-                             : "On Leave"}
+                             : entry.status === AttendanceStatus.LOCKED
+                               ? "Locked"
+                               : "On Leave"}
                          </span>
                       </div>
                     )}
@@ -303,7 +319,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
           { label: "Client Visit", className: "bg-blue-100 border-blue-600" },
           { label: AttendanceStatus.HALF_DAY, className: "bg-orange-100 border-orange-600" },
           { label: AttendanceStatus.LEAVE, className: "bg-red-200 border-red-600" },
-          { label: AttendanceStatus.NOT_UPDATED, className: "bg-white border-gray-300" },
+          { label: AttendanceStatus.NOT_UPDATED, className: "bg-[#FEF3C7] border-[#FFB020]" },
           { label: AttendanceStatus.HOLIDAY, className: "bg-blue-100 border-blue-500" },
           { label: "Today", className: "bg-white border-2 border-[#4318FF]" },
           { label: "Blocked", className: "bg-gray-200 border-gray-400" },

@@ -106,9 +106,16 @@ export const mapStatus = (
         // @ts-ignore
         if (statusStr === 'Blocked') return AttendanceStatus.BLOCKED;
         if (statusStr === AttendanceStatus.ABSENT) return AttendanceStatus.ABSENT;
+        if (statusStr === AttendanceStatus.LOCKED) return AttendanceStatus.LOCKED;
         if (statusStr === AttendanceStatus.FULL_DAY) return AttendanceStatus.FULL_DAY;
         if (statusStr === AttendanceStatus.HALF_DAY) return AttendanceStatus.HALF_DAY;
-        if (statusStr === AttendanceStatus.NOT_UPDATED) return AttendanceStatus.NOT_UPDATED;
+        if (
+            statusStr === AttendanceStatus.NOT_UPDATED ||
+            statusStr === 'Not Updated' ||
+            statusStr === 'Unlogged'
+        ) {
+            return AttendanceStatus.NOT_UPDATED;
+        }
         if (statusStr === AttendanceStatus.HOLIDAY) return AttendanceStatus.HOLIDAY;
         if (statusStr === AttendanceStatus.WEEKEND) return AttendanceStatus.WEEKEND;
         if (statusStr === AttendanceStatus.WFH) return AttendanceStatus.WFH;
@@ -119,6 +126,9 @@ export const mapStatus = (
         if (statusStr === AttendanceStatus.PENDING) {
             if (!isToday) return AttendanceStatus.PENDING;
         }
+
+        // Any other stored DB status — show it as-is
+        return statusStr as AttendanceStatus;
     }
 
     // 2. Future or Weekend (with no data) defaults to No Status (undefined)
@@ -193,7 +203,10 @@ export const getBadgeLocation = (
         return val === AttendanceStatus.WEEKEND.toLowerCase() || 
                val === AttendanceStatus.HOLIDAY.toLowerCase() || 
                val === AttendanceStatus.ABSENT.toLowerCase() || 
-               val === AttendanceStatus.NOT_UPDATED.toLowerCase() || 
+               val === AttendanceStatus.LOCKED.toLowerCase() ||
+               val === AttendanceStatus.NOT_UPDATED.toLowerCase() ||
+               val === 'not updated' ||
+               val === 'unlogged' ||
                val === 'blocked' || 
                val === AttendanceStatus.UPCOMING.toLowerCase() ||
                val === 'upcoming';

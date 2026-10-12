@@ -52,6 +52,9 @@ const AdminLayout = () => {
     if (path.includes("/admin-dashboard/inbox")) {
       return "Inbox";
     }
+    if (path.includes("/admin-dashboard/edit-access")) {
+      return "Edit Access";
+    }
     if (
       path.includes("/admin-dashboard/manager-mapping") ||
       path.includes("/admin-dashboard/manager-employees/")
@@ -85,6 +88,8 @@ const AdminLayout = () => {
         return "Notes";
       case "inbox":
         return "Inbox";
+      case "edit-access":
+        return "Edit Access";
       default:
         return isCeo ? "CEO Dashboard" : "Admin Dashboard";
     }
@@ -119,6 +124,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/notes");
     } else if (tabName === "Inbox") {
       navigate("/admin-dashboard/inbox");
+    } else if (tabName === "Edit Access") {
+      navigate("/admin-dashboard/edit-access");
     }
   };
 

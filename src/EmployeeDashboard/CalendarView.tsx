@@ -65,6 +65,7 @@ function isRestrictedActivityHalf(val: string | null | undefined): boolean {
   if (v.includes("holiday")) return false;
   if (v.includes("weekend")) return false;
   if (v.includes("absent")) return false;
+  if (v.includes("locked")) return false;
   if (isRemoteWorkHalf(v)) return false;
   return true;
 }
@@ -124,6 +125,9 @@ const Calendar = ({
   );
   const { blockers } = useAppSelector(
     (state: RootState) => state.timesheetBlocker,
+  );
+  const { approvedDates } = useAppSelector(
+    (state: RootState) => state.attendenceEditRequest,
   );
 
   const isAdmin = isAdminAccess(currentUser);
@@ -298,6 +302,24 @@ const Calendar = ({
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
 
+    const dateStr = dayjs(d).format("YYYY-MM-DD");
+    const recordForDay = records.find((r) => {
+      const rDate = new Date(r.workingDate);
+      return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
+    });
+    const isOwnCalendar =
+      location.pathname.includes("my-timesheet") ||
+      location.pathname.includes("timesheet-view") ||
+      location.pathname.includes("employee-dashboard");
+    if (
+      isOwnCalendar &&
+      !isAdmin &&
+      recordForDay?.status === AttendanceStatus.LOCKED &&
+      !approvedDates.includes(dateStr)
+    ) {
+      return true;
+    }
+
     // 1. Month Lock (Skip for Admin/Manager)
     if (!isAdmin && !isManager && !isEditableMonth(d)) return true;
 
@@ -353,6 +375,19 @@ const Calendar = ({
     // 1. Month Lock
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
+    const dateStr = dayjs(d).format("YYYY-MM-DD");
+    const recordForDay = records.find((r) => {
+      const rDate = new Date(r.workingDate);
+      return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
+    });
+    if (
+      recordForDay?.status === AttendanceStatus.LOCKED &&
+      !approvedDates.includes(dateStr) &&
+      !isAdmin
+    ) {
+      return "Date is Locked. Raise an Access Request to update it.";
+    }
+
     if (!isAdmin && !isManager && !isEditableMonth(d)) return "Month is Locked";
 
     // 2. Manual Blocker
@@ -597,9 +632,9 @@ const Calendar = ({
               },
               {
                 label: AttendanceStatus.NOT_UPDATED,
-                color: "bg-white",
-                border: "border-gray-200",
-                text: "text-gray-500",
+                color: "bg-[#FEF3C7]",
+                border: "border-[#FFB020]",
+                text: "text-[#FFB020]",
               },
               {
                 label: "Blocked",
@@ -694,12 +729,14 @@ const Calendar = ({
                   !entry.status);
 
               // Determine if the day is incomplete (has data but marked as Not Updated)
+              const isLockedDay = entry?.status === AttendanceStatus.LOCKED;
               const isIncomplete =
                 entry &&
                 !entry.isFuture &&
                 !entry.isToday &&
                 !entry.isWeekend &&
                 !holiday &&
+                !isLockedDay &&
                 !entry.totalHours &&
                 entry.status !== AttendanceStatus.LEAVE &&
                 entry.status !== AttendanceStatus.ABSENT &&
@@ -749,6 +786,13 @@ const Calendar = ({
                     badge: "bg-[#1890FF]/70 text-white font-bold",
                     border: "border-[#1890FF]/20",
                     text: "text-[#1890FF]",
+                  };
+                if (s === "locked")
+                  return {
+                    bg: "bg-[#F3E8FF]",
+                    badge: "bg-[#7C3AED]/80 text-white font-bold",
+                    border: "border-[#7C3AED]/20",
+                    text: "text-[#7C3AED]",
                   };
 
                 // Priority: Specific types first
@@ -844,6 +888,12 @@ const Calendar = ({
                 cellClass = `bg-red-50 border-transparent hover:bg-red-100 ${baseHover}`;
                 // textClass = "text-red-700 font-bold";
                 statusLabel = "ABSENT";
+              } else if (isLockedDay) {
+                cellClass = `bg-[#F3E8FF] border-[#7C3AED]/20 hover:bg-purple-100 ${baseHover}`;
+                statusLabel = AttendanceStatus.LOCKED;
+              } else if (entry?.status === AttendanceStatus.NOT_UPDATED) {
+                cellClass = `bg-[#FEF3C7] border-[#FFB020]/20 hover:bg-amber-100 ${baseHover}`;
+                statusLabel = AttendanceStatus.NOT_UPDATED;
               } else if (
                 holiday
               ) {
@@ -1059,7 +1109,7 @@ const Calendar = ({
                       </div>
                     )}
 
-                    {(entry?.totalHours || entry?.totalHours === 0) ? (
+                    {!isLockedDay && (entry?.totalHours || entry?.totalHours === 0) ? (
                       <div className="text-center">
                         <span
                           className={`text-2xl font-medium text-gray-800 leading-none`}
@@ -1087,6 +1137,10 @@ const Calendar = ({
                     className={`text-[10px] font-bold uppercase truncate w-full text-center px-1 py-1 rounded-md mt-1 backdrop-blur-sm z-10                         ${
                       (entry?.status as any) === AttendanceStatus.ABSENT
                         ? "text-white bg-[#EE5D50]/70"
+                        : isLockedDay
+                          ? "text-white bg-[#7C3AED]/80"
+                        : entry?.status === AttendanceStatus.NOT_UPDATED
+                          ? "text-white bg-[#FFB020]/90"
                         : holiday
                           ? "text-white bg-[#1890FF]/70"
                         : isSunday
@@ -1117,6 +1171,10 @@ const Calendar = ({
                   >
                     {(entry?.status as any) === AttendanceStatus.ABSENT
                       ? "ABSENT"
+                      : isLockedDay
+                        ? "LOCKED"
+                      : entry?.status === AttendanceStatus.NOT_UPDATED
+                        ? "NOT UPDATED"
                       : holiday
                         ? holiday.name || 'HOLIDAY'
                       : (isSunday || (isSaturdayWithNoData && !entry?.workLocation))

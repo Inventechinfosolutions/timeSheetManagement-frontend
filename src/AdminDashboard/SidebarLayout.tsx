@@ -83,6 +83,7 @@ const SidebarLayout = ({
           { name: "Employee Timesheet", icon: AlarmClock },
           { name: "Request Management", icon: Calendar },
           { name: "Appraisal", icon: ClipboardCheck },
+          { name: "Access Ticket", icon: Unlock },
           { name: "Notification", icon: Bell },
         ],
       },
@@ -97,6 +98,7 @@ const SidebarLayout = ({
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Request Management", icon: Calendar },
       { name: "Appraisal", icon: ClipboardCheck },
+      { name: "Edit Access", icon: Unlock },
       { name: "Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
       { name: "Manager Mapping", icon: Users },
@@ -109,6 +111,7 @@ const SidebarLayout = ({
   const visibleAdminSidebarItems = useMemo(() => {
     const items =
       title === "Receptionist"
+
         ? adminSidebarItems.filter((i) => i.name !== "Request Management")
         : adminSidebarItems;
     if (title !== "CEO") return items;
@@ -118,6 +121,8 @@ const SidebarLayout = ({
         item.name === "Admin Dashboard" ? { ...item, name: "CEO Dashboard" } : item,
       );
   }, [title, adminSidebarItems]);
+
+
 
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
@@ -138,12 +143,16 @@ const SidebarLayout = ({
         return "Leave Balance";
       case "work-management":
         return "Request Management";
+
       case "appraisal":
       case "quarterly-review":
         return "Appraisal";
       case "my-appraisal":
       case "my-quarterly-review":
         return "My Appraisal";
+      case "edit-access":
+        return title === "Manager" ? "Access Ticket" : "Edit Access";
+
       case "notes":
         return "Notes";
       case "inbox":

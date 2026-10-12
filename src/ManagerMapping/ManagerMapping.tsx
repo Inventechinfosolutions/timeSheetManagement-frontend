@@ -29,6 +29,7 @@ import {
   getManagerMappingHistory,
   getMappedEmployeeIds,
 } from "../reducers/managerMapping.reducer";
+import { message } from "antd";
 import { SearchBox } from "../components/ui";
 
 interface Employee {
@@ -313,7 +314,7 @@ const ManagerMapping: React.FC = () => {
         </p>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
           {/* Department Dropdown */}
           <div>
             <label className="block text-sm font-bold text-[#2B3674] mb-2">
@@ -849,7 +850,7 @@ const ManagerMapping: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {groupedMappings.length === 0 ? (
+                    {groupedMappings.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="text-center py-8 text-[#A3AED0]">
                       <Filter size={48} className="mx-auto mb-2 opacity-30" />

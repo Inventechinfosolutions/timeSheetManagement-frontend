@@ -80,6 +80,9 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/inbox")) {
       return "Inbox";
     }
+    if (path.includes("/manager-dashboard/edit-access")) {
+      return "Access Ticket";
+    }
 
     switch (tab) {
       case "employees":
@@ -118,6 +121,8 @@ const ManagerLayout = () => {
         return "Notes";
       case "inbox":
         return "Inbox";
+      case "edit-access":
+        return "Access Ticket";
       default:
         return "Employee Dashboard";
     }
@@ -175,6 +180,8 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/notes");
     } else if (tabName === "Inbox") {
       navigate("/manager-dashboard/inbox");
+    } else if (tabName === "Access Ticket" || tabName === "Edit Access") {
+      navigate("/manager-dashboard/edit-access");
     }
   };
 
