@@ -17,6 +17,7 @@ import {
   LogOut,
   FileText,
   Inbox,
+  ClipboardCheck,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -67,6 +68,7 @@ const SidebarLayout = ({
           { name: "My Dashboard", icon: LayoutGrid },
           { name: "My Timesheet", icon: Calendar },
           { name: "My Timesheet History", icon: Eye },
+          { name: "My Appraisal", icon: ClipboardCheck },
           { name: "Notes", icon: FileText },
           { name: "Inbox", icon: Inbox },
           { name: "Request Management ", icon: Calendar },
@@ -80,6 +82,7 @@ const SidebarLayout = ({
           { name: "Employee Directory", icon: Users },
           { name: "Employee Timesheet", icon: AlarmClock },
           { name: "Request Management", icon: Calendar },
+          { name: "Appraisal", icon: ClipboardCheck },
           { name: "Notification", icon: Bell },
         ],
       },
@@ -93,8 +96,9 @@ const SidebarLayout = ({
       { name: "Employee Directory", icon: Users },
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Request Management", icon: Calendar },
+      { name: "Appraisal", icon: ClipboardCheck },
       { name: "Notes", icon: FileText },
-          { name: "Inbox", icon: Inbox },
+      { name: "Inbox", icon: Inbox },
       { name: "Manager Mapping", icon: Users },
       { name: "Notification", icon: Bell },
     ],
@@ -129,6 +133,12 @@ const SidebarLayout = ({
         return "Leave Balance";
       case "work-management":
         return "Request Management";
+      case "appraisal":
+      case "quarterly-review":
+        return "Appraisal";
+      case "my-appraisal":
+      case "my-quarterly-review":
+        return "My Appraisal";
       case "notes":
         return "Notes";
       case "inbox":

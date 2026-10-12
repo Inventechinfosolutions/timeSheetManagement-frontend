@@ -7,4 +7,5 @@ export enum InboxTab {
   ALL = 'ALL',
   UNREAD = 'UNREAD',
   READ = 'READ',
+  STARRED = 'STARRED',
 }

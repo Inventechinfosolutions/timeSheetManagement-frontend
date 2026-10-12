@@ -5,6 +5,11 @@ import axios from "axios";
 import dayjs from "dayjs";
 import { Note, ColorOption } from "../types/notes.types";
 import { paginateToA4Sheets } from "./documentLayout";
+import {
+  htmlHasVisibleNoteContent,
+  parseExcelWorkbookFromHtml,
+  stripExcelWorkbookStore,
+} from "./excelExtract";
 
 export const TEXT_COLORS: ColorOption[] = [
   { label: "None / Default", color: "none" },
@@ -30,22 +35,37 @@ export const HIGHLIGHT_COLORS: ColorOption[] = [
   { label: "Soft Orange", color: "#FED7AA" },
 ];
 
+/** Strip HTML/CSS/base64 noise so search does not match "#fff", style junk, etc. */
+export const plainTextForSearch = (html?: string): string => {
+  if (!html) return "";
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/data:[^"'\s>]*/gi, " ")
+    .replace(/#[0-9a-fA-F]{3,8}\b/g, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&[a-zA-Z]+;/g, " ")
+    .replace(/&#\d+;/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+};
+
 export const noteMatchesSearch = (
   note: Pick<Note, "id" | "title" | "projectName" | "createdBy" | "description">,
   query: string,
 ): boolean => {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  const text = [
-    note.id,
-    note.title,
-    note.projectName,
-    note.createdBy,
-    (note.description || "").replace(/<[^>]*>/g, " "),
-  ]
+  // Short queries: title / id / names only — avoid false hits inside HTML descriptions
+  const meta = [note.id, note.title, note.projectName, note.createdBy]
     .filter((value) => value !== undefined && value !== null && String(value).trim() !== "")
     .join(" ")
     .toLowerCase();
+  if (q.length < 3) {
+    return meta.includes(q);
+  }
+  const text = `${meta} ${plainTextForSearch(note.description)}`.trim();
   return text.includes(q);
 };
 
@@ -215,7 +235,7 @@ export const justifyImportedContent = (
 
     if (!NO_JUSTIFY_ALIGN_TAGS.has(el.tagName)) {
       el.style.textAlign = "justify";
-      el.style.textJustify = "inter-word";
+      (el.style as any).textJustify = "inter-word";
       el.style.hyphens = "auto";
     } else if (el.tagName.startsWith("H")) {
       el.style.textAlign = "left";
@@ -225,7 +245,7 @@ export const justifyImportedContent = (
 
   root.classList.add("is-justified");
   root.style.textAlign = "justify";
-  root.style.textJustify = "inter-word";
+  (root.style as any).textJustify = "inter-word";
   root.style.whiteSpace = "normal";
   root.style.letterSpacing = "normal";
   root.style.wordSpacing = "normal";
@@ -358,6 +378,356 @@ const prepareAttachmentBadgesForPdfExport = (root: HTMLElement): void => {
   });
 };
 
+/** Same palette as backend note email template — used so download matches emailed description. */
+const TABLE_COLORS_MAP: Record<string, string> = {
+  "--tbl-black": "#000000",
+  "--tbl-dark-slate": "#1e293b",
+  "--tbl-slate-gray": "#475569",
+  "--tbl-deep-blue": "#1d4ed8",
+  "--tbl-electric-blue": "#2563eb",
+  "--tbl-teal": "#0284c7",
+  "--tbl-dark-green": "#15803d",
+  "--tbl-bold-green": "#16a34a",
+  "--tbl-bold-amber": "#d97706",
+  "--tbl-bold-orange": "#ea580c",
+  "--tbl-crimson-red": "#dc2626",
+  "--tbl-deep-red": "#b91c1c",
+  "--tbl-bold-pink": "#e11d48",
+  "--tbl-vibrant-purple": "#9333ea",
+  "--tbl-deep-purple": "#6b21a8",
+  "--tbl-white": "#FFFFFF",
+  "--tbl-gray": "#F1F5F9",
+  "--tbl-blue": "#DBEAFE",
+  "--tbl-cyan": "#A5F3FC",
+  "--tbl-green": "#DCFCE7",
+  "--tbl-lime": "#D9F99D",
+  "--tbl-yellow": "#FEF9C3",
+  "--tbl-orange": "#FED7AA",
+  "--tbl-light-red": "#FEE2E2",
+  "--tbl-purple": "#F3E8FF",
+};
+
+/**
+ * Inline table theme colors exactly like the share-email template
+ * (`inlineTableEmailColors`) so PDF/Word match what recipients see in description.
+ */
+export const inlineTableExportColors = (html: string): string => {
+  if (!html) return "";
+  let result = html;
+
+  result = result.replace(/var\((--tbl-[a-z0-9-]+)\)/gi, (match, varName) => {
+    return TABLE_COLORS_MAP[String(varName).toLowerCase()] || match;
+  });
+
+  for (const [varName, hex] of Object.entries(TABLE_COLORS_MAP)) {
+    const cls = "bg-" + varName.replace("--", "");
+    const classPattern = new RegExp(
+      `(<(td|th|tr)[^>]*?class="[^"]*?\\b${cls}\\b[^"]*"[^>]*?)>`,
+      "gi"
+    );
+    result = result.replace(classPattern, (_match, openTag: string) => {
+      let updatedTag = openTag;
+      if (!updatedTag.includes("bgcolor=")) {
+        updatedTag += ` bgcolor="${hex}"`;
+      }
+      if (updatedTag.includes('style="')) {
+        return (
+          updatedTag.replace('style="', `style="background-color: ${hex} !important; `) +
+          ">"
+        );
+      }
+      return `${updatedTag} style="background-color: ${hex} !important;">`;
+    });
+  }
+
+  result = result.replace(
+    /<(td|th|tr)([^>]*?style="[^"]*?background-color:\s*(#[0-9a-fA-F]{3,8})[^"]*"[^>]*?)>/gi,
+    (match, tag, rest) => {
+      if (match.includes("bgcolor=")) return match;
+      const hexMatch = match.match(/background-color:\s*(#[0-9a-fA-F]{3,8})/i);
+      if (hexMatch?.[1]) {
+        return `<${tag}${rest} bgcolor="${hexMatch[1]}">`;
+      }
+      return match;
+    }
+  );
+
+  return result;
+};
+
+/** Clean note HTML for PDF/Word — same description pipeline as email (no logo/header). */
+const prepareNoteDescriptionForExport = (note: Note): string => {
+  const raw = note.description || "";
+  const workbook = parseExcelWorkbookFromHtml(raw);
+  let html = stripExcelWorkbookStore(raw);
+
+  // Safety: strip any leftover URL-encoded workbook JSON blobs
+  html = html.replace(/%7B%22fileName%22%3A[\s\S]*?%7D/gi, "").trim();
+
+  const parsed = new DOMParser().parseFromString(html || "", "text/html");
+  parsed
+    .querySelectorAll(
+      ".excel-workbook-store, .note-inline-image-remove, .row-attach-upload-btn, .row-attach-add-btn, .row-attach-loading, .table-file-btn.remove, .note-table-scroll, .a4-page-workspace, .a4-page-rotator"
+    )
+    .forEach((el) => {
+      // Unwrap scroll shells so table content stays; remove edit-only controls
+      if (
+        el.classList.contains("note-table-scroll") ||
+        el.classList.contains("a4-page-workspace") ||
+        el.classList.contains("a4-page-rotator")
+      ) {
+        const parent = el.parentNode;
+        if (!parent) return;
+        while (el.firstChild) parent.insertBefore(el.firstChild, el);
+        el.remove();
+        return;
+      }
+      el.remove();
+    });
+  parsed.querySelectorAll(".note-inline-image, .note-table-scroll-inner").forEach((wrap) => {
+    const parent = wrap.parentNode;
+    if (!parent) return;
+    while (wrap.firstChild) parent.insertBefore(wrap.firstChild, wrap);
+    parent.removeChild(wrap);
+  });
+
+  const pages = Array.from(parsed.body.querySelectorAll(".page"));
+  if (pages.length > 0) {
+    html = pages.map((p) => p.innerHTML).join("");
+  } else {
+    html = parsed.body.innerHTML.trim();
+  }
+
+  // Match email: strip attach UI regex leftovers + inline tbl-* colors
+  html = stripAttachmentUiFromHtml(html);
+  html = inlineTableExportColors(html);
+
+  if (htmlHasVisibleNoteContent(html)) {
+    return html;
+  }
+
+  if (workbook?.fileName || workbook?.fileKey) {
+    const name = workbook.fileName || "Spreadsheet.xlsx";
+    return `<p style="margin:0;color:#334155;"><strong>Attached spreadsheet:</strong> ${name}</p>`;
+  }
+
+  return '<p style="color:#94a3b8;font-style:italic;margin:0;font-family:Arial,sans-serif;font-size:14.5px;">No content provided.</p>';
+};
+
+/**
+ * Dynamically prepares all content inside the PDF export container:
+ * - Header card: aligned grid with unified baseline for project badge and title.
+ * - Table alignments: SL column centered with #f1f5f9, data cells cleanly left-aligned
+ *   while dynamically preserving any custom user alignments (center, right, justify).
+ * - Strikethrough (s, strike, del, line-through): tight glyph line-height so the strike line
+ *   renders dead-center through text without floating above in html2canvas.
+ * - Lists (ul, ol, li): inline paragraph unwrapping so bullets and numbers stay on the same baseline.
+ * - Highlights and cell shading: zero paragraph margins inside cells for pixel-perfect vertical centering.
+ * - Inline quotes (.notes-inline-quote, blockquote): purple left-accent bar and soft lavender background.
+ */
+const preparePdfExportDom = (root: HTMLElement): void => {
+  // 1. Process attachment badges
+  prepareAttachmentBadgesForPdfExport(root);
+
+  // 2. Process all tables dynamically
+  const tables = root.querySelectorAll<HTMLTableElement>("table");
+  tables.forEach((table) => {
+    const firstRow = table.rows[0];
+    const firstCellText = firstRow?.cells[0]?.textContent?.trim() || "";
+    const isFirstColSl =
+      firstCellText === "SL" ||
+      firstRow?.cells[0]?.classList.contains("excel-sl-col") ||
+      table.querySelector(".excel-sl-col") !== null;
+
+    Array.from(table.rows).forEach((row) => {
+      Array.from(row.cells).forEach((cell, colIdx) => {
+        const isSl =
+          cell.classList.contains("excel-sl-col") ||
+          (isFirstColSl && colIdx === 0);
+
+        if (isSl) {
+          cell.classList.add("excel-sl-col");
+          cell.style.setProperty("text-align", "center", "important");
+          cell.style.setProperty("vertical-align", "top", "important");
+          cell.style.setProperty("background-color", "#f1f5f9", "important");
+          cell.style.setProperty("color", "#475569", "important");
+          cell.style.setProperty("font-weight", "600", "important");
+          cell.style.setProperty("font-size", "13px", "important");
+          cell.style.setProperty("width", "44px", "important");
+          cell.style.setProperty("min-width", "44px", "important");
+          cell.style.setProperty("max-width", "44px", "important");
+          cell.style.setProperty("padding", "8px 4px", "important");
+          return;
+        }
+
+        if (
+          cell.classList.contains("excel-attachment-col") ||
+          cell.classList.contains("excel-attachment-cell")
+        ) {
+          return;
+        }
+
+        // Dynamically resolve cell alignment: preserve custom alignment or default to left
+        const cellInlineAlign = cell.style.textAlign;
+        const cellAttrAlign = cell.getAttribute("align");
+        const styledChild = cell.querySelector<HTMLElement>(
+          "[style*='text-align'], [align], .text-center, .text-right, .text-left, .text-justify"
+        );
+        let dynamicAlign = cellInlineAlign || cellAttrAlign || "";
+
+        if (!dynamicAlign && styledChild) {
+          dynamicAlign =
+            styledChild.style.textAlign ||
+            styledChild.getAttribute("align") ||
+            (styledChild.classList.contains("text-center") ? "center" : "") ||
+            (styledChild.classList.contains("text-right") ? "right" : "") ||
+            (styledChild.classList.contains("text-justify") ? "justify" : "") ||
+            (styledChild.classList.contains("text-left") ? "left" : "");
+        }
+
+        if (dynamicAlign && dynamicAlign !== "inherit") {
+          cell.style.setProperty("text-align", dynamicAlign, "important");
+        } else {
+          cell.style.setProperty("text-align", "left", "important");
+        }
+
+        // Align cell to top with 8px padding: avoids html2canvas baseline-shift bug that drops text below background boxes
+        cell.style.setProperty("vertical-align", "top", "important");
+        cell.style.setProperty("padding", "8px 12px", "important");
+
+        // Cell background fill preservation & child content normalization
+        const cellBg = cell.style.backgroundColor;
+        if (cellBg && cellBg !== "transparent" && cellBg !== "inherit") {
+          cell.style.setProperty("background-color", cellBg, "important");
+        }
+
+        cell.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6, p, div").forEach((el) => {
+          el.style.setProperty("background-color", "transparent", "important");
+          el.style.setProperty("margin", "0", "important");
+          el.style.setProperty("padding", "0", "important");
+          el.style.setProperty("line-height", "1.35", "important");
+        });
+      });
+    });
+  });
+
+  // 3. Strikethrough fix: Use Unicode combining stroke overlay (\u0336) on text characters
+  // so the strike line is drawn by the font rasterizer dead-center through each character,
+  // completely avoiding html2canvas's buggy misplaced text-decoration lines and absolute spans.
+  root
+    .querySelectorAll<HTMLElement>(
+      "s, strike, del, [style*='line-through']"
+    )
+    .forEach((el) => {
+      el.style.setProperty("display", "inline", "important");
+      el.style.setProperty("vertical-align", "baseline", "important");
+      el.style.setProperty("line-height", "inherit", "important");
+      el.style.setProperty("text-decoration", "none", "important");
+      el.querySelectorAll(".pdf-export-strike-line, .pdf-strike-line").forEach((l) => l.remove());
+
+      const strikeWalk = (node: Node) => {
+        if (node.nodeType === Node.TEXT_NODE && node.nodeValue) {
+          if (!node.nodeValue.includes("\u0336")) {
+            node.nodeValue = node.nodeValue
+              .split("")
+              .map((c) => (c === " " || c === "\u00A0" ? c : c + "\u0336"))
+              .join("");
+          }
+        } else {
+          node.childNodes.forEach(strikeWalk);
+        }
+      };
+      strikeWalk(el);
+    });
+
+  // 4. Inline quotes & blockquotes
+  root
+    .querySelectorAll<HTMLElement>(".notes-inline-quote, blockquote")
+    .forEach((quote) => {
+      quote.style.setProperty("display", "inline-block", "important");
+      quote.style.setProperty("border-left", "3px solid #4318FF", "important");
+      quote.style.setProperty("background-color", "#EEF2FF", "important");
+      quote.style.setProperty("padding", "2px 8px", "important");
+      quote.style.setProperty("margin", "0 2px", "important");
+      quote.style.setProperty("font-style", "italic", "important");
+      quote.style.setProperty("color", "#475569", "important");
+      quote.style.setProperty("border-radius", "0 4px 4px 0", "important");
+      quote.style.setProperty("vertical-align", "middle", "important");
+      quote.style.setProperty("line-height", "1.15", "important");
+      quote.querySelectorAll<HTMLElement>("p").forEach((p) => {
+        p.style.setProperty("display", "inline", "important");
+        p.style.setProperty("background", "transparent", "important");
+        p.style.setProperty("margin", "0", "important");
+        p.style.setProperty("padding", "0", "important");
+      });
+    });
+
+  // 5. Lists (ul, ol, li): remove native list markers which html2canvas detaches onto separate lines.
+  // Insert explicit inline marker spans so bullets and numbers stay on the EXACT same baseline as the text.
+  root.querySelectorAll<HTMLElement>("ul, ol").forEach((list) => {
+    const isOrdered = list.tagName.toLowerCase() === "ol";
+    list.style.setProperty("list-style", "none", "important");
+    list.style.setProperty("list-style-type", "none", "important");
+    list.style.setProperty("padding-left", "0", "important");
+    list.style.setProperty("margin", "0", "important");
+    list.style.setProperty("text-align", "left", "important");
+
+    const items = Array.from(list.children).filter(
+      (c) => c.tagName.toLowerCase() === "li"
+    ) as HTMLElement[];
+
+    items.forEach((li, idx) => {
+      li.style.setProperty("list-style", "none", "important");
+      li.style.setProperty("list-style-type", "none", "important");
+      li.style.setProperty("display", "block", "important");
+      li.style.setProperty("margin", "0", "important");
+      li.style.setProperty("padding", "0", "important");
+      li.style.setProperty("line-height", "1.4", "important");
+      li.style.setProperty("text-align", "left", "important");
+
+      li.querySelectorAll<HTMLElement>("p, div").forEach((lp) => {
+        lp.style.setProperty("display", "inline", "important");
+        lp.style.setProperty("margin", "0", "important");
+        lp.style.setProperty("padding", "0", "important");
+        lp.style.setProperty("line-height", "inherit", "important");
+      });
+
+      if (!li.querySelector(".pdf-export-list-marker")) {
+        const marker = document.createElement("span");
+        marker.className = "pdf-export-list-marker";
+        marker.style.setProperty("display", "inline", "important");
+        marker.style.setProperty("margin-right", "5px", "important");
+        marker.style.setProperty("font-weight", isOrdered ? "normal" : "bold", "important");
+        marker.style.setProperty("line-height", "inherit", "important");
+        marker.style.setProperty("vertical-align", "baseline", "important");
+        marker.textContent = isOrdered ? `${idx + 1}. ` : "• ";
+        li.insertBefore(marker, li.firstChild);
+      }
+    });
+  });
+
+  // 6. Highlights: clean inline-block text highlight for identification with text centered horizontally & vertically inside the color pill
+  root
+    .querySelectorAll<HTMLElement>(
+      "mark, span[style*='background-color'], font[style*='background-color']"
+    )
+    .forEach((mark) => {
+      if (
+        !mark.classList.contains("notes-inline-quote") &&
+        mark.tagName !== "TD" &&
+        mark.tagName !== "TH"
+      ) {
+        mark.style.setProperty("display", "inline-block", "important");
+        mark.style.setProperty("vertical-align", "middle", "important");
+        mark.style.setProperty("line-height", "1.15", "important");
+        mark.style.setProperty("padding", "2px 6px", "important");
+        mark.style.setProperty("border-radius", "4px", "important");
+        mark.style.setProperty("box-sizing", "border-box", "important");
+        mark.style.setProperty("text-align", "center", "important");
+      }
+    });
+};
+
 /**
  * Export Note to PDF with 100% exact visual fidelity (highlighter colors, text colors,
  * boxes, cards, tables, and HTML formatting) matching the Word export and on-screen view.
@@ -374,7 +744,8 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
       });
     }
 
-    const firstRowMatch = (note.description || "").match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
+    const exportDescription = prepareNoteDescriptionForExport(note);
+    const firstRowMatch = exportDescription.match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
     const colCount = firstRowMatch
       ? (firstRowMatch[1].match(/<t[dh][^>]*>/gi) || []).length
       : 0;
@@ -389,14 +760,15 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
 
     const wrapper = document.createElement("div");
     wrapper.setAttribute("data-pdf-export-root", "true");
-    wrapper.style.position = "absolute";
-    wrapper.style.left = "0px";
+    // Off-screen but still paintable — negative z-index often yields a blank canvas
+    wrapper.style.position = "fixed";
+    wrapper.style.left = "-10000px";
     wrapper.style.top = "0px";
-    wrapper.style.zIndex = "-99999";
+    wrapper.style.zIndex = "0";
     wrapper.style.opacity = "1";
     wrapper.style.pointerEvents = "none";
     wrapper.style.overflow = "visible";
-    wrapper.style.width = isLandscape ? "1122px" : "794px"; // 1122px for A4 Landscape, 794px for Portrait
+    wrapper.style.width = isLandscape ? "1122px" : "794px";
     wrapper.style.backgroundColor = "#FFFFFF";
     wrapper.style.boxSizing = "border-box";
 
@@ -405,24 +777,53 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
 
     wrapper.innerHTML = `
       <style>
-        .pdf-export-body mark, 
-        .pdf-export-body span[style*="background-color"] {
-          padding: 2px 5px !important;
-          border-radius: 3px !important;
-          box-decoration-break: clone;
-          -webkit-box-decoration-break: clone;
+        .pdf-export-body {
+          color: #1E293B !important;
+          line-height: 1.65 !important;
         }
+        .pdf-export-body mark, 
+        .pdf-export-body span[style*="background-color"],
+        .pdf-export-body font[style*="background-color"] {
+          display: inline-block !important;
+          vertical-align: middle !important;
+          line-height: 1.15 !important;
+          padding: 2px 6px !important;
+          border-radius: 4px !important;
+          box-sizing: border-box !important;
+          text-align: center !important;
+        }
+        .pdf-export-body .notes-inline-quote,
         .pdf-export-body blockquote {
           display: inline-block !important;
           width: fit-content !important;
           max-width: 100% !important;
+          box-sizing: border-box !important;
           border-left: 3px solid #4318FF !important;
-          background-color: rgba(67, 24, 255, 0.06) !important;
-          padding: 2px 10px !important;
-          margin: 4px 0 !important;
+          background-color: #EEF2FF !important;
+          padding: 2px 8px !important;
+          margin: 0 2px !important;
           font-style: italic !important;
           color: #475569 !important;
-          border-radius: 0 6px 6px 0 !important;
+          border-radius: 0 4px 4px 0 !important;
+          vertical-align: middle !important;
+          line-height: 1.15 !important;
+        }
+        .pdf-export-body .notes-inline-quote p,
+        .pdf-export-body blockquote p {
+          display: inline !important;
+          margin: 0 !important;
+          background: transparent !important;
+          border: none !important;
+          padding: 0 !important;
+        }
+        .pdf-export-body s,
+        .pdf-export-body strike,
+        .pdf-export-body del,
+        .pdf-export-body [style*="line-through"] {
+          display: inline !important;
+          vertical-align: baseline !important;
+          line-height: inherit !important;
+          text-decoration: none !important;
         }
         .pdf-export-body pre {
           font-family: Consolas, Monaco, "Courier New", monospace !important;
@@ -466,24 +867,54 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
           min-width: 0 !important;
           table-layout: fixed !important;
           border-collapse: collapse !important;
-          margin: 0 !important;
-          border: 1px solid #CBD5E1 !important;
+          margin: 8px 0 !important;
+          border: 1px solid #E2E8F0 !important;
         }
         .pdf-export-body table th,
         .pdf-export-body table td {
-          border: 1px solid #CBD5E1 !important;
-          padding: 6px 4px !important;
-          text-align: center !important;
-          vertical-align: middle !important;
-          font-size: 11px !important;
+          border: 1px solid #E2E8F0 !important;
+          padding: 8px 12px !important;
+          text-align: left;
+          vertical-align: top !important;
+          font-size: 13px !important;
+          line-height: 1.4 !important;
           word-break: break-word !important;
           overflow-wrap: anywhere !important;
           white-space: normal !important;
+          box-sizing: border-box !important;
         }
+        /* Do not force th background — preserve inlined email/table theme colors */
         .pdf-export-body table th {
-          background-color: #F8FAFC !important;
           font-weight: 700 !important;
-          color: #1E293B !important;
+          color: #1e293b !important;
+        }
+        .pdf-export-body table td h1,
+        .pdf-export-body table th h1,
+        .pdf-export-body table td h2,
+        .pdf-export-body table th h2,
+        .pdf-export-body table td h3,
+        .pdf-export-body table th h3,
+        .pdf-export-body table td p,
+        .pdf-export-body table th p {
+          margin: 0 !important;
+          padding: 0 !important;
+          line-height: 1.35 !important;
+          background: transparent !important;
+        }
+        .pdf-export-body table th.excel-sl-col,
+        .pdf-export-body table td.excel-sl-col {
+          width: 44px !important;
+          min-width: 44px !important;
+          max-width: 44px !important;
+          padding: 8px 4px !important;
+          text-align: center !important;
+          white-space: nowrap !important;
+          overflow: hidden !important;
+          vertical-align: top !important;
+          background-color: #f1f5f9 !important;
+          color: #475569 !important;
+          font-weight: 600 !important;
+          font-size: 13px !important;
         }
         .pdf-export-body th.excel-attachment-col,
         .pdf-export-body td.excel-attachment-cell {
@@ -558,59 +989,139 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
         .pdf-export-body .table-file-btn.remove {
           display: none !important;
         }
-        .pdf-export-body ul, .pdf-export-body ol {
-          padding-left: 20px !important;
-          margin: 6px 0 !important;
+        .pdf-export-body li {
+          margin-bottom: 5px !important;
+        .pdf-export-body ul,
+        .pdf-export-body ol {
+          list-style: none !important;
+          list-style-type: none !important;
+          padding-left: 0 !important;
+          margin: 4px 0 !important;
+          text-align: left !important;
         }
         .pdf-export-body li {
-          margin-bottom: 3px !important;
+          list-style: none !important;
+          list-style-type: none !important;
+          display: block !important;
+          margin-bottom: 2px !important;
+          line-height: 1.4 !important;
+          text-align: left !important;
         }
+        .pdf-export-body li p {
+          display: inline !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        .pdf-export-body .pdf-export-list-marker {
+          display: inline !important;
+          margin-right: 5px !important;
+          line-height: inherit !important;
+          vertical-align: baseline !important;
+        }
+        .pdf-export-body table td ul,
+        .pdf-export-body table th ul,
+        .pdf-export-body table td ol,
+        .pdf-export-body table th ol {
+          list-style: none !important;
+          list-style-type: none !important;
+          padding-left: 0 !important;
+          margin: 0 !important;
+          text-align: left !important;
+        }
+        .pdf-export-body table td li,
+        .pdf-export-body table th li {
+          list-style: none !important;
+          list-style-type: none !important;
+          display: block !important;
+          text-align: left !important;
+          margin: 0 !important;
+          line-height: 1.4 !important;
+        }
+        /* Match email .note-content typography (description only — no logo/header) */
         .pdf-export-body p {
-          margin: 0 0 8px 0 !important;
-          line-height: 1.65 !important;
+          margin: 0 0 14px 0 !important;
+          line-height: 1.8 !important;
+          font-size: 14.5px !important;
+          color: #334155 !important;
+          font-family: Arial, sans-serif !important;
+        }
+        .pdf-export-body h1 { font-size: 24px !important; font-weight: 700 !important; margin: 0 0 12px 0 !important; color: #0f172a !important; font-family: Arial, sans-serif !important; }
+        .pdf-export-body h2 { font-size: 20px !important; font-weight: 700 !important; margin: 0 0 10px 0 !important; color: #0f172a !important; font-family: Arial, sans-serif !important; }
+        .pdf-export-body h3 { font-size: 17px !important; font-weight: 700 !important; margin: 0 0 8px 0 !important; color: #0f172a !important; font-family: Arial, sans-serif !important; }
+        .pdf-export-body ul, .pdf-export-body ol {
+          padding-left: 24px !important;
+          margin: 0 0 14px 0 !important;
+          font-size: 14.5px !important;
+          line-height: 1.8 !important;
+          color: #334155 !important;
+        }
+        .pdf-export-body blockquote {
+          border-left: 4px solid #0a8fe7 !important;
+          margin: 0 0 14px 0 !important;
+          padding: 12px 18px !important;
+          background-color: #f0f9ff !important;
+          color: #0369a1 !important;
+          font-size: 14px !important;
+          border-radius: 0 6px 6px 0 !important;
+        }
+        .pdf-export-body img {
+          max-width: 100% !important;
+          height: auto !important;
+          display: block;
         }
         .pdf-export-body h1 { font-size: 20px !important; font-weight: 700 !important; margin: 12px 0 6px 0 !important; color: #1E293B !important; }
         .pdf-export-body h2 { font-size: 16px !important; font-weight: 700 !important; margin: 10px 0 5px 0 !important; color: #1E293B !important; }
         .pdf-export-body h3 { font-size: 14px !important; font-weight: 600 !important; margin: 8px 0 4px 0 !important; color: #1E293B !important; }
+
+        /* Dynamic alignment classes and attributes */
+        .pdf-export-body .text-center,
+        .pdf-export-body [align="center"],
+        .pdf-export-body [style*="text-align: center"],
+        .pdf-export-body [style*="text-align:center"] {
+          text-align: center !important;
+        }
+        .pdf-export-body .text-right,
+        .pdf-export-body [align="right"],
+        .pdf-export-body [style*="text-align: right"],
+        .pdf-export-body [style*="text-align:right"] {
+          text-align: right !important;
+        }
+        .pdf-export-body .text-left,
+        .pdf-export-body [align="left"],
+        .pdf-export-body [style*="text-align: left"],
+        .pdf-export-body [style*="text-align:left"] {
+          text-align: left !important;
+        }
+        .pdf-export-body .text-justify,
+        .pdf-export-body [align="justify"],
+        .pdf-export-body [style*="text-align: justify"],
+        .pdf-export-body [style*="text-align:justify"],
+        .pdf-export-body .is-justified,
+        .pdf-export-body .is-justified p,
+        .pdf-export-body .is-justified td {
+          text-align: justify !important;
+          text-justify: inter-word !important;
+        }
       </style>
       <div style="padding: 28px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #1E293B; background-color: #FFFFFF; line-height: 1.6; box-sizing: border-box; width: ${baseWidthPx}px;">
-        <!-- Structured Note Card: Project & Title -->
-        <div style="background-color: #F8FAFC; border: 1.5px solid #E2E8F0; border-radius: 10px; padding: 18px 22px; margin-bottom: 22px; width: 100%; box-sizing: border-box;">
-          <!-- Project Row: Rendered via table for 100% pixel-perfect html2canvas alignment -->
-          <table cellpadding="0" cellspacing="0" border="0" style="margin-bottom: 12px; border-collapse: separate; width: 100%;">
-            <tr>
-              <td style="vertical-align: middle; padding-right: 10px; white-space: nowrap; width: 110px;">
-                <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px;">
-                  PROJECT:
-                </span>
-              </td>
-              <td style="vertical-align: middle;">
-                <table cellpadding="0" cellspacing="0" border="0" style="background-color: ${isProject ? "#EEF2FF" : "#ECFDF5"}; border: 1px solid ${isProject ? "#C7D2FE" : "#A7F3D0"}; border-radius: 6px; border-collapse: separate;">
-                  <tr>
-                    <td style="padding: 4px 14px; font-size: 12px; font-weight: 700; line-height: 18px; font-family: Arial, sans-serif; color: ${isProject ? "#4318FF" : "#059669"}; vertical-align: middle; text-align: center; white-space: nowrap;">
-                      ${isProject ? projectLabel : "Personal Note"}
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-          </table>
-
-          <!-- Title Row: Rendered via table for perfect baseline alignment -->
-          <table cellpadding="0" cellspacing="0" border="0" style="border-collapse: separate; width: 100%;">
-            <tr>
-              <td style="vertical-align: middle; padding-right: 10px; white-space: nowrap; width: 110px;">
-                <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px;">
-                  TITLE/SUBJECT:
-                </span>
-              </td>
-              <td style="vertical-align: middle;">
-                <span style="font-size: 18px; font-weight: 800; color: #1B2559; line-height: 24px; font-family: Arial, sans-serif; letter-spacing: -0.2px;">
-                  ${note.title || "Untitled Note"}
-                </span>
-              </td>
-            </tr>
-          </table>
+        <!-- Header: Project (No box) & Title -->
+        <div style="margin-bottom: 20px; width: 100%; box-sizing: border-box;">
+          <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;">
+              PROJECT:
+            </span>
+            <span style="font-size: 14px; font-weight: 700; color: #1B2559; line-height: 20px; text-transform: uppercase;">
+              ${isProject ? projectLabel : "Personal Note"}
+            </span>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 8px;">
+            <span style="font-size: 11px; font-weight: 800; color: #64748B; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap;">
+              TITLE/SUBJECT:
+            </span>
+            <span style="font-size: 16px; font-weight: 800; color: #1B2559; line-height: 22px;">
+              ${note.title || "Untitled Note"}
+            </span>
+          </div>
         </div>
 
         <!-- Structured Description Section -->
@@ -618,8 +1129,8 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
           <div style="font-size: 11px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: 0.8px; border-bottom: 1.5px solid #E2E8F0; padding-bottom: 6px; margin-bottom: 14px; width: 100%;">
             DESCRIPTION
           </div>
-          <div class="pdf-export-body" style="font-size: 13.5px; line-height: 1.65; color: #1E293B; background-color: #FFFFFF; width: 100%;">
-            ${note.description && note.description.trim() ? note.description : '<p style="color: #94A3B8; font-style: italic; margin: 0;">No description provided.</p>'}
+          <div class="notes-content-view doc-pages-editor pdf-export-body" style="font-size: 13.5px; line-height: 1.65; color: #1E293B; background-color: #FFFFFF; width: 100%;">
+            ${exportDescription && exportDescription.trim() ? exportDescription : '<p style="color: #94A3B8; font-style: italic; margin: 0;">No description provided.</p>'}
           </div>
         </div>
       </div>
@@ -628,8 +1139,8 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
     document.body.appendChild(wrapper);
 
     wrapper.style.width = `${baseWidthPx}px`;
-    // Force editor-like truncated names — CSS ellipsis alone is unreliable in html2canvas
-    prepareAttachmentBadgesForPdfExport(wrapper);
+    // Dynamically prepare all content (alignments, SL col, badges, quotes, lists, highlights, strikethrough)
+    preparePdfExportDom(wrapper);
 
     const canvas = await html2canvas(wrapper, {
       scale: 2,
@@ -638,9 +1149,14 @@ export const exportNoteToPdf = async (note: Note): Promise<void> => {
       backgroundColor: "#FFFFFF",
       width: baseWidthPx,
       windowWidth: baseWidthPx,
+      foreignObjectRendering: false,
     });
 
     document.body.removeChild(wrapper);
+
+    if (!canvas.width || !canvas.height) {
+      throw new Error("PDF render produced an empty canvas");
+    }
 
     // Initialize jsPDF in A4 with correct orientation
     const pdf = new jsPDF({
@@ -767,12 +1283,11 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
   const hideLoading = message.loading("Preparing Word document download...", 0);
 
   try {
-    const isProject = note.type === "PROJECT";
-    const projectLabel = note.projectName || "Worksphere Project";
+    const exportDescription = prepareNoteDescriptionForExport(note);
     const isLandscape = note.rotation === 90 || note.rotation === 270;
 
     const isHorizontal = note.isVertical === false;
-    const firstRowMatch = (note.description || "").match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
+    const firstRowMatch = exportDescription.match(/<tr[^>]*>([\s\S]*?)<\/tr>/i);
     let colCount = 0;
     if (firstRowMatch) {
       const cells = firstRowMatch[1].match(/<t[dh][^>]*>/gi);
@@ -801,7 +1316,7 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
         <title>${note.title || "Note"}</title>
         <style>
           @page Section1 {
-            size: ${isLandscape ? "841.9pt 595.3pt" : "595.3pt 841.9pt"};
+            size: ${isLandscape || isWide ? `${pageWidthPt}pt ${pageHeightPt}pt` : "595.3pt 841.9pt"};
             margin: 1.0in 1.0in 1.0in 1.0in;
             mso-header-margin: 35.4pt;
             mso-footer-margin: 35.4pt;
@@ -830,32 +1345,6 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
             margin-bottom: 0;
           }
           p { margin-top: 0; margin-bottom: 8pt; line-height: 1.6; }
-          table.structured-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 18pt;
-            border: 1.5pt solid #CBD5E1;
-          }
-          table.structured-table td {
-            padding: 9pt 14pt;
-            border: 1pt solid #CBD5E1;
-            vertical-align: middle;
-          }
-          .label-cell {
-            width: 110pt;
-            background-color: #F8FAFC;
-            font-size: 9.5pt;
-            font-weight: bold;
-            color: #475569;
-            text-transform: uppercase;
-            letter-spacing: 0.5pt;
-          }
-          .val-cell {
-            background-color: #FFFFFF;
-            font-size: 11pt;
-            font-weight: bold;
-            color: #1E293B;
-          }
           .desc-container {
             border: 1.5pt solid #CBD5E1;
             margin-bottom: 18pt;
@@ -881,6 +1370,7 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
             padding: 2pt 4pt;
             border-radius: 2pt;
           }
+          .notes-inline-quote,
           blockquote {
             display: inline-block;
             width: fit-content;
@@ -908,16 +1398,25 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
           }
           table th, table td {
             border: 1pt solid #CBD5E1;
-            padding: 6pt 4pt;
-            text-align: center;
+            padding: 6pt 8pt;
+            text-align: left;
             vertical-align: middle;
-            font-size: 10pt;
+            font-size: 11pt;
+            font-family: Arial, sans-serif;
+            color: #334155;
             word-break: break-word;
           }
+          /* Preserve inlined email/table theme colors (do not force gray header fill) */
           table th {
-            background-color: #F1F5F9;
             font-weight: bold;
             color: #1E293B;
+          }
+          table th.excel-sl-col, table td.excel-sl-col {
+            width: 44px;
+            text-align: center;
+            background-color: #F1F5F9;
+            color: #475569;
+            font-weight: bold;
           }
           th.excel-attachment-col, td.excel-attachment-cell {
             width: 260px;
@@ -955,22 +1454,9 @@ export const exportNoteToWord = async (note: Note): Promise<void> => {
       </head>
       <body>
         <div class="Section1">
-          <table class="structured-table">
-            <tr>
-              <td class="label-cell">PROJECT:</td>
-              <td class="val-cell">${isProject ? projectLabel : "Personal Note"}</td>
-            </tr>
-            <tr>
-              <td class="label-cell">TITLE/SUBJECT:</td>
-              <td class="val-cell">${note.title || "Untitled Note"}</td>
-            </tr>
-          </table>
-
-          <div style="font-size: 10pt; font-weight: bold; color: #475569; text-transform: uppercase; border-bottom: 1.5pt solid #CBD5E1; padding-bottom: 4pt; margin-top: 16pt; margin-bottom: 12pt;">
-            DESCRIPTION
-          </div>
-          <div style="font-size: 11pt; line-height: 1.65; color: #1E293B;">
-            ${note.description && note.description.trim() ? note.description : '<p style="color: #94A3B8; font-style: italic; margin: 0;">No description provided.</p>'}
+          <h1 style="font-family:Arial,sans-serif;font-size:24px;font-weight:bold;color:#0f172a;line-height:1.3;margin:0 0 12pt 0;">${note.title || "Untitled Note"}</h1>
+          <div class="note-content" style="font-family:Arial,sans-serif;font-size:14.5px;line-height:1.8;color:#1e293b;margin-top:12pt;">
+            ${exportDescription}
           </div>
         </div>
       </body>
@@ -1083,11 +1569,127 @@ export const wrapWideTablesInRoot = (root: HTMLElement | null | undefined) => {
   });
 };
 
+/** Join "I\\nN\\nF\\nO" style clipboard garbage into normal text. */
+export const collapseVerticalCharPaste = (text: string): string => {
+  if (!text) return "";
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  if (lines.length < 6) return text;
+  const single = lines.filter((l) => l.length <= 1).length;
+  if (single / lines.length < 0.55) return text;
+  // Mostly one char per line → join; keep blank lines as paragraph breaks
+  const joined: string[] = [];
+  let buf = "";
+  for (const line of lines) {
+    if (line.length === 0) {
+      if (buf) joined.push(buf);
+      buf = "";
+      joined.push("");
+    } else if (line.length === 1) {
+      buf += line;
+    } else {
+      if (buf) {
+        joined.push(buf);
+        buf = "";
+      }
+      joined.push(line);
+    }
+  }
+  if (buf) joined.push(buf);
+  return joined.join("\n");
+};
+
+export const plainTextToPasteHtml = (plain: string): string => {
+  const normalized = collapseVerticalCharPaste(plain);
+  if (!normalized.trim()) return "";
+  return normalized
+    .split(/\n{2,}/)
+    .map((block) => {
+      const lines = block
+        .split("\n")
+        .map((line) => line.replace(/</g, "&lt;").replace(/>/g, "&gt;"))
+        .join("<br>");
+      return `<p style="display:block;width:100%;max-width:100%;margin:0 0 0.4em;clear:both;">${
+        lines || "<br>"
+      }</p>`;
+    })
+    .join("");
+};
+
+/** True when HTML is mostly tiny spans/divs (causes vertical overlap beside tables). */
+const isFragmentedPasteHtml = (root: ParentNode): boolean => {
+  const els = Array.from(root.querySelectorAll("span, div, p, font, b, i")).slice(0, 400);
+  if (els.length < 12) return false;
+  let tiny = 0;
+  els.forEach((el) => {
+    const t = (el.textContent || "").replace(/\s+/g, "");
+    if (t.length > 0 && t.length <= 2 && el.children.length === 0) tiny += 1;
+  });
+  return tiny / els.length > 0.45;
+};
+
+/** Strip chat/Word layout styles that clip pasted text or stack it beside tables. */
+const normalizePastedLayoutStyles = (root: ParentNode) => {
+  root.querySelectorAll<HTMLElement>("*").forEach((el) => {
+    el.style.removeProperty("margin-left");
+    el.style.removeProperty("margin-right");
+    el.style.removeProperty("padding-left");
+    el.style.removeProperty("padding-right");
+    el.style.removeProperty("text-indent");
+    el.style.removeProperty("transform");
+    el.style.removeProperty("left");
+    el.style.removeProperty("right");
+    el.style.removeProperty("top");
+    el.style.removeProperty("bottom");
+    el.style.removeProperty("position");
+    el.style.removeProperty("float");
+    el.style.removeProperty("max-width");
+    el.style.removeProperty("min-width");
+    el.style.removeProperty("writing-mode");
+    el.style.removeProperty("column-count");
+    el.style.removeProperty("column-width");
+    el.style.removeProperty("columns");
+    el.style.removeProperty("flex");
+    el.style.removeProperty("flex-direction");
+    el.style.removeProperty("grid-template-columns");
+    const display = (el.style.display || "").toLowerCase();
+    if (
+      display.includes("flex") ||
+      display.includes("grid") ||
+      display === "inline-block" ||
+      display === "inline"
+    ) {
+      if (!["SPAN", "A", "B", "I", "STRONG", "EM", "U", "S", "CODE", "LABEL"].includes(el.tagName)) {
+        el.style.display = "block";
+      } else {
+        el.style.removeProperty("display");
+      }
+    }
+    const w = el.style.width;
+    if (w && (w.includes("px") || w.includes("vw") || w.includes("%") || parseFloat(w) > 0)) {
+      // Tiny widths force one-char-per-line wrapping beside tables
+      const px = parseFloat(w);
+      if (w.includes("%") || px > 100 || px < 40) {
+        el.style.removeProperty("width");
+      }
+    }
+    el.style.maxWidth = "100%";
+    if (["DIV", "P", "SECTION", "ARTICLE", "LI"].includes(el.tagName)) {
+      el.style.clear = "both";
+    }
+    if (el.tagName === "PRE" || el.tagName === "CODE") {
+      el.style.whiteSpace = "pre-wrap";
+      el.style.wordBreak = "break-word";
+      el.style.maxWidth = "100%";
+    }
+  });
+};
+
 /**
- * Prepare HTML pasted from email/Word/Outlook for the note editor:
- * unwrap A4 shells, keep full tables, enable horizontal scroll wrappers.
+ * Prepare HTML pasted from email/Word/Outlook/chat for the note editor:
+ * unwrap A4 shells, keep full tables, strip layout that clips text.
+ * Pass plainText to fall back when HTML is fragmented (avoids vertical overlap).
  */
-export const preparePastedHtmlForNote = (html?: string): string => {
+export const preparePastedHtmlForNote = (html?: string, plainText?: string): string => {
   if (!html || !html.trim()) return "";
   const flat = sanitizeNoteHtmlForClipboard(html);
   if (!flat) return "";
@@ -1095,6 +1697,13 @@ export const preparePastedHtmlForNote = (html?: string): string => {
   const parsed = new DOMParser().parseFromString(flat, "text/html");
   // Drop scripts / Word conditional noise that can truncate paste
   parsed.querySelectorAll("script, style, meta, link").forEach((el) => el.remove());
+
+  // Fragmented / OCR-style HTML → use plain text so it lays out neatly with tables
+  if (plainText && isFragmentedPasteHtml(parsed.body)) {
+    return plainTextToPasteHtml(plainText);
+  }
+
+  normalizePastedLayoutStyles(parsed.body);
 
   parsed.querySelectorAll("table").forEach((tableEl) => {
     const table = tableEl as HTMLTableElement;
@@ -1105,6 +1714,10 @@ export const preparePastedHtmlForNote = (html?: string): string => {
     const wrap = parsed.createElement("div");
     wrap.className = "note-table-scroll";
     wrap.setAttribute("contenteditable", "false");
+    wrap.setAttribute(
+      "style",
+      "display:block;width:100%;max-width:100%;clear:both;margin:0.5em 0;"
+    );
     const inner = parsed.createElement("div");
     inner.className = "note-table-scroll-inner";
     inner.setAttribute("contenteditable", "true");
@@ -1153,6 +1766,156 @@ export const copyNoteContentToClipboard = async (
     navigator.clipboard.writeText(textContent);
     message.success("Page copied to clipboard!");
   }
+};
+
+/** Dispatched on the editor DOM before bulk HTML mutations (e.g. Docling import). */
+export const NOTE_EDITOR_CHECKPOINT_EVENT = "note-editor-checkpoint";
+
+const INLINE_FILE_KEY_ATTR = "data-inline-file-key";
+
+/** Convert a data:image URL into a File for MinIO upload. */
+export const dataUrlToFile = (dataUrl: string, fileName?: string): File | null => {
+  try {
+    const match = /^data:([^;,]+)?(;base64)?,(.*)$/i.exec(dataUrl);
+    if (!match) return null;
+    const mime = (match[1] || "image/png").trim();
+    const isBase64 = Boolean(match[2]);
+    const data = match[3] || "";
+    let bytes: Uint8Array;
+    if (isBase64) {
+      const binary = atob(data);
+      bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    } else {
+      const decoded = decodeURIComponent(data);
+      bytes = new Uint8Array(decoded.length);
+      for (let i = 0; i < decoded.length; i++) bytes[i] = decoded.charCodeAt(i);
+    }
+    const ext = mime.split("/")[1]?.split("+")[0] || "png";
+    const name = fileName || `inline-image-${Date.now()}.${ext}`;
+    const buffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength
+    ) as ArrayBuffer;
+    return new File([buffer], name, { type: mime });
+  } catch {
+    return null;
+  }
+};
+
+export const getInlineImageFileKey = (img: HTMLImageElement): string | null => {
+  const attr = img.getAttribute(INLINE_FILE_KEY_ATTR);
+  if (attr) return attr;
+  const src = img.getAttribute("src") || "";
+  const match = /\/api\/notes\/attachments\/([^/?#]+)\/(?:view|download)/i.exec(src);
+  return match?.[1] ? decodeURIComponent(match[1]) : null;
+};
+
+/**
+ * Upload embedded data:image sources and normalize blob/preview srcs so saved
+ * description HTML stays small (keys + view URLs instead of base64).
+ */
+export const rewriteInlineDataImagesInHtml = async (
+  html: string,
+  upload: (file: File) => Promise<string | null | undefined>,
+  toPreviewUrl: (key: string) => string
+): Promise<string> => {
+  if (!html || !html.trim()) return html || "";
+  const needsRewrite =
+    /data:image\//i.test(html) ||
+    html.includes("blob:") ||
+    html.includes(INLINE_FILE_KEY_ATTR) ||
+    /\/api\/notes\/attachments\//i.test(html);
+  if (!needsRewrite) return html;
+
+  const parsed = new DOMParser().parseFromString(html, "text/html");
+  const images = Array.from(parsed.querySelectorAll("img"));
+  let changed = false;
+
+  for (const img of images) {
+    const src = img.getAttribute("src") || "";
+    const existingKey = getInlineImageFileKey(img);
+
+    if (src.startsWith("data:image")) {
+      const file = dataUrlToFile(src, img.getAttribute("alt") || undefined);
+      if (!file) continue;
+      const key = await upload(file);
+      if (!key) continue;
+      img.setAttribute(INLINE_FILE_KEY_ATTR, key);
+      img.setAttribute("src", toPreviewUrl(key));
+      changed = true;
+      continue;
+    }
+
+    if (src.startsWith("blob:") && !existingKey) {
+      try {
+        const res = await fetch(src);
+        const blob = await res.blob();
+        const ext = (blob.type.split("/")[1] || "png").split("+")[0];
+        const file = new File(
+          [blob],
+          img.getAttribute("alt") || `inline-image-${Date.now()}.${ext}`,
+          { type: blob.type || "image/png" }
+        );
+        const key = await upload(file);
+        if (!key) continue;
+        img.setAttribute(INLINE_FILE_KEY_ATTR, key);
+        img.setAttribute("src", toPreviewUrl(key));
+        changed = true;
+        try {
+          URL.revokeObjectURL(src);
+        } catch {
+          /* ignore */
+        }
+      } catch {
+        /* leave blob src — save may still fail if not uploaded */
+      }
+      continue;
+    }
+
+    if (existingKey) {
+      const canonical = toPreviewUrl(existingKey);
+      if (img.getAttribute(INLINE_FILE_KEY_ATTR) !== existingKey) {
+        img.setAttribute(INLINE_FILE_KEY_ATTR, existingKey);
+        changed = true;
+      }
+      if (src.startsWith("blob:") || src !== canonical) {
+        img.setAttribute("src", canonical);
+        changed = true;
+      }
+    }
+  }
+
+  return changed ? parsed.body.innerHTML : html;
+};
+
+/**
+ * Resolve authorized blob URLs for inline images that were saved as attachment keys.
+ * Keeps data-inline-file-key so the next save can re-canonicalize srcs.
+ */
+export const hydrateInlineImagesInRoot = async (
+  root: HTMLElement | null | undefined,
+  fetchBlobUrl: (key: string, fileName?: string) => Promise<string | null>
+): Promise<void> => {
+  if (!root) return;
+  const images = Array.from(root.querySelectorAll<HTMLImageElement>("img"));
+  await Promise.all(
+    images.map(async (img) => {
+      const key = getInlineImageFileKey(img);
+      if (!key) return;
+      const src = img.getAttribute("src") || "";
+      if (src.startsWith("blob:") || src.startsWith("data:")) return;
+      try {
+        const blobUrl = await fetchBlobUrl(key, img.getAttribute("alt") || undefined);
+        if (blobUrl) {
+          img.setAttribute(INLINE_FILE_KEY_ATTR, key);
+          img.src = blobUrl;
+        }
+      } catch {
+        // leave preview URL — may still work if cookies auth the view route
+      }
+    })
+  );
 };
 
 /**
@@ -1296,14 +2059,16 @@ export interface DirectoryEmployee {
   designation: string;
 }
 
+/** Empty/omitted search returns all active employees (backend Get All / Select All). */
 export const searchEmployeeDirectory = async (search?: string): Promise<DirectoryEmployee[]> => {
   try {
     const params = new URLSearchParams();
     if (search && search.trim()) {
       params.append('search', search.trim());
     }
+    const qs = params.toString();
     const res = await axios.get<DirectoryEmployee[]>(
-      `/api/employee-details/search-directory?${params.toString()}`,
+      `/api/employee-details/search-directory${qs ? `?${qs}` : ''}`,
       {
         headers: { 'x-skip-loader': 'true' },
       }
