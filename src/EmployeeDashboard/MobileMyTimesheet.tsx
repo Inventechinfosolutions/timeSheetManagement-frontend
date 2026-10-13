@@ -170,7 +170,10 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
               let isDeptBlocked = false;
               // if (dayOfWeek === 0) isDeptBlocked = true; // REMOVED: Allow Sunday editing
 
-              const isStatusLocked = entry.status === AttendanceStatus.LOCKED;
+              const isStatusLocked =
+                entry.status === AttendanceStatus.LOCKED ||
+                entry.firstHalf === AttendanceStatus.LOCKED ||
+                entry.secondHalf === AttendanceStatus.LOCKED;
               const isBlocked = !!manualBlocker || isDateBlocked(entry.fullDate) || (!isAdmin && !isManager && (isStatusLeave || isStatusLocked || isDeptBlocked));
               
               const isEditable =
@@ -264,7 +267,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                     </div>
 
                     {/* Lock Icon for Admin Blockers or Month-end Locks */}
-                    {(isBlocked || (!isAdmin && !isEditableMonth(entry.fullDate))) && (
+                    {(isStatusLocked || isBlocked || (!isAdmin && !isEditableMonth(entry.fullDate))) && (
                         <div className="absolute -top-1 -left-1 p-1 rounded-full bg-red-50 text-red-500 border border-red-100 z-10">
                             <Lock size={8} strokeWidth={3} />
                         </div>
@@ -273,13 +276,20 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                     <input
                       type="text"
                       disabled={!isEditable}
-                      className="w-full h-full bg-transparent text-center text-xl font-bold focus:outline-none placeholder:text-gray-300"
+                      readOnly={!isEditable}
+                      className={`w-full h-full bg-transparent text-center text-xl font-bold focus:outline-none placeholder:text-gray-300 ${
+                        !isEditable ? "cursor-not-allowed pointer-events-none" : ""
+                      }`}
                       value={inputValue}
                       onChange={(e) => {
+                        if (!isEditable) return;
                         const val = e.target.value;
                         if (val === "" || /^\d*\.?\d*$/.test(val)) {
                           onHoursInput(originalIndex, val);
                         }
+                      }}
+                      onKeyDown={(e) => {
+                        if (!isEditable) e.preventDefault();
                       }}
                       onBlur={() => onInputBlur(originalIndex)}
                       placeholder="-"

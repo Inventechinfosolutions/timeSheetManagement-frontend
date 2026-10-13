@@ -32,6 +32,7 @@ import { EmployeePerformanceStatus, QuarterlyReviewStatus } from "../../enums/ap
 import { AppraisalApi, formatAppraisalDisplayDate, readApiError, RevealedRating } from "../../reducers/appraisal.reducer";
 import { DatePicker } from "../../../components/ui";
 import { message } from "antd";
+import { getRatingTierConfig } from "../../utils/appraisalHelpers";
 import "./EvaluationPanel.css";
 
 export interface EvaluationData {
@@ -736,13 +737,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     averageScore !== null ? Math.min(Math.max(averageScore / 5, 0), 1) : 0;
   const gaugeOffset = gaugeCircumference - gaugeCircumference * gaugePercent;
 
-  const gaugeColor = useMemo(() => {
-    if (averageScore === null) return "#CBD5E1";
-    if (averageScore >= 4.5) return "#2563EB";
-    if (averageScore >= 3.5) return "#3B82F6";
-    if (averageScore >= 2.5) return "#60A5FA";
-    return "#93C5FD";
+  const currentTier = useMemo(() => {
+    if (averageScore === null) return null;
+    return getRatingTierConfig(averageScore);
   }, [averageScore]);
+
+  const gaugeColor = useMemo(() => {
+    if (averageScore === null || !currentTier) return "#CBD5E1";
+    return currentTier.accentHex;
+  }, [averageScore, currentTier]);
 
   const handleAddStrength = (tag: string) => {
     setStrengths((prev) => (prev ? `${prev.trim()}, ${tag}` : tag));
@@ -1831,15 +1834,50 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
 
                     {/* Calculated Average Score Banner with Circular Radial SVG Gauge */}
-                    <div className="eval-kpi-card eval-reveal-card flex items-center gap-4">
+                    <div
+                      className="eval-kpi-card eval-reveal-card flex items-center gap-4 transition-all duration-300"
+                      style={
+                        currentTier
+                          ? {
+                              borderColor: currentTier.badgeBorderHex,
+                              boxShadow: `0 4px 18px -2px ${currentTier.accentHex}26`,
+                            }
+                          : undefined
+                      }
+                    >
                       <div className="flex items-center gap-2 min-w-0 shrink-0">
-                        <div className="w-7 h-7 rounded-lg bg-blue-100/80 text-blue-600 flex items-center justify-center font-bold shrink-0">
+                        <div
+                          className="w-7 h-7 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors duration-300"
+                          style={
+                            currentTier
+                              ? {
+                                  backgroundColor: currentTier.badgeBgHex,
+                                  color: currentTier.badgeTextHex,
+                                  border: `1px solid ${currentTier.badgeBorderHex}60`,
+                                }
+                              : { backgroundColor: "rgba(219, 234, 254, 0.8)", color: "#2563EB" }
+                          }
+                        >
                           <Award className="w-4 h-4" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider">
-                            Performance Index
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider">
+                              Performance Index
+                            </span>
+                            {currentTier && (
+                              <span
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold tracking-wide uppercase transition-all duration-300"
+                                style={{
+                                  backgroundColor: currentTier.badgeBgHex,
+                                  color: currentTier.badgeTextHex,
+                                  border: `1.5px solid ${currentTier.badgeBorderHex}`,
+                                }}
+                              >
+                                {currentTier.badge}
+                              </span>
+                            )}
+                          </div>
                           <label
                             htmlFor="eval-field-final-score"
                             className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider"
@@ -1862,6 +1900,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             onChange={(event) => handleFinalScoreChange(event.target.value)}
                             onBlur={handleFinalScoreBlur}
                             className={`eval-star-score-input eval-final-score-input ${fieldErrors.finalScore ? "!border-red-500" : ""} ${isViewMode ? "eval-score-input-disabled" : ""}`}
+                            style={
+                              currentTier && !fieldErrors.finalScore
+                                ? {
+                                    borderColor: currentTier.badgeBorderHex,
+                                    color: currentTier.badgeTextHex,
+                                    backgroundColor: "#FFFFFF",
+                                  }
+                                : undefined
+                            }
                             aria-label="Enter final rating from 1 to 5"
                             title="Type a rating from 1 to 5"
                           />
@@ -1895,7 +1942,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           />
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                          <span className="text-base font-extrabold text-[#0F172A] leading-none">
+                          <span
+                            className="text-base font-extrabold leading-none transition-colors duration-300"
+                            style={currentTier ? { color: currentTier.badgeTextHex } : { color: "#0F172A" }}
+                          >
                             {averageScore !== null ? averageScore.toFixed(1) : "—"}
                           </span>
                           <span className="text-[9px] font-bold text-[#64748B] mt-0.5">/ 5.0</span>
