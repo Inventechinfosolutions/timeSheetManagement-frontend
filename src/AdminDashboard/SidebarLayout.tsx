@@ -68,8 +68,7 @@ const SidebarLayout = ({
           { name: "My Dashboard", icon: LayoutGrid },
           { name: "My Timesheet", icon: Calendar },
           { name: "My Timesheet History", icon: Eye },
-          { name: "Quarterly Review ", icon: ClipboardCheck },
-          { name: "My Appraisal", icon: ClipboardCheck },
+          { name: "Appraisal", icon: ClipboardCheck },
           { name: "Notes", icon: FileText },
           { name: "Inbox", icon: Inbox },
           { name: "Request Management ", icon: Calendar },
@@ -84,7 +83,6 @@ const SidebarLayout = ({
           { name: "Employee Timesheet", icon: AlarmClock },
           { name: "Request Management", icon: Calendar },
           { name: "Quarterly Review", icon: ClipboardCheck },
-          { name: "Appraisal", icon: ClipboardCheck },
           { name: "Access Ticket", icon: Unlock },
           { name: "Notification", icon: Bell },
         ],
@@ -100,7 +98,6 @@ const SidebarLayout = ({
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Request Management", icon: Calendar },
       { name: "Quarterly Review", icon: ClipboardCheck },
-      { name: "Appraisal", icon: ClipboardCheck },
       { name: "Access Ticket", icon: Unlock },
       { name: "Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
@@ -114,7 +111,6 @@ const SidebarLayout = ({
   const visibleAdminSidebarItems = useMemo(() => {
     const items =
       title === "Receptionist"
-
         ? adminSidebarItems.filter((i) => i.name !== "Request Management")
         : adminSidebarItems;
     if (title !== "CEO") return items;
@@ -124,8 +120,6 @@ const SidebarLayout = ({
         item.name === "Admin Dashboard" ? { ...item, name: "CEO Dashboard" } : item,
       );
   }, [title, adminSidebarItems]);
-
-
 
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
@@ -149,11 +143,9 @@ const SidebarLayout = ({
       case "quarterly-review":
         return "Quarterly Review";
       case "my-quarterly-review":
-        return "Quarterly Review ";
       case "appraisal":
-        return "Appraisal";
       case "my-appraisal":
-        return "My Appraisal";
+        return "Appraisal";
       case "edit-access":
         return "Access Ticket";
 

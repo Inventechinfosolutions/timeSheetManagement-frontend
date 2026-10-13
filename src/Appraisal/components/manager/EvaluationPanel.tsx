@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   Check,
@@ -243,8 +244,21 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     };
   }, [activeView]);
 
-  // Modal flow state: 'email' | 'otp' | 'success'
   const [isEmailModalOpen, setIsEmailModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (isEmailModalOpen) {
+      document.body.style.overflow = "hidden";
+      document.body.classList.add("modal-open-active");
+    } else {
+      document.body.style.overflow = "unset";
+      document.body.classList.remove("modal-open-active");
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+      document.body.classList.remove("modal-open-active");
+    };
+  }, [isEmailModalOpen]);
   const [modalStage, setModalStage] = useState<"email" | "otp" | "success">("email");
   const [emailInput, setEmailInput] = useState<string>("");
   const [emailError, setEmailError] = useState<string>("");
@@ -1255,6 +1269,23 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm font-extrabold text-[#0F172A]">
                                 {project.title || "—"}
                               </div>
+                              {(project.attachments || []).length > 0 && (
+                                <div className="mt-2.5">
+                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                    Attachments
+                                  </label>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {(project.attachments || []).map((file) => (
+                                      <span
+                                        key={file.objectKey || file.fileName}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg shadow-2xs max-w-full"
+                                      >
+                                        📎 <span className="truncate">{file.fileName}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                             <div>
                               <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
@@ -1270,18 +1301,6 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               </label>
                               <div className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line">
                                 {project.challenge || "—"}
-                                {(project.attachments || []).length > 0 && (
-                                  <div className="mt-2 pt-2 border-t border-blue-100/70 flex flex-wrap gap-1.5">
-                                    {(project.attachments || []).map((file) => (
-                                      <span
-                                        key={file.objectKey || file.fileName}
-                                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md"
-                                      >
-                                        📎 {file.fileName}
-                                      </span>
-                                    ))}
-                                  </div>
-                                )}
                               </div>
                             </div>
                           </div>
@@ -2036,7 +2055,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       </div>
 
       {/* Themed Authentication / OTP Verification Modal */}
-      {isEmailModalOpen && (
+      {isEmailModalOpen && typeof document !== "undefined" && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 eval-themed-modal-overlay animate-in fade-in duration-300"
           onClick={() => {
@@ -2257,7 +2276,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

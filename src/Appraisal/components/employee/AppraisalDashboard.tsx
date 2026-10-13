@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Award,
   BarChart3,
@@ -183,6 +184,21 @@ export const AppraisalDashboard: React.FC = () => {
     (assignment.reviewStatus || "").toUpperCase() === "COMPLETED" &&
     Boolean(assignment.reviewId);
 
+  // Scroll lock & background blur for password authentication modal
+  useEffect(() => {
+    if (ratingTarget) {
+      document.body.style.overflow = "hidden";
+      document.body.classList.add("modal-open-active");
+    } else {
+      document.body.style.overflow = "unset";
+      document.body.classList.remove("modal-open-active");
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+      document.body.classList.remove("modal-open-active");
+    };
+  }, [ratingTarget]);
+
   const closeRatingModal = () => {
     setRatingTarget(null);
     setRatingPassword("");
@@ -280,7 +296,7 @@ export const AppraisalDashboard: React.FC = () => {
     if (revealed) {
       return (
         <span className="text-sm font-extrabold text-[#0F172A]">
-          {Number.isFinite(revealed.finalRating) ? revealed.finalRating.toFixed(2) : "—"}
+          {Number.isFinite(revealed.finalRating) ? Number(revealed.finalRating.toFixed(2)) : "—"}
         </span>
       );
     }
@@ -1162,90 +1178,119 @@ export const AppraisalDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {ratingTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 eval-themed-modal-overlay"
-          onClick={closeRatingModal}
-        >
+      {ratingTarget && typeof document !== "undefined" && createPortal(
+        <>
+          <style>{`
+            header,
+            .header,
+            aside,
+            footer,
+            .footer,
+            .sidebar-footer {
+              transition: filter 0.3s ease, opacity 0.3s ease !important;
+            }
+            body.modal-open-active header,
+            body.modal-open-active .header,
+            body.modal-open-active aside,
+            body.modal-open-active footer,
+            body.modal-open-active .footer,
+            body.modal-open-active .sidebar-footer {
+              filter: blur(2.5px) !important;
+              -webkit-filter: blur(2.5px) !important;
+              pointer-events: none !important;
+              user-select: none !important;
+            }
+          `}</style>
           <div
-            className="eval-themed-modal-card max-w-sm sm:max-w-md w-full p-6 sm:p-8 text-[#0F172A] relative shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 eval-themed-modal-overlay"
+            style={{
+              backdropFilter: "blur(2.5px)",
+              WebkitBackdropFilter: "blur(2.5px)",
+              backgroundColor: "rgba(30, 58, 138, 0.35)",
+            }}
+            onClick={closeRatingModal}
           >
-            <button
-              type="button"
-              onClick={closeRatingModal}
-              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors z-20"
-              title="Close"
+            <div
+              className="eval-themed-modal-card max-w-sm sm:max-w-md w-full p-6 sm:p-8 text-[#0F172A] relative shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
             >
-              <X className="w-4 h-4" />
-            </button>
-            <form onSubmit={(event) => void revealRowRating(event)} className="relative z-10 space-y-5">
-              <div className="text-center space-y-1.5">
-                <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-lg shadow-blue-500/25 mb-3">
-                  <ShieldCheck className="w-6 h-6" />
+              <button
+                type="button"
+                onClick={closeRatingModal}
+                className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors z-20 cursor-pointer"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <form onSubmit={(event) => void revealRowRating(event)} className="relative z-10 space-y-5">
+                <div className="text-center space-y-1.5">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-lg shadow-blue-500/25 mb-3">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold tracking-tight text-[#0F172A]">
+                    Authenticate Rating Access
+                  </h3>
+                  <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
+                    Enter your login password to see the final rating and average for {ratingTarget.quarter}.
+                  </p>
                 </div>
-                <h3 className="text-xl font-bold tracking-tight text-[#0F172A]">
-                  Authenticate Rating Access
-                </h3>
-                <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
-                  Enter your login password to see the final rating and average for {ratingTarget.quarter}.
-                </p>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
-                  Password <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showRatingPassword ? "text" : "password"}
-                    required
-                    value={ratingPassword}
-                    onChange={(event) => {
-                      setRatingPassword(event.target.value);
-                      if (ratingError) setRatingError("");
-                    }}
-                    placeholder="Password"
-                    autoComplete="current-password"
-                    className="w-full px-4 py-3 pl-10 pr-10 rounded-2xl bg-white border border-[#E2E8F0] text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    autoFocus
-                  />
-                  <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <div>
+                  <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showRatingPassword ? "text" : "password"}
+                      required
+                      value={ratingPassword}
+                      onChange={(event) => {
+                        setRatingPassword(event.target.value);
+                        if (ratingError) setRatingError("");
+                      }}
+                      placeholder="Password"
+                      autoComplete="current-password"
+                      className="w-full px-4 py-3 pl-10 pr-10 rounded-2xl bg-white border border-[#E2E8F0] text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                      autoFocus
+                    />
+                    <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <button
+                      type="button"
+                      onClick={() => setShowRatingPassword((current) => !current)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#2563EB]"
+                      aria-label={showRatingPassword ? "Hide password" : "Show password"}
+                    >
+                      {showRatingPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {ratingError && (
+                    <p className="text-xs font-medium text-red-500 mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      {ratingError}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={() => setShowRatingPassword((current) => !current)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#2563EB]"
-                    aria-label={showRatingPassword ? "Hide password" : "Show password"}
+                    onClick={closeRatingModal}
+                    className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
                   >
-                    {showRatingPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={unlockingRating}
+                    className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                  >
+                    <span>{unlockingRating ? "Checking" : "Continue"}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                {ratingError && (
-                  <p className="text-xs font-medium text-red-500 mt-1.5 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    {ratingError}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeRatingModal}
-                  className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={unlockingRating}
-                  className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
-                >
-                  <span>{unlockingRating ? "Checking" : "Continue"}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
+        </>,
+        document.body
       )}
 
       {/* RATING VERIFICATION MODAL */}

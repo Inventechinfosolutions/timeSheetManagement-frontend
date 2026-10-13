@@ -12,7 +12,6 @@ import {
   FileText,
   ClipboardCheck,
   Inbox,
-  ClipboardCheck,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
@@ -139,7 +138,6 @@ const SidebarLayout = ({
     { name: "Dashboard", icon: LayoutGrid },
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet History", icon: Eye },
-    { name: "Quarterly Review", icon: ClipboardCheck },
     { name: "Appraisal", icon: ClipboardCheck },
     { name: "Request Management", icon: Calendar },
     { name: "Employee Notes", icon: FileText },

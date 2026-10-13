@@ -824,5 +824,10 @@ export const animateKeyIconBounce = (iconElement: SVGElement | HTMLElement | nul
     .to(iconElement, { rotation: 0, scale: 1, duration: 0.12, ease: "power1.out" });
 };
 
+// ----------------------------------------------------------------------------
+// 9. Revealed Rating Modal Animations
+// ----------------------------------------------------------------------------
+export * from "./revealedRatingAnimations";
+
 export { gsap };
 export default gsap;

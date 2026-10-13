@@ -148,7 +148,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
           return {
             ...rec,
             status: QuarterlyReviewStatus.COMPLETED,
-            finalRating: evaluation.averageScore.toFixed(1),
+            finalRating: String(evaluation.averageScore),
             managerEvaluation: {
               ...rec.managerEvaluation,
               productivity: evaluation.scores.productivity,

@@ -12,13 +12,6 @@ const EmployeeLayout = () => {
   // Determine active tab based on path parameter
   const getActiveTab = () => {
     switch (tab) {
-      case "my-timesheet": return "My Timesheet";
-      case "timesheet-view": return "Timesheet History";
-      case "my-profile": return "Account Settings";
-      case "change-password": return "Change Password";
-      case "leave-management": return "Request Management";
-      case "leave-balance": return "Leave Balance";
-      case "quarterly-review": return "Quarterly Review";
       case "my-timesheet":
         return "My Timesheet";
       case "timesheet-view":
@@ -52,8 +45,6 @@ const EmployeeLayout = () => {
       case "Timesheet History":
         navigate("/employee-dashboard/timesheet-view");
         break;
-      case "Quarterly Review":
-        navigate("/employee-dashboard/quarterly-review");
       case "Appraisal":
       case "Quarterly Review":
         navigate("/employee-dashboard/appraisal");

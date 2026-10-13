@@ -117,6 +117,23 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
                       <div className="p-3 bg-white border border-blue-200/60 rounded-xl text-sm font-bold text-[#0F172A]">
                         {project.title || "—"}
                       </div>
+                      {(project.attachments || []).length > 0 && (
+                        <div className="mt-2.5">
+                          <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                            Attachments
+                          </label>
+                          <div className="flex flex-wrap gap-1.5">
+                            {(project.attachments || []).map((file) => (
+                              <span
+                                key={file.objectKey || file.fileName}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg shadow-2xs max-w-full"
+                              >
+                                📎 <span className="truncate">{file.fileName}</span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
@@ -132,18 +149,6 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
                       </label>
                       <div className="p-3.5 bg-white border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line">
                         {project.challenge || "—"}
-                        {(project.attachments || []).length > 0 && (
-                          <div className="mt-2 pt-2 border-t border-blue-100/70 flex flex-wrap gap-1.5">
-                            {(project.attachments || []).map((file) => (
-                              <span
-                                key={file.objectKey || file.fileName}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md"
-                              >
-                                📎 {file.fileName}
-                              </span>
-                            ))}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>

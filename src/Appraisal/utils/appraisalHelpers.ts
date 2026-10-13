@@ -294,7 +294,10 @@ export const toManagerReviewRecord = (
       : "managerName" in review && review.managerName
         ? review.managerName
         : "",
-  finalRating: review.finalRating == null ? "" : String(review.finalRating),
+  finalRating:
+    review.finalRating == null
+      ? ""
+      : String(Number(review.finalRating)),
   status: review.status,
   reviewId: review.id,
   description: review.description || "",

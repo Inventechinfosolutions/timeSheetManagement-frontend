@@ -1181,9 +1181,23 @@
 
 /* Modal Backdrop */
 .eval-themed-modal-overlay {
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(30, 58, 138, 0.35);
+  backdrop-filter: blur(2.5px);
+  -webkit-backdrop-filter: blur(2.5px);
+  z-index: 9999;
+}
+
+body.modal-open-active header,
+body.modal-open-active .header,
+body.modal-open-active aside,
+body.modal-open-active footer,
+body.modal-open-active .footer,
+body.modal-open-active .sidebar-footer {
+  filter: blur(2.5px) !important;
+  -webkit-filter: blur(2.5px) !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  transition: filter 0.3s ease !important;
 }
 
 /* Modal Card matching existing luxury theme */
