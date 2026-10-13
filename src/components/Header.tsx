@@ -84,7 +84,7 @@ const Header = ({
 
   // Total count for the bell bubble
   const unreadCount = isApprover
-    ? leaveNotifications.length
+    ? leaveNotifications.length + attendanceUnreadCount
     : attendanceUnreadCount + employeeUpdates.length;
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -136,14 +136,23 @@ const Header = ({
       dispatch(fetchUnreadNotifications());
     }
 
+    const currentEmpId =
+      entity?.employeeId || currentUser?.employeeId || currentUser?.loginId;
     // Employee updates apply to anyone with an employee record (including Managers viewing their own)
-    if (entity?.employeeId && currentUser) {
+    if (currentEmpId && currentUser) {
       if (!isAdmin) {
-        dispatch(fetchNotifications(entity?.employeeId));
-        dispatch(fetchEmployeeUpdates(entity?.employeeId));
+        dispatch(fetchNotifications(currentEmpId));
+        dispatch(fetchEmployeeUpdates(currentEmpId));
       }
     }
-  }, [dispatch, isApprover, isAdmin, entity?.employeeId]);
+  }, [
+    dispatch,
+    isApprover,
+    isAdmin,
+    entity?.employeeId,
+    currentUser?.employeeId,
+    currentUser?.loginId,
+  ]);
 
   const handleNotificationClick = (id: number) => {
     dispatch(fetchNotificationDetails(id));
@@ -376,8 +385,9 @@ const Header = ({
                       {/* Notification List */}
                       <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
                         {isApprover ? (
-                          leaveNotifications.length > 0 ? (
-                            leaveNotifications.map((notif) => {
+                          leaveNotifications.length > 0 || notifications.length > 0 ? (
+                            <>
+                              {leaveNotifications.map((notif) => {
                               const getNotificationContent = (
                                 notif: LeaveNotification,
                               ) => {
@@ -519,7 +529,66 @@ const Header = ({
                                   </div>
                                 </div>
                               );
-                            })
+                            })}
+
+                              {/* Approver General / Access Ticket Notifications */}
+                              {notifications.map((notif) => (
+                                <div
+                                  key={notif.id}
+                                  onClick={() =>
+                                    handleNotificationClick(notif.id)
+                                  }
+                                  className={`flex gap-4 p-5 hover:bg-gray-50/80 transition-colors border-b border-gray-50 last:border-0 group cursor-pointer relative ${
+                                    !notif.isRead ? "bg-blue-50/30" : ""
+                                  }`}
+                                >
+                                  <div className="relative shrink-0">
+                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-[#4318FF]">
+                                      <Bell size={18} />
+                                    </div>
+                                  </div>
+                                  <div className="flex-1 space-y-1">
+                                    <div className="flex justify-between items-start">
+                                      <p className="text-sm text-[#1B2559] leading-snug">
+                                        <span className="font-bold">
+                                          {notif.title}
+                                        </span>
+                                      </p>
+                                      {!notif.isRead && (
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMarkAsRead(
+                                              notif.id,
+                                              "attendance",
+                                            );
+                                          }}
+                                          className="text-[10px] text-[#4318FF] hover:underline font-bold"
+                                        >
+                                          Dismiss
+                                        </button>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                      <span className="text-xs text-gray-500 font-medium line-clamp-2">
+                                        {notif.message}
+                                      </span>
+                                      <span className="text-[10px] text-gray-400">
+                                        {new Date(
+                                          notif.createdAt,
+                                        ).toLocaleDateString()}{" "}
+                                        {new Date(
+                                          notif.createdAt,
+                                        ).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </>
                           ) : (
                             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
                               <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-3">
@@ -529,7 +598,7 @@ const Header = ({
                                 No new requests
                               </p>
                               <p className="text-xs text-gray-400 mt-1">
-                                All leave applications have been reviewed.
+                                All requests have been reviewed.
                               </p>
                             </div>
                           )
@@ -898,11 +967,67 @@ const Header = ({
                               </div>
                             </div>
 
-                            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                              <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-                                {selectedNotification.message}
-                              </p>
-                            </div>
+                            {(() => {
+                              const isEditAccess = Boolean(
+                                selectedNotification.title
+                                  ?.toLowerCase()
+                                  .includes("edit access") ||
+                                selectedNotification.message
+                                  ?.toLowerCase()
+                                  .includes("edit access")
+                              );
+
+                              const handleNavigateAction = () => {
+                                if (!selectedNotification.isRead) {
+                                  handleMarkAsRead(
+                                    selectedNotification.id,
+                                    "attendance",
+                                  );
+                                }
+                                setIsNotificationOpen(false);
+                                setViewMode("list");
+                                dispatch(clearSelectedNotification());
+                                if (isApprover) {
+                                  const target =
+                                    location.pathname.startsWith(
+                                      "/admin-dashboard",
+                                    ) || isAdmin
+                                      ? "/admin-dashboard/edit-access"
+                                      : "/manager-dashboard/edit-access";
+                                  navigate(target);
+                                } else {
+                                  navigate("/employee-dashboard/my-timesheet");
+                                }
+                              };
+
+                              return (
+                                <div
+                                  onClick={() => {
+                                    if (isEditAccess) {
+                                      handleNavigateAction();
+                                    }
+                                  }}
+                                  className={`p-4 bg-gray-50 rounded-2xl border border-gray-100 ${
+                                    isEditAccess
+                                      ? "cursor-pointer hover:bg-blue-50/60 hover:border-blue-200 transition-all group"
+                                      : ""
+                                  }`}
+                                >
+                                  <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                                    {selectedNotification.message}
+                                  </p>
+                                  {isEditAccess && (
+                                    <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-[#4318FF] group-hover:underline">
+                                      <span>
+                                        {isApprover
+                                          ? "Go to Edit Access Tickets →"
+                                          : "Go to My Timesheet →"}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         ) : (
                           <div className="text-center text-gray-500">
@@ -915,21 +1040,89 @@ const Header = ({
                       {selectedNotification && !selectedNotification.isRead && !isReceptionist && (
                         <div className="p-6 border-t border-gray-50 bg-gray-50/50">
                           <button
-                            onClick={() =>
-                              handleMarkAsRead(selectedNotification.id)
-                            }
+                            onClick={() => {
+                              const isEditAccess = Boolean(
+                                selectedNotification.title
+                                  ?.toLowerCase()
+                                  .includes("edit access") ||
+                                selectedNotification.message
+                                  ?.toLowerCase()
+                                  .includes("edit access")
+                              );
+
+                              handleMarkAsRead(
+                                selectedNotification.id,
+                                "attendance",
+                              );
+
+                              if (isEditAccess) {
+                                setIsNotificationOpen(false);
+                                setViewMode("list");
+                                dispatch(clearSelectedNotification());
+                                if (isApprover) {
+                                  const target =
+                                    location.pathname.startsWith(
+                                      "/admin-dashboard",
+                                    ) || isAdmin
+                                      ? "/admin-dashboard/edit-access"
+                                      : "/manager-dashboard/edit-access";
+                                  navigate(target);
+                                } else {
+                                  navigate("/employee-dashboard/my-timesheet");
+                                }
+                              }
+                            }}
                             className="w-full py-3 rounded-xl bg-[#4318FF] text-white font-bold text-sm shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:scale-95 transition-all flex items-center justify-center gap-2"
                           >
                             <Check size={18} />
-                            Mark as Read
+                            {selectedNotification.title
+                              ?.toLowerCase()
+                              .includes("edit access") ||
+                            selectedNotification.message
+                              ?.toLowerCase()
+                              .includes("edit access")
+                              ? isApprover
+                                ? "Mark as Read & View Tickets"
+                                : "Mark as Read & Go to Timesheet"
+                              : "Mark as Read"}
                           </button>
                         </div>
                       )}
                       {selectedNotification && selectedNotification.isRead && (
-                        <div className="p-6 border-t border-gray-50 bg-gray-50/50 text-center">
+                        <div className="p-6 border-t border-gray-50 bg-gray-50/50 flex items-center justify-between gap-3">
                           <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-100 text-green-700 text-xs font-bold uppercase tracking-wide">
                             <Check size={14} /> Read
                           </span>
+                          {(selectedNotification.title
+                            ?.toLowerCase()
+                            .includes("edit access") ||
+                            selectedNotification.message
+                              ?.toLowerCase()
+                              .includes("edit access")) && (
+                            <button
+                              onClick={() => {
+                                setIsNotificationOpen(false);
+                                setViewMode("list");
+                                dispatch(clearSelectedNotification());
+                                if (isApprover) {
+                                  const target =
+                                    location.pathname.startsWith(
+                                      "/admin-dashboard",
+                                    ) || isAdmin
+                                      ? "/admin-dashboard/edit-access"
+                                      : "/manager-dashboard/edit-access";
+                                  navigate(target);
+                                } else {
+                                  navigate("/employee-dashboard/my-timesheet");
+                                }
+                              }}
+                              className="px-4 py-2 rounded-xl bg-[#4318FF] text-white font-bold text-xs shadow-md hover:bg-blue-700 transition-all"
+                            >
+                              {isApprover
+                                ? "View Edit Access"
+                                : "Go to Timesheet"}
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
