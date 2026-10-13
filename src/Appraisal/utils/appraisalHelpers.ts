@@ -451,3 +451,220 @@ export async function getCurrentMasterYearAndQuarter(
   const period = await loadAppraisalPeriod(today);
   return period.current;
 }
+
+// ==========================================
+// DYNAMIC RATING TIER CONFIGURATION (OUT OF 5)
+// ==========================================
+export interface RatingTierConfig {
+  key: "needs_improvement" | "developing" | "meets_expectations" | "exceeds_expectations" | "outstanding";
+  rangeLabel: string;
+  headline: string;
+  badge: string;
+  greetingText: string;
+  quoteMessage: string;
+  motivationalLines: string[];
+  theme: "coral" | "amber" | "mint" | "emerald" | "gold" | "red" | "orange";
+  accentHex: string;
+  badgeBgHex: string;
+  badgeBorderHex: string;
+  badgeTextHex: string;
+  cardGlow: string;
+  bgSwoosh: string;
+  bgAura: string;
+  badgeBg: string;
+  badgeBorder: string;
+  badgeText: string;
+  quoteBg: string;
+  quoteBorder: string;
+  quoteBar: string;
+  quoteText: string;
+  greetingColor: string;
+  underlineColor: string;
+  rayColor: string;
+  starFilledClass: string;
+  starEmptyClass: string;
+  starAnimation: "none" | "gentle-fill" | "celebrate";
+  illustrationType: "sprout" | "steps" | "trophy" | "medal" | "champion_trophy";
+}
+
+export const getRatingTierConfig = (scoreValue: number): RatingTierConfig => {
+  const score = Math.max(0, Math.min(5, Number(scoreValue) || 0));
+
+  // 1.0–1.9 — Needs Improvement (Definitive True Red)
+  if (score < 2.0) {
+    return {
+      key: "needs_improvement",
+      rangeLabel: "1.0 – 1.9",
+      headline: "Needs Improvement",
+      badge: "NEEDS IMPROVEMENT",
+      greetingText: "Keep Growing,",
+      quoteMessage:
+        "Every step is an opportunity to grow. Use this cycle to focus on core fundamentals, review targeted areas with your mentor, and build a steady path forward.",
+      motivationalLines: ["Every step", "is a chance", "to grow!"],
+      theme: "red",
+      accentHex: "#DC2626",
+      badgeBgHex: "#FEF2F2",
+      badgeBorderHex: "#DC2626",
+      badgeTextHex: "#DC2626",
+      cardGlow: "shadow-[0_20px_50px_-10px_rgba(220,38,38,0.22)]",
+      bgSwoosh: "from-red-100/40 via-amber-50/20 to-transparent",
+      bgAura: "bg-red-400/15",
+      badgeBg: "bg-[#FEF2F2]",
+      badgeBorder: "border-[#DC2626]",
+      badgeText: "text-[#DC2626]",
+      quoteBg: "bg-[#FFF5F5]",
+      quoteBorder: "border-[#EF4444]",
+      quoteBar: "bg-[#DC2626]",
+      quoteText: "text-[#991B1B]",
+      greetingColor: "text-red-600 font-extrabold",
+      underlineColor: "text-red-600",
+      rayColor: "text-red-500",
+      starFilledClass: "text-red-600 fill-red-600",
+      starEmptyClass: "text-red-200 fill-slate-100",
+      starAnimation: "none",
+      illustrationType: "sprout",
+    };
+  }
+
+  // 2.0–2.9 — Developing (Pure Vibrant Orange)
+  if (score < 3.0) {
+    return {
+      key: "developing",
+      rangeLabel: "2.0 – 2.9",
+      headline: "Developing & Gaining Momentum",
+      badge: "DEVELOPING",
+      greetingText: "Building Momentum,",
+      quoteMessage:
+        "You're building momentum. Keep going! You've laid solid groundwork in several competencies. Target consistency and partner on your next milestone.",
+      motivationalLines: ["Building", "momentum", "step by step!"],
+      theme: "orange",
+      accentHex: "#F97316",
+      badgeBgHex: "#FFEDD5",
+      badgeBorderHex: "#FED7AA",
+      badgeTextHex: "#C2410C",
+      cardGlow: "shadow-[0_20px_50px_-10px_rgba(249,115,22,0.25)]",
+      bgSwoosh: "from-orange-100/65 via-amber-50/40 to-transparent",
+      bgAura: "bg-orange-200/40",
+      badgeBg: "bg-[#FFEDD5]",
+      badgeBorder: "border-[#FED7AA]",
+      badgeText: "text-[#C2410C]",
+      quoteBg: "bg-[#FFF7ED]",
+      quoteBorder: "border-[#FFEDD5]",
+      quoteBar: "bg-[#F97316]",
+      quoteText: "text-[#C2410C]",
+      greetingColor: "text-orange-600",
+      underlineColor: "text-orange-500",
+      rayColor: "text-orange-400",
+      starFilledClass: "text-orange-500 fill-orange-500",
+      starEmptyClass: "text-orange-200 fill-orange-50",
+      starAnimation: "none",
+      illustrationType: "steps",
+    };
+  }
+
+  // 3.0–3.9 — Meets Expectations (Mint / Green)
+  if (score < 4.0) {
+    return {
+      key: "meets_expectations",
+      rangeLabel: "3.0 – 3.9",
+      headline: "Meets Expectations!",
+      badge: "GOOD - MEETS EXPECTATIONS",
+      greetingText: "Great Work,",
+      quoteMessage:
+        "Solid work! Keep growing your impact. You have accomplished your core quarterly objectives and contributed positively to team milestones. Keep striving for even higher impact in the next cycle!",
+      motivationalLines: ["Small steps", "create big", "success!"],
+      theme: "mint",
+      accentHex: "#10B981",
+      badgeBgHex: "#DCFCE7",
+      badgeBorderHex: "#BBF7D0",
+      badgeTextHex: "#15803D",
+      cardGlow: "shadow-[0_20px_50px_-10px_rgba(16,185,129,0.22)]",
+      bgSwoosh: "from-emerald-100/60 via-teal-50/40 to-transparent",
+      bgAura: "bg-emerald-200/35",
+      badgeBg: "bg-[#DCFCE7]",
+      badgeBorder: "border-[#BBF7D0]",
+      badgeText: "text-[#15803D]",
+      quoteBg: "bg-[#F0FDF4]",
+      quoteBorder: "border-[#DCFCE7]",
+      quoteBar: "bg-[#10B981]",
+      quoteText: "text-[#15803D]",
+      greetingColor: "text-emerald-600",
+      underlineColor: "text-emerald-500",
+      rayColor: "text-emerald-400",
+      starFilledClass: "text-emerald-500 fill-emerald-500",
+      starEmptyClass: "text-emerald-200 fill-emerald-50",
+      starAnimation: "none",
+      illustrationType: "trophy",
+    };
+  }
+
+  // 4.0–4.5 — Exceeds Expectations (Emerald / Teal)
+  if (score <= 4.5) {
+    return {
+      key: "exceeds_expectations",
+      rangeLabel: "4.0 – 4.5",
+      headline: "Exceeds Expectations!",
+      badge: "EXCEEDS EXPECTATIONS",
+      greetingText: "Excellent Work,",
+      quoteMessage:
+        "Excellent work! You're making a real difference. Your strong initiative, deliverable quality, and collaborative drive consistently elevate benchmark goals.",
+      motivationalLines: ["Making a", "real & lasting", "difference!"],
+      theme: "emerald",
+      accentHex: "#0D9488",
+      badgeBgHex: "#CCFBF1",
+      badgeBorderHex: "#99F6E4",
+      badgeTextHex: "#0F766E",
+      cardGlow: "shadow-[0_20px_55px_-10px_rgba(13,148,136,0.28)]",
+      bgSwoosh: "from-teal-100/65 via-emerald-50/45 to-transparent",
+      bgAura: "bg-teal-200/40",
+      badgeBg: "bg-[#CCFBF1]",
+      badgeBorder: "border-[#99F6E4]",
+      badgeText: "text-[#0F766E]",
+      quoteBg: "bg-[#F0FDFA]",
+      quoteBorder: "border-[#CCFBF1]",
+      quoteBar: "bg-[#0D9488]",
+      quoteText: "text-[#0F766E]",
+      greetingColor: "text-teal-600",
+      underlineColor: "text-teal-500",
+      rayColor: "text-teal-400",
+      starFilledClass: "text-teal-500 fill-teal-500",
+      starEmptyClass: "text-teal-200 fill-teal-50",
+      starAnimation: "gentle-fill",
+      illustrationType: "medal",
+    };
+  }
+
+  // 4.6–5.0 — Outstanding (Gold)
+  return {
+    key: "outstanding",
+    rangeLabel: "4.6 – 5.0",
+    headline: "Outstanding Achievement! 🌟",
+    badge: "OUTSTANDING • TOP TIER",
+    greetingText: "Champion Performance,",
+    quoteMessage:
+      "Outstanding achievement! You raised the bar. Your exceptional execution, proactive leadership, and relentless pursuit of excellence have inspired the entire team.",
+    motivationalLines: ["You raised", "the bar of", "excellence! ★"],
+    theme: "gold",
+    accentHex: "#EAB308",
+    badgeBgHex: "#FEF08A",
+    badgeBorderHex: "#FDE047",
+    badgeTextHex: "#854D0E",
+    cardGlow: "shadow-[0_22px_65px_-10px_rgba(234,179,8,0.38)]",
+    bgSwoosh: "from-yellow-100/70 via-amber-50/50 to-transparent",
+    bgAura: "bg-amber-300/45",
+    badgeBg: "bg-[#FEF08A]",
+    badgeBorder: "border-[#FDE047]",
+    badgeText: "text-[#854D0E]",
+    quoteBg: "bg-[#FEFCE8]",
+    quoteBorder: "border-[#FEF08A]",
+    quoteBar: "bg-[#EAB308]",
+    quoteText: "text-[#854D0E]",
+    greetingColor: "text-amber-600",
+    underlineColor: "text-amber-500",
+    rayColor: "text-yellow-500",
+    starFilledClass: "text-amber-400 fill-amber-400",
+    starEmptyClass: "text-amber-200 fill-amber-100",
+    starAnimation: "celebrate",
+    illustrationType: "champion_trophy",
+  };
+};
