@@ -46,6 +46,7 @@ export interface EvaluationData {
 export interface EvaluationPanelProps {
   record: ManagerQuarterlyReviewRecord;
   mode?: "edit" | "view";
+  grantAccess?: boolean;
   hideScoreParameters?: boolean;
   onBack: () => void;
   onSubmitEvaluation?: (recordId: string, evaluation: EvaluationData) => void;
@@ -104,6 +105,7 @@ const ENVIRONMENT_RATINGS: Record<number, { label: string; emoji: string }> = {
 export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   record,
   mode = "edit",
+  grantAccess = false,
   hideScoreParameters = false,
   onBack,
   onSubmitEvaluation,
@@ -907,11 +909,23 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     return `${match[3]}-${match[2]}-${match[1]}`;
   };
 
+  const todayDisplayDate = (): string => {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    return `${day}-${month}-${now.getFullYear()}`;
+  };
+
   useEffect(() => {
     setReviewId(record.reviewId);
+    setAssignmentDescription(record.description || "");
+    if (grantAccess) {
+      setAssignedDate(todayDisplayDate());
+      setDeadlineDate("");
+      return;
+    }
     setAssignedDate(record.assignedOn || record.fromDate || "");
     setDeadlineDate(record.toDate || "");
-    setAssignmentDescription(record.description || "");
     if (hideScoreParameters || record.reviewId) {
       return;
     }
@@ -929,7 +943,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         setDeadlineDate(formatAppraisalDisplayDate(match.deadlineDate));
       })
       .catch(() => undefined);
-  }, [record, hideScoreParameters]);
+  }, [record, hideScoreParameters, grantAccess]);
 
   const saveAssignment = async () => {
     if (!reviewId) {
@@ -938,12 +952,33 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     }
     const deadlineIso = toIsoDate(deadlineDate);
     if (!deadlineIso) {
-      setAssignmentError("Enter the deadline as dd-mm-yyyy.");
+      setAssignmentError(grantAccess ? "Select a deadline." : "Enter the deadline as dd-mm-yyyy.");
       return;
     }
     setSavingAssignment(true);
     setAssignmentError("");
     try {
+      if (grantAccess) {
+        const todayIso = toIsoDate(todayDisplayDate());
+        if (!todayIso || deadlineIso <= todayIso) {
+          setAssignmentError("Select a deadline after today.");
+          setSavingAssignment(false);
+          return;
+        }
+        await AppraisalApi.reassignReview({
+          reviewId,
+          deadlineDate: deadlineIso,
+          reassignedDate: todayIso,
+        });
+        onAssignmentSaved?.({
+          reviewId,
+          assignedDate,
+          deadline: deadlineDate,
+          description: assignmentDescription.trim(),
+        });
+        message.success("Access granted with the new deadline");
+        return;
+      }
       await AppraisalApi.updateReview(reviewId, {
         deadlineDate: deadlineIso,
         description: assignmentDescription.trim(),
@@ -1166,9 +1201,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </div>
                 <div>
                   <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-1">
-                    Deadline
+                    Deadline{grantAccess ? " *" : ""}
                   </span>
-                  {isViewMode ? (
+                  {isViewMode && !grantAccess ? (
                     <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                       {deadlineDate || "—"}
                     </div>
@@ -1183,14 +1218,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </span>
                 <textarea
                   rows={3}
-                  readOnly={isViewMode}
+                  readOnly={isViewMode || grantAccess}
                   value={assignmentDescription}
                   onChange={(event) => setAssignmentDescription(event.target.value)}
                   placeholder="Assignment description"
-                  className={`eval-textarea-field w-full ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : "!cursor-text cursor-text"}`}
+                  className={`eval-textarea-field w-full ${isViewMode || grantAccess ? "eval-textarea-readonly !cursor-not-allowed" : "!cursor-text cursor-text"}`}
                 />
               </div>
-              {!isViewMode && (
+              {(!isViewMode || grantAccess) && (
                 <div className="flex items-center justify-end gap-3">
                   {assignmentError ? (
                     <p className="text-xs font-bold text-red-600">{assignmentError}</p>
@@ -1201,7 +1236,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     onClick={() => void saveAssignment()}
                     className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] px-4 py-2 text-sm font-bold text-white shadow-md shadow-blue-500/20 disabled:opacity-60 cursor-pointer"
                   >
-                    {savingAssignment ? "Saving" : "Save"}
+                    {savingAssignment ? "Saving" : grantAccess ? "Grant access" : "Save"}
                   </button>
                 </div>
               )}

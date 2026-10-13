@@ -60,6 +60,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   // Active record being evaluated/viewed in the Appraisal Review Evaluation Panel
   const [evaluatingRecord, setEvaluatingRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
   const [evaluationMode, setEvaluationMode] = useState<"edit" | "view">("edit");
+  const [accessGrantRecord, setAccessGrantRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
 
   const scrollToTop = () => {
     // 1. Scroll main elements (the scrollable container in SidebarLayout)
@@ -365,10 +366,37 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const statusOptions = [
     { value: AppraisalFilterAll.ALL, label: "Status" },
     { value: QuarterlyReviewStatus.NOT_STARTED, label: "Not Started" },
+    { value: QuarterlyReviewStatus.DRAFT, label: "Draft" },
+    { value: QuarterlyReviewStatus.SUBMITTED, label: "Submitted" },
+    { value: QuarterlyReviewStatus.REQUESTED_FOR_EDIT, label: "Requested for edit" },
     { value: QuarterlyReviewStatus.ASSIGNED, label: "Assigned" },
     { value: "PERFORMANCE_RECEIVED", label: "Performance Received" },
     { value: QuarterlyReviewStatus.COMPLETED, label: "Completed" },
   ];
+
+  if (accessGrantRecord) {
+    return (
+      <div className="w-full min-h-screen relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 pt-1 sm:pt-1.5 pb-8 bg-[#F4F7FE]">
+        <div className="relative z-10">
+          <EvaluationPanel
+            key={`grant-${accessGrantRecord.reviewId || accessGrantRecord.id}`}
+            record={accessGrantRecord}
+            submissionData={accessGrantRecord.submission}
+            mode="view"
+            grantAccess
+            onBack={() => {
+              setAccessGrantRecord(null);
+              setReloadKey((current) => current + 1);
+            }}
+            onAssignmentSaved={() => {
+              setAccessGrantRecord(null);
+              setReloadKey((current) => current + 1);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (evaluatingRecord) {
     return (
@@ -577,6 +605,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
                   highlightedId={highlightedRowId}
                   onEdit={handleEditRecord}
                   onView={handleViewRecord}
+                  onOpenAccessGrant={(record) => {
+                    scrollToTop();
+                    setAccessGrantRecord(record);
+                  }}
                   onRefresh={() => setReloadKey((k) => k + 1)}
                   page={tablePage}
                   totalCount={tableTotal}

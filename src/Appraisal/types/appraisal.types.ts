@@ -56,6 +56,8 @@ export interface ManagerQuarterlyReviewRecord {
   canRequestEdit?: boolean;
   remainingRequestHours?: number;
   canEdit?: boolean;
+  reassignCount?: number;
+  lockedAt?: string;
   submission?: ReviewFormData;
   managerEvaluation?: {
     productivity?: number | string | null;
@@ -293,6 +295,8 @@ export interface ManagerReviewApiRecord {
   remainingRequestHours?: number;
   canEdit?: boolean;
   isEditWindowActive?: boolean;
+  reassignCount?: number;
+  updatedAt?: string;
 }
 
 export interface ManagerDashboardResponse {
@@ -444,6 +448,8 @@ export interface EmployeeReviewDetail {
   remainingRequestHours?: number;
   canEdit?: boolean;
   isEditWindowActive?: boolean;
+  reassignCount?: number;
+  updatedAt?: string;
   productivity?: number | string | null;
   qualityOfWork?: number | string | null;
   ownershipResponsibility?: number | string | null;

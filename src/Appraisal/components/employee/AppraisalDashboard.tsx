@@ -70,9 +70,9 @@ const renderQuarterBadge = (quarter: string) => {
 
 const renderStatusBadge = (status: string) => {
   const raw = (status || "").trim();
-  if (raw.toUpperCase() === "NOT_UPDATED") {
+  if (raw.toUpperCase() === "NOT_UPDATED" || raw.toUpperCase() === "LOCKED") {
     return (
-      <span className="qr-status-badge qr-status-locked" title="Locked due to expired deadline (+48h grace period)">
+      <span className="qr-status-badge qr-status-locked" title="Locked because the deadline was missed">
         <Lock className="w-3 h-3 text-rose-500 mr-0.5 inline" />
         Locked
       </span>
@@ -448,7 +448,7 @@ export const AppraisalDashboard: React.FC = () => {
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState<boolean>(false);
   const [selectedAccessAssignment, setSelectedAccessAssignment] = useState<QuarterlyReviewAssignment | null>(null);
-  const [selectedAccessRemainingHours, setSelectedAccessRemainingHours] = useState<number>(24);
+  const [selectedAccessRemainingHours, setSelectedAccessRemainingHours] = useState<number>(42);
 
   const checkAccessEligibility = (assignment: QuarterlyReviewAssignment) => {
     const hidden = {
@@ -478,17 +478,17 @@ export const AppraisalDashboard: React.FC = () => {
       };
     }
 
-    if (!assignment.canRequestEdit) {
+    if (!assignment.canRequestEdit || (assignment.remainingRequestHours ?? 0) <= 0) {
       return hidden;
     }
 
-    const remainingHours = assignment.remainingRequestHours ?? 24;
+    const remainingHours = assignment.remainingRequestHours ?? 0;
     return {
       visible: true,
       eligible: true,
       alreadyRequested: false,
       remainingHours,
-      tooltip: `Request edit access from ${assignment.assignedBy} (~${remainingHours}h remaining in the 2-day window).`,
+      tooltip: `Request edit access from ${assignment.assignedBy} (~${remainingHours}h remaining in the 42-hour window).`,
     };
   };
 

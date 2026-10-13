@@ -65,11 +65,18 @@ export const formatAppraisalDisplayDate = (value: string | null | undefined): st
   if (!value) {
     return "";
   }
-  const date = new Date(value);
+  const text = String(value).trim();
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (dateOnly) {
+    return `${dateOnly[3]}-${dateOnly[2]}-${dateOnly[1]}`;
+  }
+  const date = new Date(text);
   if (Number.isNaN(date.getTime())) {
     return "";
   }
-  return date.toLocaleDateString("en-GB").replace(/\//g, "-");
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  return `${day}-${month}-${date.getFullYear()}`;
 };
 
 export const formatStoredFileSize = (bytes: number): string => {
@@ -88,7 +95,9 @@ export const formatStoredFileSize = (bytes: number): string => {
 export const reviewCanEdit = (review: EmployeeReviewDetail): boolean => {
   if (
     review.status?.toUpperCase() === "NOT_UPDATED" ||
-    review.performanceDetails?.status?.toUpperCase() === "NOT_UPDATED"
+    review.status?.toUpperCase() === "LOCKED" ||
+    review.performanceDetails?.status?.toUpperCase() === "NOT_UPDATED" ||
+    review.performanceDetails?.status?.toUpperCase() === "LOCKED"
   ) {
     return false;
   }
@@ -96,7 +105,7 @@ export const reviewCanEdit = (review: EmployeeReviewDetail): boolean => {
 };
 
 export const performanceCanEdit = (row: EmployeePerformanceDetail): boolean => {
-  if (row.status?.toUpperCase() === "NOT_UPDATED") {
+  if (row.status?.toUpperCase() === "NOT_UPDATED" || row.status?.toUpperCase() === "LOCKED") {
     return false;
   }
   return Boolean(row.canEdit ?? false);
@@ -313,6 +322,11 @@ export const toManagerReviewRecord = (
   canRequestEdit: review.canRequestEdit ?? review.performanceDetails?.canRequestEdit ?? false,
   remainingRequestHours: review.remainingRequestHours ?? review.performanceDetails?.remainingRequestHours ?? 0,
   canEdit: review.canEdit ?? review.performanceDetails?.canEdit ?? false,
+  reassignCount: review.reassignCount || 0,
+  lockedAt:
+    review.status?.toUpperCase() === "LOCKED" || review.status?.toUpperCase() === "NOT_UPDATED"
+      ? review.updatedAt || undefined
+      : undefined,
   managerEvaluation: {
     productivity: review.productivity,
     qualityOfWork: review.qualityOfWork,

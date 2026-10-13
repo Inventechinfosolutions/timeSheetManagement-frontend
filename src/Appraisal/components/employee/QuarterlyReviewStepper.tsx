@@ -674,7 +674,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
           <span>
             {assignment.status.toUpperCase() === "EDIT_GRANTED"
               ? "Your edit deadline granted by your manager has expired. This review is locked."
-              : "This review is currently locked for editing."}
+              : assignment.canRequestEdit
+                ? "The deadline is today. Submit is closed. Request access from your manager."
+                : "This review is currently locked for editing."}
           </span>
         </div>
       )}
@@ -854,7 +856,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                 </Button>
                 )}
 
-                {isLocked && currentStep === 6 ? null : currentStep < 6 ? (
+                {currentStep < 6 ? (
                   <Button
                     variant="primary"
                     size="md"
@@ -865,7 +867,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   >
                     Next Step
                   </Button>
-                ) : (
+                ) : isLocked ? null : (
                   <Button
                     variant="primary"
                     size="md"

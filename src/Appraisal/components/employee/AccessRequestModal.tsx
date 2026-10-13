@@ -27,7 +27,7 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
   isOpen,
   onClose,
   assignment,
-  remainingHours = 24,
+  remainingHours = 42,
   onSubmit,
 }) => {
   const [description, setDescription] = useState("");
@@ -96,11 +96,13 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
           Request Review Access
           <span className="access-window-badge">
             <Clock className="w-2.5 h-2.5 inline mr-0.5" />
-            {remainingHours}h left
+            {remainingHours > 0 ? `${remainingHours}h left` : "Deadline reached"}
           </span>
         </h2>
         <p className="create-modal-subtitle">
-          Submit an edit request for your submitted {assignment.quarter} review
+          {remainingHours > 0
+            ? `Submit an edit request for your submitted ${assignment.quarter} review`
+            : `Ask your manager to open your ${assignment.quarter} review again`}
         </p>
       </div>
     </div>
@@ -247,7 +249,7 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
           <div className="py-1.5 px-2.5 rounded-lg bg-[#EFF6FF] border border-[#BFDBFE]/60 flex items-center gap-2">
             <HelpCircle className="w-3.5 h-3.5 text-[#2563EB] shrink-0" />
             <p className="text-[10.5px] text-[#64748B] leading-tight">
-              Edit requests can only be sent within <strong className="text-[#0F172A]">24 hours</strong> of submission. Approved requests unlock the review for adjustments.
+              Edit requests can only be sent within <strong className="text-[#0F172A]">42 hours</strong> of submission. Approved requests unlock the review for adjustments.
             </p>
           </div>
         </div>

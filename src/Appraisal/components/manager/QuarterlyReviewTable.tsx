@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Star, Pencil, Eye, ShieldCheck, UserCheck, Check, X, Calendar, Clock, AlertCircle, Lock, RotateCcw } from "lucide-react";
 import { ManagerQuarterlyReviewRecord } from "../../types/appraisal.types";
-import { Pagination } from "../../../components/ui";
+import { DatePicker, Pagination } from "../../../components/ui";
 import { useAppSelector } from "../../../hooks";
 import { AppraisalApi, readApiError } from "../../reducers/appraisal.reducer";
 import { message } from "antd";
@@ -11,6 +11,7 @@ interface QuarterlyReviewTableProps {
   data: ManagerQuarterlyReviewRecord[];
   onEdit?: (record: ManagerQuarterlyReviewRecord) => void;
   onView?: (record: ManagerQuarterlyReviewRecord) => void;
+  onOpenAccessGrant?: (record: ManagerQuarterlyReviewRecord) => void;
   onRefresh?: () => void;
   className?: string;
   highlightedId?: string | null;
@@ -21,6 +22,18 @@ interface QuarterlyReviewTableProps {
   onPageChange?: (page: number) => void;
   headerTheme?: "indigo" | "navy" | "purple" | "teal";
 }
+
+const extractReassignReasons = (description?: string | null): string[] => {
+  if (!description?.trim()) {
+    return [];
+  }
+  return description
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => /^\[Re-assigned on /i.test(line))
+    .map((line) => line.replace(/^\[Re-assigned on [^\]]+\]:\s*/i, "").trim())
+    .filter(Boolean);
+};
 
 // Harmonious colorful avatar palettes matching the frosted ice-blue & royal blue aesthetic
 const AVATAR_PALETTES = [
@@ -36,6 +49,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   data,
   onEdit,
   onView,
+  onOpenAccessGrant,
   onRefresh,
   className = "",
   highlightedId = null,
@@ -63,6 +77,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   const [reassignTodayDate, setReassignTodayDate] = useState<string>("");
   const [reassignReason, setReassignReason] = useState<string>("");
   const [reassignSubmitting, setReassignSubmitting] = useState<boolean>(false);
+  const [accessPreviewRecord, setAccessPreviewRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = defaultPageSize;
@@ -125,9 +140,9 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
 
   const renderStatusBadge = (status: string) => {
     const raw = (status || "").trim();
-    if (raw.toUpperCase() === "NOT_UPDATED") {
+    if (raw.toUpperCase() === "NOT_UPDATED" || raw.toUpperCase() === "LOCKED") {
       return (
-        <span className="qr-status-badge qr-status-locked" title="Locked due to expired deadline (+48h grace period)">
+        <span className="qr-status-badge qr-status-locked" title="Locked because the deadline was missed">
           <Lock className="w-3 h-3 text-rose-500 mr-0.5" />
           Locked
         </span>
@@ -202,9 +217,13 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   };
 
   const handleOpenDecision = (record: ManagerQuarterlyReviewRecord, isApprove: boolean) => {
+    if (isApprove && !record.submittedOn) {
+      setAccessPreviewRecord(record);
+      return;
+    }
     setDecisionRecord(record);
     setDecisionIsApprove(isApprove);
-    const d = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    const d = new Date(Date.now() + 42 * 60 * 60 * 1000);
     const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     setDecisionDeadline(localIso);
     setDecisionRemarks("");
@@ -241,35 +260,52 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
     }
   };
 
+  const toIsoDate = (value: string): string | undefined => {
+    const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value.trim());
+    if (!match) {
+      return undefined;
+    }
+    return `${match[3]}-${match[2]}-${match[1]}`;
+  };
+
+  const todayIsoDate = (): string => {
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, "0");
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    return `${today.getFullYear()}-${month}-${day}`;
+  };
+
   const handleOpenReassign = (record: ManagerQuarterlyReviewRecord) => {
     setReassignRecord(record);
-    const today = new Date();
-    const todayStr = today.toISOString().split("T")[0];
-    setReassignTodayDate(todayStr);
-
-    const futureDate = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
-    setReassignDeadline(futureDate.toISOString().split("T")[0]);
+    setReassignTodayDate(todayIsoDate());
+    setReassignDeadline("");
     setReassignReason("");
     setReassignModalOpen(true);
   };
 
   const handleConfirmReassign = async () => {
     if (!reassignRecord) return;
-    if (!reassignDeadline) {
+    const deadlineIso = toIsoDate(reassignDeadline);
+    if (!deadlineIso) {
       message.error("Please pick a new deadline date.");
       return;
     }
-    const todayStr = new Date().toISOString().split("T")[0];
-    if (reassignDeadline <= todayStr) {
+    const todayStr = todayIsoDate();
+    if (deadlineIso <= todayStr) {
       message.error("The new deadline must be tomorrow or later.");
+      return;
+    }
+
+    if (!reassignRecord.reviewId) {
+      message.error("Review id is missing. Refresh the page and try again.");
       return;
     }
 
     setReassignSubmitting(true);
     try {
       await AppraisalApi.reassignReview({
-        reviewId: reassignRecord.id,
-        deadlineDate: reassignDeadline,
+        reviewId: reassignRecord.reviewId,
+        deadlineDate: deadlineIso,
         reassignedDate: reassignTodayDate || todayStr,
         reason: reassignReason.trim() || undefined,
       });
@@ -286,7 +322,33 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   const renderAction = (record: ManagerQuarterlyReviewRecord) => {
     const isLocked =
       record.status.toUpperCase() === "NOT_UPDATED" ||
-      record.performanceStatus?.toUpperCase() === "NOT_UPDATED";
+      record.status.toUpperCase() === "LOCKED" ||
+      record.performanceStatus?.toUpperCase() === "NOT_UPDATED" ||
+      record.performanceStatus?.toUpperCase() === "LOCKED";
+    const renewalClosed = isLocked && (record.reassignCount || 0) >= 1;
+    const requestWindowMs = 42 * 60 * 60 * 1000;
+    const deadlineMatch = /^(\d{2})-(\d{2})-(\d{4})$/.exec((record.toDate || "").trim());
+    const deadlineStartMs = deadlineMatch
+      ? new Date(
+          Number(deadlineMatch[3]),
+          Number(deadlineMatch[2]) - 1,
+          Number(deadlineMatch[1]),
+          0,
+          0,
+          0,
+          0,
+        ).getTime()
+      : 0;
+    const lockedAtMs = record.lockedAt ? new Date(record.lockedAt).getTime() : 0;
+    const windowStartMs = deadlineStartMs || lockedAtMs;
+    const stillInEmployeeWindow =
+      record.canRequestEdit === true
+        ? true
+        : record.canRequestEdit === false
+          ? false
+          : windowStartMs > 0 && Date.now() - windowStartMs <= requestWindowMs;
+    // Rotate / re-assign only after the employee 42-hour request window ends.
+    const showReassign = isLocked && !renewalClosed && !stillInEmployeeWindow;
 
     const isEditRequested =
       record.status.toUpperCase() === "REQUESTED_FOR_EDIT" ||
@@ -307,7 +369,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
           <Eye className="w-4 h-4" />
         </button>
 
-        {isLocked ? (
+        {showReassign ? (
           <button
             type="button"
             onClick={() => handleOpenReassign(record)}
@@ -317,7 +379,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
           >
             <RotateCcw className="w-4 h-4" />
           </button>
-        ) : isEditRequested ? (
+        ) : isLocked || renewalClosed ? null : isEditRequested ? (
           <>
             <button
               type="button"
@@ -553,6 +615,21 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                 </p>
               </div>
 
+              {extractReassignReasons(decisionRecord.description).length > 0 && (
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Re-assign Reasons
+                  </div>
+                  <ul className="space-y-1.5">
+                    {extractReassignReasons(decisionRecord.description).map((reason, index) => (
+                      <li key={`${reason}-${index}`} className="text-sm text-slate-700 italic">
+                        "{reason}"
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               {decisionIsApprove ? (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -636,6 +713,83 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
           </div>
         </div>
       )}
+      {accessPreviewRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div className="p-5 flex items-center justify-between border-b bg-emerald-50/80 border-emerald-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Previous access</h3>
+                <p className="text-xs text-slate-500">
+                  {accessPreviewRecord.name} • {accessPreviewRecord.id} • {accessPreviewRecord.quarter}{" "}
+                  {accessPreviewRecord.financialYear}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAccessPreviewRecord(null)}
+                className="text-slate-400 hover:text-slate-600 p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">Assigned date</span>
+                <span className="font-bold text-slate-800">{accessPreviewRecord.assignedOn || "—"}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-slate-500">Deadline</span>
+                <span className="font-bold text-slate-800">{accessPreviewRecord.toDate || "—"}</span>
+              </div>
+              <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
+                  Employee's Stated Reason
+                </div>
+                <p className="text-sm text-slate-700 italic">
+                  "{accessPreviewRecord.editRequestReason || "No specific reason provided."}"
+                </p>
+              </div>
+              {extractReassignReasons(accessPreviewRecord.description).length > 0 && (
+                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
+                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Re-assign Reasons
+                  </div>
+                  <ul className="space-y-1.5">
+                    {extractReassignReasons(accessPreviewRecord.description).map((reason, index) => (
+                      <li key={`${reason}-${index}`} className="text-sm text-slate-700 italic">
+                        "{reason}"
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="text-xs text-slate-500">
+                Next opens the review so you can set today as the assigned date and choose a new deadline.
+              </p>
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setAccessPreviewRecord(null)}
+                className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200/60 rounded-xl"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const record = accessPreviewRecord;
+                  setAccessPreviewRecord(null);
+                  onOpenAccessGrant?.(record);
+                }}
+                className="px-5 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Unlock / Re-assign Appraisal Modal */}
       {reassignModalOpen && reassignRecord && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
@@ -705,16 +859,15 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   <Calendar className="w-3.5 h-3.5 text-emerald-600" />
                   New Submission Deadline <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  min={new Date(Date.now() + 86400000).toISOString().split("T")[0]}
+                <DatePicker
+                  className="w-full"
                   value={reassignDeadline}
-                  onChange={(e) => setReassignDeadline(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
+                  onChange={setReassignDeadline}
+                  placeholder="Select deadline date"
                 />
                 <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
-                  Status will change to Assigned. Employee can edit & submit until this new date (+48h grace).
+                  Status becomes Assigned for the manager and Not Started for the employee, same as the first assignment.
                 </p>
               </div>
 
