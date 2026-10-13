@@ -19,6 +19,7 @@ import {
   generateMonthlyEntries,
   generateRangeEntries,
   isEditableMonth,
+  isLockedAttendance,
 } from "../utils/attendanceUtils";
 import { TimesheetEntry } from "../types";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
@@ -307,14 +308,10 @@ const Calendar = ({
       const rDate = new Date(r.workingDate);
       return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
     });
-    const isOwnCalendar =
-      location.pathname.includes("my-timesheet") ||
-      location.pathname.includes("timesheet-view") ||
-      location.pathname.includes("employee-dashboard");
     if (
-      isOwnCalendar &&
       !isAdmin &&
-      recordForDay?.status === AttendanceStatus.LOCKED &&
+      !isManager &&
+      isLockedAttendance(recordForDay) &&
       !approvedDates.includes(dateStr)
     ) {
       return true;
@@ -381,9 +378,10 @@ const Calendar = ({
       return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
     });
     if (
-      recordForDay?.status === AttendanceStatus.LOCKED &&
-      !approvedDates.includes(dateStr) &&
-      !isAdmin
+      !isAdmin &&
+      !isManager &&
+      isLockedAttendance(recordForDay) &&
+      !approvedDates.includes(dateStr)
     ) {
       return "Date is Locked. Raise an Access Request to update it.";
     }
@@ -419,9 +417,11 @@ const Calendar = ({
   const checkIsHoliday = (year: number, month: number, day: number) => {
     if (!holidays || holidays.length === 0) return null;
     const dateStr = dayjs(new Date(year, month, day)).format("YYYY-MM-DD");
-    return holidays.find(
-      (h: any) => h.holidayDate === dateStr || h.date === dateStr,
-    );
+    return holidays.find((h: any) => {
+      const hDate = h.holidayDate || h.date;
+      if (!hDate) return false;
+      return dayjs(hDate).format("YYYY-MM-DD") === dateStr;
+    });
   };
 
   const isSmall = variant === "small";
@@ -729,7 +729,7 @@ const Calendar = ({
                   !entry.status);
 
               // Determine if the day is incomplete (has data but marked as Not Updated)
-              const isLockedDay = entry?.status === AttendanceStatus.LOCKED;
+              const isLockedDay = isLockedAttendance(entry);
               const isIncomplete =
                 entry &&
                 !entry.isFuture &&
@@ -891,16 +891,12 @@ const Calendar = ({
               } else if (isLockedDay) {
                 cellClass = `bg-[#F3E8FF] border-[#7C3AED]/20 hover:bg-purple-100 ${baseHover}`;
                 statusLabel = AttendanceStatus.LOCKED;
+              } else if (holiday && !(entry && Number(entry.totalHours) > 0)) {
+                cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
+                statusLabel = holiday.name || "HOLIDAY";
               } else if (entry?.status === AttendanceStatus.NOT_UPDATED) {
                 cellClass = `bg-[#FEF3C7] border-[#FFB020]/20 hover:bg-amber-100 ${baseHover}`;
                 statusLabel = AttendanceStatus.NOT_UPDATED;
-              } else if (
-                holiday
-              ) {
-                // Master holidays take priority over everything (Leave, WFH, Client Visit, etc.) ONLY if no work hours
-                cellClass = `bg-blue-50 border-transparent hover:bg-blue-100 ${baseHover}`;
-                // textClass = "text-blue-700 font-bold";
-                statusLabel = holiday.name || 'HOLIDAY';
               } else if (isSunday) {
                 cellClass = `bg-red-50 border-transparent text-red-600 hover:bg-red-100 ${baseHover}`;
                 statusLabel = "WEEKEND";
@@ -1080,7 +1076,7 @@ const Calendar = ({
                     {day}
                   </span>
 
-                  {isBlocked &&
+                  {(isLockedDay || isBlocked) &&
                     entry?.status !== AttendanceStatus.ABSENT && (
                       <div className="absolute top-2 right-2 z-10 transition-transform hover:scale-110">
                         <ShieldBan
@@ -1139,10 +1135,10 @@ const Calendar = ({
                         ? "text-white bg-[#EE5D50]/70"
                         : isLockedDay
                           ? "text-white bg-[#7C3AED]/80"
+                        : holiday && !(entry && Number(entry.totalHours) > 0)
+                          ? "text-white bg-[#1890FF]/70"
                         : entry?.status === AttendanceStatus.NOT_UPDATED
                           ? "text-white bg-[#FFB020]/90"
-                        : holiday
-                          ? "text-white bg-[#1890FF]/70"
                         : isSunday
                           ? "text-white bg-red-400/70"
                           : isSplitDay
@@ -1173,10 +1169,10 @@ const Calendar = ({
                       ? "ABSENT"
                       : isLockedDay
                         ? "LOCKED"
+                      : holiday && !(entry && Number(entry.totalHours) > 0)
+                        ? holiday.name || "HOLIDAY"
                       : entry?.status === AttendanceStatus.NOT_UPDATED
                         ? "NOT UPDATED"
-                      : holiday
-                        ? holiday.name || 'HOLIDAY'
                       : (isSunday || (isSaturdayWithNoData && !entry?.workLocation))
                         ? "WEEKEND"
                         : isSplitDay
