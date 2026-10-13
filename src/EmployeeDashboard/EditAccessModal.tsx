@@ -15,6 +15,8 @@ interface EditAccessModalProps {
   submitting?: boolean;
   subtitle?: string;
   onMonthChange?: (next: Date) => void;
+  /** Only Locked dates in the current calendar month can be requested. */
+  currentMonthOnly?: boolean;
 }
 
 const EditAccessModal = ({
@@ -27,10 +29,13 @@ const EditAccessModal = ({
   submitting = false,
   subtitle,
   onMonthChange,
+  currentMonthOnly = false,
 }: EditAccessModalProps) => {
   const [selected, setSelected] = useState<string[]>([]);
 
   const pendingSet = useMemo(() => new Set(pendingDates), [pendingDates]);
+  const isOutsideAllowedMonth =
+    currentMonthOnly && !dayjs(monthDate).isSame(dayjs(), "month");
 
   const weeks = useMemo(() => {
     const first = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
@@ -47,7 +52,7 @@ const EditAccessModal = ({
   }, [entries, monthDate]);
 
   const isLockedDay = (entry: TimesheetEntry | null) =>
-    !!entry && entry.status === AttendanceStatus.LOCKED;
+    !!entry && !isOutsideAllowedMonth && entry.status === AttendanceStatus.LOCKED;
 
   const toggleDate = (dateStr: string, locked: boolean, pending: boolean) => {
     if (!locked || pending) return;
@@ -102,10 +107,16 @@ const EditAccessModal = ({
     >
       <div className="mb-4 flex items-center justify-between gap-3">
         <p className="text-xs text-gray-500">
-          Only Locked days can be requested. Pending dates are already submitted.
-          Click a week row to select that week&apos;s Locked days.
+          Only Locked days{currentMonthOnly ? " of the current month" : ""} can be
+          requested. Pending dates are already submitted. Click a week row to
+          select that week&apos;s Locked days.
         </p>
-        {onMonthChange && (
+        {currentMonthOnly && (
+          <span className="shrink-0 text-[11px] font-bold text-[#2B3674] px-3 py-1.5 rounded-lg bg-[#EEF2FF]">
+            {dayjs(monthDate).format("MMM YYYY")}
+          </span>
+        )}
+        {onMonthChange && !currentMonthOnly && (
           <div className="flex items-center gap-1 shrink-0">
             <button
               type="button"
@@ -135,6 +146,13 @@ const EditAccessModal = ({
           </div>
         )}
       </div>
+
+      {isOutsideAllowedMonth && (
+        <div className="mb-4 px-4 py-3 rounded-xl bg-amber-50 border border-amber-100 text-xs font-semibold text-amber-700">
+          Edit Access can only be requested for Locked days of the current month (
+          {dayjs().format("MMMM YYYY")}).
+        </div>
+      )}
 
       <div className="grid grid-cols-8 gap-2 mb-2 px-1">
         <div />
