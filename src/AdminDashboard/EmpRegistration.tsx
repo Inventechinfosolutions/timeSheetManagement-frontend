@@ -20,6 +20,7 @@ import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import { createUser } from "../reducers/user.reducer";
 import { UserType } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 import { Shield } from "lucide-react";
 
 const Registration = () => {
@@ -31,7 +32,7 @@ const Registration = () => {
     (state: RootState) => state.masterDepartments,
   );
   const currentUser = useAppSelector((state: RootState) => state.user.currentUser);
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = isAdminAccess(currentUser);
   const { loading: userCreateLoading, error: userCreateError } = useAppSelector(
     (state: RootState) => state.user,
   );

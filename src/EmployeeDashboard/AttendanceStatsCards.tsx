@@ -234,11 +234,13 @@ const AttendanceStatsCards = ({
     // Parse Joining Date
     let joinMonth = 0;
     let joinYear = 0;
+    let joinDay = 0;
     if (joiningDate) {
       const jd = new Date(joiningDate);
       if (!isNaN(jd.getTime())) {
         joinMonth = jd.getMonth() + 1;
         joinYear = jd.getFullYear();
+        joinDay = jd.getDate();
       }
     }
 
@@ -320,7 +322,7 @@ const AttendanceStatsCards = ({
 
       const isInternThisMonthFallback = isInternForMonth(m);
       let monthlyAccrualFallback = isInternThisMonthFallback ? 1 : 1.5;
-      if (year === joinYear && m === joinMonth && joinDate.date() > 10) {
+      if (year === joinYear && m === joinMonth && joinDay > 10) {
         monthlyAccrualFallback = 0;
       }
 

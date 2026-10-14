@@ -22,6 +22,7 @@ import {
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { TimesheetEntry } from "../types";
 import { AttendanceStatus, UserType, Department } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 import {
   generateMonthlyEntries,
   generateRangeEntries,
@@ -55,7 +56,7 @@ const MobileResponsiveCalendarPage = ({
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
 
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = isAdminAccess(currentUser);
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&
@@ -248,9 +249,11 @@ const MobileResponsiveCalendarPage = ({
     const checkIsHoliday = (day: number) => {
     if (!holidays || holidays.length === 0) return null;
     const dateStr = dayjs(new Date(currentDate.getFullYear(), currentDate.getMonth(), day)).format("YYYY-MM-DD");
-    return holidays.find(
-      (h: any) => h.holidayDate === dateStr || h.date === dateStr,
-    );
+    return holidays.find((h: any) => {
+      const hDate = h.holidayDate || h.date;
+      if (!hDate) return false;
+      return dayjs(hDate).format("YYYY-MM-DD") === dateStr;
+    });
   };
 
   return (
@@ -339,6 +342,7 @@ const MobileResponsiveCalendarPage = ({
             let isDeptBlocked = false;
             if (dayOfWeek === 0) isDeptBlocked = true;
 
+            const isStatusLocked = entry?.status === AttendanceStatus.LOCKED;
             const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (entry?.status === AttendanceStatus.LEAVE || isDeptBlocked || !!holiday));
             
             const isToday =
@@ -377,6 +381,15 @@ const MobileResponsiveCalendarPage = ({
             } else if (entry?.status === AttendanceStatus.FULL_DAY) {
               colorClass =
                 "bg-green-100 border border-green-600 text-black font-bold";
+            } else if (entry?.status === AttendanceStatus.LOCKED) {
+              colorClass =
+                "bg-purple-100 border border-purple-500 text-black font-bold";
+            } else if (holiday && !(entry && Number(entry.totalHours) > 0)) {
+              colorClass =
+                "bg-blue-100 border border-blue-500 text-black font-bold";
+            } else if (entry?.status === AttendanceStatus.NOT_UPDATED) {
+              colorClass =
+                "bg-[#FEF3C7] border border-[#FFB020] text-[#92400E] font-bold";
             } else if (
               entry?.status === AttendanceStatus.HALF_DAY ||
               isPendingUpdate
@@ -435,6 +448,11 @@ const MobileResponsiveCalendarPage = ({
                   </div>
                 )}
                 <span className="text-sm sm:text-lg">{day}</span>
+                {isStatusLocked && (
+                  <div className="absolute -top-1 -left-1 p-1 rounded-full bg-red-50 text-red-500 border border-red-100 z-10">
+                    <Lock size={8} strokeWidth={3} />
+                  </div>
+                )}
                 {isBlocked && (
                   <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-[2px] rounded-xl flex flex-col items-center justify-center p-1 text-center pointer-events-none">
                     <Lock size={12} className="text-white mb-0.5" />
@@ -482,7 +500,7 @@ const MobileResponsiveCalendarPage = ({
               },
               {
                 label: AttendanceStatus.NOT_UPDATED,
-                className: "bg-white border border-gray-300",
+                className: "bg-[#FEF3C7] border border-[#FFB020]",
                 icon: true,
               },
             ].map((item) => (

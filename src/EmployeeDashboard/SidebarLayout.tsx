@@ -11,12 +11,14 @@ import {
   LogOut,
   FileText,
   Inbox,
+  ClipboardCheck,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
 import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
 import { UserType } from "../enums";
+import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import ScrollNavigator from "../components/ScrollNavigator";
 import Header from "../components/Header";
@@ -83,6 +85,9 @@ const SidebarLayout = ({
         return "Request Management";
       case "leave-balance":
         return "Leave Balance";
+      case "quarterly-review":
+      case "appraisal":
+        return "Appraisal";
       case "notes":
       case "employee-notes":
         return "Employee Notes";
@@ -132,6 +137,7 @@ const SidebarLayout = ({
     { name: "Dashboard", icon: LayoutGrid },
     { name: "My Timesheet", icon: Calendar },
     { name: "Timesheet History", icon: Eye },
+    { name: "Appraisal", icon: ClipboardCheck },
     { name: "Request Management", icon: Calendar },
     { name: "Employee Notes", icon: FileText },
     { name: "Inbox", icon: Inbox },
@@ -204,7 +210,9 @@ const SidebarLayout = ({
               <AlarmClock className="w-6 h-6 text-white" />
             </div>
             <span className="text-xl font-bold text-white tracking-tight">
-              {currentUser?.userType === UserType.ADMIN
+              {isCeoUser(currentUser)
+                ? "CEO"
+                : isAdminAccess(currentUser)
                 ? "Admin"
                 : currentUser?.userType === UserType.MANAGER
                   ? "Manager"
@@ -238,7 +246,9 @@ const SidebarLayout = ({
                   {entity?.employeeId || "EMP001"}
                 </span>
                 <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                  {currentUser?.userType === UserType.ADMIN
+                  {isCeoUser(currentUser)
+                    ? "CEO"
+                    : isAdminAccess(currentUser)
                     ? "Admin"
                     : currentUser?.userType === UserType.MANAGER
                       ? "Manager"

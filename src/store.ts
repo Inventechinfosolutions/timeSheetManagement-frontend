@@ -14,6 +14,8 @@ import masterDepartmentReducer from './reducers/masterDepartment.reducer';
 import apiLoadingReducer from './reducers/apiLoading.reducer';
 import notesReducer from './reducers/notes.reducer';
 import inboxReducer from './reducers/inbox.reducer';
+import adminDashboardReducer from './reducers/adminDashboard.reducer';
+import attendenceEditRequestReducer from './reducers/attendenceEditRequest.reducer';
 
 export const store = configureStore({
   reducer: {
@@ -32,6 +34,8 @@ export const store = configureStore({
     masterDepartments: masterDepartmentReducer,
     notes: notesReducer,
     inbox: inboxReducer,
+    adminDashboard: adminDashboardReducer,
+    attendenceEditRequest: attendenceEditRequestReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

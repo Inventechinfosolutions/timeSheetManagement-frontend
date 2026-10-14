@@ -13,8 +13,11 @@ Trash2,
 Eye,
 ArrowLeft,
 ChevronDown,
+Cake,
+Award,
 } from "lucide-react";
 import { Modal } from "antd";
+import dayjs from "dayjs";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import {
@@ -26,6 +29,25 @@ removeProfileImage,
 } from "../reducers/employeeDetails.reducer";
 import { getManagerMappingByEmployeeId } from "../reducers/managerMapping.reducer";
 import defaultAvatar from "../assets/default-avatar.jpg";
+
+const formatExperience = (joiningDate: string) => {
+  const start = dayjs(String(joiningDate).slice(0, 10));
+  const today = dayjs().startOf("day");
+  if (!start.isValid() || start.isAfter(today)) return "-";
+
+  const years = today.diff(start, "year");
+  const afterYears = start.add(years, "year");
+  const months = today.diff(afterYears, "month");
+  const days = today.diff(afterYears.add(months, "month"), "day");
+
+  const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"}`;
+  const parts = [
+    years > 0 && plural(years, "Year"),
+    months > 0 && plural(months, "Month"),
+    days > 0 && plural(days, "Day"),
+  ].filter(Boolean);
+  return parts.length ? parts.join(", ") : "Joined today";
+};
 
 const MyProfile = () => {
   const navigate = useNavigate();
@@ -61,6 +83,7 @@ const designation = entity?.designation ?? entity?.designation_name ?? "";
 const email = entity?.email ?? entity?.email_address ?? "";
 const role = entity?.role ?? entity?.user_role ?? entity?.userRole ?? "";
 const joiningDate = entity?.joiningDate ?? entity?.joining_date ?? "";
+const dateOfBirth = entity?.dateOfBirth ?? entity?.date_of_birth ?? "";
 const employmentType = entity?.employmentType ?? entity?.employment_type ?? "";
 const gender = entity?.gender ?? entity?.gender_type ?? "";
 
@@ -444,6 +467,42 @@ className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-100 rounded-2xl bg-gray
 />
 <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-cyan-50 flex items-center justify-center">
 <Calendar className="text-cyan-500 w-4 h-4" />
+</div>
+</div>
+</div>
+
+{/* Experience */}
+<div className="space-y-2">
+<label className="text-[10px] font-bold text-[#A3AED0] uppercase tracking-widest pl-1">
+Experience
+</label>
+<div className="relative group">
+<input
+type="text"
+disabled
+value={joiningDate ? formatExperience(joiningDate) : "-"}
+className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-100 rounded-2xl bg-gray-50/40 text-[#1B2559] text-sm md:text-base font-bold transition-all"
+/>
+<div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center">
+<Award className="text-emerald-500 w-4 h-4" />
+</div>
+</div>
+</div>
+
+{/* Date of Birth */}
+<div className="space-y-2">
+<label className="text-[10px] font-bold text-[#A3AED0] uppercase tracking-widest pl-1">
+Date of Birth
+</label>
+<div className="relative group">
+<input
+type="text"
+disabled
+value={dateOfBirth ? new Date(`${String(dateOfBirth).slice(0, 10)}T00:00:00`).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "-"}
+className="w-full pl-12 pr-4 py-3.5 border-2 border-gray-100 rounded-2xl bg-gray-50/40 text-[#1B2559] text-sm md:text-base font-bold transition-all"
+/>
+<div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-xl bg-pink-50 flex items-center justify-center">
+<Cake className="text-pink-500 w-4 h-4" />
 </div>
 </div>
 </div>

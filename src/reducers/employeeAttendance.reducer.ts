@@ -326,6 +326,8 @@ export interface MyTimesheetData {
     blockedBy: string;
     blockedAt?: string;
   }[];
+  pendingDates?: string[];
+  approvedDates?: string[];
 }
 
 export const fetchMyTimesheet = createAsyncThunk(

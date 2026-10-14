@@ -10,6 +10,7 @@ import {
   Rocket,
   ShieldBan,
   ArrowLeft,
+  Unlock,
 } from "lucide-react";
 import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
@@ -20,6 +21,7 @@ import {
   HalfDayType,
   Department,
 } from "../enums";
+import { blockedByLabel, isAdminAccess } from "../utils/roleAccess";
 import {
   updateAttendanceRecord,
   submitBulkAttendance,
@@ -31,12 +33,15 @@ import { submitLeaveRequest } from "../reducers/leaveRequest.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import {
   generateMonthlyEntries,
+  isLockedAttendance,
   isEditableMonth,
   getBadgeLocation,
 } from "../utils/attendanceUtils";
 import MobileMyTimesheet from "./MobileMyTimesheet";
 import AutoUpdateModal from "./AutoUpdateModal";
 import AutoUpdateSuccessModal from "./AutoUpdateSuccessModal";
+import EditAccessModal from "./EditAccessModal";
+import { submitEditAccessRequest } from "../reducers/attendenceEditRequest.reducer";
 
 interface TimesheetProps {
   now?: Date;
@@ -99,10 +104,13 @@ const MyTimesheet = ({
   );
 
   const { blockers } = useAppSelector((state) => state.timesheetBlocker);
+  const { pendingDates, approvedDates, submitting: editAccessSubmitting } =
+    useAppSelector((state) => state.attendenceEditRequest);
 
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = isAdminAccess(currentUser);
   const isManager = !!(
     currentUser?.userType === UserType.MANAGER ||
+    currentUser?.userType === UserType.TEAMLEAD ||
     (currentUser?.role &&
       currentUser.role.toUpperCase().includes(UserType.MANAGER))
   );
@@ -187,6 +195,7 @@ const MyTimesheet = ({
   const [autoUpdateCount, setAutoUpdateCount] = useState<number>(0);
   const [isCheckingAutoUpdate, setIsCheckingAutoUpdate] = useState(false);
   const [autoUpdateTrigger, setAutoUpdateTrigger] = useState(0);
+  const [showEditAccessModal, setShowEditAccessModal] = useState(false);
 
   const refreshDryRun = () => setAutoUpdateTrigger((prev) => prev + 1);
 
@@ -442,6 +451,25 @@ const MyTimesheet = ({
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
 
+    const dateStr = dayjs(d).format("YYYY-MM-DD");
+    const recordForDay = records.find((r) => {
+      const rDate = new Date(r.workingDate);
+      return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
+    });
+    const localForDay = localEntries.find(
+      (e) => dayjs(e.fullDate).format("YYYY-MM-DD") === dateStr,
+    );
+    const isLockedDay =
+      isLockedAttendance(recordForDay) || isLockedAttendance(localForDay);
+    if (
+      !isAdmin &&
+      !isManager &&
+      isLockedDay &&
+      !approvedDates.includes(dateStr)
+    ) {
+      return true;
+    }
+
     // 1. Month Lock (Skip for Admin/Manager)
     if (!isAdmin && !isManager && !isEditableMonth(d)) return true;
 
@@ -480,6 +508,7 @@ const MyTimesheet = ({
           !val.includes("holiday") &&
           !val.includes("weekend") &&
           !val.includes("absent") &&
+          !val.includes("locked") &&
           val.trim() !== "";
 
         if (isRestricted(h1) || isRestricted(h2)) return true;
@@ -505,12 +534,26 @@ const MyTimesheet = ({
     // 1. Month Lock
     const d = new Date(date);
     d.setHours(0, 0, 0, 0);
+    const dateStr = dayjs(d).format("YYYY-MM-DD");
+    const recordForDay = records.find((r) => {
+      const rDate = new Date(r.workingDate);
+      return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
+    });
+    if (
+      !isAdmin &&
+      !isManager &&
+      isLockedAttendance(recordForDay) &&
+      !approvedDates.includes(dateStr)
+    ) {
+      return "Date is Locked. Raise an Access Request to update it.";
+    }
+
     if (!isAdmin && !isManager && !isEditableMonth(d)) return "Month is Locked";
 
     // 2. Manual Blocker
     const blocker = getBlocker(date);
     if (blocker) {
-      const by = blocker.blockedBy === UserType.ADMIN ? "Admin" : "Manager";
+      const by = blockedByLabel(blocker.blockedBy);
       return `Blocked by ${by}${blocker.reason ? ": " + blocker.reason : ""}`;
     }
 
@@ -533,6 +576,7 @@ const MyTimesheet = ({
           !val.includes("holiday") &&
           !val.includes("weekend") &&
           !val.includes("absent") &&
+          !val.includes("locked") &&
           val.trim() !== "";
 
         if (isRestricted(h1) || isRestricted(h2))
@@ -573,7 +617,17 @@ const MyTimesheet = ({
 
   const handleHoursInput = (entryIndex: number, val: string) => {
     if (effectiveReadOnly) return;
-    if (isDateBlocked(localEntries[entryIndex].fullDate)) return;
+    const hoursEntry = localEntries[entryIndex];
+    const hoursDateStr = dayjs(hoursEntry.fullDate).format("YYYY-MM-DD");
+    if (
+      !isAdmin &&
+      !isManager &&
+      isLockedAttendance(hoursEntry) &&
+      !approvedDates.includes(hoursDateStr)
+    ) {
+      return;
+    }
+    if (isDateBlocked(hoursEntry.fullDate)) return;
 
     // Reject non-numeric characters immediately (allows digits and at most one dot)
     if (val !== "" && !/^\d*\.?\d*$/.test(val)) return;
@@ -808,10 +862,11 @@ const MyTimesheet = ({
       // 1. Check blocked
       if (isDateBlocked(entry.fullDate)) return;
 
-      // 2. Skip exclusions: Leave, Half Day
+      // 2. Skip exclusions: Leave, Half Day, Locked
       if (
         entry.status === AttendanceStatus.LEAVE ||
-        entry.status === AttendanceStatus.HALF_DAY
+        entry.status === AttendanceStatus.HALF_DAY ||
+        entry.status === AttendanceStatus.LOCKED
       )
         return;
 
@@ -855,6 +910,14 @@ const MyTimesheet = ({
     const payload: any[] = [];
     localEntries.forEach((entry, idx) => {
       if (isDateBlocked(entry.fullDate)) return;
+      if (
+        !isAdmin &&
+        !isManager &&
+        isLockedAttendance(entry) &&
+        !approvedDates.includes(dayjs(entry.fullDate).format("YYYY-MM-DD"))
+      ) {
+        return;
+      }
 
       const currentTotal = entry.totalHours;
       const originalTotal = baseEntries[idx]?.totalHours;
@@ -909,8 +972,11 @@ const MyTimesheet = ({
 
         let derivedStatus: string;
 
+        if (entry.status === AttendanceStatus.LOCKED) {
+          derivedStatus = AttendanceStatus.LOCKED;
+        }
         // For Sunday: Default status to AttendanceStatus.WEEKEND ONLY if no hours are present
-        if (
+        else if (
           dayOfWeek === 0 &&
           (!currentTotal || currentTotal === 0) &&
           entry.status !== AttendanceStatus.ABSENT
@@ -1021,6 +1087,9 @@ const MyTimesheet = ({
     // Set status based on hours and day of week
     // NEVER allow Leave status when hours are 0 - always set to Absent/Weekend/Holiday
     payload.forEach((item) => {
+      if (item.status === AttendanceStatus.LOCKED) {
+        return;
+      }
       const d_item = dayjs(item.workingDate);
       const dayOfWeek = d_item.day(); // 0 = Sunday, 6 = Saturday
 
@@ -1679,6 +1748,56 @@ const MyTimesheet = ({
     0,
   );
 
+  const ownEmployeeId = currentUser?.employeeId || currentUser?.loginId;
+  const viewingOtherEmployee = !!(
+    currentEmployeeId &&
+    currentEmployeeId.toLowerCase() !== "admin" &&
+    currentEmployeeId !== ownEmployeeId
+  );
+  const canRaiseOnBehalf = (isAdmin || isManager) && viewingOtherEmployee;
+  // Employees may only request access for the current month; managers/admins raising on behalf are not limited.
+  const editAccessCurrentMonthOnly = !canRaiseOnBehalf;
+  const showEditAccessButton =
+    !!currentEmployeeId &&
+    currentEmployeeId.toLowerCase() !== "admin" &&
+    ((isMyRoute || isManagerView || canRaiseOnBehalf) &&
+      (!effectiveReadOnly || canRaiseOnBehalf)) &&
+    (!editAccessCurrentMonthOnly || dayjs(now).isSame(dayjs(), "month"));
+
+  const openEditAccessModal = () => {
+    if (editAccessCurrentMonthOnly && !dayjs(now).isSame(dayjs(), "month")) {
+      const today = new Date();
+      setNow(new Date(today.getFullYear(), today.getMonth(), 1));
+      setManuallyEditedIndices(new Set());
+    }
+    setShowEditAccessModal(true);
+  };
+
+  const handleSubmitEditAccess = async (dates: string[]) => {
+    try {
+      await dispatch(
+        submitEditAccessRequest(
+          canRaiseOnBehalf
+            ? { requestDates: dates, employeeId: currentEmployeeId }
+            : { requestDates: dates },
+        ),
+      ).unwrap();
+      message.success(
+        canRaiseOnBehalf
+          ? "Access Request submitted on behalf of employee"
+          : "Access Request submitted",
+      );
+      setShowEditAccessModal(false);
+      refreshData();
+    } catch (err: any) {
+      message.error(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to submit Access Request",
+      );
+    }
+  };
+
   const firstDayOfMonth = new Date(
     now.getFullYear(),
     now.getMonth(),
@@ -1758,6 +1877,7 @@ const MyTimesheet = ({
 
   if (isMobile) {
     return (
+      <>
       <MobileMyTimesheet
         currentWeekEntries={weeks[currentWeekIndex] || []}
         onPrevWeek={handlePrevWeek}
@@ -1787,7 +1907,27 @@ const MyTimesheet = ({
         // autoUpdateCount={autoUpdateCount}
         blockers={blockers}
         department={entity?.department || entity?.department_name || ""}
+        onEditAccess={
+          showEditAccessButton ? openEditAccessModal : undefined
+        }
       />
+      <EditAccessModal
+        open={showEditAccessModal}
+        onClose={() => setShowEditAccessModal(false)}
+        monthDate={now}
+        entries={localEntries}
+        pendingDates={pendingDates}
+        submitting={editAccessSubmitting}
+        onSubmit={handleSubmitEditAccess}
+        onMonthChange={setNow}
+        currentMonthOnly={editAccessCurrentMonthOnly}
+        subtitle={
+          canRaiseOnBehalf
+            ? `On behalf of ${entity?.fullName || currentEmployeeId}`
+            : "Select Locked days only"
+        }
+      />
+      </>
     );
   }
 
@@ -1857,6 +1997,22 @@ const MyTimesheet = ({
         count={updateResult?.count || 0}
         monthName={now.toLocaleDateString("en-US", { month: "long" })}
         year={now.getFullYear()}
+      />
+      <EditAccessModal
+        open={showEditAccessModal}
+        onClose={() => setShowEditAccessModal(false)}
+        monthDate={now}
+        entries={localEntries}
+        pendingDates={pendingDates}
+        submitting={editAccessSubmitting}
+        onSubmit={handleSubmitEditAccess}
+        onMonthChange={setNow}
+        currentMonthOnly={editAccessCurrentMonthOnly}
+        subtitle={
+          canRaiseOnBehalf
+            ? `On behalf of ${entity?.fullName || currentEmployeeId}`
+            : "Select Locked days only"
+        }
       />
       {false && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/30 backdrop-blur-[2px]">
@@ -1937,6 +2093,17 @@ const MyTimesheet = ({
               </div>
             </div>
 
+            {showEditAccessButton && (
+              <button
+                onClick={openEditAccessModal}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 text-[#7C3AED] rounded-xl font-bold text-[10px] transition-all active:scale-95 tracking-wide uppercase hover:-translate-y-0.5 bg-[#F3E8FF] border border-[#7C3AED]/20"
+                title="Raise an Access Request for Locked days"
+              >
+                <Unlock size={14} />
+                <span className="hidden sm:inline">Access Request</span>
+              </button>
+            )}
+
             {/* Auto Update Button */}
             {(!effectiveReadOnly ||
               (isAdmin && !isAdminView) ||
@@ -1993,6 +2160,11 @@ const MyTimesheet = ({
               border: "border-[#DC2626]",
             },
             {
+              label: AttendanceStatus.LOCKED,
+              color: "bg-[#F3E8FF]",
+              border: "border-[#7C3AED]",
+            },
+            {
               label: AttendanceStatus.LEAVE,
               color: "bg-[#FEE2E2]",
               border: "border-[#EE5D50]",
@@ -2009,8 +2181,8 @@ const MyTimesheet = ({
             },
             {
               label: AttendanceStatus.NOT_UPDATED,
-              color: "bg-[#F8FAFC]",
-              border: "border-[#64748B]",
+              color: "bg-[#FEF3C7]",
+              border: "border-[#FFB020]",
             },
             {
               label: "Today",
@@ -2096,6 +2268,11 @@ const MyTimesheet = ({
                 : "";
 
             const isBlocked = isDateBlocked(day.fullDate);
+            const isEmployeeLockedDay =
+              !isAdmin &&
+              !isManager &&
+              isLockedAttendance(day) &&
+              !approvedDates.includes(calendarDateStr);
 
             // Disable editing for approved Leave days only
             // WFH and Client Visit days are editable (they are present, not leave)
@@ -2130,7 +2307,8 @@ const MyTimesheet = ({
                 isCurrentOrNextMonth ||
                 isEditableMonth(day.fullDate) ||
                 day.status === AttendanceStatus.ABSENT) &&
-              !isBlocked;
+              !isBlocked &&
+              !isEmployeeLockedDay;
 
             // Helper to get consistent styles for any status string
             const getStatusStyles = (
@@ -2191,6 +2369,20 @@ const MyTimesheet = ({
                   badge: "bg-[#DC2626]/70 text-white font-bold",
                   border: "border-[#DC2626]/20",
                   text: "text-[#DC2626]",
+                };
+              if (s === AttendanceStatus.LOCKED.toLowerCase())
+                return {
+                  bg: "bg-[#F3E8FF]",
+                  badge: "bg-[#7C3AED]/80 text-white font-bold",
+                  border: "border-[#7C3AED]/20",
+                  text: "text-[#7C3AED]",
+                };
+              if (s === AttendanceStatus.NOT_UPDATED.toLowerCase() || s === "not updated")
+                return {
+                  bg: "bg-[#FEF3C7]",
+                  badge: "bg-[#FFB020]/90 text-white font-bold",
+                  border: "border-[#FFB020]/20",
+                  text: "text-[#FFB020]",
                 };
               if (s === "wfh" || loc === "wfh" || s === "work from home")
                 return {
@@ -2272,8 +2464,10 @@ const MyTimesheet = ({
             // Determine Overall Styles (for border and badge)
             let displayStatus = day.status as string;
 
-            // Priority: If explicitly ABSENT, always show Absent
-            if (displayStatus === AttendanceStatus.ABSENT) {
+            // Priority: Locked and Absent stay as themselves (not Leave)
+            if (displayStatus === AttendanceStatus.LOCKED) {
+              // Keep it as Locked
+            } else if (displayStatus === AttendanceStatus.ABSENT) {
               // Keep it as Absent
             } else if (
               holidayInfo ||
@@ -2379,8 +2573,8 @@ const MyTimesheet = ({
                   >
                     {day.date}
                   </div>
-                  {/* Show lock if blocked by admin OR if the month is locked for non-admins */}
-                  {(isBlocked ||
+                  {((displayStatus === AttendanceStatus.LOCKED && !canRaiseOnBehalf) ||
+                    isBlocked ||
                     (!isAdmin &&
                       !isManager &&
                       !isCurrentOrNextMonth &&
@@ -2413,17 +2607,24 @@ const MyTimesheet = ({
                     <input
                       type="text"
                       disabled={!isEditable || isError}
+                      readOnly={!isEditable}
                       className={`w-full h-6 text-center font-medium bg-transparent transition-all focus:outline-none focus:ring-0
                         ${
                           !isEditable
-                            ? "text-gray-400 cursor-not-allowed"
+                            ? "text-gray-400 cursor-not-allowed pointer-events-none"
                             : isError
                               ? "text-red-500 text-[10px] font-bold animate-pulse"
                               : "text-gray-800 text-xl md:text-2xl group-hover:scale-105 focus:scale-105"
                         }`}
                       placeholder="-"
                       value={isError ? inputError.message : inputValue}
-                      onChange={(e) => handleHoursInput(idx, e.target.value)}
+                      onChange={(e) => {
+                        if (!isEditable) return;
+                        handleHoursInput(idx, e.target.value);
+                      }}
+                      onKeyDown={(e) => {
+                        if (!isEditable) e.preventDefault();
+                      }}
                       onBlur={() => handleInputBlur(idx)}
                     />
                     {isEditable && !isError && (
@@ -2441,6 +2642,10 @@ const MyTimesheet = ({
                 >
                   {displayStatus === AttendanceStatus.ABSENT
                     ? "ABSENT"
+                    : displayStatus === AttendanceStatus.LOCKED
+                      ? "LOCKED"
+                    : displayStatus === AttendanceStatus.NOT_UPDATED
+                      ? "NOT UPDATED"
                     : holidayInfo || displayStatus === AttendanceStatus.HOLIDAY
                       ? holidayInfo?.holidayName ||
                         holidayInfo?.name ||
@@ -2470,7 +2675,7 @@ const MyTimesheet = ({
             const blockedTip = blocker ? (
               <div style={{ textAlign: "left", lineHeight: 1.4 }}>
                 <div style={{ fontWeight: 600 }}>
-                  Blocked by {blocker.blockedBy === UserType.ADMIN ? "Admin" : "Manager"}
+                  Blocked by {blockedByLabel(blocker.blockedBy)}
                 </div>
                 {blocker.reason && <div>Reason: {blocker.reason}</div>}
               </div>

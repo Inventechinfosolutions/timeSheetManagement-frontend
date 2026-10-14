@@ -1,12 +1,13 @@
 import { Outlet, useParams, useNavigate, useLocation } from "react-router-dom";
 import SidebarLayout from "../AdminDashboard/SidebarLayout";
+import BirthdayWish from "../components/BirthdayWish";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { fetchNotifications } from "../reducers/notification.reducer";
 import {
   fetchEmployeeUpdates,
   fetchUnreadNotifications,
 } from "../reducers/leaveNotification.reducer";
-import { UserType } from "../enums";
+import { isAdminAccess } from "../utils/roleAccess";
 
 const ManagerLayout = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -64,8 +65,23 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/notes")) {
       return "Notes";
     }
+    if (
+      path.includes("/manager-dashboard/my-appraisal") ||
+      path.includes("/manager-dashboard/my-quarterly-review")
+    ) {
+      return "My Appraisal";
+    }
+    if (
+      path.includes("/manager-dashboard/appraisal") ||
+      path.includes("/manager-dashboard/quarterly-review")
+    ) {
+      return "Appraisal";
+    }
     if (path.includes("/manager-dashboard/inbox")) {
       return "Inbox";
+    }
+    if (path.includes("/manager-dashboard/edit-access")) {
+      return "Access Ticket";
     }
 
     switch (tab) {
@@ -95,10 +111,18 @@ const ManagerLayout = () => {
         return "Account Settings";
       case "leave-management":
         return "Request Management ";
+      case "appraisal":
+      case "quarterly-review":
+        return "Appraisal";
+      case "my-appraisal":
+      case "my-quarterly-review":
+        return "My Appraisal";
       case "notes":
         return "Notes";
       case "inbox":
         return "Inbox";
+      case "edit-access":
+        return "Access Ticket";
       default:
         return "Employee Dashboard";
     }
@@ -107,7 +131,7 @@ const ManagerLayout = () => {
   const dispatch = useAppDispatch();
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
-  const isAdmin = currentUser?.userType === UserType.ADMIN;
+  const isAdmin = isAdminAccess(currentUser);
 
   const handleTabChange = (tabName: string) => {
     // Refresh notifications when switching to primary dashboards
@@ -148,10 +172,16 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/my-profile");
     } else if (tabName === "Request Management ") {
       navigate("/manager-dashboard/leave-management");
+    } else if (tabName === "Appraisal" || tabName === "Quarterly Review") {
+      navigate("/manager-dashboard/appraisal");
+    } else if (tabName === "My Appraisal" || tabName === "Quarterly Review ") {
+      navigate("/manager-dashboard/my-appraisal");
     } else if (tabName === "Notes") {
       navigate("/manager-dashboard/notes");
     } else if (tabName === "Inbox") {
       navigate("/manager-dashboard/inbox");
+    } else if (tabName === "Access Ticket" || tabName === "Edit Access") {
+      navigate("/manager-dashboard/edit-access");
     }
   };
 
@@ -162,6 +192,7 @@ const ManagerLayout = () => {
       title="Manager"
     >
       <Outlet />
+      <BirthdayWish />
     </SidebarLayout>
   );
 };

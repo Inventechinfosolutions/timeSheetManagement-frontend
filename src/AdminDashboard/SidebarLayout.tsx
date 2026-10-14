@@ -17,6 +17,7 @@ import {
   LogOut,
   FileText,
   Inbox,
+  ClipboardCheck,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -67,6 +68,7 @@ const SidebarLayout = ({
           { name: "My Dashboard", icon: LayoutGrid },
           { name: "My Timesheet", icon: Calendar },
           { name: "My Timesheet History", icon: Eye },
+          { name: "My Appraisal", icon: ClipboardCheck },
           { name: "Notes", icon: FileText },
           { name: "Inbox", icon: Inbox },
           { name: "Request Management ", icon: Calendar },
@@ -80,6 +82,8 @@ const SidebarLayout = ({
           { name: "Employee Directory", icon: Users },
           { name: "Employee Timesheet", icon: AlarmClock },
           { name: "Request Management", icon: Calendar },
+          { name: "Appraisal", icon: ClipboardCheck },
+          { name: "Access Ticket", icon: Unlock },
           { name: "Notification", icon: Bell },
         ],
       },
@@ -93,8 +97,10 @@ const SidebarLayout = ({
       { name: "Employee Directory", icon: Users },
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Request Management", icon: Calendar },
+      { name: "Appraisal", icon: ClipboardCheck },
+      { name: "Access Ticket", icon: Unlock },
       { name: "Notes", icon: FileText },
-          { name: "Inbox", icon: Inbox },
+      { name: "Inbox", icon: Inbox },
       { name: "Manager Mapping", icon: Users },
       { name: "Notification", icon: Bell },
     ],
@@ -102,13 +108,21 @@ const SidebarLayout = ({
   );
 
   // Receptionist: hide Request Management from sidebar
-  const visibleAdminSidebarItems = useMemo(
-    () =>
+  const visibleAdminSidebarItems = useMemo(() => {
+    const items =
       title === "Receptionist"
+
         ? adminSidebarItems.filter((i) => i.name !== "Request Management")
-        : adminSidebarItems,
-    [title, adminSidebarItems],
-  );
+        : adminSidebarItems;
+    if (title !== "CEO") return items;
+    return items
+      .filter((item) => item.name !== "Employee Directory")
+      .map((item) =>
+        item.name === "Admin Dashboard" ? { ...item, name: "CEO Dashboard" } : item,
+      );
+  }, [title, adminSidebarItems]);
+
+
 
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
@@ -129,6 +143,16 @@ const SidebarLayout = ({
         return "Leave Balance";
       case "work-management":
         return "Request Management";
+
+      case "appraisal":
+      case "quarterly-review":
+        return "Appraisal";
+      case "my-appraisal":
+      case "my-quarterly-review":
+        return "My Appraisal";
+      case "edit-access":
+        return "Access Ticket";
+
       case "notes":
         return "Notes";
       case "inbox":
@@ -142,7 +166,11 @@ const SidebarLayout = ({
       case "my-profile":
         return "Account Settings";
       default:
-        return title === "Manager" ? "My Dashboard" : "Admin Dashboard";
+        return title === "Manager"
+          ? "My Dashboard"
+          : title === "CEO"
+            ? "CEO Dashboard"
+            : "Admin Dashboard";
     }
   }, [tab, activeTab, title]);
 

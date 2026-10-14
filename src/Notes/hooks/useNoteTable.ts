@@ -21,7 +21,7 @@ interface UseNoteTableParams {
   setFormData: React.Dispatch<React.SetStateAction<NotesFormData>>;
   activeNote: Note | null;
   saveUndoSnapshot: () => void;
-  handleEditorInputWrapper: () => void;
+  handleEditorInputWrapper: (opts?: { skipPagination?: boolean }) => void;
   onPreviewAttachment: (item: NoteDocumentItem) => void;
   onDownloadAttachment: (item: NoteDocumentItem) => void;
   onPreviewImage?: (url: string, title?: string) => void;
@@ -596,7 +596,8 @@ export const useNoteTable = ({
         clearExpandMode();
         return;
       }
-      handleEditorInputWrapper();
+      // Width-only change — A4 reflow would incorrectly push rows to the next page
+      handleEditorInputWrapper({ skipPagination: true });
       requestAnimationFrame(syncHandle);
     };
 
@@ -650,33 +651,36 @@ export const useNoteTable = ({
     if (!editorRef.current) return;
     editorRef.current.focus();
 
-    let tableHtml = `<table style="width:100%;max-width:100%;table-layout:fixed;"><thead><tr>`;
+    let tableInner = `<table class="note-editor-table" style="width:100%;max-width:100%;table-layout:fixed;display:table;clear:both;"><thead><tr>`;
     for (let c = 0; c < numCols; c++) {
       const isSlCol = numCols > 1 && c === 0;
       const colName = getColLabel(c, numCols);
-      tableHtml += `<th contenteditable="false" class="${
+      tableInner += `<th contenteditable="false" class="${
         isSlCol ? "excel-sl-col" : ""
       }" title="${
         isSlCol ? "Click to select entire table" : `Column ${colName} (Click to select column)`
       }">${colName}</th>`;
     }
-    tableHtml += `</tr></thead><tbody>`;
+    tableInner += `</tr></thead><tbody>`;
 
     for (let r = 0; r < numRows; r++) {
-      tableHtml += `<tr>`;
+      tableInner += `<tr>`;
       for (let c = 0; c < numCols; c++) {
         const isSlCol = numCols > 1 && c === 0;
         if (isSlCol) {
-          tableHtml += `<td contenteditable="false" class="excel-sl-col" title="Click to select this row">${
+          tableInner += `<td contenteditable="false" class="excel-sl-col" title="Click to select this row">${
             r + 1
           }</td>`;
         } else {
-          tableHtml += `<td contenteditable="true">&nbsp;</td>`;
+          tableInner += `<td contenteditable="true">&nbsp;</td>`;
         }
       }
-      tableHtml += `</tr>`;
+      tableInner += `</tr>`;
     }
-    tableHtml += `</tbody></table><p><br/></p>`;
+    tableInner += `</tbody></table>`;
+
+    // Full-width block so table never sits beside pasted text (vertical overlap)
+    const tableHtml = `<p><br></p><div class="note-inserted-table" style="display:block;width:100%;max-width:100%;clear:both;margin:0.5em 0;">${tableInner}</div><p><br></p>`;
 
     document.execCommand("insertHTML", false, tableHtml);
     handleEditorInputWrapper();
@@ -994,14 +998,33 @@ export const useNoteTable = ({
       }
 
       const newHtml = editorRef.current ? editorRef.current.innerHTML : "";
-      setFormData((prev) => ({
-        ...prev,
-        description: newHtml || prev.description,
-        // Row attachments stay in the table cell only — not Files & Attachments
-      }));
+      setFormData((prev) => {
+        const alreadyListed = (prev.attachmentKeys || []).includes(fileKey);
+        return {
+          ...prev,
+          description: newHtml || prev.description,
+          // Also list under Files & Attachments (file upload section)
+          attachmentKeys: alreadyListed
+            ? prev.attachmentKeys
+            : [...(prev.attachmentKeys || []), fileKey],
+          attachments: alreadyListed
+            ? prev.attachments
+            : [
+                ...(prev.attachments || []),
+                {
+                  key: fileKey,
+                  fileKey,
+                  name: fileName,
+                  fileName,
+                  size: file.size,
+                  file,
+                },
+              ],
+        };
+      });
 
       handleEditorInputWrapper();
-      message.success(`Attached "${fileName}" to row`);
+      message.success(`Attached "${fileName}" to row and Files & Attachments`);
     } catch (err: any) {
       if (tempLoadingEl && tempLoadingEl.parentElement) {
         tempLoadingEl.remove();
@@ -1057,7 +1080,8 @@ export const useNoteTable = ({
           } applied`
     );
 
-    handleEditorInputWrapper();
+    // Style-only change — A4 reflow would incorrectly push table rows to the next page
+    handleEditorInputWrapper({ skipPagination: true });
   };
 
   return {

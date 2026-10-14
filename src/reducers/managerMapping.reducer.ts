@@ -14,6 +14,7 @@ interface ManagerMappingState {
   totalItems: number;
   historyTotalItems: number;
   updateSuccess: boolean;
+  lockType: "Weekly" | "Monthly";
 }
 
 const initialState: ManagerMappingState = {
@@ -27,6 +28,7 @@ const initialState: ManagerMappingState = {
   totalItems: 0,
   historyTotalItems: 0,
   updateSuccess: false,
+  lockType: "Weekly",
 };
 
 interface ThunkConfig {
@@ -174,6 +176,45 @@ export const getManagerMappingHistory = createAsyncThunk<
   }
 );
 
+export const fetchLockType = createAsyncThunk<
+  { lockType: "Weekly" | "Monthly" },
+  { department?: string } | void,
+  ThunkConfig
+>(
+  "managerMapping/fetch_lock_type",
+  async (args, { rejectWithValue }) => {
+    try {
+      const department = args && "department" in args ? args.department : undefined;
+      const response = await axios.get(`${apiUrl}/lock-type`, {
+        params: department ? { department } : undefined,
+      });
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || "Request failed");
+    }
+  },
+);
+
+export const updateLockType = createAsyncThunk<
+  { lockType: "Weekly" | "Monthly"; updated: number; managerId?: string; department?: string },
+  { lockType: "Weekly" | "Monthly"; managerId?: string; department?: string },
+  ThunkConfig
+>(
+  "managerMapping/update_lock_type",
+  async ({ lockType, managerId, department }, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`${apiUrl}/lock-type`, {
+        lockType,
+        managerId,
+        department,
+      });
+      return { ...response.data, managerId, department };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || error.message || "Request failed");
+    }
+  },
+);
+
 export const getMappedEmployeeIds = createAsyncThunk<any, void, ThunkConfig>(
   'managerMapping/fetch_mapped_ids',
   async (_, { rejectWithValue }) => {
@@ -215,6 +256,20 @@ export const ManagerMappingSlice = createSlice({
       .addCase(getMappedEmployeeIds.fulfilled, (state, action) => {
         state.loading = false;
         state.mappedEmployeeIds = action.payload;
+      })
+      .addCase(fetchLockType.fulfilled, (state, action) => {
+        state.lockType = action.payload.lockType || "Weekly";
+      })
+      .addCase(updateLockType.fulfilled, (state, action) => {
+        state.lockType = action.payload.lockType || "Weekly";
+        state.updating = false;
+        if (action.payload.managerId) {
+          state.historyEntities = state.historyEntities.map((m) =>
+            m.managerId === action.payload.managerId
+              ? { ...m, lockType: action.payload.lockType }
+              : m,
+          );
+        }
       })
       .addMatcher(
         isFulfilled(createManagerMapping, updateManagerMapping, partialUpdateManagerMapping, deleteManagerMapping),
