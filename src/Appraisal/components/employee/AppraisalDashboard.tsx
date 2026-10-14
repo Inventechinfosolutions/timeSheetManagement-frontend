@@ -591,11 +591,35 @@ export const AppraisalDashboard: React.FC = () => {
       })
       .map((assignment) => {
         const status = (assignment.status || "").toLowerCase();
-        const editDeadline = approvedEdit.has(status) ? assignment.editAllowedUntil : undefined;
+        const deadlineDateParsed = assignment.deadline ? parse(assignment.deadline) : null;
+        const editUntilParsed =
+          approvedEdit.has(status) && assignment.editAllowedUntil
+            ? parse(assignment.editAllowedUntil)
+            : null;
+
+        let targetDate: Date | null = null;
+        let targetLabel: string = assignment.deadline || "";
+
+        if (deadlineDateParsed && editUntilParsed) {
+          if (deadlineDateParsed.getTime() >= editUntilParsed.getTime()) {
+            targetDate = deadlineDateParsed;
+            targetLabel = assignment.deadline || formatAppraisalDisplayDate(deadlineDateParsed);
+          } else {
+            targetDate = editUntilParsed;
+            targetLabel = formatAppraisalDisplayDate(assignment.editAllowedUntil!);
+          }
+        } else if (deadlineDateParsed) {
+          targetDate = deadlineDateParsed;
+          targetLabel = assignment.deadline || formatAppraisalDisplayDate(deadlineDateParsed);
+        } else if (editUntilParsed) {
+          targetDate = editUntilParsed;
+          targetLabel = formatAppraisalDisplayDate(assignment.editAllowedUntil!);
+        }
+
         return {
           assignment,
-          date: parse(editDeadline || assignment.deadline),
-          deadlineLabel: editDeadline ? formatAppraisalDisplayDate(editDeadline) : assignment.deadline,
+          date: targetDate,
+          deadlineLabel: targetLabel,
         };
       })
       .filter((item): item is { assignment: QuarterlyReviewAssignment; date: Date; deadlineLabel: string } => item.date !== null)

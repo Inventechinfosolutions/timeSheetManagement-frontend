@@ -855,7 +855,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         setIsSubmitting(false);
         setIsSuccess(true);
         scrollToTop();
-        onSubmitEvaluation?.(record.id, evaluationResult);
+        onSubmitEvaluation?.(record.reviewId ? String(record.reviewId) : record.id, evaluationResult);
         setTimeout(() => {
           scrollToTop();
           onBack();

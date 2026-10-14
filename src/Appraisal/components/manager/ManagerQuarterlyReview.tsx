@@ -145,7 +145,14 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const handleEvaluationSubmit = (recordId: string, evaluation: EvaluationData) => {
     setAssignments((prev) =>
       prev.map((rec) => {
-        if (rec.id === recordId || rec.name === evaluatingRecord?.name) {
+        const isMatch = evaluatingRecord?.reviewId
+          ? rec.reviewId === evaluatingRecord.reviewId
+          : String(rec.reviewId) === recordId ||
+            (rec.id === recordId &&
+              rec.quarter === evaluatingRecord?.quarter &&
+              rec.financialYear === evaluatingRecord?.financialYear);
+
+        if (isMatch) {
           return {
             ...rec,
             status: QuarterlyReviewStatus.COMPLETED,
@@ -174,6 +181,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
     }, 2500);
     scrollToTop();
     setEvaluatingRecord(null);
+    setReloadKey((k) => k + 1);
     setTimeout(scrollToTop, 40);
   };
 
