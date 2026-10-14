@@ -65,8 +65,6 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
 
   const [decisionModalOpen, setDecisionModalOpen] = useState(false);
   const [decisionRecord, setDecisionRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
-  const [decisionIsApprove, setDecisionIsApprove] = useState<boolean>(true);
-  const [decisionDeadline, setDecisionDeadline] = useState<string>("");
   const [decisionRemarks, setDecisionRemarks] = useState<string>("");
   const [decisionSubmitting, setDecisionSubmitting] = useState<boolean>(false);
 
@@ -217,15 +215,11 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   };
 
   const handleOpenDecision = (record: ManagerQuarterlyReviewRecord, isApprove: boolean) => {
-    if (isApprove && !record.submittedOn) {
+    if (isApprove) {
       setAccessPreviewRecord(record);
       return;
     }
     setDecisionRecord(record);
-    setDecisionIsApprove(isApprove);
-    const d = new Date(Date.now() + 42 * 60 * 60 * 1000);
-    const localIso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    setDecisionDeadline(localIso);
     setDecisionRemarks("");
     setDecisionModalOpen(true);
   };
@@ -242,15 +236,10 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
       await AppraisalApi.respondEdit({
         performanceId,
         managerId,
-        approved: decisionIsApprove,
-        editAllowedUntil: decisionIsApprove && decisionDeadline ? new Date(decisionDeadline).toISOString() : undefined,
+        approved: false,
         responseNote: decisionRemarks.trim() || undefined,
       });
-      message.success(
-        decisionIsApprove
-          ? `Edit access granted to ${decisionRecord.name}!`
-          : `Edit request rejected.`
-      );
+      message.success(`Edit request rejected.`);
       setDecisionModalOpen(false);
       onRefresh?.();
     } catch (error) {
@@ -556,38 +545,18 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
         </div>
       )}
 
-      {/* Manager Decision Modal (Approve / Reject) */}
+      {/* Manager Reject Modal */}
       {decisionModalOpen && decisionRecord && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
             {/* Modal Header */}
-            <div
-              className={`p-5 flex items-center justify-between border-b ${
-                decisionIsApprove
-                  ? "bg-emerald-50/80 border-emerald-100"
-                  : "bg-rose-50/80 border-rose-100"
-              }`}
-            >
+            <div className="p-5 flex items-center justify-between border-b bg-rose-50/80 border-rose-100">
               <div className="flex items-center gap-2.5">
-                <div
-                  className={`w-9 h-9 rounded-xl flex items-center justify-center ${
-                    decisionIsApprove
-                      ? "bg-emerald-100 text-emerald-700"
-                      : "bg-rose-100 text-rose-700"
-                  }`}
-                >
-                  {decisionIsApprove ? (
-                    <Check className="w-5 h-5" />
-                  ) : (
-                    <X className="w-5 h-5" />
-                  )}
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-rose-100 text-rose-700">
+                  <X className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">
-                    {decisionIsApprove
-                      ? "Approve Edit Request"
-                      : "Reject Edit Request"}
-                  </h3>
+                  <h3 className="text-base font-bold text-slate-900">Reject Edit Request</h3>
                   <p className="text-xs text-slate-500">
                     {decisionRecord.name} • {decisionRecord.id} •{" "}
                     {decisionRecord.quarter} {decisionRecord.financialYear}
@@ -605,13 +574,12 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
 
             {/* Modal Body */}
             <div className="p-6 space-y-4">
-              {/* Employee's request reason */}
               <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
                 <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Employee's Stated Reason
+                  Description
                 </div>
-                <p className="text-sm text-slate-700 italic">
-                  "{decisionRecord.editRequestReason || "No specific reason provided."}"
+                <p className="text-sm text-slate-700 italic whitespace-pre-wrap">
+                  "{decisionRecord.editRequestReason || decisionRecord.description || "No description provided."}"
                 </p>
               </div>
 
@@ -630,33 +598,13 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                 </div>
               )}
 
-              {decisionIsApprove ? (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Edit Access Valid Until (Deadline){" "}
-                    <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={decisionDeadline}
-                    onChange={(e) => setDecisionDeadline(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
-                  />
-                  <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    The employee will be permitted to edit and resubmit their self-assessment until this deadline. When the deadline passes, editing is locked automatically.
-                  </p>
-                </div>
-              ) : (
-                <div className="p-3 bg-amber-50 border border-amber-200/60 rounded-xl text-xs text-amber-800 flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                  <span>
-                    Rejecting this request will keep the self-assessment locked in its current submitted state.
-                  </span>
-                </div>
-              )}
+              <div className="p-3 bg-amber-50 border border-amber-200/60 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <span>
+                  Rejecting this request will keep the self-assessment locked in its current submitted state.
+                </span>
+              </div>
 
-              {/* Manager Remarks note */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Manager Remarks (Optional)
@@ -665,11 +613,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   rows={3}
                   value={decisionRemarks}
                   onChange={(e) => setDecisionRemarks(e.target.value)}
-                  placeholder={
-                    decisionIsApprove
-                      ? "Optional remarks or instructions for the employee..."
-                      : "Provide a reason for rejection..."
-                  }
+                  placeholder="Provide a reason for rejection..."
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
                 />
               </div>
@@ -688,21 +632,11 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               <button
                 type="button"
                 onClick={handleConfirmDecision}
-                disabled={
-                  decisionSubmitting || (decisionIsApprove && !decisionDeadline)
-                }
-                className={`px-5 py-2 text-sm font-bold text-white rounded-xl shadow-md transition-all flex items-center gap-1.5 ${
-                  decisionIsApprove
-                    ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/25 disabled:opacity-50"
-                    : "bg-rose-600 hover:bg-rose-700 shadow-rose-600/25 disabled:opacity-50"
-                }`}
+                disabled={decisionSubmitting}
+                className="px-5 py-2 text-sm font-bold text-white rounded-xl shadow-md transition-all flex items-center gap-1.5 bg-rose-600 hover:bg-rose-700 shadow-rose-600/25 disabled:opacity-50"
               >
                 {decisionSubmitting ? (
                   "Processing..."
-                ) : decisionIsApprove ? (
-                  <>
-                    <Check className="w-4 h-4" /> Grant Edit Access
-                  </>
                 ) : (
                   <>
                     <X className="w-4 h-4" /> Confirm Rejection
@@ -717,12 +651,17 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
             <div className="p-5 flex items-center justify-between border-b bg-emerald-50/80 border-emerald-100">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Previous access</h3>
-                <p className="text-xs text-slate-500">
-                  {accessPreviewRecord.name} • {accessPreviewRecord.id} • {accessPreviewRecord.quarter}{" "}
-                  {accessPreviewRecord.financialYear}
-                </p>
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-emerald-100 text-emerald-700">
+                  <Check className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Approve Edit Request</h3>
+                  <p className="text-xs text-slate-500">
+                    {accessPreviewRecord.name} • {accessPreviewRecord.id} • {accessPreviewRecord.quarter}{" "}
+                    {accessPreviewRecord.financialYear}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
@@ -733,20 +672,12 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               </button>
             </div>
             <div className="p-6 space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">Assigned date</span>
-                <span className="font-bold text-slate-800">{accessPreviewRecord.assignedOn || "—"}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">Deadline</span>
-                <span className="font-bold text-slate-800">{accessPreviewRecord.toDate || "—"}</span>
-              </div>
               <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
                 <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1">
-                  Employee's Stated Reason
+                  Description
                 </div>
-                <p className="text-sm text-slate-700 italic">
-                  "{accessPreviewRecord.editRequestReason || "No specific reason provided."}"
+                <p className="text-sm text-slate-700 italic whitespace-pre-wrap">
+                  "{accessPreviewRecord.editRequestReason || accessPreviewRecord.description || "No description provided."}"
                 </p>
               </div>
               {extractReassignReasons(accessPreviewRecord.description).length > 0 && (
@@ -763,9 +694,6 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   </ul>
                 </div>
               )}
-              <p className="text-xs text-slate-500">
-                Next opens the review so you can set today as the assigned date and choose a new deadline.
-              </p>
             </div>
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
               <button
