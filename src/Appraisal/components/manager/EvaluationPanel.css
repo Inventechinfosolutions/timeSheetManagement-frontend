@@ -1097,10 +1097,16 @@
 }
 
 .eval-view-mode .eval-textarea-field,
+.eval-view-mode .eval-textarea-field:hover,
+.eval-view-mode .eval-textarea-field:focus,
 .eval-textarea-field:disabled,
+.eval-textarea-field:disabled:hover,
 .eval-textarea-field:read-only,
-.eval-textarea-readonly {
-  cursor: default !important;
+.eval-textarea-field:read-only:hover,
+.eval-textarea-readonly,
+.eval-textarea-readonly:hover,
+.eval-textarea-readonly:focus {
+  cursor: not-allowed !important;
   caret-color: transparent;
   pointer-events: auto !important;
   background: #F8FAFC !important;
@@ -1108,16 +1114,6 @@
   color: #334155 !important;
   resize: none !important;
   user-select: text;
-}
-
-.eval-view-mode .eval-textarea-field:hover,
-.eval-view-mode .eval-textarea-field:focus,
-.eval-textarea-readonly:hover,
-.eval-textarea-readonly:focus {
-  background: #F8FAFC !important;
-  border-color: #CBD5E1 !important;
-  box-shadow: none !important;
-  outline: none !important;
 }
 
 /* ==========================================================================

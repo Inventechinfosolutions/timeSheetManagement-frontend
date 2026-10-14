@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Star, Pencil, Eye, ShieldCheck, UserCheck, Check, X, Calendar, Clock, AlertCircle, Lock, RotateCcw } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Star, Pencil, Eye, ShieldCheck, UserCheck, Check, X, CheckCircle, XCircle, Calendar, Clock, AlertCircle, Lock, RotateCcw } from "lucide-react";
 import { ManagerQuarterlyReviewRecord } from "../../types/appraisal.types";
 import { DatePicker, Pagination } from "../../../components/ui";
 import { useAppSelector } from "../../../hooks";
@@ -75,7 +76,24 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   const [reassignTodayDate, setReassignTodayDate] = useState<string>("");
   const [reassignReason, setReassignReason] = useState<string>("");
   const [reassignSubmitting, setReassignSubmitting] = useState<boolean>(false);
+  const [reassignError, setReassignError] = useState<string>("");
   const [accessPreviewRecord, setAccessPreviewRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
+
+  // Blur surrounding background and lock scroll when any modal is open
+  useEffect(() => {
+    const isAnyModalOpen = decisionModalOpen || !!accessPreviewRecord || reassignModalOpen;
+    if (isAnyModalOpen) {
+      document.body.style.overflow = "hidden";
+      document.body.classList.add("modal-open-active");
+    } else {
+      document.body.style.overflow = "unset";
+      document.body.classList.remove("modal-open-active");
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+      document.body.classList.remove("modal-open-active");
+    };
+  }, [decisionModalOpen, accessPreviewRecord, reassignModalOpen]);
 
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = defaultPageSize;
@@ -269,27 +287,44 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
     setReassignTodayDate(todayIsoDate());
     setReassignDeadline("");
     setReassignReason("");
+    setReassignError("");
     setReassignModalOpen(true);
+  };
+
+  const handleReassignDeadlineChange = (val: string) => {
+    setReassignDeadline(val);
+    if (!val) {
+      setReassignError("");
+      return;
+    }
+    const iso = toIsoDate(val);
+    const todayStr = todayIsoDate();
+    if (iso && iso <= todayStr) {
+      setReassignError("The new deadline must be tomorrow or later.");
+    } else {
+      setReassignError("");
+    }
   };
 
   const handleConfirmReassign = async () => {
     if (!reassignRecord) return;
     const deadlineIso = toIsoDate(reassignDeadline);
     if (!deadlineIso) {
-      message.error("Please pick a new deadline date.");
+      setReassignError("Please pick a new deadline date.");
       return;
     }
     const todayStr = todayIsoDate();
     if (deadlineIso <= todayStr) {
-      message.error("The new deadline must be tomorrow or later.");
+      setReassignError("The new deadline must be tomorrow or later.");
       return;
     }
 
     if (!reassignRecord.reviewId) {
-      message.error("Review id is missing. Refresh the page and try again.");
+      setReassignError("Review id is missing. Refresh the page and try again.");
       return;
     }
 
+    setReassignError("");
     setReassignSubmitting(true);
     try {
       await AppraisalApi.reassignReview({
@@ -302,7 +337,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
       setReassignModalOpen(false);
       onRefresh?.();
     } catch (error) {
-      message.error(readApiError(error));
+      setReassignError(readApiError(error));
     } finally {
       setReassignSubmitting(false);
     }
@@ -319,14 +354,14 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
     const deadlineMatch = /^(\d{2})-(\d{2})-(\d{4})$/.exec((record.toDate || "").trim());
     const deadlineStartMs = deadlineMatch
       ? new Date(
-          Number(deadlineMatch[3]),
-          Number(deadlineMatch[2]) - 1,
-          Number(deadlineMatch[1]),
-          0,
-          0,
-          0,
-          0,
-        ).getTime()
+        Number(deadlineMatch[3]),
+        Number(deadlineMatch[2]) - 1,
+        Number(deadlineMatch[1]),
+        0,
+        0,
+        0,
+        0,
+      ).getTime()
       : 0;
     const lockedAtMs = record.lockedAt ? new Date(record.lockedAt).getTime() : 0;
     const windowStartMs = deadlineStartMs || lockedAtMs;
@@ -355,7 +390,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
           title={`View appraisal for ${record.name}`}
           aria-label={`View appraisal for ${record.name}`}
         >
-          <Eye className="w-4 h-4" />
+          <Eye size={18} />
         </button>
 
         {showReassign ? (
@@ -366,7 +401,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
             title={`Unlock & Re-assign appraisal for ${record.name}`}
             aria-label={`Unlock & Re-assign appraisal for ${record.name}`}
           >
-            <RotateCcw className="w-4 h-4" />
+            <RotateCcw size={18} />
           </button>
         ) : isLocked || renewalClosed ? null : isEditRequested ? (
           <>
@@ -377,7 +412,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               title={`Approve edit request for ${record.name}`}
               aria-label={`Approve edit request for ${record.name}`}
             >
-              <Check className="w-4 h-4" />
+              <CheckCircle size={18} />
             </button>
             <button
               type="button"
@@ -386,7 +421,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               title={`Reject edit request for ${record.name}`}
               aria-label={`Reject edit request for ${record.name}`}
             >
-              <X className="w-4 h-4" />
+              <XCircle size={18} />
             </button>
           </>
         ) : (
@@ -400,7 +435,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
             title={`Edit evaluation for ${record.name}`}
             aria-label={`Edit evaluation for ${record.name}`}
           >
-            <Pencil className="w-4 h-4" />
+            <Pencil size={18} />
           </button>
         )}
       </div>
@@ -493,8 +528,8 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   <td className="text-center">
                     <span
                       className={`qr-assigned-by-pill ${record.assignedBy.toLowerCase() === "admin"
-                          ? "qr-assigned-by-admin"
-                          : ""
+                        ? "qr-assigned-by-admin"
+                        : ""
                         }`}
                     >
                       {record.assignedBy.toLowerCase() === "admin" ? (
@@ -546,8 +581,8 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
       )}
 
       {/* Manager Reject Modal */}
-      {decisionModalOpen && decisionRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+      {decisionModalOpen && decisionRecord && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 qr-modal-overlay animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden transform transition-all">
             {/* Modal Header */}
             <div className="p-5 flex items-center justify-between border-b bg-rose-50/80 border-rose-100">
@@ -579,7 +614,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   Description
                 </div>
                 <p className="text-sm text-slate-700 italic whitespace-pre-wrap">
-                  "{decisionRecord.editRequestReason || decisionRecord.description || "No description provided."}"
+                  "{decisionRecord.editRequestReason || "No description provided."}"
                 </p>
               </div>
 
@@ -645,10 +680,11 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
-      {accessPreviewRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+      {accessPreviewRecord && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 qr-modal-overlay">
           <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
             <div className="p-5 flex items-center justify-between border-b bg-emerald-50/80 border-emerald-100">
               <div className="flex items-center gap-2.5">
@@ -677,7 +713,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   Description
                 </div>
                 <p className="text-sm text-slate-700 italic whitespace-pre-wrap">
-                  "{accessPreviewRecord.editRequestReason || accessPreviewRecord.description || "No description provided."}"
+                  "{accessPreviewRecord.editRequestReason || "No description provided."}"
                 </p>
               </div>
               {extractReassignReasons(accessPreviewRecord.description).length > 0 && (
@@ -716,11 +752,12 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       {/* Unlock / Re-assign Appraisal Modal */}
-      {reassignModalOpen && reassignRecord && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+      {reassignModalOpen && reassignRecord && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 qr-modal-overlay animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-scale-up">
             {/* Modal Header */}
             <div className="p-5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 text-white flex items-center justify-between">
@@ -790,9 +827,15 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                 <DatePicker
                   className="w-full"
                   value={reassignDeadline}
-                  onChange={setReassignDeadline}
+                  onChange={handleReassignDeadlineChange}
                   placeholder="Select deadline date"
                 />
+                {reassignError && (
+                  <div className="flex items-center gap-1.5 mt-2 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200/90 rounded-xl p-2.5 animate-in fade-in duration-150">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+                    <span>{reassignError}</span>
+                  </div>
+                )}
                 <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1">
                   <Clock className="w-3.5 h-3.5 text-slate-400" />
                   Status becomes Assigned for the manager and Not Started for the employee, same as the first assignment.
@@ -827,7 +870,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               <button
                 type="button"
                 onClick={handleConfirmReassign}
-                disabled={reassignSubmitting || !reassignDeadline}
+                disabled={reassignSubmitting || !reassignDeadline || Boolean(reassignError)}
                 className="px-5 py-2 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/25 transition-all flex items-center gap-1.5 disabled:opacity-50"
               >
                 {reassignSubmitting ? (
@@ -840,7 +883,8 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

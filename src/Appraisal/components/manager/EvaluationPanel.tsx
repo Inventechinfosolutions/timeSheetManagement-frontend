@@ -8,7 +8,6 @@ import {
   AlertCircle,
   Trophy,
   Award,
-  Compass,
   Sliders,
   Mail,
   Lock,
@@ -1166,23 +1165,6 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
            =================================================================== */}
         {activeView === "review" && (
           <div className="w-full space-y-4 eval-submission-col">
-            {/* Header Card */}
-            <div className="eval-glass-card eval-reveal-card p-4 sm:p-5">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shrink-0 shadow-sm eval-stagger-item eval-stagger-1">
-                  <Compass className="w-4 h-4" />
-                </div>
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-[#0F172A] eval-stagger-item eval-stagger-2">
-                    Employee Performance Review
-                  </h2>
-                  <p className="text-xs text-[#64748B] mt-0.5 eval-stagger-item eval-stagger-3">
-                    Detailed review of quarterly outputs submitted by employee.
-                  </p>
-                </div>
-              </div>
-            </div>
-
             <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 space-y-3">
               <h3 className="text-sm font-bold text-[#0F172A]">Assignment</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1978,7 +1960,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         }}
                         placeholder="Highlight major strengths and positive attributes..."
                         className={`eval-textarea-field eval-stagger-item eval-stagger-2 ${fieldErrors.strengths ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
-                          } ${isViewMode ? "eval-textarea-readonly" : ""
+                          } ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed cursor-not-allowed" : ""
                           }`}
                         title={
                           isViewMode
@@ -2015,7 +1997,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         }}
                         placeholder="Identify growth areas and learning objectives..."
                         className={`eval-textarea-field eval-stagger-item eval-stagger-2 ${fieldErrors.improvements ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
-                          } ${isViewMode ? "eval-textarea-readonly" : ""
+                          } ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed cursor-not-allowed" : ""
                           }`}
                         title={
                           isViewMode
@@ -2052,7 +2034,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         }}
                         placeholder="General comments or HR guidelines..."
                         className={`eval-textarea-field eval-stagger-item eval-stagger-2 ${fieldErrors.remarks ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
-                          } ${isViewMode ? "eval-textarea-readonly" : ""
+                          } ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed cursor-not-allowed" : ""
                           }`}
                         title={
                           isViewMode

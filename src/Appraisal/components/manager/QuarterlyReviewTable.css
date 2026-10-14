@@ -3,6 +3,35 @@
    Frosted Ice-Blue Aesthetic & Royal Blue Highlights
    ========================================================================== */
 
+/* Modal Backdrop Blur for Header, Sidebar, and Layout */
+body.modal-open-active header,
+body.modal-open-active .header,
+body.modal-open-active aside,
+body.modal-open-active footer,
+body.modal-open-active .footer,
+body.modal-open-active .sidebar-footer {
+  filter: blur(1.5px) brightness(0.96) !important;
+  opacity: 0.85 !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.qr-modal-overlay {
+  animation: qrModalOverlayFade 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  background: rgba(15, 23, 42, 0.25) !important;
+  backdrop-filter: blur(2.5px) !important;
+  -webkit-backdrop-filter: blur(2.5px) !important;
+}
+
+@keyframes qrModalOverlayFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .quarterly-review-table-card {
   width: 100%;
   background: #FFFFFF;
@@ -409,81 +438,84 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.1rem;
-  height: 2.1rem;
-  border-radius: 0.65rem;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 9999px;
   cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  border: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
 }
 
-.qr-action-btn-edit,
-.qr-action-btn-view {
-  background: #EFF6FF;
-  color: #1D4ED8;
-  border: 1px solid #BFDBFE;
-  box-shadow: 0 1px 2px rgba(37, 99, 235, 0.08);
+.qr-action-btn-view,
+.qr-action-btn-edit {
+  background: rgba(239, 246, 255, 0.85);
+  color: #2563EB;
 }
 
-.qr-action-btn-edit:hover,
-.qr-action-btn-view:hover {
+.qr-action-btn-view:hover,
+.qr-action-btn-edit:hover {
   background: #2563EB;
   color: #FFFFFF;
-  border-color: #2563EB;
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
-}
-
-.qr-action-btn-edit:active,
-.qr-action-btn-view:active,
-.qr-action-btn-approve:active,
-.qr-action-btn-reject:active {
-  transform: scale(0.94);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  transform: translateY(-1px) scale(1.05);
 }
 
 .qr-action-btn-approve {
-  background: #ECFDF5;
-  color: #059669;
-  border: 1px solid #A7F3D0;
-  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.08);
+  background: rgba(236, 253, 245, 0.85);
+  color: #16A34A;
 }
 
 .qr-action-btn-approve:hover {
-  background: #059669;
+  background: #16A34A;
   color: #FFFFFF;
-  border-color: #059669;
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.28);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.28);
+  transform: translateY(-1px) scale(1.05);
 }
 
 .qr-action-btn-reject {
-  background: #FEF2F2;
+  background: rgba(254, 242, 242, 0.85);
   color: #DC2626;
-  border: 1px solid #FECACA;
-  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.08);
 }
 
 .qr-action-btn-reject:hover {
   background: #DC2626;
   color: #FFFFFF;
-  border-color: #DC2626;
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.28);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.28);
+  transform: translateY(-1px) scale(1.05);
 }
 
 .qr-action-btn-reassign {
-  background: #ECFDF5;
-  color: #059669;
-  border: 1px solid #A7F3D0;
-  box-shadow: 0 1px 2px rgba(5, 150, 105, 0.08);
+  background: rgba(236, 253, 245, 0.85);
+  color: #16A34A;
 }
 
 .qr-action-btn-reassign:hover {
-  background: #059669;
+  background: #16A34A;
   color: #FFFFFF;
-  border-color: #059669;
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.28);
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.28);
+  transform: translateY(-1px) scale(1.05);
+}
+
+.qr-action-btn-view:active,
+.qr-action-btn-edit:active,
+.qr-action-btn-approve:active,
+.qr-action-btn-reject:active,
+.qr-action-btn-reassign:active,
+.qr-action-btn-access:active {
+  transform: scale(0.92);
+}
+
+.qr-action-btn-access {
+  background: rgba(239, 246, 255, 0.85);
+  color: #2563EB;
+}
+
+.qr-action-btn-access:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  transform: translateY(-1px) scale(1.05);
 }
 
 

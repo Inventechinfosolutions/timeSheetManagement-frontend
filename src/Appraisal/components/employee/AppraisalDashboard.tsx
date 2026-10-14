@@ -471,10 +471,10 @@ export const AppraisalDashboard: React.FC = () => {
     if (isPending) {
       return {
         visible: true,
-        eligible: false,
+        eligible: true,
         alreadyRequested: true,
         remainingHours: 0,
-        tooltip: `Access request already sent to ${assignment.assignedBy}. Status: Pending Approval.`,
+        tooltip: `Access request submitted to ${assignment.assignedBy}. Status: Pending Approval. Click to view details.`,
       };
     }
 
@@ -996,22 +996,22 @@ export const AppraisalDashboard: React.FC = () => {
                                           type="button"
                                           disabled={!elig.eligible}
                                           onMouseEnter={(e) => {
-                                            if (elig.eligible) animateKeyIconBounce(e.currentTarget);
+                                            if (elig.eligible && !elig.alreadyRequested) animateKeyIconBounce(e.currentTarget);
                                           }}
                                           onClick={() =>
                                             elig.eligible &&
                                             handleOpenAccessRequest(assignment, elig.remainingHours)
                                           }
                                           className={`qr-action-icon-btn qr-action-btn-access ${elig.alreadyRequested
-                                              ? "qr-action-btn-access-requested"
+                                              ? "qr-action-btn-access-requested cursor-pointer"
                                               : elig.eligible
-                                                ? "qr-action-btn-access-enabled"
+                                                ? "qr-action-btn-access-enabled cursor-pointer"
                                                 : "qr-action-btn-access-disabled"
                                             }`}
                                           title={elig.tooltip}
                                           aria-label={
                                             elig.alreadyRequested
-                                              ? `Access requested for ${assignment.quarter}`
+                                              ? `Access request submitted for ${assignment.quarter}. Click to view.`
                                               : `Request access for ${assignment.quarter}`
                                           }
                                         >
@@ -1140,15 +1140,15 @@ export const AppraisalDashboard: React.FC = () => {
                                   handleOpenAccessRequest(assignment, elig.remainingHours)
                                 }
                                 className={`qr-action-icon-btn qr-action-btn-access !h-8 !w-8 justify-center shrink-0 ${elig.alreadyRequested
-                                    ? "qr-action-btn-access-requested"
+                                    ? "qr-action-btn-access-requested cursor-pointer"
                                     : elig.eligible
-                                      ? "qr-action-btn-access-enabled"
+                                      ? "qr-action-btn-access-enabled cursor-pointer"
                                       : "qr-action-btn-access-disabled"
                                   }`}
                                 title={elig.tooltip}
                                 aria-label={
                                   elig.alreadyRequested
-                                    ? `Access requested for ${assignment.quarter}`
+                                    ? `Access request submitted for ${assignment.quarter}. Click to view.`
                                     : `Request access for ${assignment.quarter}`
                                 }
                               >
@@ -1306,6 +1306,26 @@ export const AppraisalDashboard: React.FC = () => {
         assignment={selectedAccessAssignment}
         remainingHours={selectedAccessRemainingHours}
         onSubmit={handleSubmitAccessRequest}
+        isReadOnly={Boolean(
+          selectedAccessAssignment &&
+          (selectedAccessAssignment.status.toUpperCase() === "REQUESTED_FOR_EDIT" ||
+            accessRequests.some(
+              (req) =>
+                req.assignmentId === selectedAccessAssignment.id ||
+                (req.quarter === selectedAccessAssignment.quarter &&
+                  req.financialYear === selectedAccessAssignment.financialYear)
+            ))
+        )}
+        requestDetails={
+          selectedAccessAssignment
+            ? accessRequests.find(
+              (req) =>
+                req.assignmentId === selectedAccessAssignment.id ||
+                (req.quarter === selectedAccessAssignment.quarter &&
+                  req.financialYear === selectedAccessAssignment.financialYear)
+            ) || null
+            : null
+        }
       />
 
       {/* 3D CELEBRATORY REVEALED RATING MODAL */}
