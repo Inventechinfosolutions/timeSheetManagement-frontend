@@ -99,6 +99,16 @@ const renderStatusBadge = (status: string) => {
   );
 };
 
+const Marquee: React.FC<
+  React.HTMLAttributes<HTMLElement> & {
+    scrollamount?: number | string;
+    behavior?: string;
+    direction?: string;
+  }
+> = ({ children, ...props }) => {
+  return React.createElement("marquee", props, children);
+};
+
 export const AppraisalDashboard: React.FC = () => {
   const {
     assignments,
@@ -616,19 +626,30 @@ export const AppraisalDashboard: React.FC = () => {
           targetLabel = formatAppraisalDisplayDate(assignment.editAllowedUntil!);
         }
 
+        const days = targetDate ? Math.round((targetDate.getTime() - today.getTime()) / 86400000) : null;
+
         return {
           assignment,
           date: targetDate,
           deadlineLabel: targetLabel,
+          days,
         };
       })
-      .filter((item): item is { assignment: QuarterlyReviewAssignment; date: Date; deadlineLabel: string } => item.date !== null)
+      .filter((item): item is { assignment: QuarterlyReviewAssignment; date: Date; deadlineLabel: string; days: number } => item.date !== null)
       .sort((left, right) => {
         const leftDistance = Math.abs(left.date.getTime() - today.getTime());
         const rightDistance = Math.abs(right.date.getTime() - today.getTime());
         if (leftDistance !== rightDistance) return leftDistance - rightDistance;
         return left.date.getTime() - right.date.getTime();
       });
+
+    const pendingMap = new Map<string, { days: number; deadlineLabel: string }>();
+    pending.forEach((item) => {
+      pendingMap.set(item.assignment.id, {
+        days: item.days,
+        deadlineLabel: item.deadlineLabel,
+      });
+    });
 
     if (pending.length === 0) return null;
 
@@ -639,6 +660,7 @@ export const AppraisalDashboard: React.FC = () => {
       days,
       pendingCount: pending.length,
       deadlineLabel: pick.deadlineLabel,
+      pendingMap,
     };
   }, [assignments]);
 
@@ -696,9 +718,6 @@ export const AppraisalDashboard: React.FC = () => {
   if (activeAssignment) {
     return (
       <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE]">
-
-
-
         <div className="relative z-10">
           <QuarterlyReviewStepper
             key={activeAssignment.id}
@@ -938,8 +957,15 @@ export const AppraisalDashboard: React.FC = () => {
                         </thead>
                         <tbody>
                           {paginatedAssignments.map((assignment) => {
+                            const pendingItem = deadlineInfo?.pendingMap?.get(assignment.id);
+                            const daysLeft = pendingItem?.days ?? null;
+                            const showRowMarquee = pendingItem !== undefined && daysLeft === 1;
+
                             return (
-                              <tr key={assignment.id}>
+                              <tr
+                                key={assignment.id}
+                                className={`quarterly-review-row ${showRowMarquee ? "qr-urgent-row" : ""}`}
+                              >
                                 {/* 1. Quarter with Dedicated Color */}
                                 <td>{renderQuarterBadge(assignment.quarter)}</td>
 
@@ -973,10 +999,17 @@ export const AppraisalDashboard: React.FC = () => {
                                 </td>
 
                                 <td className="text-center">
-                                  <span className="qr-date-chip">
-                                    <Calendar className="w-3.5 h-3.5 text-[#A36361] mr-1.5 inline" />
+                                  <span className={`qr-date-chip ${showRowMarquee ? "qr-date-chip-urgent" : ""}`}>
+                                    <Calendar className={`w-3.5 h-3.5 mr-1.5 inline ${showRowMarquee ? "text-rose-500" : "text-[#A36361]"}`} />
                                     {assignment.deadline}
                                   </span>
+                                  {showRowMarquee && (
+                                    <div className="qr-cell-marquee-container">
+                                      <Marquee scrollamount={3} className="qr-cell-marquee-text">
+                                        ⚠️ 1 day remaining — please submit your review before the deadline.
+                                      </Marquee>
+                                    </div>
+                                  )}
                                 </td>
 
                                 {/* 5. Status */}
@@ -1079,10 +1112,16 @@ export const AppraisalDashboard: React.FC = () => {
                 {/* Mobile Card Layout for Table Rows */}
                 <div className="sm:hidden space-y-3">
                   {paginatedAssignments.map((assignment) => {
+                    const pendingItem = deadlineInfo?.pendingMap?.get(assignment.id);
+                    const daysLeft = pendingItem?.days ?? null;
+                    const showRowMarquee = pendingItem !== undefined && daysLeft === 1;
+
                     return (
                       <Card
                         key={assignment.id}
-                        className="p-4 rounded-2xl border border-[#BFDBFE]/60 bg-white shadow-xs space-y-3"
+                        className={`p-4 rounded-2xl border space-y-3 ${
+                          showRowMarquee ? "bg-[#FFF1F2] border-rose-300 ring-1 ring-rose-200" : "bg-white border-[#BFDBFE]/60 shadow-xs"
+                        }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -1120,10 +1159,19 @@ export const AppraisalDashboard: React.FC = () => {
                           </div>
                           <div className="flex items-center justify-between">
                             <span>Deadline:</span>
-                            <span className="qr-date-chip">
-                              <Calendar className="w-3 h-3 text-[#A36361] mr-1 inline" />
-                              {assignment.deadline}
-                            </span>
+                            <div className="flex flex-col items-end">
+                              <span className={`qr-date-chip ${showRowMarquee ? "qr-date-chip-urgent" : ""}`}>
+                                <Calendar className={`w-3 h-3 mr-1 inline ${showRowMarquee ? "text-rose-500" : "text-[#A36361]"}`} />
+                                {assignment.deadline}
+                              </span>
+                              {showRowMarquee && (
+                                <div className="qr-cell-marquee-container w-[130px]">
+                                  <Marquee scrollamount={3} className="qr-cell-marquee-text">
+                                    ⚠️ 1 day left! Review not submitted
+                                  </Marquee>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 
