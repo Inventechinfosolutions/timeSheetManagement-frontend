@@ -31,6 +31,7 @@ export const AppraisalCopy = {
   selectFinancialYear: "Select a financial year before assigning.",
   selectDates: "Select the from date and deadline before assigning.",
   deadlineAfterAssigned: "Deadline must be after the assigned date.",
+  descriptionRequired: "Please enter instructions or description before assigning.",
 } as const;
 
 export const MANAGER_MAPPING_LIST_PATH = "/api/manager-mapping/all";

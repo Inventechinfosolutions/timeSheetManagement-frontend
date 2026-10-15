@@ -274,6 +274,10 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       showFieldError(AssignFormField.DEADLINE, AppraisalCopy.deadlineAfterAssigned);
       return;
     }
+    if (!description.trim()) {
+      showFieldError(AssignFormField.DESCRIPTION, AppraisalCopy.descriptionRequired);
+      return;
+    }
 
     setAssignError("");
     setErrorField(null);
@@ -593,10 +597,18 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             <textarea
               rows={3}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (e.target.value.trim()) {
+                  clearFieldError(AssignFormField.DESCRIPTION);
+                }
+              }}
               placeholder="Add instructions, focus areas, or deadline remarks for the employee(s)..."
-              className="w-full px-3.5 py-2.5 bg-white border border-blue-200/70 rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[80px] assign-input-control assign-input-textarea custom-scrollbar"
+              className={`w-full px-3.5 py-2.5 bg-white border rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[80px] assign-input-control assign-input-textarea custom-scrollbar ${errorField === AssignFormField.DESCRIPTION ? "is-error !border-red-500 ring-2 ring-red-500/15" : "border-blue-200/70"}`}
             />
+            {errorField === AssignFormField.DESCRIPTION ? (
+              <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+            ) : null}
           </div>
         </div>
       )}
