@@ -432,4 +432,60 @@
 
 .qr-status-locked .qr-status-dot {
   background: #F43F5E !important;
-}
+}
+
+/* ==========================================================================
+   Urgent 1-Day Deadline Single-Row Styles (Matching Pink Reference Screenshot)
+   ========================================================================== */
+.quarterly-review-table tbody tr.qr-urgent-row,
+.qr-urgent-row {
+  background: #FFF1F2 !important;
+  border-bottom: 1px solid #FECDD3 !important;
+}
+
+.quarterly-review-table tbody tr.qr-urgent-row:hover {
+  background: #FFE4E6 !important;
+}
+
+.quarterly-review-table tbody tr.qr-urgent-row td {
+  background: #FFF1F2 !important;
+  border-bottom: 1px solid #FECDD3 !important;
+}
+
+.quarterly-review-table tbody tr.qr-urgent-row:hover td {
+  background: #FFE4E6 !important;
+}
+
+.quarterly-review-table tbody tr.qr-urgent-row .qr-sticky-action-td {
+  background: #FFF1F2 !important;
+}
+
+.quarterly-review-table tbody tr.qr-urgent-row:hover .qr-sticky-action-td {
+  background: #FFE4E6 !important;
+}
+
+.qr-cell-marquee-container {
+  width: 100%;
+  max-width: 140px;
+  margin: 3px auto 0 auto;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.qr-cell-marquee-text {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #DC2626;
+  display: block;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.qr-date-chip-urgent {
+  background: #FFE4E6 !important;
+  border-color: #FECDD3 !important;
+  color: #BE123C !important;
+  font-weight: 700 !important;
+}
+
+
