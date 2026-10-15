@@ -960,8 +960,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     setSavingAssignment(true);
     setAssignmentError("");
     try {
+      const todayDisplay = todayDisplayDate();
+      const todayIso = toIsoDate(todayDisplay);
       if (grantAccess) {
-        const todayIso = toIsoDate(todayDisplayDate());
         if (!todayIso || deadlineIso <= todayIso) {
           setAssignmentError("Select a deadline after today.");
           setSavingAssignment(false);
@@ -972,9 +973,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           deadlineDate: deadlineIso,
           reassignedDate: todayIso,
         });
+        setAssignedDate(todayDisplay);
         onAssignmentSaved?.({
           reviewId,
-          assignedDate,
+          assignedDate: todayDisplay,
           deadline: deadlineDate,
           description: assignmentDescription.trim(),
         });
@@ -983,11 +985,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       }
       await AppraisalApi.updateReview(reviewId, {
         deadlineDate: deadlineIso,
+        assignedDate: todayIso,
         description: assignmentDescription.trim(),
       });
+      setAssignedDate(todayDisplay);
       onAssignmentSaved?.({
         reviewId,
-        assignedDate,
+        assignedDate: todayDisplay,
         deadline: deadlineDate,
         description: assignmentDescription.trim(),
       });
