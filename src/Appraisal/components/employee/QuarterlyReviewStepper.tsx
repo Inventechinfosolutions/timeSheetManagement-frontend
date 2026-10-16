@@ -15,7 +15,7 @@ import {
 import { ReviewFormData, QuarterlyReviewAssignment, StoredPerformanceFile } from "../../types/appraisal.types";
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
 import { AppraisalApi, readApiError, toPerformancePayload, toReviewFormData } from "../../reducers/appraisal.reducer";
-import { QuaterlyEnum } from "../../enums/appraisal.enums";
+import { QuaterlyEnum, QuarterlyReviewStatus } from "../../enums/appraisal.enums";
 import OverviewStep from "./steps/OverviewStep";
 import AchievementsStep from "./steps/AchievementsStep";
 import TeamContributionStep from "./steps/TeamContributionStep";
@@ -62,6 +62,19 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   onSubmitSuccess,
 }) => {
   const isLocked = readOnly || assignment.canEdit === false;
+  const isReassignedReview = Boolean(
+    (assignment.reassignCount && assignment.reassignCount >= 1) ||
+    [
+      QuarterlyReviewStatus.EDIT_GRANTED,
+      QuarterlyReviewStatus.ALLOWED_TO_EDIT,
+      QuarterlyReviewStatus.APPROVED_FOR_EDITING,
+    ].some(
+      (s) =>
+        s.toUpperCase() === String(assignment.status || "").toUpperCase() ||
+        s.toUpperCase() === String(assignment.reviewStatus || "").toUpperCase()
+    ) ||
+    Boolean(assignment.submittedAt)
+  );
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [exitingStep, setExitingStep] = useState<number | null>(null);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
@@ -387,7 +400,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         setPerformanceId(existingId);
         return true;
       }
-      const saved = asDraft
+      const shouldSaveAsDraft = asDraft && !isReassignedReview;
+      const saved = shouldSaveAsDraft
         ? await AppraisalApi.savePerformanceDraft(payload)
         : await AppraisalApi.createPerformance(payload);
       performanceIdRef.current = saved.id;
@@ -545,7 +559,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         formDataRef.current = currentData;
       }
     }
-    const saved = await persistStep(true, currentData);
+    const saved = await persistStep(!isReassignedReview, currentData);
     if (!saved) {
       return;
     }

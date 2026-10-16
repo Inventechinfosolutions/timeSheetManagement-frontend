@@ -31,6 +31,7 @@ export enum QuarterlyReviewStatus {
   LOCKED = "LOCKED",
   DEADLINE_REMINDER = "DEADLINE_REMINDER",
   ONE_DAY_DEADLINE_REMINDER = "ONE_DAY_DEADLINE_REMINDER",
+  ALLOWED_TO_EDIT = "ALLOWED_TO_EDIT",
 }
 
 export enum QuaterlyEnum {

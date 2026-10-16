@@ -363,6 +363,7 @@ export const toPerformanceAssignment = (
   description: row.description || "",
   submittedAt: row.submittedAt || undefined,
   editAllowedUntil: row.editAllowedUntil || undefined,
+  reassignCount: row.reassignCount || 0,
 });
 
 export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyReviewAssignment => ({
@@ -388,6 +389,7 @@ export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyRev
   description: review.description || "",
   submittedAt: review.performanceDetails?.submittedAt || undefined,
   editAllowedUntil: review.performanceDetails?.editAllowedUntil || undefined,
+  reassignCount: review.reassignCount || review.performanceDetails?.reassignCount || 0,
 });
 
 // ==========================================

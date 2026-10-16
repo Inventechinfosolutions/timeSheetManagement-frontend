@@ -11,6 +11,7 @@ import {
   Sliders,
   Mail,
   Lock,
+  Clock,
   Eye,
   EyeOff,
   X,
@@ -182,6 +183,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   }, [record.id, mode]);
 
   const handleNavigateToMatrix = () => {
+    if (isEditAccessPendingOrGranted) {
+      return;
+    }
     setActiveView("matrix");
     scrollToTop();
     setTimeout(scrollToTop, 30);
@@ -891,6 +895,19 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     record.reviewStatus === QuarterlyReviewStatus.COMPLETED &&
     record.performanceStatus === EmployeePerformanceStatus.COMPLETED;
   const normalizedPerfStatus = String(record.performanceStatus || record.status || "").toUpperCase();
+  const isEditAccessPendingOrGranted =
+    Boolean(grantAccess) ||
+    [
+      QuarterlyReviewStatus.REQUESTED_FOR_EDIT,
+      QuarterlyReviewStatus.EDIT_GRANTED,
+      QuarterlyReviewStatus.APPROVED_FOR_EDITING,
+      QuarterlyReviewStatus.ALLOWED_TO_EDIT,
+    ].some(
+      (s) =>
+        s.toUpperCase() === normalizedPerfStatus ||
+        s.toUpperCase() === String(record.reviewStatus || "").toUpperCase() ||
+        s.toUpperCase() === String(record.status || "").toUpperCase()
+    );
   const employeeSubmitted =
     [
       EmployeePerformanceStatus.SUBMITTED,
@@ -1497,8 +1514,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
                 </div>
 
-                {/* Shown to the employee only after both review and performance are COMPLETED. */}
-                {(!isViewMode || managerEvaluationReady) ? (
+                {/* Shown to the manager only after both review and performance are COMPLETED and edit access is not pending/granted */}
+                {(!isViewMode || managerEvaluationReady) && !isEditAccessPendingOrGranted ? (
                   <div className="eval-matrix-cta-card eval-reveal-card relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-blue-200/70 bg-gradient-to-br from-white via-blue-50/40 to-blue-100/20 shadow-lg shadow-blue-500/10 mt-6">
                     {/* Ambient Decorative SVG in Background */}
                     <svg
@@ -1581,6 +1598,26 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           />
                         </svg>
                       </button>
+                    </div>
+                  </div>
+                ) : isEditAccessPendingOrGranted ? (
+                  <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-6 border border-amber-200/70 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-amber-50/70 rounded-2xl shadow-xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 text-amber-700">
+                        <Clock className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                          {grantAccess || [QuarterlyReviewStatus.EDIT_GRANTED, QuarterlyReviewStatus.APPROVED_FOR_EDITING, QuarterlyReviewStatus.ALLOWED_TO_EDIT].some((s) => s.toUpperCase() === normalizedPerfStatus || s.toUpperCase() === String(record.reviewStatus || "").toUpperCase())
+                            ? "Edit Window Active"
+                            : "Edit Access Requested"}
+                        </p>
+                        <p className="text-xs text-amber-700/90 mt-0.5 font-medium">
+                          {grantAccess || [QuarterlyReviewStatus.EDIT_GRANTED, QuarterlyReviewStatus.APPROVED_FOR_EDITING, QuarterlyReviewStatus.ALLOWED_TO_EDIT].some((s) => s.toUpperCase() === normalizedPerfStatus || s.toUpperCase() === String(record.reviewStatus || "").toUpperCase())
+                            ? "Employee has been granted edit access. The Evaluation Matrix will become accessible once they resubmit their review."
+                            : "Employee has submitted an access request to update this review. The Evaluation Matrix will become accessible once the review is resubmitted."}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 ) : hideScoreParameters ? (

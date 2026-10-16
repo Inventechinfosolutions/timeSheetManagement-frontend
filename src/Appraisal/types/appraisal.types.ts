@@ -93,6 +93,7 @@ export interface QuarterlyReviewAssignment {
   description?: string;
   submittedAt?: string;
   editAllowedUntil?: string;
+  reassignCount?: number;
 }
 
 export interface AccessRequest {
