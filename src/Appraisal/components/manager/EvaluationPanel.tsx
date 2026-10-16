@@ -904,9 +904,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       QuarterlyReviewStatus.ALLOWED_TO_EDIT,
     ].some(
       (s) =>
-        s.toUpperCase() === normalizedPerfStatus ||
-        s.toUpperCase() === String(record.reviewStatus || "").toUpperCase() ||
-        s.toUpperCase() === String(record.status || "").toUpperCase()
+        s &&
+        (s.toUpperCase() === normalizedPerfStatus ||
+          s.toUpperCase() === String(record.reviewStatus || "").toUpperCase() ||
+          s.toUpperCase() === String(record.status || "").toUpperCase())
     );
   const employeeSubmitted =
     [
@@ -918,7 +919,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       EmployeePerformanceStatus.APPROVED_FOR_EDITING,
       EmployeePerformanceStatus.ALLOWED_TO_EDIT,
       EmployeePerformanceStatus.COMPLETED,
-    ].some((s) => s.toUpperCase() === normalizedPerfStatus) || Boolean(record.submittedOn);
+    ].some((s) => s && s.toUpperCase() === normalizedPerfStatus) || Boolean(record.submittedOn);
 
   const toIsoDate = (value: string): string | undefined => {
     const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value.trim());
@@ -1608,12 +1609,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       </div>
                       <div>
                         <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
-                          {grantAccess || [QuarterlyReviewStatus.EDIT_GRANTED, QuarterlyReviewStatus.APPROVED_FOR_EDITING, QuarterlyReviewStatus.ALLOWED_TO_EDIT].some((s) => s.toUpperCase() === normalizedPerfStatus || s.toUpperCase() === String(record.reviewStatus || "").toUpperCase())
+                          {grantAccess || [QuarterlyReviewStatus.EDIT_GRANTED, QuarterlyReviewStatus.APPROVED_FOR_EDITING, QuarterlyReviewStatus.ALLOWED_TO_EDIT].some((s) => s && (s.toUpperCase() === normalizedPerfStatus || s.toUpperCase() === String(record.reviewStatus || "").toUpperCase()))
                             ? "Edit Window Active"
                             : "Edit Access Requested"}
                         </p>
                         <p className="text-xs text-amber-700/90 mt-0.5 font-medium">
-                          {grantAccess || [QuarterlyReviewStatus.EDIT_GRANTED, QuarterlyReviewStatus.APPROVED_FOR_EDITING, QuarterlyReviewStatus.ALLOWED_TO_EDIT].some((s) => s.toUpperCase() === normalizedPerfStatus || s.toUpperCase() === String(record.reviewStatus || "").toUpperCase())
+                          {grantAccess || [QuarterlyReviewStatus.EDIT_GRANTED, QuarterlyReviewStatus.APPROVED_FOR_EDITING, QuarterlyReviewStatus.ALLOWED_TO_EDIT].some((s) => s && (s.toUpperCase() === normalizedPerfStatus || s.toUpperCase() === String(record.reviewStatus || "").toUpperCase()))
                             ? "Employee has been granted edit access. The Evaluation Matrix will become accessible once they resubmit their review."
                             : "Employee has submitted an access request to update this review. The Evaluation Matrix will become accessible once the review is resubmitted."}
                         </p>

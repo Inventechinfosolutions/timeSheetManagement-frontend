@@ -70,8 +70,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       QuarterlyReviewStatus.APPROVED_FOR_EDITING,
     ].some(
       (s) =>
-        s.toUpperCase() === String(assignment.status || "").toUpperCase() ||
-        s.toUpperCase() === String(assignment.reviewStatus || "").toUpperCase()
+        s &&
+        (s.toUpperCase() === String(assignment.status || "").toUpperCase() ||
+          s.toUpperCase() === String(assignment.reviewStatus || "").toUpperCase())
     ) ||
     Boolean(assignment.submittedAt)
   );
