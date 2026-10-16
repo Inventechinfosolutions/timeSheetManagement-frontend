@@ -93,6 +93,94 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
+/* Executive Summary Stat Cards */
+.employee-stat-card-executive {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.95rem;
+  padding: 0.75rem 1.15rem;
+  min-height: 72px;
+  min-width: 240px;
+  background: #FFFFFF !important;
+  border-radius: 18px !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02) !important;
+  overflow: hidden;
+  transition: border-color 0.25s ease;
+  user-select: none;
+}
+
+.employee-stat-card-executive::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.employee-stat-card-executive:hover::before {
+  opacity: 1;
+}
+
+.employee-stat-card-executive-overdue::before {
+  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.7), transparent);
+}
+
+.employee-stat-card-executive-warning::before {
+  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.7), transparent);
+}
+
+.employee-stat-chevron-pill {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 9999px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94A3B8;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.employee-stat-card-executive:hover .employee-stat-chevron-pill {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #2563EB;
+}
+
+/* Colored Edge Bar on Left */
+.employee-stat-edge-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%);
+  transition: width 0.25s ease, filter 0.25s ease;
+  z-index: 2;
+}
+
+.employee-stat-card-executive:hover .employee-stat-edge-bar {
+  width: 6.5px;
+  filter: brightness(1.1);
+}
+
+.employee-stat-card-executive-overdue .employee-stat-edge-bar {
+  background: linear-gradient(180deg, #EF4444 0%, #DC2626 100%);
+}
+
+.employee-stat-card-executive-warning .employee-stat-edge-bar {
+  background: linear-gradient(180deg, #F59E0B 0%, #D97706 100%);
+}
+
 /* ==========================================================================
    Stepper Numbered Circles & Rating Element Base Styles (Animations in GSAP)
    ========================================================================== */
