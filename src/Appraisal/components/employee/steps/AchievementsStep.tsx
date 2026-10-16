@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { StepProps } from "../../../types/appraisal.types";
 import { AlertCircle, X, Paperclip, ChevronDown, Pencil, Trash2 } from "lucide-react";
 import { readApiError } from "../../../reducers/appraisal.reducer";
+import AttachmentItem from "../../common/AttachmentItem";
 
 export const AchievementsStep: React.FC<StepProps> = ({
   formData,
@@ -371,28 +372,12 @@ export const AchievementsStep: React.FC<StepProps> = ({
             onChange={handleFileSelect}
           />
           {attachments.map((file) => (
-            <div
+            <AttachmentItem
               key={file.objectKey}
-              className="flex items-center gap-2.5 px-3 py-1.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl shadow-2xs max-w-full"
-            >
-              <Paperclip className="w-4 h-4 text-[#2563EB] shrink-0" />
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-bold text-[#0F172A] truncate max-w-[150px] sm:max-w-[190px]">
-                  {file.fileName}
-                </span>
-                {file.sizeLabel && (
-                  <span className="text-[10px] text-[#64748B]">{file.sizeLabel}</span>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => handleRemoveFile(file.objectKey)}
-                className="p-1 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors ml-1 cursor-pointer"
-                title="Remove document"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
+              file={file}
+              canDelete
+              onDelete={handleRemoveFile}
+            />
           ))}
           {attachments.length < 5 && (
             <button
@@ -541,20 +526,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
                             </span>
                             <div className="flex flex-wrap items-center gap-2">
                               {(project.attachments || []).map((file) => (
-                                <div
-                                  key={file.objectKey}
-                                  className="flex items-center gap-2.5 px-3 py-1.5 bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl shadow-2xs max-w-full"
-                                >
-                                  <Paperclip className="w-4 h-4 text-[#2563EB] shrink-0" />
-                                  <div className="flex flex-col min-w-0">
-                                    <span className="text-xs font-bold text-[#0F172A] truncate max-w-[150px] sm:max-w-[190px]">
-                                      {file.fileName}
-                                    </span>
-                                    {file.sizeLabel && (
-                                      <span className="text-[10px] text-[#64748B]">({file.sizeLabel})</span>
-                                    )}
-                                  </div>
-                                </div>
+                                <AttachmentItem
+                                  key={file.objectKey || file.fileName}
+                                  file={file}
+                                  readOnly
+                                />
                               ))}
                             </div>
                           </div>

@@ -145,6 +145,42 @@ export const AppraisalApi = {
     });
   },
 
+  downloadPerformanceAttachment: async (objectKey: string, fileName?: string): Promise<void> => {
+    const response = await axios.get(
+      `${EMPLOYEE_PERFORMANCE_URL}/attachments/download`,
+      {
+        params: { objectKey },
+        responseType: "blob",
+        skipGlobalLoader: true,
+      },
+    );
+    const contentType = response.headers?.["content-type"] || "application/octet-stream";
+    const blob = new Blob([response.data], { type: contentType });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", fileName || "attachment");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+  },
+
+  previewPerformanceAttachment: async (objectKey: string): Promise<{ blobUrl: string; contentType: string }> => {
+    const response = await axios.get(
+      `${EMPLOYEE_PERFORMANCE_URL}/attachments/view`,
+      {
+        params: { objectKey },
+        responseType: "blob",
+        skipGlobalLoader: true,
+      },
+    );
+    const contentType = response.headers?.["content-type"] || "application/octet-stream";
+    const blob = new Blob([response.data], { type: contentType });
+    const blobUrl = window.URL.createObjectURL(blob);
+    return { blobUrl, contentType };
+  },
+
   createPerformance: async (payload: PerformanceWritePayload): Promise<EmployeePerformanceDetail> => {
     const response = await axios.post<EmployeePerformanceDetail>(EMPLOYEE_PERFORMANCE_URL, payload);
     return response.data;

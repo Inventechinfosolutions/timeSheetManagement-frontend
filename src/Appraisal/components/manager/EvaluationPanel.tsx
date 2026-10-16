@@ -34,6 +34,7 @@ import { DatePicker } from "../../../components/ui";
 import { message } from "antd";
 import { getRatingTierConfig } from "../../utils/appraisalHelpers";
 import "./EvaluationPanel.css";
+import AttachmentItem from "../common/AttachmentItem";
 
 export interface EvaluationData {
   scores: Record<string, number>;
@@ -1210,7 +1211,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-1">
                     Deadline{grantAccess ? " *" : ""}
                   </span>
-                  {isViewMode && !grantAccess ? (
+                  {(isViewMode || employeeSubmitted) && !grantAccess ? (
                     <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                       {deadlineDate || "—"}
                     </div>
@@ -1225,14 +1226,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </span>
                 <textarea
                   rows={3}
-                  readOnly={isViewMode || grantAccess}
+                  readOnly={isViewMode || employeeSubmitted || grantAccess}
                   value={assignmentDescription}
                   onChange={(event) => setAssignmentDescription(event.target.value)}
                   placeholder="Assignment description"
-                  className={`eval-textarea-field w-full ${isViewMode || grantAccess ? "eval-textarea-readonly !cursor-not-allowed" : "!cursor-text cursor-text"}`}
+                  className={`eval-textarea-field w-full ${isViewMode || employeeSubmitted || grantAccess ? "eval-textarea-readonly !cursor-not-allowed" : "!cursor-text cursor-text"}`}
                 />
               </div>
-              {(!isViewMode || grantAccess) && (
+              {((!isViewMode && !employeeSubmitted) || grantAccess) && (
                 <div className="flex items-center justify-end gap-3">
                   {assignmentError ? (
                     <p className="text-xs font-bold text-red-600">{assignmentError}</p>
@@ -1316,14 +1317,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                                   <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
                                     Attachments
                                   </label>
-                                  <div className="flex flex-wrap gap-1.5">
+                                  <div className="flex flex-wrap gap-2">
                                     {(project.attachments || []).map((file) => (
-                                      <span
+                                      <AttachmentItem
                                         key={file.objectKey || file.fileName}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg shadow-2xs max-w-full"
-                                      >
-                                        📎 <span className="truncate">{file.fileName}</span>
-                                      </span>
+                                        file={file}
+                                        readOnly
+                                      />
                                     ))}
                                   </div>
                                 </div>

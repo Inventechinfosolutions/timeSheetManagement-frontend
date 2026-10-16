@@ -3,6 +3,7 @@ import { StepProps } from "../../../types/appraisal.types";
 import { Star } from "lucide-react";
 import { initScrollRevealCards } from "../../../animations/appraisalAnimations";
 import { renderAnimatedEmojiIcon } from "./CompanyEnvironmentStep";
+import AttachmentItem from "../../common/AttachmentItem";
 
 const TEAM_CRITERIA = [
   { key: "communication", title: "Communication" },
@@ -122,14 +123,13 @@ export const ReviewStep: React.FC<StepProps> = ({ formData }) => {
                           <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
                             Attachments
                           </label>
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="flex flex-wrap gap-2">
                             {(project.attachments || []).map((file) => (
-                              <span
+                              <AttachmentItem
                                 key={file.objectKey || file.fileName}
-                                className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg shadow-2xs max-w-full"
-                              >
-                                📎 <span className="truncate">{file.fileName}</span>
-                              </span>
+                                file={file}
+                                readOnly
+                              />
                             ))}
                           </div>
                         </div>
