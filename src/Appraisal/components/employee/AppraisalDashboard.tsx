@@ -31,7 +31,7 @@ import {
   ReviewFormData,
 } from "../../types/appraisal.types";
 import { useEmployeeAppraisal } from "../../hooks/useEmployeeAppraisal";
-import { AppraisalApi, formatAppraisalDisplayDate, readApiError, toReviewFormData } from "../../reducers/appraisal.reducer";
+import { AppraisalApi, formatAppraisalDisplayDate, isResubmittedStatus, readApiError, toReviewFormData } from "../../reducers/appraisal.reducer";
 import QuarterlyReviewStepper from "./QuarterlyReviewStepper";
 import EvaluationPanel from "../manager/EvaluationPanel";
 import RatingVerificationModal from "./RatingVerificationModal";
@@ -469,7 +469,11 @@ export const AppraisalDashboard: React.FC = () => {
       tooltip: "",
     };
 
-    const statusUpper = assignment.status.toUpperCase();
+    const statusUpper = (assignment.status || "").toUpperCase();
+    if (isResubmittedStatus(assignment.status) || statusUpper === "RE_SUBMITTED") {
+      return hidden;
+    }
+
     const isPending =
       statusUpper === "REQUESTED_FOR_EDIT" ||
       accessRequests.some(
@@ -687,11 +691,8 @@ export const AppraisalDashboard: React.FC = () => {
     };
 
     return (
-      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE]">
-
-
-
-        <div className="relative z-10">
+      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
+        <div className="relative z-10 w-full flex-1 flex flex-col min-h-0">
           <EvaluationPanel
             key={`employee-${viewRecord.reviewId || viewRecord.id}`}
             record={viewRecord}
@@ -717,8 +718,8 @@ export const AppraisalDashboard: React.FC = () => {
   // If stepper is open, display 6-step review UI
   if (activeAssignment) {
     return (
-      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE]">
-        <div className="relative z-10">
+      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
+        <div className="relative z-10 w-full flex-1 flex flex-col min-h-0">
           <QuarterlyReviewStepper
             key={activeAssignment.id}
             assignment={activeAssignment}
@@ -733,6 +734,15 @@ export const AppraisalDashboard: React.FC = () => {
               setTimeout(scrollToPageTop, 50);
             }}
             onSubmitSuccess={() => {
+              if (activeAssignment) {
+                setAccessRequests((prev) =>
+                  prev.filter(
+                    (req) =>
+                      req.assignmentId !== activeAssignment.id &&
+                      !(req.quarter === activeAssignment.quarter && req.financialYear === activeAssignment.financialYear)
+                  )
+                );
+              }
               submitReview(activeAssignment.id);
               reloadAssignments();
             }}
