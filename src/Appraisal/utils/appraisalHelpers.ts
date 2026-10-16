@@ -111,6 +111,12 @@ export const performanceCanEdit = (row: EmployeePerformanceDetail): boolean => {
   return Boolean(row.canEdit ?? false);
 };
 
+export const isResubmittedStatus = (status?: string | null): boolean => {
+  if (!status) return false;
+  const normalized = status.toUpperCase().replace(/[\s_-]/g, "");
+  return normalized === "RESUBMITTED" || normalized.includes("RESUBMIT");
+};
+
 // ==========================================
 // FORM DATA & PAYLOAD PARSERS
 // ==========================================
@@ -342,53 +348,60 @@ export const toManagerReviewRecord = (
 
 export const toPerformanceAssignment = (
   row: EmployeePerformanceListItem,
-): QuarterlyReviewAssignment => ({
-  id: String(row.id),
-  employeeId: row.employeeId || "",
-  employeeName: row.employeeName || row.employeeId || "",
-  designation: row.designation || "",
-  quarter: row.quarter || "",
-  financialYear: row.financialYear || "",
-  assignedBy: row.assignedBy || "",
-  assignedDate: formatAppraisalDisplayDate(row.assignedDate),
-  deadline: formatAppraisalDisplayDate(row.deadlineDate),
-  performanceDate: formatAppraisalDisplayDate(row.submittedAt),
-  status: row.status,
-  reviewStatus: String(row.status).toUpperCase() === "COMPLETED" ? "COMPLETED" : undefined,
-  canEdit: performanceCanEdit(row),
-  canRequestEdit: Boolean(row.canRequestEdit),
-  remainingRequestHours: row.remainingRequestHours ?? 0,
-  performanceId: row.id,
-  reviewId: row.reviewId ?? undefined,
-  description: row.description || "",
-  submittedAt: row.submittedAt || undefined,
-  editAllowedUntil: row.editAllowedUntil || undefined,
-});
+): QuarterlyReviewAssignment => {
+  const isResubmitted = isResubmittedStatus(row.status);
+  return {
+    id: String(row.id),
+    employeeId: row.employeeId || "",
+    employeeName: row.employeeName || row.employeeId || "",
+    designation: row.designation || "",
+    quarter: row.quarter || "",
+    financialYear: row.financialYear || "",
+    assignedBy: row.assignedBy || "",
+    assignedDate: formatAppraisalDisplayDate(row.assignedDate),
+    deadline: formatAppraisalDisplayDate(row.deadlineDate),
+    performanceDate: formatAppraisalDisplayDate(row.submittedAt),
+    status: row.status,
+    reviewStatus: String(row.status).toUpperCase() === "COMPLETED" ? "COMPLETED" : undefined,
+    canEdit: performanceCanEdit(row),
+    canRequestEdit: isResubmitted ? false : Boolean(row.canRequestEdit),
+    remainingRequestHours: isResubmitted ? 0 : (row.remainingRequestHours ?? 0),
+    performanceId: row.id,
+    reviewId: row.reviewId ?? undefined,
+    description: row.description || "",
+    submittedAt: row.submittedAt || undefined,
+    editAllowedUntil: row.editAllowedUntil || undefined,
+  };
+};
 
-export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyReviewAssignment => ({
-  id: String(review.id),
-  employeeId: review.employeeId,
-  employeeName: review.employeeName || review.employeeId,
-  designation: review.designation || "",
-  quarter: review.performanceDetails?.quarter || review.quarter,
-  financialYear: review.performanceDetails?.financialYear || review.financialYear,
-  assignedBy: review.managerName || review.assignerId || "",
-  assignedDate: formatAppraisalDisplayDate(review.assignedDate),
-  deadline: formatAppraisalDisplayDate(review.deadlineDate),
-  performanceDate: formatAppraisalDisplayDate(
-    review.performanceDetails?.submittedAt,
-  ),
-  status: review.performanceDetails?.status || review.status,
-  reviewStatus: review.status,
-  canEdit: reviewCanEdit(review),
-  canRequestEdit: Boolean(review.canRequestEdit ?? review.performanceDetails?.canRequestEdit),
-  remainingRequestHours: review.remainingRequestHours ?? review.performanceDetails?.remainingRequestHours ?? 0,
-  performanceId: review.performanceDetails?.id,
-  reviewId: review.id,
-  description: review.description || "",
-  submittedAt: review.performanceDetails?.submittedAt || undefined,
-  editAllowedUntil: review.performanceDetails?.editAllowedUntil || undefined,
-});
+export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyReviewAssignment => {
+  const rawStatus = review.performanceDetails?.status || review.status;
+  const isResubmitted = isResubmittedStatus(rawStatus);
+  return {
+    id: String(review.id),
+    employeeId: review.employeeId,
+    employeeName: review.employeeName || review.employeeId,
+    designation: review.designation || "",
+    quarter: review.performanceDetails?.quarter || review.quarter,
+    financialYear: review.performanceDetails?.financialYear || review.financialYear,
+    assignedBy: review.managerName || review.assignerId || "",
+    assignedDate: formatAppraisalDisplayDate(review.assignedDate),
+    deadline: formatAppraisalDisplayDate(review.deadlineDate),
+    performanceDate: formatAppraisalDisplayDate(
+      review.performanceDetails?.submittedAt,
+    ),
+    status: review.performanceDetails?.status || review.status,
+    reviewStatus: review.status,
+    canEdit: reviewCanEdit(review),
+    canRequestEdit: isResubmitted ? false : Boolean(review.canRequestEdit ?? review.performanceDetails?.canRequestEdit),
+    remainingRequestHours: isResubmitted ? 0 : (review.remainingRequestHours ?? review.performanceDetails?.remainingRequestHours ?? 0),
+    performanceId: review.performanceDetails?.id,
+    reviewId: review.id,
+    description: review.description || "",
+    submittedAt: review.performanceDetails?.submittedAt || undefined,
+    editAllowedUntil: review.performanceDetails?.editAllowedUntil || undefined,
+  };
+};
 
 // ==========================================
 // MASTER PERIOD / CALENDAR HELPERS

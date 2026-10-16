@@ -667,7 +667,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   };
 
   return (
-    <div ref={topRef} className="w-full max-w-5xl mx-auto space-y-6 font-sans">
+    <div ref={topRef} className="w-full space-y-6 font-sans">
       {assignment.canEdit === false && (
         <div className="p-4 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-center gap-3 text-amber-900 text-sm font-semibold shadow-xs">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />

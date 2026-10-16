@@ -11,6 +11,7 @@ export enum EmployeePerformanceStatus {
   APPROVED_FOR_EDITING = "APPROVED_FOR_EDITING",
   ALLOWED_TO_EDIT = "ALLOWED_TO_EDIT",
   COMPLETED = "COMPLETED",
+  RE_SUBMITTED = "RE_SUBMITTED",
 }
 
 export enum QuarterlyReviewStatus {
@@ -31,6 +32,7 @@ export enum QuarterlyReviewStatus {
   LOCKED = "LOCKED",
   DEADLINE_REMINDER = "DEADLINE_REMINDER",
   ONE_DAY_DEADLINE_REMINDER = "ONE_DAY_DEADLINE_REMINDER",
+  RE_SUBMITTED = "RE_SUBMITTED",
 }
 
 export enum QuaterlyEnum {
