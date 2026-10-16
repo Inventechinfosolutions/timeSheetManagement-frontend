@@ -36,6 +36,7 @@ export interface ManagerQuarterlyReviewRecord {
   name: string;
   id: string;
   role: string;
+  department?: string;
   quarter: string;
   financialYear: string;
   fromDate: string;
@@ -273,6 +274,7 @@ export interface ManagerReviewApiRecord {
   employeeId: string;
   employeeName: string | null;
   designation: string | null;
+  department?: string | null;
   quarter: QuaterlyEnum;
   financialYear: string;
   assignedDate: string | null;
@@ -358,7 +360,8 @@ export interface CurrentMasterYearAndQuarter {
 }
 
 export interface QuarterlyReviewListQuery {
-  assignerId: string;
+  assignerId?: string;
+  department?: string;
   page: number;
   limit: number;
   financialYear?: string;
@@ -435,6 +438,7 @@ export interface EmployeeReviewDetail {
   employeeId: string;
   employeeName: string | null;
   designation: string | null;
+  department?: string | null;
   quarter: QuaterlyEnum;
   financialYear: string;
   assignedDate: string | null;

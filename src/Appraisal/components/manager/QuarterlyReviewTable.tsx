@@ -22,6 +22,7 @@ interface QuarterlyReviewTableProps {
   totalCount?: number;
   onPageChange?: (page: number) => void;
   headerTheme?: "indigo" | "navy" | "purple" | "teal";
+  viewOnly?: boolean;
 }
 
 const extractReassignReasons = (description?: string | null): string[] => {
@@ -57,6 +58,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   defaultPageSize = 10,
   showPagination = true,
   headerTheme = "indigo",
+  viewOnly = false,
   page,
   totalCount,
   onPageChange,
@@ -344,6 +346,24 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   };
 
   const renderAction = (record: ManagerQuarterlyReviewRecord) => {
+    if (viewOnly) {
+      return (
+        <div className="qr-actions-container">
+          <button
+            type="button"
+            onClick={() => {
+              scrollToTop();
+              onView?.(record);
+            }}
+            className="qr-action-icon-btn qr-action-btn-view"
+            title={`View appraisal for ${record.name}`}
+            aria-label={`View appraisal for ${record.name}`}
+          >
+            <Eye size={18} />
+          </button>
+        </div>
+      );
+    }
     const isLocked =
       record.status.toUpperCase() === "NOT_UPDATED" ||
       record.status.toUpperCase() === "LOCKED" ||
@@ -456,6 +476,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               <th className="text-left min-w-[190px]">Name</th>
               <th className="text-left min-w-[95px]">ID</th>
               <th className="text-left min-w-[160px]">Role</th>
+              <th className="text-left min-w-[140px]">Department</th>
               <th className="text-center min-w-[90px]">Quarter</th>
               <th className="text-center min-w-[125px]">Financial Year</th>
               <th className="text-center min-w-[120px]">Assigned Date</th>
@@ -504,6 +525,13 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   {/* 3. Role */}
                   <td>
                     <span className="qr-role-text">{record.role}</span>
+                  </td>
+
+                  {/* Department */}
+                  <td>
+                    <span className="qr-department-pill" title={record.department || "—"}>
+                      {record.department || "—"}
+                    </span>
                   </td>
 
                   {/* 4. Quarter with Dedicated Color */}

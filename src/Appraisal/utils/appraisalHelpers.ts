@@ -298,6 +298,7 @@ export const toManagerReviewRecord = (
   name: review.employeeName || review.employeeId,
   id: review.employeeId,
   role: review.designation || "",
+  department: review.department || "",
   quarter: review.quarter,
   financialYear: review.financialYear,
   fromDate: formatAppraisalDisplayDate(review.assignedDate),

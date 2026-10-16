@@ -635,3 +635,19 @@ body.modal-open-active .sidebar-footer {
   box-shadow: 0 0 10px rgba(37, 99, 235, 0.25) !important;
   transition: all 0.35s ease;
 }
+/* Department pill */
+.qr-department-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #334155;
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.5rem;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
