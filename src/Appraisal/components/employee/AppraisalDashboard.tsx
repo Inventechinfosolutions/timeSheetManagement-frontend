@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import gsap from "gsap";
 import { createPortal } from "react-dom";
 import {
   Award,
@@ -107,6 +108,453 @@ const Marquee: React.FC<
   }
 > = ({ children, ...props }) => {
   return React.createElement("marquee", props, children);
+};
+
+// ==========================================
+// EXECUTIVE HEADER SUMMARY STAT CARDS (GSAP & BESPOKE SVGs)
+// ==========================================
+
+const DeadlineSvgIcon: React.FC<{
+  urgency: "overdue" | "warning" | "normal" | "empty";
+}> = ({ urgency }) => {
+  const theme = {
+    overdue: {
+      bgGradStart: "#FEF2F2",
+      bgGradEnd: "#FEE2E2",
+      border: "#FECACA",
+      accent: "#EF4444",
+      calTop: "#DC2626",
+      pin: "#991B1B",
+    },
+    warning: {
+      bgGradStart: "#FFFBEB",
+      bgGradEnd: "#FEF3C7",
+      border: "#FDE68A",
+      accent: "#F59E0B",
+      calTop: "#D97706",
+      pin: "#92400E",
+    },
+    normal: {
+      bgGradStart: "#EFF6FF",
+      bgGradEnd: "#DBEAFE",
+      border: "#BFDBFE",
+      accent: "#2563EB",
+      calTop: "#1D4ED8",
+      pin: "#1E40AF",
+    },
+    empty: {
+      bgGradStart: "#F8FAFC",
+      bgGradEnd: "#F1F5F9",
+      border: "#E2E8F0",
+      accent: "#64748B",
+      calTop: "#475569",
+      pin: "#334155",
+    },
+  }[urgency];
+
+  return (
+    <svg
+      width="44"
+      height="44"
+      viewBox="0 0 44 44"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="shrink-0"
+    >
+      <defs>
+        <linearGradient id={`dlBg-${urgency}`} x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={theme.bgGradStart} />
+          <stop offset="100%" stopColor={theme.bgGradEnd} />
+        </linearGradient>
+        <linearGradient id={`dlCalTop-${urgency}`} x1="0" y1="0" x2="20" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={theme.calTop} />
+          <stop offset="100%" stopColor={theme.accent} />
+        </linearGradient>
+      </defs>
+
+      <rect
+        x="2"
+        y="2"
+        width="40"
+        height="40"
+        rx="12"
+        fill={`url(#dlBg-${urgency})`}
+        stroke={theme.border}
+        strokeWidth="1.5"
+      />
+
+      <g transform="translate(6, 6.5)">
+        <rect
+          x="1"
+          y="3"
+          width="18"
+          height="18"
+          rx="4"
+          fill="#FFFFFF"
+          stroke={theme.border}
+          strokeWidth="1"
+        />
+        <path
+          d="M 1 7 C 1 4.79 2.79 3 5 3 L 15 3 C 17.21 3 19 4.79 19 7 L 19 8 L 1 8 Z"
+          fill={`url(#dlCalTop-${urgency})`}
+        />
+        <rect x="4.5" y="1" width="1.8" height="3" rx="0.9" fill="#FFFFFF" />
+        <rect x="13.7" y="1" width="1.8" height="3" rx="0.9" fill="#FFFFFF" />
+        <circle cx="5.5" cy="11.5" r="1" fill={theme.accent} opacity="0.7" />
+        <circle cx="10" cy="11.5" r="1" fill={theme.accent} opacity="0.7" />
+        <circle cx="14.5" cy="11.5" r="1" fill={theme.accent} opacity="0.7" />
+        <circle cx="5.5" cy="15.5" r="1" fill={theme.accent} opacity="0.7" />
+        <circle cx="10" cy="15.5" r="1" fill={theme.accent} opacity="0.7" />
+        <circle cx="14.5" cy="15.5" r="1" fill={theme.accent} opacity="0.5" />
+      </g>
+
+      <g transform="translate(19.5, 18.5)">
+        <circle cx="10" cy="10" r="9.5" fill="#FFFFFF" stroke={theme.border} strokeWidth="1.2" />
+        <circle cx="10" cy="10" r="7.5" fill={theme.bgGradStart} />
+        <circle cx="10" cy="10" r="1.3" fill={theme.pin} />
+        <line x1="10" y1="10" x2="10" y2="6.2" stroke={theme.pin} strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="10" y1="10" x2="13.8" y2="10" stroke={theme.accent} strokeWidth="1.4" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+};
+
+const FinancialRatingSvgIcon: React.FC = () => {
+  return (
+    <svg
+      width="44"
+      height="44"
+      viewBox="0 0 44 44"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="shrink-0"
+    >
+      <defs>
+        <linearGradient id="frBgGrad" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#EFF6FF" />
+          <stop offset="100%" stopColor="#DBEAFE" />
+        </linearGradient>
+        <linearGradient id="frRibbonLeft" x1="0" y1="0" x2="0" y2="1" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#3B82F6" />
+          <stop offset="100%" stopColor="#1D4ED8" />
+        </linearGradient>
+        <linearGradient id="frRibbonRight" x1="0" y1="0" x2="0" y2="1" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#2563EB" />
+          <stop offset="100%" stopColor="#1E40AF" />
+        </linearGradient>
+        <linearGradient id="frGoldRim" x1="0" y1="0" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#FDE047" />
+          <stop offset="50%" stopColor="#EAB308" />
+          <stop offset="100%" stopColor="#CA8A04" />
+        </linearGradient>
+        <linearGradient id="frGoldCore" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#FEF08A" />
+          <stop offset="60%" stopColor="#FACC15" />
+          <stop offset="100%" stopColor="#EAB308" />
+        </linearGradient>
+        <linearGradient id="frGlint" x1="0" y1="0" x2="8" y2="8" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      <rect
+        x="2"
+        y="2"
+        width="40"
+        height="40"
+        rx="12"
+        fill="url(#frBgGrad)"
+        stroke="#BFDBFE"
+        strokeWidth="1.5"
+      />
+
+      {/* Perfectly Centered Medal Assembly */}
+      <g transform="translate(11, 8.5)">
+        <path
+          d="M 5 14 L 2 26 L 6.5 23.5 L 11 26 L 9 14 Z"
+          fill="url(#frRibbonLeft)"
+        />
+        <path
+          d="M 13 14 L 11 26 L 15.5 23.5 L 20 26 L 17 14 Z"
+          fill="url(#frRibbonRight)"
+        />
+
+        <circle cx="11" cy="11" r="9.5" fill="url(#frGoldRim)" stroke="#A16207" strokeWidth="0.6" />
+        <circle cx="11" cy="11" r="8" fill="url(#frGoldCore)" />
+        <circle cx="11" cy="11" r="6.8" stroke="#CA8A04" strokeWidth="0.75" strokeDasharray="1.5 1" fill="none" />
+
+        <path
+          d="M 5 8 A 7 7 0 0 1 17 8"
+          stroke="url(#frGlint)"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          fill="none"
+        />
+
+        <polygon
+          points="11,6.5 12.4,9.5 15.5,9.8 13.1,11.9 13.8,15 11,13.3 8.2,15 8.9,11.9 6.5,9.8 9.6,9.5"
+          fill="#FFFFFF"
+          stroke="#B45309"
+          strokeWidth="0.4"
+        />
+      </g>
+
+      <g transform="translate(29, 9)">
+        <path
+          d="M 3 0 Q 3 3 6 3 Q 3 3 3 6 Q 3 3 0 3 Q 3 3 3 0 Z"
+          fill="#3B82F6"
+          opacity="0.8"
+        />
+      </g>
+    </svg>
+  );
+};
+
+interface DeadlineHeaderCardProps {
+  deadlineInfo: {
+    assignment: QuarterlyReviewAssignment;
+    days: number;
+    pendingCount: number;
+    deadlineLabel: string;
+    pendingMap: Map<string, { days: number; deadlineLabel: string }>;
+  } | null;
+  onOpenEdit: (assignment: QuarterlyReviewAssignment) => void;
+  onOpenView: (assignment: QuarterlyReviewAssignment) => void;
+  renderQuarterBadge: (quarter: string) => React.ReactNode;
+}
+
+const DeadlineHeaderCard: React.FC<DeadlineHeaderCardProps> = ({
+  deadlineInfo,
+  onOpenEdit,
+  onOpenView,
+  renderQuarterBadge,
+}) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const chevronRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (cardRef.current) {
+      gsap.fromTo(
+        cardRef.current,
+        { opacity: 0, y: 10, scale: 0.98 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "power2.out" }
+      );
+    }
+  }, []);
+
+  const isClickable = Boolean(deadlineInfo);
+  const days = deadlineInfo?.days ?? null;
+  const isOverdue = days !== null && days < 0;
+  const isUrgent = days !== null && days >= 0 && days <= 3;
+
+  const urgencyState: "overdue" | "warning" | "normal" | "empty" = !deadlineInfo
+    ? "empty"
+    : isOverdue
+      ? "overdue"
+      : isUrgent
+        ? "warning"
+        : "normal";
+
+  const handleMouseEnter = () => {
+    if (!isClickable) return;
+    if (cardRef.current) {
+      gsap.to(cardRef.current, {
+        y: -3,
+        scale: 1.015,
+        boxShadow: isOverdue
+          ? "0 14px 28px -4px rgba(239,68,68,0.18), 0 4px 12px rgba(15,23,42,0.04)"
+          : isUrgent
+            ? "0 14px 28px -4px rgba(245,158,11,0.18), 0 4px 12px rgba(15,23,42,0.04)"
+            : "0 14px 28px -4px rgba(37,99,235,0.14), 0 4px 12px rgba(15,23,42,0.04)",
+        borderColor: isOverdue ? "#FCA5A5" : isUrgent ? "#FCD34D" : "#93C5FD",
+        duration: 0.28,
+        ease: "power2.out",
+      });
+    }
+    if (chevronRef.current) {
+      gsap.to(chevronRef.current, { x: 3, duration: 0.2, ease: "power2.out" });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isClickable) return;
+    if (cardRef.current) {
+      gsap.to(cardRef.current, {
+        y: 0,
+        scale: 1,
+        boxShadow: "0 4px 16px -2px rgba(15,23,42,0.04)",
+        borderColor: "#E2E8F0",
+        duration: 0.25,
+        ease: "power2.out",
+      });
+    }
+    if (chevronRef.current) {
+      gsap.to(chevronRef.current, { x: 0, duration: 0.2, ease: "power2.out" });
+    }
+  };
+
+  const handleClick = () => {
+    if (!deadlineInfo) return;
+    if (deadlineInfo.assignment.canEdit) {
+      onOpenEdit(deadlineInfo.assignment);
+    } else {
+      onOpenView(deadlineInfo.assignment);
+    }
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`employee-stat-card-executive group ${isOverdue
+        ? "employee-stat-card-executive-overdue"
+        : isUrgent
+          ? "employee-stat-card-executive-warning"
+          : ""
+        } ${isClickable ? "cursor-pointer" : "cursor-default"}`}
+      title={isClickable ? `Click to open ${deadlineInfo.assignment.quarter} review` : undefined}
+    >
+      {/* Colored Left Edge Bar */}
+      <div className="employee-stat-edge-bar" />
+
+      <div className="flex items-center gap-3">
+        <DeadlineSvgIcon urgency={urgencyState} />
+
+        <div className="flex flex-col justify-center">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug">
+              Deadline
+            </span>
+            {deadlineInfo && renderQuarterBadge(deadlineInfo.assignment.quarter)}
+          </div>
+
+          {deadlineInfo ? (
+            <div className="text-[11px] sm:text-xs font-semibold leading-snug mt-1 flex items-center flex-wrap gap-1">
+              <span
+                className={
+                  isOverdue
+                    ? "text-[#DC2626] font-bold"
+                    : isUrgent
+                      ? "text-[#D97706] font-bold"
+                      : "text-[#0F172A]"
+                }
+              >
+                {deadlineInfo.deadlineLabel}
+              </span>
+              <span className="text-[#94A3B8] font-normal">
+                {" "}· {isOverdue
+                  ? `Overdue by ${Math.abs(days!)}d`
+                  : days === 0
+                    ? "Due today"
+                    : `${days}d left`}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[11px] sm:text-xs text-[#94A3B8] font-medium leading-snug mt-1 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              No pending reviews
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div ref={chevronRef} className="employee-stat-chevron-pill ml-2">
+        <ChevronRight className="w-3.5 h-3.5 stroke-[2.4]" />
+      </div>
+    </div>
+  );
+};
+
+interface FinancialRatingHeaderCardProps {
+  onOpen: () => void;
+}
+
+const FinancialRatingHeaderCard: React.FC<FinancialRatingHeaderCardProps> = ({ onOpen }) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const chevronRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (cardRef.current) {
+      gsap.fromTo(
+        cardRef.current,
+        { opacity: 0, y: 10, scale: 0.98 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.45, delay: 0.08, ease: "power2.out" }
+      );
+    }
+  }, []);
+
+  const handleMouseEnter = () => {
+    if (cardRef.current) {
+      gsap.to(cardRef.current, {
+        y: -3,
+        scale: 1.015,
+        boxShadow: "0 14px 28px -4px rgba(37,99,235,0.15), 0 4px 12px rgba(15,23,42,0.04)",
+        borderColor: "#93C5FD",
+        duration: 0.28,
+        ease: "power2.out",
+      });
+    }
+    if (chevronRef.current) {
+      gsap.to(chevronRef.current, { x: 3, duration: 0.2, ease: "power2.out" });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (cardRef.current) {
+      gsap.to(cardRef.current, {
+        y: 0,
+        scale: 1,
+        boxShadow: "0 4px 16px -2px rgba(15,23,42,0.04)",
+        borderColor: "#E2E8F0",
+        duration: 0.25,
+        ease: "power2.out",
+      });
+    }
+    if (chevronRef.current) {
+      gsap.to(chevronRef.current, { x: 0, duration: 0.2, ease: "power2.out" });
+    }
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onClick={onOpen}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className="employee-stat-card-executive cursor-pointer group"
+      title="Click to view Financial Rating breakdown & calculation"
+    >
+      {/* Colored Left Edge Bar */}
+      <div className="employee-stat-edge-bar" />
+
+      <div className="flex items-center gap-3">
+        <FinancialRatingSvgIcon />
+
+        <div className="flex flex-col justify-center">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug group-hover:text-[#2563EB] transition-colors">
+              Financial Rating
+            </span>
+            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider bg-blue-50 text-blue-700 border border-blue-200/80">
+              Annual
+            </span>
+          </div>
+
+          <span className="text-[11px] sm:text-xs text-[#64748B] font-medium leading-snug mt-1 flex items-center gap-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            Verified Evaluation
+          </span>
+        </div>
+      </div>
+
+      <div ref={chevronRef} className="employee-stat-chevron-pill ml-2">
+        <ChevronRight className="w-3.5 h-3.5 stroke-[2.4]" />
+      </div>
+    </div>
+  );
 };
 
 export const AppraisalDashboard: React.FC = () => {
@@ -774,92 +1222,16 @@ export const AppraisalDashboard: React.FC = () => {
 
           {/* 2 Summary Cards beside title */}
           <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
-            {/* DEADLINE CARD */}
-            <div
-              onClick={() => {
-                if (!deadlineInfo) return;
-                if (deadlineInfo.assignment.canEdit) {
-                  handleOpenEdit(deadlineInfo.assignment);
-                  return;
-                }
-                handleOpenView(deadlineInfo.assignment);
-              }}
-              className={`manager-review-glass-card employee-header-stat-card ${deadlineInfo ? "cursor-pointer" : "cursor-default"
-                }`}
-              title={deadlineInfo ? "Click to open review assignment" : undefined}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`employee-header-stat-icon-wrap ${deadlineInfo && deadlineInfo.days < 0
-                    ? "bg-[#FEF2F2] border border-red-200 text-[#DC2626]"
-                    : deadlineInfo && deadlineInfo.days <= 3
-                      ? "bg-[#FFFBEB] border border-amber-200 text-[#D97706]"
-                      : "bg-white/90 border border-white/90 text-[#0F172A]"
-                    }`}
-                >
-                  <CalendarClock className="w-5 h-5 stroke-[2.2]" />
-                </div>
+            <DeadlineHeaderCard
+              deadlineInfo={deadlineInfo}
+              onOpenEdit={handleOpenEdit}
+              onOpenView={handleOpenView}
+              renderQuarterBadge={renderQuarterBadge}
+            />
 
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug">
-                      Deadline
-                    </span>
-                    {deadlineInfo && renderQuarterBadge(deadlineInfo.assignment.quarter)}
-                  </div>
-
-                  {deadlineInfo ? (
-                    <div className="text-[11px] sm:text-xs font-semibold leading-snug mt-1">
-                      <span
-                        className={
-                          deadlineInfo.days < 0
-                            ? "text-[#DC2626]"
-                            : deadlineInfo.days <= 3
-                              ? "text-[#D97706]"
-                              : "text-[#0F172A]"
-                        }
-                      >
-                        {deadlineInfo.deadlineLabel}
-                      </span>
-                      <span className="text-[#94A3B8] font-normal">
-                        {" "}· {deadlineInfo.days < 0
-                          ? `Overdue by ${Math.abs(deadlineInfo.days)}d`
-                          : deadlineInfo.days === 0
-                            ? "Due today"
-                            : `${deadlineInfo.days}d left`}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-[11px] sm:text-xs text-[#94A3B8] font-medium leading-snug mt-1">
-                      No pending reviews
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <ChevronRight className="w-4 h-4 text-[#94A3B8] shrink-0 ml-1.5" />
-            </div>
-
-            {/* FINANCIAL RATING CARD */}
-            <div
-              onClick={handleOpenAnnualRating}
-              className="manager-review-glass-card employee-header-stat-card cursor-pointer group hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-              title="Click to view Financial Rating breakdown & calculation"
-            >
-              <div className="flex items-center gap-3">
-                <div className="employee-header-stat-icon-wrap bg-white/90 border border-white/90 text-[#2563EB] group-hover:bg-[#2563EB] group-hover:text-white transition-colors duration-200 shadow-2xs">
-                  <Award className="w-5 h-5 stroke-[2.2]" />
-                </div>
-
-                <div className="flex flex-col justify-center">
-                  <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug group-hover:text-[#2563EB] transition-colors">
-                    Financial Rating
-                  </span>
-                </div>
-              </div>
-
-              <ChevronRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#2563EB] group-hover:translate-x-0.5 transition-all shrink-0 ml-1.5" />
-            </div>
+            <FinancialRatingHeaderCard
+              onOpen={handleOpenAnnualRating}
+            />
           </div>
         </div>
 
@@ -1070,10 +1442,10 @@ export const AppraisalDashboard: React.FC = () => {
                                             handleOpenAccessRequest(assignment, elig.remainingHours)
                                           }
                                           className={`qr-action-icon-btn qr-action-btn-access ${elig.alreadyRequested
-                                              ? "qr-action-btn-access-requested cursor-pointer"
-                                              : elig.eligible
-                                                ? "qr-action-btn-access-enabled cursor-pointer"
-                                                : "qr-action-btn-access-disabled"
+                                            ? "qr-action-btn-access-requested cursor-pointer"
+                                            : elig.eligible
+                                              ? "qr-action-btn-access-enabled cursor-pointer"
+                                              : "qr-action-btn-access-disabled"
                                             }`}
                                           title={elig.tooltip}
                                           aria-label={
@@ -1129,9 +1501,8 @@ export const AppraisalDashboard: React.FC = () => {
                     return (
                       <Card
                         key={assignment.id}
-                        className={`p-4 rounded-2xl border space-y-3 ${
-                          showRowMarquee ? "bg-[#FFF1F2] border-rose-300 ring-1 ring-rose-200" : "bg-white border-[#BFDBFE]/60 shadow-xs"
-                        }`}
+                        className={`p-4 rounded-2xl border space-y-3 ${showRowMarquee ? "bg-[#FFF1F2] border-rose-300 ring-1 ring-rose-200" : "bg-white border-[#BFDBFE]/60 shadow-xs"
+                          }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -1222,10 +1593,10 @@ export const AppraisalDashboard: React.FC = () => {
                                   handleOpenAccessRequest(assignment, elig.remainingHours)
                                 }
                                 className={`qr-action-icon-btn qr-action-btn-access !h-8 !w-8 justify-center shrink-0 ${elig.alreadyRequested
-                                    ? "qr-action-btn-access-requested cursor-pointer"
-                                    : elig.eligible
-                                      ? "qr-action-btn-access-enabled cursor-pointer"
-                                      : "qr-action-btn-access-disabled"
+                                  ? "qr-action-btn-access-requested cursor-pointer"
+                                  : elig.eligible
+                                    ? "qr-action-btn-access-enabled cursor-pointer"
+                                    : "qr-action-btn-access-disabled"
                                   }`}
                                 title={elig.tooltip}
                                 aria-label={
