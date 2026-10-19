@@ -219,7 +219,10 @@ const ManagerEmployeesView: React.FC = () => {
               <table className="w-full border-separate border-spacing-0">
                 <thead>
                   <tr className="bg-[#4318FF] text-white">
-                    <th className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider rounded-tl-[16px]">
+                    <th className="text-center py-4 pl-6 pr-2 text-[13px] font-bold uppercase tracking-wider rounded-tl-[16px] w-16">
+                      Sl No
+                    </th>
+                    <th className="text-left py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
                       Employee Name
                     </th>
                     <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider">
@@ -237,7 +240,7 @@ const ManagerEmployeesView: React.FC = () => {
                   {mappings.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={4}
+                        colSpan={5}
                         className="text-center py-12 text-[#A3AED0]"
                       >
                         <Users size={48} className="mx-auto mb-2 opacity-30" />
@@ -252,7 +255,10 @@ const ManagerEmployeesView: React.FC = () => {
                         key={m.id}
                         className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} hover:bg-[#F1F4FF] cursor-pointer`}
                       >
-                        <td className="py-4 pl-10 pr-4">
+                        <td className="py-4 pl-6 pr-2 text-center text-[#475569] text-sm font-semibold">
+                          {(teamPage - 1) * itemsPerPage + index + 1}
+                        </td>
+                        <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-[#4318FF]/10 flex items-center justify-center text-[#4318FF] text-xs font-bold">
                               {m.employeeName.charAt(0)}

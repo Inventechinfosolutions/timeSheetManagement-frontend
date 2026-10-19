@@ -368,7 +368,8 @@ const DailyStatus = () => {
         <table className="w-full border-separate border-spacing-0">
           <thead className="bg-[#4318FF] text-white">
             <tr>
-              <th className={`${styles.th} text-left pl-10`}>Employee</th>
+              <th className={`${styles.th} text-center pl-6 pr-2 w-16`}>Sl No</th>
+              <th className={`${styles.th} text-left px-4`}>Employee</th>
               <th className={`${styles.th} text-center`}>ID</th>
               <th className={`${styles.th} text-center`}>Department</th>
               <th className={`${styles.th} text-center`}>Today's Hours</th>
@@ -381,7 +382,10 @@ const DailyStatus = () => {
                 key={emp.id}
                 className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} hover:bg-[#F1F4FF] cursor-pointer`}
               >
-                <td className={`${styles.td} pl-10`}>
+                <td className={`${styles.td} text-center pl-6 pr-2 text-[#475569] font-semibold`}>
+                  {(currentPage - 1) * itemsPerPage + index + 1}
+                </td>
+                <td className={`${styles.td} px-4`}>
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4318FF] to-[#5BC4FF] flex items-center justify-center text-white font-black text-[10px]">
                       {emp.avatar}
@@ -622,6 +626,9 @@ const DailyStatus = () => {
                             )}
                           </div>
                         </th>
+                        <th className="pb-2 w-14 text-center font-bold text-[#A3AED0] text-[11px] uppercase tracking-wider">
+                          Sl No
+                        </th>
                         <th className="pb-2 text-left font-bold text-[#A3AED0] text-[11px] uppercase tracking-wider">
                           Employee
                         </th>
@@ -631,7 +638,7 @@ const DailyStatus = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-transparent">
-                      {filteredModalEmps.map((emp) => {
+                      {filteredModalEmps.map((emp, index) => {
                         const id = emp.employeeId || emp.id;
                         const isSelected = selectedEmps.has(id);
                         return (
@@ -648,6 +655,9 @@ const DailyStatus = () => {
                                   <Check size={14} className="text-white" />
                                 )}
                               </div>
+                            </td>
+                            <td className="p-4 text-center border-b border-gray-50 text-xs font-semibold text-[#475569]">
+                              {index + 1}
                             </td>
                             <td className="p-4 border-b border-gray-50">
                               <div className="flex items-center gap-3">

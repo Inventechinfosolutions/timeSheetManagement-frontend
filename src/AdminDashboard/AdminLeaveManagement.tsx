@@ -2206,7 +2206,10 @@ const AdminLeaveManagement = () => {
                 <table className="w-full min-w-[900px] border-separate border-spacing-0">
                   <thead>
                     <tr className="bg-[#4318FF] text-white">
-                      <th className="py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap">
+                      <th className="py-4 pl-6 pr-2 text-center text-[13px] font-bold uppercase tracking-wider whitespace-nowrap w-16">
+                        Sl No
+                      </th>
+                      <th className="py-4 px-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap">
                         Employee
                       </th>
                       <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
@@ -2236,7 +2239,7 @@ const AdminLeaveManagement = () => {
                     {entities.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={8}
+                          colSpan={9}
                           className="py-8 text-center text-gray-400"
                         >
                           <div className="flex flex-col items-center justify-center gap-3">
@@ -2258,7 +2261,10 @@ const AdminLeaveManagement = () => {
                             className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
                               } hover:bg-gray-100`}
                           >
-                            <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold whitespace-nowrap">
+                            <td className="py-4 pl-6 pr-2 text-center text-[#475569] text-sm font-semibold whitespace-nowrap">
+                              {(currentPage - 1) * itemsPerPage + index + 1}
+                            </td>
+                            <td className="py-4 px-4 text-[#2B3674] text-sm font-bold whitespace-nowrap">
                               {item.fullName || "User"} (
                                 {(() => {
                                   const internId = (item as any).internId || selectedEmployee?.internId;

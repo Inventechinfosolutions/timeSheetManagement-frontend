@@ -474,8 +474,11 @@ const AdminEmployeeTimesheetList = () => {
             <table className="w-full border-separate border-spacing-0">
               <thead>
                 <tr className="bg-[#4318FF] text-white">
+                  <th className="text-center py-4 pl-6 pr-2 text-[13px] font-bold uppercase tracking-wider w-16">
+                    Sl No
+                  </th>
                   <th
-                    className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors"
+                    className="text-left py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors"
                     onClick={() => handleSort("fullName")}
                   >
                     Name
@@ -503,7 +506,10 @@ const AdminEmployeeTimesheetList = () => {
                     key={emp.id}
                     className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} hover:bg-[#F1F4FF] cursor-pointer`}
                   >
-                    <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
+                    <td className="py-4 pl-6 pr-2 text-center text-[#475569] text-sm font-semibold">
+                      {(currentPage - 1) * itemsPerPage + index + 1}
+                    </td>
+                    <td className="py-4 px-4 text-[#2B3674] text-sm font-bold">
                       {emp.name}
                     </td>
                     <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">

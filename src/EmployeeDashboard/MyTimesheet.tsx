@@ -1567,6 +1567,9 @@ const MyTimesheet = ({
                 <table className="w-full text-left border-collapse">
                   <thead className="sticky top-0 bg-[#F4F7FE] z-10">
                     <tr>
+                      <th className="p-3 text-[10px] font-black text-[#A3AED0] uppercase tracking-wider text-center w-12">
+                        Sl No
+                      </th>
                       <th className="p-3 text-[10px] font-black text-[#A3AED0] uppercase tracking-wider">
                         Date
                       </th>
@@ -1623,6 +1626,9 @@ const MyTimesheet = ({
                           key={idx}
                           className="border-b border-gray-50 last:border-0 hover:bg-white/50 transition-colors"
                         >
+                          <td className="p-3 text-xs font-semibold text-[#475569] text-center">
+                            {idx + 1}
+                          </td>
                           <td className="p-3 text-sm font-bold text-[#2B3674]">
                             {date.toLocaleDateString("en-US", {
                               month: "short",

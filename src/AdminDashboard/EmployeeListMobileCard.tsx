@@ -1,4 +1,4 @@
-import { Pencil, RefreshCw, Eye, Mail } from "lucide-react";
+import { Pencil, RefreshCw, Eye, Mail, LayoutDashboard } from "lucide-react";
 import { UserStatus } from "../enums";
 
 interface Employee {
@@ -18,6 +18,7 @@ interface Employee {
 interface EmployeeListMobileCardProps {
   employees: Employee[];
   onViewDetails: (empId: string) => void;
+  onEditEmployee?: (empId: string) => void;
   onViewDashboard: (empId: string) => void;
   onResendActivation: (empId: string) => void;
   onToggleStatus: (empId: string) => void;
@@ -27,6 +28,7 @@ interface EmployeeListMobileCardProps {
 const EmployeeListMobileCard = ({
   employees,
   onViewDetails,
+  onEditEmployee,
   onViewDashboard,
   onResendActivation,
   onToggleStatus,
@@ -153,18 +155,27 @@ const EmployeeListMobileCard = ({
                     </button>
                   )}
                 <button
-                  onClick={() => onViewDashboard(emp.rawId)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] font-bold text-sm hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
-                  title="View Dashboard"
+                  onClick={() => onViewDetails(emp.rawId)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] font-bold text-sm hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
+                  title="View Employee"
                 >
                   <Eye size={16} />
                 </button>
+                {isAdmin && onEditEmployee && (
+                  <button
+                    onClick={() => onEditEmployee(emp.rawId)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] font-bold text-sm hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
+                    title="Edit Employee"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                )}
                 <button
-                  onClick={() => onViewDetails(emp.rawId)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] font-bold text-sm hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
-                  title="Edit Details"
+                  onClick={() => onViewDashboard(emp.rawId)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[#4318FF]/5 text-[#4318FF] font-bold text-sm hover:bg-[#4318FF] hover:text-white transition-all active:scale-95 shadow-sm"
+                  title="View Dashboard"
                 >
-                  <Pencil size={16} />
+                  <LayoutDashboard size={16} />
                 </button>
               </div>
             </div>

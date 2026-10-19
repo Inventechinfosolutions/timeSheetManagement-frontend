@@ -447,7 +447,10 @@ const AttendenceEditRequests = () => {
           <table className="w-full min-w-[900px] border-separate border-spacing-0">
             <thead>
               <tr className="bg-[#4318FF] text-white">
-                <th className="py-4 pl-6 pr-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap min-w-[200px]">
+                <th className="py-4 pl-6 pr-2 text-center text-[13px] font-bold uppercase tracking-wider whitespace-nowrap w-16">
+                  Sl No
+                </th>
+                <th className="py-4 px-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap min-w-[200px]">
                   Employee
                 </th>
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
@@ -470,7 +473,7 @@ const AttendenceEditRequests = () => {
             <tbody className="divide-y divide-gray-50">
               {waitingForDepartment ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-gray-400">
+                  <td colSpan={7} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center gap-2">
                       <Clock size={40} className="text-gray-200" />
                       <p className="font-medium text-lg">
@@ -481,7 +484,7 @@ const AttendenceEditRequests = () => {
                 </tr>
               ) : loading && entities.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-gray-400">
+                  <td colSpan={7} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center justify-center py-6">
                       <WorksphereLogoLoader />
                     </div>
@@ -489,7 +492,7 @@ const AttendenceEditRequests = () => {
                 </tr>
               ) : entities.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-gray-400">
+                  <td colSpan={7} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center gap-2">
                       <Clock size={40} className="text-gray-200" />
                       <p className="font-medium text-lg">No requests found</p>
@@ -504,7 +507,10 @@ const AttendenceEditRequests = () => {
                       index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
                     } hover:bg-gray-100`}
                   >
-                    <td className="py-3 pl-6 pr-4 align-middle">
+                    <td className="py-3 pl-6 pr-2 text-center text-[#475569] text-sm font-semibold align-middle whitespace-nowrap">
+                      {(page - 1) * PAGE_SIZE + index + 1}
+                    </td>
+                    <td className="py-3 px-4 align-middle">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#4318FF] font-bold text-xs ring-2 ring-blue-50">
                           {req.fullName ? (
