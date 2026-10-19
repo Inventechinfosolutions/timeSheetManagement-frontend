@@ -1627,7 +1627,7 @@ const isFragmentedPasteHtml = (root: ParentNode): boolean => {
   return tiny / els.length > 0.45;
 };
 
-/** Strip chat/Word layout styles that clip pasted text or stack it beside tables. */
+/** Strip chat/Word layout styles, heights, and margins that push content down or clip text. */
 const normalizePastedLayoutStyles = (root: ParentNode) => {
   root.querySelectorAll<HTMLElement>("*").forEach((el) => {
     el.style.removeProperty("margin-left");
@@ -1640,7 +1640,6 @@ const normalizePastedLayoutStyles = (root: ParentNode) => {
     el.style.removeProperty("right");
     el.style.removeProperty("top");
     el.style.removeProperty("bottom");
-    el.style.removeProperty("position");
     el.style.removeProperty("float");
     el.style.removeProperty("max-width");
     el.style.removeProperty("min-width");
@@ -1651,6 +1650,38 @@ const normalizePastedLayoutStyles = (root: ParentNode) => {
     el.style.removeProperty("flex");
     el.style.removeProperty("flex-direction");
     el.style.removeProperty("grid-template-columns");
+
+    // Remove sticky / fixed positioning which causes huge empty offsets or jumping
+    const pos = (el.style.position || "").toLowerCase();
+    if (pos === "sticky" || pos === "fixed" || pos === "absolute") {
+      el.style.removeProperty("position");
+    }
+
+    // Strip forced heights that create massive empty bands (e.g. ChatGPT min-height: 100vh)
+    if (!["IMG", "VIDEO", "CANVAS", "TABLE", "TD", "TH"].includes(el.tagName)) {
+      el.style.removeProperty("min-height");
+      el.style.removeProperty("height");
+      el.style.removeProperty("max-height");
+    }
+
+    // Remove excessive top padding / top margin that pushes content halfway down the page
+    const padTop = parseFloat(el.style.paddingTop || "0");
+    if (padTop > 8 || el.style.paddingTop?.includes("vh") || el.style.paddingTop?.includes("rem")) {
+      el.style.paddingTop = "0";
+    }
+    const padBottom = parseFloat(el.style.paddingBottom || "0");
+    if (padBottom > 16 || el.style.paddingBottom?.includes("vh") || el.style.paddingBottom?.includes("rem")) {
+      el.style.paddingBottom = "0";
+    }
+    const mTop = parseFloat(el.style.marginTop || "0");
+    if (mTop > 8 || el.style.marginTop?.includes("vh") || el.style.marginTop?.includes("rem")) {
+      el.style.marginTop = "0";
+    }
+    const mBottom = parseFloat(el.style.marginBottom || "0");
+    if (mBottom > 16 || el.style.marginBottom?.includes("vh") || el.style.marginBottom?.includes("rem")) {
+      el.style.marginBottom = "0.35em";
+    }
+
     const display = (el.style.display || "").toLowerCase();
     if (
       display.includes("flex") ||
@@ -1666,7 +1697,6 @@ const normalizePastedLayoutStyles = (root: ParentNode) => {
     }
     const w = el.style.width;
     if (w && (w.includes("px") || w.includes("vw") || w.includes("%") || parseFloat(w) > 0)) {
-      // Tiny widths force one-char-per-line wrapping beside tables
       const px = parseFloat(w);
       if (w.includes("%") || px > 100 || px < 40) {
         el.style.removeProperty("width");
@@ -1682,6 +1712,41 @@ const normalizePastedLayoutStyles = (root: ParentNode) => {
       el.style.maxWidth = "100%";
     }
   });
+
+  // Ensure all top-level / leading elements start flush with zero top margin/padding
+  let cur: HTMLElement | null = (root as HTMLElement).firstElementChild as HTMLElement | null;
+  while (cur) {
+    cur.style.marginTop = "0";
+    cur.style.paddingTop = "0";
+    cur = cur.firstElementChild as HTMLElement | null;
+  }
+};
+
+/**
+ * Remove empty spacer blocks (&nbsp;, <br>-only, empty p/div/li/span/header/section)
+ * from pasted content so headers and text start flush at the top.
+ */
+const stripEmptyPastedSpacers = (root: HTMLElement) => {
+  let changed = true;
+  let passes = 0;
+  while (changed && passes < 5) {
+    changed = false;
+    passes += 1;
+    const candidates = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        "p, div, span, li, header, section, article, nav, aside"
+      )
+    );
+    for (const el of candidates) {
+      if (el.closest("table, th, td, .excel-sl-col, .excel-attachment-cell")) continue;
+      if (el.querySelector("img, table, video, canvas, svg, iframe")) continue;
+      const text = (el.textContent || "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+      if (!text) {
+        el.remove();
+        changed = true;
+      }
+    }
+  }
 };
 
 /**
@@ -1695,8 +1760,36 @@ export const preparePastedHtmlForNote = (html?: string, plainText?: string): str
   if (!flat) return "";
 
   const parsed = new DOMParser().parseFromString(flat, "text/html");
-  // Drop scripts / Word conditional noise that can truncate paste
-  parsed.querySelectorAll("script, style, meta, link").forEach((el) => el.remove());
+  // Drop scripts / Word conditional noise / noscript
+  parsed.querySelectorAll("script, style, meta, link, noscript").forEach((el) => el.remove());
+
+  // Strip empty spacer divs, empty paragraphs, and empty containers
+  stripEmptyPastedSpacers(parsed.body);
+
+  // Strip leading empty nodes from the body
+  while (parsed.body.firstChild) {
+    const first = parsed.body.firstChild;
+    if (first.nodeType === Node.TEXT_NODE && !(first.textContent || "").trim()) {
+      first.remove();
+      continue;
+    }
+    if (first.nodeType === Node.ELEMENT_NODE) {
+      const el = first as HTMLElement;
+      if (
+        (el.tagName === "P" || el.tagName === "DIV" || el.tagName === "SECTION" || el.tagName === "HEADER") &&
+        (!el.textContent || !el.textContent.trim()) &&
+        !el.querySelector("img, table, svg, canvas")
+      ) {
+        first.remove();
+        continue;
+      }
+      if (el.tagName === "BR") {
+        first.remove();
+        continue;
+      }
+    }
+    break;
+  }
 
   // Fragmented / OCR-style HTML → use plain text so it lays out neatly with tables
   if (plainText && isFragmentedPasteHtml(parsed.body)) {

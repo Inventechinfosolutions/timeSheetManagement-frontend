@@ -128,7 +128,15 @@ export const absorbOrphansIntoPages = (
   // Prefer the page under the caret — never dump paste onto the last/next page
   const target =
     (preferredPage && pages.includes(preferredPage) ? preferredPage : null) ||
-    pages[pages.length - 1];
+    pages[0];
+
+  // If the target sheet only has empty spacer blocks, clear them so content starts flush at the top
+  const targetText = (target.textContent || "").replace(/\u00a0/g, " ").trim();
+  const targetMedia = Boolean(target.querySelector("img, table, svg, canvas, iframe"));
+  if (!targetText && !targetMedia) {
+    target.innerHTML = "";
+  }
+
   orphans.forEach((node) => {
     target.appendChild(node);
   });
@@ -164,21 +172,27 @@ const splitTableAcrossPage = (
 };
 
 const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElement | null => {
-  // Use real content height, not min-height (empty Enter lines must not open a new sheet)
-  const contentHeight = Math.max(
-    page.scrollHeight,
-    ...Array.from(page.children).map((c) => {
-      const el = c as HTMLElement;
-      return el.offsetTop + el.offsetHeight;
-    }),
-    0
-  );
-  if (contentHeight <= a4SheetHeightPx(landscape) + 8) return null;
-
-  const limitY = pageLimitY(page, landscape);
   const children = Array.from(page.children) as HTMLElement[];
+  if (children.length === 0) return null;
+
+  // Clean up any leading empty paragraph if other content follows
+  while (children.length > 1 && isTrivialOverflowNode(children[0])) {
+    children[0].remove();
+    children.shift();
+  }
+
+  const sheetHeight = a4SheetHeightPx(landscape);
+  // Calculate bottom of actual children inside page (independent of scroll/viewport)
+  const maxChildBottom = Math.max(
+    0,
+    ...children.map((c) => c.offsetTop + c.offsetHeight)
+  );
+
+  // If children fit comfortably inside the A4 sheet, no overflow to next page
+  if (maxChildBottom <= sheetHeight + 8) return null;
+
   const overflowChild = children.find(
-    (child) => child.getBoundingClientRect().bottom > limitY + 1
+    (child) => child.offsetTop + child.offsetHeight > sheetHeight + 1
   );
   if (!overflowChild) return null;
 
