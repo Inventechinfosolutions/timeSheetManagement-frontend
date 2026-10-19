@@ -4,6 +4,7 @@ import { User, Eye, EyeOff, Lock, ShieldCheck, ArrowRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { setCurrentUser } from "../reducers/employeeDetails.reducer";
 import { loginUser, clearError } from "../reducers/user.reducer";
+import { fetchNotes } from "../reducers/notes.reducer";
 import { UserType } from "../enums";
 import workspherelogo from "../assets/worksphere_white.svg";
 import SplashVideo from "./SplashVideo";
@@ -88,12 +89,14 @@ const Landing = () => {
       if (loginUser.fulfilled.match(resultAction)) {
         localStorage.setItem("userLoginId", loginId);
         dispatch(setCurrentUser({ employeeId: loginId }));
+        dispatch(fetchNotes({ type: "PROJECT" as any, isArchived: false }));
       } else {
         console.log(
           "Admin login failed or user is not admin. Proceeding as Employee.",
         );
         localStorage.setItem("userLoginId", loginId);
         dispatch(setCurrentUser({ employeeId: loginId }));
+        dispatch(fetchNotes({ type: "PROJECT" as any, isArchived: false }));
       }
     } catch (err) {
       console.error("Login attempt failed:", err);
