@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
 import { useState, useEffect } from "react";
@@ -36,7 +36,13 @@ import defaultAvatar from "../assets/default-avatar.jpg";
 const EmployeeDetailsView = () => {
   const { employeeId } = useParams<{ employeeId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
+
+  const mode = searchParams.get("mode") || (location.state as any)?.mode;
+  const isDirectEdit = mode === "edit" || (location.state as any)?.isEditing === true;
+
   const { entities, entity, loading, errorMessage } = useSelector(
     (state: RootState) => state.employeeDetails,
   );
@@ -46,6 +52,9 @@ const EmployeeDetailsView = () => {
   const { departments } = useSelector(
     (state: RootState) => state.masterDepartments,
   );
+  const currentUser = useSelector((state: RootState) => state.user.currentUser);
+  const canEditEmployee = currentUser?.userType !== UserType.RECEPTIONIST;
+
   const [viewedProfileImage, setViewedProfileImage] = useState<string | null>(
     null,
   );
@@ -56,7 +65,15 @@ const EmployeeDetailsView = () => {
   });
   const [resetError, setResetError] = useState("");
   const [resetSuccess, setResetSuccess] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(Boolean(isDirectEdit && canEditEmployee));
+
+  useEffect(() => {
+    if (isDirectEdit && canEditEmployee) {
+      setIsEditing(true);
+    } else {
+      setIsEditing(false);
+    }
+  }, [isDirectEdit, mode, canEditEmployee]);
   const [editedData, setEditedData] = useState({
     fullName: "",
     employeeId: "",
@@ -190,10 +207,6 @@ const EmployeeDetailsView = () => {
     );
   }
 
-  const handleEdit = () => {
-    dispatch(clearErrorMessage());
-    setIsEditing(true);
-  };
 
   const handleSave = () => {
     setValidationError("");
@@ -316,7 +329,11 @@ const EmployeeDetailsView = () => {
     });
     setValidationError("");
     dispatch(clearErrorMessage());
-    setIsEditing(false);
+    if (isDirectEdit) {
+      navigate(-1);
+    } else {
+      setIsEditing(false);
+    }
   };
 
   const avatarLetter = (employee.fullName || employee.name || "?")
@@ -458,14 +475,7 @@ const EmployeeDetailsView = () => {
               Personal Information
             </h2>
           </div>
-          {!isEditing ? (
-            <button
-              onClick={handleEdit}
-              className="px-4 py-2 bg-[#4318FF] text-white rounded-xl font-bold text-sm hover:bg-[#3311CC] transition-all"
-            >
-              Edit
-            </button>
-          ) : (
+          {isEditing && canEditEmployee && (
             <div className="flex gap-2">
               <button
                 onClick={handleSave}

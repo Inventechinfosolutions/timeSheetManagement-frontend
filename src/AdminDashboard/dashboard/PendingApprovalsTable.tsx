@@ -155,6 +155,7 @@ const PendingApprovalsTable = ({ items, basePath }: PendingApprovalsTableProps) 
               <table className="w-full min-w-[760px] text-left">
                 <thead className="sticky top-0 z-10 bg-[#F8F9FC]">
                   <tr className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">
+                    <th className="px-4 py-3 text-center w-14">Sl No</th>
                     <th className="px-4 py-3">Employee</th>
                     <th className="px-4 py-3">Request</th>
                     <th className="px-4 py-3">Dates</th>
@@ -167,17 +168,20 @@ const PendingApprovalsTable = ({ items, basePath }: PendingApprovalsTableProps) 
                 <tbody className="divide-y divide-gray-50">
                   {rows.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-400">
+                      <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">
                         No requests match this filter.
                       </td>
                     </tr>
                   ) : (
-                    rows.map((item) => {
+                    rows.map((item, index) => {
                       const meta = typeMeta(item.requestType);
                       const Icon = meta.icon;
                       const name = item.fullName || item.employeeId;
                       return (
                         <tr key={item.id} className="hover:bg-[#F8F9FC] transition-colors">
+                          <td className="px-4 py-3 text-center text-xs font-semibold text-[#475569]">
+                            {index + 1}
+                          </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-3 min-w-0">
                               <span className="w-9 h-9 rounded-full bg-linear-to-br from-[#4318FF] to-[#868CFF] text-white flex items-center justify-center text-xs font-black shrink-0">

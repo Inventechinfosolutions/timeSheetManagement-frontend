@@ -901,6 +901,9 @@ const AdminDashboard = () => {
                             )}
                           </div>
                         </th>
+                        <th className="pb-2 w-14 text-center text-[#A3AED0] text-[11px] uppercase">
+                          Sl No
+                        </th>
                         <th className="pb-2 text-left text-[#A3AED0] text-[11px] uppercase">
                           Employee
                         </th>
@@ -910,7 +913,7 @@ const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredModalEmps.map((emp) => {
+                      {filteredModalEmps.map((emp, index) => {
                         const id = emp.employeeId || emp.id;
                         const isSelected = selectedEmps.has(id);
                         return (
@@ -927,6 +930,9 @@ const AdminDashboard = () => {
                                   <Check size={14} className="text-white" />
                                 )}
                               </div>
+                            </td>
+                            <td className="p-4 text-center border-b border-gray-50 text-xs font-semibold text-[#475569]">
+                              {index + 1}
                             </td>
                             <td className="p-4 border-b border-gray-50">
                               <div className="flex items-center gap-3">

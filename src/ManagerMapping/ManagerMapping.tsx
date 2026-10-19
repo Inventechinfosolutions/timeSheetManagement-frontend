@@ -789,8 +789,11 @@ const ManagerMapping: React.FC = () => {
             <table className="w-full border-separate border-spacing-0">
               <thead>
                 <tr className="bg-[#4318FF] text-white">
+                  <th className="text-center py-4 pl-6 pr-2 text-[13px] font-bold uppercase tracking-wider w-16">
+                    Sl No
+                  </th>
                   <th
-                    className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
+                    className="text-left py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer hover:bg-[#3311DD] transition-colors"
                     onClick={() =>
                       setHistorySort({
                         key: "managerName",
@@ -852,7 +855,7 @@ const ManagerMapping: React.FC = () => {
               <tbody className="divide-y divide-gray-50">
                     {groupedMappings.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-[#A3AED0]">
+                    <td colSpan={7} className="text-center py-8 text-[#A3AED0]">
                       <Filter size={48} className="mx-auto mb-2 opacity-30" />
                       <p className="text-sm font-medium">
                         No mapping history available
@@ -865,7 +868,10 @@ const ManagerMapping: React.FC = () => {
                       key={`${mapping.managerId}-${mapping.department}`}
                       className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} hover:bg-[#F1F4FF] cursor-pointer`}
                     >
-                      <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
+                      <td className="py-4 pl-6 pr-2 text-center text-[#475569] text-sm font-semibold">
+                        {(historyPage - 1) * historyItemsPerPage + index + 1}
+                      </td>
+                      <td className="py-4 px-4 text-[#2B3674] text-sm font-bold">
                         {mapping.managerName}
                       </td>
                       <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
