@@ -114,9 +114,8 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
         {/* 1. Feedback on Work Culture */}
         <div
           id="field-workCultureFeedback"
-          className={`eval-step-card space-y-2 flex flex-col justify-between transition-all duration-200 ${
-            workCultureError ? "eval-field-has-error" : ""
-          }`}
+          className={`eval-step-card space-y-2 flex flex-col justify-between transition-all duration-200 ${workCultureError ? "eval-field-has-error" : ""
+            }`}
         >
           <div>
             <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between">
@@ -129,10 +128,9 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
               rows={3}
               value={formData.workCultureFeedback ?? ""}
               onChange={(e) => handleWorkCultureChange(e.target.value)}
-              placeholder="Share your thoughts on company culture, peer collaboration, communication, and work atmosphere..."
-              className={`eval-textarea-field mt-2 ${
-                workCultureError ? "eval-input-error" : ""
-              }`}
+              placeholder="Share feedback on culture, teamwork, and work environment...."
+              className={`eval-textarea-field mt-2 ${workCultureError ? "eval-input-error" : ""
+                }`}
             />
             {workCultureError && (
               <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -146,9 +144,8 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
         {/* 2. Work Life Balance */}
         <div
           id="field-workLifeBalance"
-          className={`eval-step-card space-y-2 flex flex-col justify-between transition-all duration-200 ${
-            workLifeBalanceError ? "eval-field-has-error" : ""
-          }`}
+          className={`eval-step-card space-y-2 flex flex-col justify-between transition-all duration-200 ${workLifeBalanceError ? "eval-field-has-error" : ""
+            }`}
         >
           <div>
             <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between">
@@ -161,10 +158,9 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
               rows={3}
               value={formData.workLifeBalance ?? ""}
               onChange={(e) => handleWorkLifeBalanceChange(e.target.value)}
-              placeholder="Describe your workload management, personal time boundaries, flexibility, and overall well-being..."
-              className={`eval-textarea-field mt-2 ${
-                workLifeBalanceError ? "eval-input-error" : ""
-              }`}
+              placeholder="Describe your work-life balance, workload, and well-being...."
+              className={`eval-textarea-field mt-2 ${workLifeBalanceError ? "eval-input-error" : ""
+                }`}
             />
             {workLifeBalanceError && (
               <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -178,9 +174,8 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
         {/* 3. Suggestions for Improvement */}
         <div
           id="field-suggestionsForImprovement"
-          className={`eval-step-card space-y-2 flex flex-col justify-between transition-all duration-200 ${
-            suggestionsError ? "eval-field-has-error" : ""
-          }`}
+          className={`eval-step-card space-y-2 flex flex-col justify-between transition-all duration-200 ${suggestionsError ? "eval-field-has-error" : ""
+            }`}
         >
           <div>
             <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between">
@@ -193,10 +188,9 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
               rows={3}
               value={formData.suggestionsForImprovement ?? ""}
               onChange={(e) => handleSuggestionsChange(e.target.value)}
-              placeholder="Suggest specific ideas or improvements regarding development tooling, workflows, or company processes..."
-              className={`eval-textarea-field mt-2 ${
-                suggestionsError ? "eval-input-error" : ""
-              }`}
+              placeholder="Suggest ideas for workplace improvement...."
+              className={`eval-textarea-field mt-2 ${suggestionsError ? "eval-input-error" : ""
+                }`}
             />
             {suggestionsError && (
               <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -210,9 +204,8 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
         {/* 4. Rate the Company Environment (Interactive Animated Emojis) */}
         <div
           id="field-companyEnvironmentRating"
-          className={`eval-step-card space-y-2 flex flex-col justify-between transition-all duration-200 ${
-            ratingError ? "eval-field-has-error" : ""
-          }`}
+          className={`eval-step-card space-y-2 flex flex-col justify-between transition-all duration-200 ${ratingError ? "eval-field-has-error" : ""
+            }`}
         >
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -245,15 +238,14 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
                     type="button"
                     onClick={() => handleSelect(item.id)}
                     onMouseEnter={() => setHoveredRating(item.id)}
-                    className={`group relative flex flex-col items-center justify-center py-2.5 sm:py-3 px-1 rounded-xl border-2 transition-all duration-200 cursor-pointer focus:outline-none select-none ${
-                      isSelected
+                    className={`group relative flex flex-col items-center justify-center py-2.5 sm:py-3 px-1 rounded-xl border-2 transition-all duration-200 cursor-pointer focus:outline-none select-none ${isSelected
                         ? "bg-white border-[#2563EB] shadow-md shadow-blue-500/20 ring-2 ring-blue-500/20 scale-[1.03] z-10"
                         : isHovered
-                        ? "bg-white border-blue-300 shadow-xs -translate-y-0.5"
-                        : ratingError
-                        ? "bg-white/80 border-red-300 hover:border-red-400"
-                        : "bg-white/60 border-[#E2E8F0] hover:border-[#CBD5E1]"
-                    }`}
+                          ? "bg-white border-blue-300 shadow-xs -translate-y-0.5"
+                          : ratingError
+                            ? "bg-white/80 border-red-300 hover:border-red-400"
+                            : "bg-white/60 border-[#E2E8F0] hover:border-[#CBD5E1]"
+                      }`}
                   >
                     {/* Selected Checkmark Badge on Top Right */}
                     {isSelected && (
@@ -267,33 +259,30 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
                       ref={(el) => {
                         emojiBtnRefs.current[item.id] = el;
                       }}
-                      className={`relative flex items-center justify-center transition-all duration-200 ${
-                        isSelected
+                      className={`relative flex items-center justify-center transition-all duration-200 ${isSelected
                           ? "scale-110 drop-shadow-md filter-none opacity-100"
                           : isHovered
-                          ? "scale-105 filter grayscale-[15%] opacity-90"
-                          : "filter grayscale-[80%] opacity-45 group-hover:filter-none group-hover:opacity-100"
-                      }`}
+                            ? "scale-105 filter grayscale-[15%] opacity-90"
+                            : "filter grayscale-[80%] opacity-45 group-hover:filter-none group-hover:opacity-100"
+                        }`}
                     >
                       {renderEmojiIcon(item.emoji)}
                     </div>
 
                     {/* Label */}
                     <span
-                      className={`mt-1.5 text-[10px] sm:text-[11px] font-bold transition-all tracking-tight whitespace-nowrap text-center ${
-                        isSelected
+                      className={`mt-1.5 text-[10px] sm:text-[11px] font-bold transition-all tracking-tight whitespace-nowrap text-center ${isSelected
                           ? "text-[#2563EB] font-extrabold scale-105"
                           : "text-[#64748B] group-hover:text-[#0F172A]"
-                      }`}
+                        }`}
                     >
                       {item.label}
                     </span>
 
                     {/* Selected Indicator Pill */}
                     <div
-                      className={`mt-1 h-0.5 rounded-full transition-all duration-300 ${
-                        isSelected ? "w-6 bg-[#2563EB]" : "w-0 bg-transparent"
-                      }`}
+                      className={`mt-1 h-0.5 rounded-full transition-all duration-300 ${isSelected ? "w-6 bg-[#2563EB]" : "w-0 bg-transparent"
+                        }`}
                     />
                   </button>
                 );

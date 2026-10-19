@@ -679,16 +679,7 @@ export const animateStepSlide = (
 
 export const initActiveStepperCircle = (circleElement: HTMLElement | null) => {
   if (!circleElement) return () => {};
-  const tween = gsap.to(circleElement, {
-    boxShadow: "0 0 0 6px rgba(37, 99, 235, 0.15), 0 6px 18px rgba(37, 99, 235, 0.32)",
-    duration: 1.2,
-    repeat: -1,
-    yoyo: true,
-    ease: "sine.inOut",
-  });
-  return () => {
-    tween.kill();
-  };
+  return () => {};
 };
 
 export const animateFieldError = (element: HTMLElement | null) => {

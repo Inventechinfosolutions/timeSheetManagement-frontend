@@ -28,7 +28,7 @@ export const OverviewStep: React.FC<StepProps> = ({
           <span className="eval-title-accent-line" />
         </h3>
         <p className="text-xs text-[#64748B] mt-1 eval-subtitle-anim">
-          Summarize your current role, primary responsibilities, and key highlights for this quarter.
+         Summarize your role, key responsibilities, and quarterly highlights.
         </p>
       </div>
 

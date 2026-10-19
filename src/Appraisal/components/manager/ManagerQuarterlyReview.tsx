@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import gsap from "gsap";
 import {
   Calendar,
   Clock,
@@ -210,6 +211,26 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const yearsLoaded = useRef(false);
   const yearChosen = useRef(false);
   const defaultYear = useRef("");
+  const filtersDockRef = useRef<HTMLDivElement>(null);
+
+  // GSAP: Modern entrance animation for filters dock
+  useEffect(() => {
+    if (filtersDockRef.current) {
+      gsap.fromTo(
+        filtersDockRef.current.children,
+        { opacity: 0, y: 7, scale: 0.98 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.45,
+          stagger: 0.05,
+          ease: "power2.out",
+          clearProps: "transform,opacity",
+        }
+      );
+    }
+  }, []);
 
   const hasActiveFilters = Boolean(
     searchTerm.trim() ||
@@ -557,7 +578,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
             </CardTitle>
 
             {/* Filters beside title */}
-            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar flex-nowrap py-1 manager-review-filters-bar flex-1 justify-start xl:justify-end">
+            <div
+              ref={filtersDockRef}
+              className="manager-review-filters-dock flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar flex-nowrap py-1 flex-1 justify-start xl:justify-end"
+            >
               <div className="w-32 sm:w-36 md:w-40 xl:w-44 shrink-0 filter-item-stagger-1">
                 <SearchBox
                   value={searchTerm}
@@ -591,7 +615,11 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 placeholder="Financial Year"
                 allowClear={true}
                 defaultValue=""
-                prefixIcon={<Calendar size={14} className="filter-icon-fy" />}
+                prefixIcon={
+                  <span className="filter-icon-badge filter-icon-badge-fy">
+                    <Calendar size={13} />
+                  </span>
+                }
                 options={financialYearOptions}
                 value={financialYear}
                 onChange={(value) => {
@@ -601,7 +629,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 onOpen={loadFinancialYears}
                 loading={yearsLoading}
                 maxLabelWidth="max-w-[124px]"
-                buttonClassName="manager-review-filter-btn filter-btn-fy rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[172px]"
+                buttonClassName={`manager-review-filter-btn filter-btn-fy ${
+                  financialYear && financialYear !== defaultYear.current ? "filter-active" : ""
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[172px]`}
               />
 
               <Dropdown
@@ -609,12 +639,18 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 placeholder="Quarters"
                 allowClear={false}
                 defaultValue=""
-                prefixIcon={<Clock size={14} className="filter-icon-quarters" />}
+                prefixIcon={
+                  <span className="filter-icon-badge filter-icon-badge-quarters">
+                    <Clock size={13} />
+                  </span>
+                }
                 options={quarterOptions}
                 value={quarter}
                 onChange={(value) => setQuarter(value || AppraisalFilterAll.ALL)}
                 maxLabelWidth="max-w-[100px]"
-                buttonClassName="manager-review-filter-btn filter-btn-quarters rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[150px]"
+                buttonClassName={`manager-review-filter-btn filter-btn-quarters ${
+                  quarter && quarter !== AppraisalFilterAll.ALL ? "filter-active" : ""
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[150px]`}
               />
 
               <Dropdown
@@ -622,13 +658,19 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 placeholder="Status"
                 allowClear={true}
                 defaultValue=""
-                prefixIcon={<ClipboardList size={14} className="filter-icon-status" />}
+                prefixIcon={
+                  <span className="filter-icon-badge filter-icon-badge-status">
+                    <ClipboardList size={13} />
+                  </span>
+                }
                 options={statusOptions}
                 value={statusFilter}
                 onChange={setStatusFilter}
                 maxLabelWidth="max-w-[80px]"
                 contentWidth
-                buttonClassName="manager-review-filter-btn filter-btn-status rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[124px]"
+                buttonClassName={`manager-review-filter-btn filter-btn-status ${
+                  statusFilter ? "filter-active" : ""
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[124px]`}
               />
 
               {hasActiveFilters && (
@@ -636,11 +678,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   onClick={handleClearFilters}
-                  className="manager-review-clear-btn shrink-0 p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-xs font-medium flex items-center gap-1 border border-blue-200/80 bg-white/90 text-blue-600 hover:text-blue-700 hover:bg-blue-50/80 shadow-xs"
+                  className="manager-review-clear-btn shrink-0"
                   title="Clear all filters"
                 >
-                  <RotateCcw size={13} className="filter-clear-icon shrink-0" />
-                  <span className="hidden 2xl:inline text-xs">Clear</span>
+                  <RotateCcw size={14} className="filter-clear-icon shrink-0" />
                 </Button>
               )}
             </div>

@@ -176,7 +176,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
             rows={7}
             value={draft}
             onChange={(e) => handleChange(e.target.value)}
-            placeholder="Highlight new technical frameworks learned, courses or certifications completed, and your core learning and career development goals for the upcoming quarter..."
+            placeholder="Highlight your new skills, completed training, and upcoming development goals...."
             className={`eval-textarea-field leading-relaxed text-sm ${
               addError ? "eval-input-error" : ""
             }`}

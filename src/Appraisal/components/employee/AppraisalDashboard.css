@@ -576,4 +576,202 @@
   font-weight: 700 !important;
 }
 
+/* ==========================================================================
+   SVG Step Icons Progressive Build Animations (Drawing elements piece by piece)
+   ========================================================================== */
+.stepper-build-svg {
+  overflow: visible;
+  display: block;
+}
+
+/* 1. Overview (Compass) */
+@keyframes buildCircleOuter {
+  0% { stroke-dashoffset: 58; opacity: 0; }
+  15% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes buildFadeInTicks {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes buildNeedleSwing {
+  0% { opacity: 0; transform: rotate(-90deg) scale(0.6); }
+  60% { opacity: 1; transform: rotate(15deg) scale(1.05); }
+  80% { transform: rotate(-8deg) scale(1); }
+  100% { opacity: 1; transform: rotate(0deg) scale(1); }
+}
+
+.anim-build-circle-outer {
+  stroke-dasharray: 58;
+  animation: buildCircleOuter 0.55s cubic-bezier(0.4, 0, 0.2, 1) both;
+  transform-origin: center;
+}
+
+.anim-build-fade-fast {
+  animation: buildFadeInTicks 0.3s 0.4s ease-out both;
+}
+
+.anim-build-compass-needle {
+  transform-origin: center;
+  animation: buildNeedleSwing 0.75s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* 2. Achievements (Trophy) */
+@keyframes buildDrawLine {
+  0% { stroke-dasharray: 30; stroke-dashoffset: 30; opacity: 0; }
+  10% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes buildTrophyBody {
+  0% { stroke-dasharray: 60; stroke-dashoffset: 60; opacity: 0; transform: translateY(4px); }
+  100% { stroke-dashoffset: 0; opacity: 1; transform: translateY(0); }
+}
+
+@keyframes buildTrophyHandles {
+  0% { stroke-dasharray: 40; stroke-dashoffset: 40; opacity: 0; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+.anim-build-trophy-base {
+  animation: buildDrawLine 0.4s ease-out both;
+}
+
+.anim-build-trophy-body {
+  animation: buildTrophyBody 0.6s 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anim-build-trophy-handles {
+  animation: buildTrophyHandles 0.5s 0.55s ease-out both;
+}
+
+/* 3. Teamwork (Users) */
+@keyframes buildUserCenter {
+  0% { transform: scale(0.3) translateY(4px); opacity: 0; }
+  70% { transform: scale(1.1) translateY(-1px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes buildUserPeers {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.anim-build-user-center {
+  transform-origin: center 7px;
+  animation: buildUserCenter 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.anim-build-user-center-body {
+  animation: buildDrawLine 0.45s 0.15s ease-out both;
+}
+
+.anim-build-user-peers-head {
+  transform-origin: center;
+  animation: buildUserPeers 0.4s 0.45s ease-out both;
+}
+
+.anim-build-user-peers-body {
+  animation: buildDrawLine 0.45s 0.55s ease-out both;
+}
+
+/* 4. Learning Goals (Target: Circle built 1 by 1) */
+@keyframes buildCircleMiddle {
+  0% { stroke-dashoffset: 36; opacity: 0; }
+  10% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes buildBullseyePop {
+  0% { transform: scale(0); opacity: 0; }
+  65% { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes buildCrosshairs {
+  0% { opacity: 0; stroke-dashoffset: 12; stroke-dasharray: 12; }
+  100% { opacity: 1; stroke-dashoffset: 0; stroke-dasharray: 12; }
+}
+
+.anim-build-target-outer {
+  stroke-dasharray: 58;
+  animation: buildCircleOuter 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+  transform-origin: center;
+}
+
+.anim-build-target-middle {
+  stroke-dasharray: 36;
+  animation: buildCircleMiddle 0.45s 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+  transform-origin: center;
+}
+
+.anim-build-target-bullseye {
+  transform-origin: center;
+  animation: buildBullseyePop 0.4s 0.68s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.anim-build-target-crosshairs {
+  animation: buildCrosshairs 0.35s 0.9s ease-out both;
+}
+
+/* 5. Environment (Building) */
+@keyframes buildEnvWalls {
+  0% { stroke-dasharray: 70; stroke-dashoffset: 70; opacity: 0; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes buildEnvWindows {
+  0% { opacity: 0; transform: scaleY(0); }
+  100% { opacity: 1; transform: scaleY(1); }
+}
+
+.anim-build-env-base {
+  animation: buildDrawLine 0.3s ease-out both;
+}
+
+.anim-build-env-walls {
+  animation: buildEnvWalls 0.55s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anim-build-env-windows {
+  transform-origin: bottom center;
+  animation: buildEnvWindows 0.4s 0.6s ease-out both;
+}
+
+/* 6. Final Review (Arrow gliding through steps) */
+@keyframes buildArrowTrail {
+  0% { stroke-dashoffset: 14; opacity: 0; }
+  50% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes buildArrowHead {
+  0% { transform: translateX(-6px); opacity: 0; }
+  60% { transform: translateX(2px); opacity: 1; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes buildTargetDot {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.anim-build-send-trail {
+  stroke-dasharray: 14;
+  animation: buildArrowTrail 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.anim-build-send-arrow {
+  animation: buildArrowHead 0.5s 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.anim-build-send-target {
+  transform-origin: 19px 12px;
+  animation: buildTargetDot 0.35s 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+
+
 

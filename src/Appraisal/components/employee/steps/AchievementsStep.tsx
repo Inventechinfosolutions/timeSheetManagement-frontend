@@ -316,7 +316,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 rows={4}
                 value={projectDescription}
                 onChange={(e) => handleDescriptionChange(e.target.value)}
-                placeholder="Describe the project scope, your key responsibilities, deliverables, and measurable outcomes..."
+                placeholder="Describe your project contributions, key deliverables, and results...."
                 className={`eval-textarea-field mt-2 ${
                   descriptionError ? "eval-input-error" : ""
                 }`}
@@ -348,7 +348,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 rows={4}
                 value={projectChallenge}
                 onChange={(e) => handleChallengeChange(e.target.value)}
-                placeholder="What technical or operational challenges did you encounter and how did you resolve them?..."
+                placeholder="Describe the challenges you faced and how you resolved them...."
                 className={`eval-textarea-field mt-2 ${
                   challengeError ? "eval-input-error" : ""
                 }`}

@@ -8,6 +8,14 @@ import {
   AlertCircle,
 } from "lucide-react";
 import {
+  StepOverviewIcon,
+  StepAchievementsIcon,
+  StepTeamworkIcon,
+  StepGoalsIcon,
+  StepEnvironmentIcon,
+  StepFinalReviewIcon,
+} from "./StepSvgIcons";
+import {
   animateStepSlide,
   initActiveStepperCircle,
   animateFieldError,
@@ -34,12 +42,12 @@ interface QuarterlyReviewStepperProps {
 }
 
 const STEP_DEFINITIONS = [
-  { id: 1, label: "Overview" },
-  { id: 2, label: "Achievements" },
-  { id: 3, label: "Teamwork" },
-  { id: 4, label: "Learning Goals" },
-  { id: 5, label: "Environment" },
-  { id: 6, label: "Final Review" },
+  { id: 1, label: "Overview", IconComponent: StepOverviewIcon },
+  { id: 2, label: "Achievements", IconComponent: StepAchievementsIcon },
+  { id: 3, label: "Teamwork", IconComponent: StepTeamworkIcon },
+  { id: 4, label: "Learning Goals", IconComponent: StepGoalsIcon },
+  { id: 5, label: "Environment", IconComponent: StepEnvironmentIcon },
+  { id: 6, label: "Final Review", IconComponent: StepFinalReviewIcon },
 ];
 
 const quarterValue = (value: string): QuaterlyEnum | null => {
@@ -757,31 +765,31 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   type="button"
                   onClick={() => handleStepClick(step.id)}
                   title={`Go to Step ${step.id}: ${step.label}`}
-                  className="group relative z-10 flex flex-col items-center cursor-pointer select-none focus:outline-none transition-transform"
+                  className="group relative z-10 flex flex-col items-center cursor-pointer select-none focus:outline-none"
                 >
-                  {/* Circle with Step Number */}
+                  {/* Circle with Step Icon */}
                   <div
                     ref={isActive ? activeCircleRef : undefined}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ease-out ${
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-200 ${
                       isActive
-                        ? "bg-[#2563EB] text-white ring-4 ring-blue-400/30 shadow-lg shadow-blue-500/25 scale-110"
+                        ? "bg-[#2563EB] text-white ring-4 ring-blue-400/25 shadow-md shadow-blue-500/20"
                         : isCompleted
-                        ? "bg-blue-500 text-white shadow-xs hover:scale-105 border-2 border-blue-500"
-                        : "bg-white text-[#64748B] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB] hover:scale-105"
+                        ? "bg-blue-500 text-white border-2 border-blue-500 shadow-xs"
+                        : "bg-white text-[#64748B] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB]"
                     }`}
                   >
                     {isCompleted ? (
                       <Check className="w-5 h-5 stroke-[2.8]" />
                     ) : (
-                      <span>{step.id}</span>
+                      <step.IconComponent isActive={isActive} />
                     )}
                   </div>
 
                   {/* Title Placed Below Circle */}
                   <span
-                    className={`mt-2 text-xs font-semibold text-center whitespace-nowrap transition-all duration-300 ${
+                    className={`mt-2 text-xs font-semibold text-center whitespace-nowrap transition-colors duration-200 ${
                       isActive
-                        ? "text-[#2563EB] font-extrabold scale-105"
+                        ? "text-[#2563EB] font-bold"
                         : isCompleted
                         ? "text-[#0F172A] font-semibold"
                         : "text-[#64748B] group-hover:text-[#0F172A]"
