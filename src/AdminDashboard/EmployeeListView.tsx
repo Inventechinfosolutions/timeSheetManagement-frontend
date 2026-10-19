@@ -37,6 +37,7 @@ import {
   Calendar,
   Cake,
   Download,
+  LayoutDashboard,
 } from "lucide-react";
 import EmployeeListMobileCard from "./EmployeeListMobileCard";
 import Toast from "../components/Toast";
@@ -240,7 +241,16 @@ const EmployeeListView = () => {
 
   const handleViewDetails = (empId: string) => {
     dispatch(getEntity(empId));
-    navigate(`${basePath}/employee-details/${empId}`);
+    navigate(`${basePath}/employee-details/${empId}?mode=view`, {
+      state: { mode: "view", isEditing: false },
+    });
+  };
+
+  const handleEditEmployee = (empId: string) => {
+    dispatch(getEntity(empId));
+    navigate(`${basePath}/employee-details/${empId}?mode=edit`, {
+      state: { mode: "edit", isEditing: true },
+    });
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -765,31 +775,35 @@ const EmployeeListView = () => {
             <table className="w-full border-separate border-spacing-0">
               <thead>
                 <tr className="bg-[#4318FF] text-white">
+                  <th className="text-center py-4 pl-6 pr-2 text-[13px] font-bold uppercase tracking-wider w-[8%]">
+                    Sl No
+                  </th>
                   <th
-                    className="text-left py-4 pl-10 pr-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors w-[30%]"
+                    className="text-left py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors w-[26%]"
                     onClick={() => handleSort("fullName")}
                   >
                     Name
                   </th>
                   <th
-                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors w-[15%]"
+                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors w-[14%]"
                     onClick={() => handleSort("employeeId")}
                   >
                     ID
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[20%]">
+                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[18%]">
                     Department
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[15%]">
+                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[14%]"
+                  >
                     Role
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[15%]">
+                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[12%]">
                     Status
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[15%]">
+                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[12%]">
                     Activation
                   </th>
-                  <th className="py-4 px-4 text-[13px] font-bold uppercase tracking-wider text-center w-[20%]">
+                  <th className="py-4 px-4 text-[13px] font-bold uppercase tracking-wider text-center w-[16%]">
                     Actions
                   </th>
                 </tr>
@@ -800,7 +814,10 @@ const EmployeeListView = () => {
                     key={emp.id}
                     className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} hover:bg-[#F1F4FF] cursor-pointer`}
                   >
-                    <td className="py-4 pl-10 pr-4 text-[#2B3674] text-sm font-bold">
+                    <td className="py-4 pl-6 pr-2 text-center text-[#475569] text-sm font-semibold">
+                      {(currentPage - 1) * itemsPerPage + index + 1}
+                    </td>
+                    <td className="py-4 px-4 text-[#2B3674] text-sm font-bold">
                       {emp.name}
                     </td>
                     <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
@@ -908,21 +925,28 @@ const EmployeeListView = () => {
                     <td className="py-4 px-4 text-center">
                       <div className="flex items-center justify-center gap-3">
                         <button
-                          onClick={() => handleViewDashboard(emp.rawId)}
+                          onClick={() => handleViewDetails(emp.rawId)}
                           className="inline-flex items-center justify-center bg-transparent border-none cursor-pointer text-[#4318FF] hover:scale-110 active:scale-95 transition-all"
-                          title="View Dashboard"
+                          title="View Employee"
                         >
                           <Eye size={16} />
                         </button>
                         {canEdit && (
                           <button
-                            onClick={() => handleViewDetails(emp.rawId)}
+                            onClick={() => handleEditEmployee(emp.rawId)}
                             className="inline-flex items-center justify-center bg-transparent border-none cursor-pointer text-[#4318FF] hover:scale-110 active:scale-95 transition-all"
-                            title="Edit Details"
+                            title="Edit Employee"
                           >
                             <Pencil size={16} />
                           </button>
                         )}
+                        <button
+                          onClick={() => handleViewDashboard(emp.rawId)}
+                          className="inline-flex items-center justify-center bg-transparent border-none cursor-pointer text-[#4318FF] hover:scale-110 active:scale-95 transition-all"
+                          title="View Dashboard"
+                        >
+                          <LayoutDashboard size={16} />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -937,6 +961,7 @@ const EmployeeListView = () => {
               <EmployeeListMobileCard
                 employees={currentItems}
                 onViewDetails={handleViewDetails}
+                onEditEmployee={handleEditEmployee}
                 onViewDashboard={handleViewDashboard}
                 onResendActivation={handleResendActivation}
                 onToggleStatus={handleToggleStatus}

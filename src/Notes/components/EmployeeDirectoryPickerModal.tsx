@@ -45,15 +45,23 @@ export const EmployeeDirectoryPickerModal: React.FC<EmployeeDirectoryPickerModal
     }
   }, []);
 
-  // Reset state when modal opens - DO NOT fetch automatically on open!
+  // When modal opens, auto-load all employees and reset selection state
   useEffect(() => {
     if (open) {
       setSearchTerm("");
-      setEmployees([]);
-      setHasSearched(false);
       setSelectedEmails(new Set());
       setCopiedEmail(null);
-      setLoading(false);
+      // Auto-load all employees on open
+      setLoading(true);
+      setHasSearched(true);
+      searchEmployeeDirectory("").then((data) => {
+        setEmployees(data || []);
+      }).catch((err) => {
+        console.error("Failed to load employees:", err);
+        setEmployees([]);
+      }).finally(() => {
+        setLoading(false);
+      });
     }
   }, [open]);
 
@@ -64,7 +72,7 @@ export const EmployeeDirectoryPickerModal: React.FC<EmployeeDirectoryPickerModal
     (val: string) => {
       if (!open) return;
       const trimmed = val.trim();
-      if (!trimmed) return;
+      // Empty search = reload all employees
       setLoading(true);
       fetchEmployees(trimmed);
     },
@@ -199,7 +207,7 @@ export const EmployeeDirectoryPickerModal: React.FC<EmployeeDirectoryPickerModal
             </div>
             <div>
               <h3 className="text-sm font-bold text-[#1B2559]">Employee Directory</h3>
-              <p className="text-[11px] text-slate-400">Search by name or ID to add recipients</p>
+              <p className="text-[11px] text-slate-400">All employees shown — search to filter</p>
             </div>
           </div>
           <button
@@ -221,9 +229,15 @@ export const EmployeeDirectoryPickerModal: React.FC<EmployeeDirectoryPickerModal
             onDebounce={handleSearchDebounce}
             onClear={() => {
               setSearchTerm("");
-              setEmployees([]);
-              setHasSearched(false);
-              setLoading(false);
+              setLoading(true);
+              setHasSearched(true);
+              searchEmployeeDirectory("").then((data) => {
+                setEmployees(data || []);
+              }).catch(() => {
+                setEmployees([]);
+              }).finally(() => {
+                setLoading(false);
+              });
             }}
             autoFocus
             inputSize="sm"

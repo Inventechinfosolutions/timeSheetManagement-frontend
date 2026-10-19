@@ -1367,6 +1367,7 @@ export const AppraisalDashboard: React.FC = () => {
                       <table className="quarterly-review-table qr-header-indigo">
                         <thead>
                           <tr>
+                            <th className="text-center min-w-[70px]">Sl No</th>
                             <th className="text-left min-w-[110px]">Quarter</th>
                             <th className="text-left min-w-[150px]">Financial Year</th>
                             <th className="text-center min-w-[130px]">Assigned By</th>
@@ -1378,16 +1379,12 @@ export const AppraisalDashboard: React.FC = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {paginatedAssignments.map((assignment) => {
-                            const pendingItem = deadlineInfo?.pendingMap?.get(assignment.id);
-                            const daysLeft = pendingItem?.days ?? null;
-                            const showRowMarquee = pendingItem !== undefined && daysLeft === 1;
-
+                          {paginatedAssignments.map((assignment, index) => {
                             return (
-                              <tr
-                                key={assignment.id}
-                                className={`quarterly-review-row ${showRowMarquee ? "qr-urgent-row" : ""}`}
-                              >
+                              <tr key={assignment.id}>
+                                <td className="text-center font-semibold text-xs text-[#475569]">
+                                  {index + 1}
+                                </td>
                                 {/* 1. Quarter with Dedicated Color */}
                                 <td>{renderQuarterBadge(assignment.quarter)}</td>
 

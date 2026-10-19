@@ -593,10 +593,18 @@ const MonthlyAttendanceMatrix: React.FC = () => {
                   <thead>
                     {/* Row 1: Date Labels (1-Sep, 2-Sep, etc.) */}
                     <tr className="h-9">
+                      {/* Sticky Sl No Header */}
+                      <th
+                        rowSpan={2}
+                        className="sticky left-0 top-0 z-30 bg-[#2563EB] text-white py-2 px-2 text-center font-black text-xs uppercase tracking-wider min-w-[50px] max-w-[50px] border-r border-blue-400 shadow-[2px_0_6px_rgba(0,0,0,0.08)] align-middle"
+                      >
+                        Sl No
+                      </th>
+
                       {/* Sticky Employee Name Header */}
                       <th
                         rowSpan={2}
-                        className="sticky left-0 top-0 z-30 bg-[#2563EB] text-white py-2 px-3 text-left font-black text-xs uppercase tracking-wider min-w-[170px] max-w-[190px] border-r border-blue-400 shadow-[2px_0_6px_rgba(0,0,0,0.08)] align-middle"
+                        className="sticky left-[50px] top-0 z-30 bg-[#2563EB] text-white py-2 px-3 text-left font-black text-xs uppercase tracking-wider min-w-[170px] max-w-[190px] border-r border-blue-400 shadow-[2px_0_6px_rgba(0,0,0,0.08)] align-middle"
                       >
                         Employee Name
                       </th>
@@ -678,9 +686,16 @@ const MonthlyAttendanceMatrix: React.FC = () => {
                           key={emp.employeeId}
                           className={`group ${rowBg} hover:bg-blue-50/60 transition-colors`}
                         >
+                          {/* Sticky Sl No Cell */}
+                          <td
+                            className={`sticky left-0 z-10 py-2.5 px-2 text-center font-semibold text-xs text-[#475569] border-r border-b border-gray-200 min-w-[50px] max-w-[50px] shadow-[2px_0_6px_rgba(0,0,0,0.04)] ${rowBg} group-hover:bg-[#F1F5FD] transition-colors`}
+                          >
+                            {empIdx + 1}
+                          </td>
+
                           {/* Sticky Employee Name Cell */}
                           <td
-                            className={`sticky left-0 z-10 py-2.5 px-3 border-r border-b border-gray-200 min-w-[170px] max-w-[190px] shadow-[2px_0_6px_rgba(0,0,0,0.04)] ${rowBg} group-hover:bg-[#F1F5FD] transition-colors`}
+                            className={`sticky left-[50px] z-10 py-2.5 px-3 border-r border-b border-gray-200 min-w-[170px] max-w-[190px] shadow-[2px_0_6px_rgba(0,0,0,0.04)] ${rowBg} group-hover:bg-[#F1F5FD] transition-colors`}
                           >
                             <div className="flex items-center gap-2.5">
                               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4318FF] to-[#5BC4FF] flex items-center justify-center text-white font-black text-xs shrink-0 shadow-xs">
