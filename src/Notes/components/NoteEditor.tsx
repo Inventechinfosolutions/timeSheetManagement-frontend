@@ -49,6 +49,7 @@ import {
   applyLandscapeToPages,
   absorbOrphansIntoPages,
   removeEmptyPages,
+  paginateToA4Sheets,
 } from "../utils/documentLayout";
 import {
   embedExcelWorkbookInHtml,
@@ -356,7 +357,15 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       const plain = e.clipboardData?.getData("text/plain") || "";
       const activeCell = getActiveTableCell();
       const pages = Array.from(editor.querySelectorAll(":scope > .page")) as HTMLElement[];
-      let cursorPage = getCursorPage() || pages[0] || null;
+      const docText = (editor.textContent || "").replace(/\u00a0/g, " ").trim();
+      const docMedia = Boolean(editor.querySelector("img, table, canvas, iframe"));
+      const isDocEmpty = !docText && !docMedia;
+
+      // If document is empty, ALWAYS target Page 1 and clear any lingering sheets!
+      let cursorPage = isDocEmpty ? (pages[0] || null) : (getCursorPage() || pages[0] || null);
+      if (isDocEmpty && pages.length > 1) {
+        pages.slice(1).forEach((p) => p.remove());
+      }
 
       // Ensure selection is firmly inside cursorPage before inserting
       if (cursorPage && !activeCell) {
@@ -507,18 +516,20 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       if (!clean && plain) {
         clean = plainTextToPasteHtml(plain);
       }
-      if (!clean) {
+      if (isDocEmpty && cursorPage && clean) {
+        // Direct insertion into empty Page 1 — starts right at the top!
+        cursorPage.innerHTML = clean;
+      } else if (!clean) {
         document.execCommand("insertText", false, collapseVerticalCharPaste(plain));
       } else {
         document.execCommand("insertHTML", false, clean);
       }
       isTypingSessionRef.current = true;
-      markPasteSkipPagination();
       const pasteGen = ++pasteGenerationRef.current;
       requestAnimationFrame(async () => {
         if (!editorRef.current || isHistoryNavigatingRef.current) return;
         const landscape = editorRef.current.classList.contains("is-landscape");
-        // Stay at cursor page: pull orphans into that page, skip A4 reflow (avoids next-page jump)
+        // Pull any loose nodes back into sheets
         absorbOrphansIntoPages(editorRef.current, landscape, cursorPage);
         wrapWideTablesInRoot(editorRef.current);
         wrapNoteInlineImages(editorRef.current);
@@ -527,8 +538,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         });
         const workspace = editorRef.current.closest(".a4-page-workspace") as HTMLElement | null;
         if (workspace) workspace.scrollLeft = 0;
+        // Reflow across A4 sheets starting firmly from Page 1 (reflow = true)
+        paginateToA4Sheets(editorRef.current, landscape, true);
         removeEmptyPages(editorRef.current);
-        handleEditorInputWrapper({ skipPagination: true });
+        handleEditorInputWrapper();
         if (onPersistInlineImages) {
           try {
             await onPersistInlineImages(
@@ -908,6 +921,62 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     restoreEditorSelection();
     applyFontSizeToSelection(String(size));
     handleEditorInputWrapper();
+  };
+
+  /**
+   * Apply Heading 1, Heading 2, or Normal text to the selection or current line.
+   * Directly transforms any block (including nested DIVs from chat/pasted content)
+   * without browser execCommand failures or caret jumping.
+   */
+  const applyHeading = (tag: "h1" | "h2" | "p") => {
+    saveUndoSnapshot();
+    if (!editorRef.current) return;
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+
+    let range = sel.getRangeAt(0);
+    if (!editorRef.current.contains(range.commonAncestorContainer)) {
+      if (!restoreEditorSelection()) return;
+      range = sel.getRangeAt(0);
+    }
+
+    const anchor =
+      range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? (range.startContainer as HTMLElement)
+        : range.startContainer.parentElement;
+
+    const page = anchor?.closest(".page") as HTMLElement | null;
+    if (!page || !editorRef.current.contains(page)) return;
+
+    const targetBlock = anchor?.closest(
+      "h1, h2, h3, h4, h5, h6, p, div, li, blockquote"
+    ) as HTMLElement | null;
+
+    if (targetBlock && targetBlock !== page && !targetBlock.classList.contains("page")) {
+      const currentTag = targetBlock.tagName.toLowerCase();
+      const newTag = currentTag === tag && tag !== "p" ? "p" : tag;
+      const newEl = document.createElement(newTag);
+
+      while (targetBlock.firstChild) {
+        newEl.appendChild(targetBlock.firstChild);
+      }
+      if (targetBlock.style.textAlign) {
+        newEl.style.textAlign = targetBlock.style.textAlign;
+      }
+      targetBlock.replaceWith(newEl);
+
+      const newRange = document.createRange();
+      newRange.selectNodeContents(newEl);
+      newRange.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+
+      handleEditorInputWrapper();
+      return;
+    }
+
+    runToolbarCommand("formatBlock", `<${tag}>`);
   };
 
   const handleCopyAll = async () => {
@@ -1323,7 +1392,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    runToolbarCommand("formatBlock", "<h1>");
+                    applyHeading("h1");
                   }}
                   className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
                   title="Heading 1"
@@ -1336,7 +1405,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    runToolbarCommand("formatBlock", "<h2>");
+                    applyHeading("h2");
                   }}
                   className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
                   title="Heading 2"
@@ -1349,7 +1418,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    runToolbarCommand("formatBlock", "<p>");
+                    applyHeading("p");
                   }}
                   className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
                   title="Normal Text"

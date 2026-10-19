@@ -1791,6 +1791,19 @@ export const preparePastedHtmlForNote = (html?: string, plainText?: string): str
     break;
   }
 
+  // Unwrap redundant outer wrapper divs from ChatGPT / web pages so individual blocks flow across A4 pages
+  while (
+    parsed.body.children.length === 1 &&
+    parsed.body.firstElementChild &&
+    ["DIV", "SECTION", "ARTICLE", "MAIN"].includes(parsed.body.firstElementChild.tagName)
+  ) {
+    const wrapper = parsed.body.firstElementChild;
+    while (wrapper.firstChild) {
+      parsed.body.insertBefore(wrapper.firstChild, wrapper);
+    }
+    wrapper.remove();
+  }
+
   // Fragmented / OCR-style HTML → use plain text so it lays out neatly with tables
   if (plainText && isFragmentedPasteHtml(parsed.body)) {
     return plainTextToPasteHtml(plainText);

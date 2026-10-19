@@ -181,6 +181,21 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
     children.shift();
   }
 
+  // If page only has a single container child and it overflows, unwrap it so children paginate
+  if (children.length === 1) {
+    const single = children[0];
+    if (
+      single.children.length > 0 &&
+      ["DIV", "SECTION", "ARTICLE", "MAIN"].includes(single.tagName)
+    ) {
+      while (single.firstChild) {
+        page.insertBefore(single.firstChild, single);
+      }
+      single.remove();
+      return pushOverflowToNextPage(page, landscape);
+    }
+  }
+
   const sheetHeight = a4SheetHeightPx(landscape);
   // Calculate bottom of actual children inside page (independent of scroll/viewport)
   const maxChildBottom = Math.max(
@@ -196,6 +211,19 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
   );
   if (!overflowChild) return null;
 
+  // If the overflowing child is a container with multiple children, unwrap it to split cleanly
+  if (
+    overflowChild &&
+    overflowChild.children.length > 1 &&
+    ["DIV", "SECTION", "ARTICLE"].includes(overflowChild.tagName)
+  ) {
+    while (overflowChild.firstChild) {
+      page.insertBefore(overflowChild.firstChild, overflowChild);
+    }
+    overflowChild.remove();
+    return pushOverflowToNextPage(page, landscape);
+  }
+
   // Enter / blank lines past the fold stay on this page — only real content starts a new sheet
   if (isTrivialOverflowNode(overflowChild)) return null;
 
@@ -210,12 +238,13 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
       return next;
     }
   }
-  if (isFirst && children.length === 1) return null;
+  // Never move all children off the current page (a page must never be stripped to 0 children)
+  if (children.length <= 1) return null;
 
   // If everything from overflow onward is trivial (blank lines), do not create a page
-  const startIndex = isFirst ? 1 : children.indexOf(overflowChild);
-  const moving = children.slice(Math.max(0, startIndex));
-  if (moving.length > 0 && moving.every(isTrivialOverflowNode)) return null;
+  const startIndex = Math.max(1, children.indexOf(overflowChild));
+  const moving = children.slice(startIndex);
+  if (moving.length === 0 || moving.every(isTrivialOverflowNode)) return null;
 
   const next = createSheet(0, landscape);
   moving.forEach((child) => next.appendChild(child));
@@ -298,17 +327,20 @@ const parseHtml = (html: string) => new DOMParser().parseFromString(html || "", 
 const hasVisibleContent = (html: string): boolean => {
   if (!html.trim()) return false;
   const parsed = parseHtml(`<div>${html}</div>`);
+  // Strip decorative svgs, empty buttons, or br-only nodes before checking visibility
+  parsed.body.querySelectorAll("svg, button, br").forEach((el) => {
+    if (!(el.textContent || "").trim()) el.remove();
+  });
   const text = (parsed.body.textContent || "").replace(/\u00a0/g, " ").trim();
-  return Boolean(text || parsed.body.querySelector("img, table, svg, canvas"));
+  return Boolean(text || parsed.body.querySelector("img, table, canvas, iframe"));
 };
 
-/** Drop blank A4 sheets (leading empty import pages) and renumber. */
+/** Drop blank A4 sheets (leading or trailing empty pages) and renumber. */
 export const removeEmptyPages = (root: HTMLElement) => {
   const pages = Array.from(root.querySelectorAll(":scope > .page")) as HTMLElement[];
-  if (pages.length === 0) return;
+  if (pages.length <= 1) return;
 
   pages.forEach((page) => {
-    // Keep a single empty sheet so the editor still has a place to type
     const remaining = root.querySelectorAll(":scope > .page").length;
     if (remaining > 1 && !hasVisibleContent(page.innerHTML)) {
       page.remove();
