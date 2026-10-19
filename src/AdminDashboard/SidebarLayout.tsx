@@ -24,6 +24,7 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "../store";
 import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
+import { fetchNotes } from "../reducers/notes.reducer";
 import { useAppSelector } from "../hooks";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import ScrollNavigator from "../components/ScrollNavigator";
@@ -54,6 +55,7 @@ const SidebarLayout = ({
 
   useEffect(() => {
     dispatch(fetchInboxUnreadCount());
+    dispatch(fetchNotes({ type: "PROJECT" as any, isArchived: false }));
   }, [dispatch]);
 
   // Ref for the main scrollable content area

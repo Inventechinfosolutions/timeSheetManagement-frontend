@@ -48,6 +48,8 @@ import { descriptionFromExcelWorkbook } from "../utils/excelExtract";
 import {
   applyLandscapeToPages,
   absorbOrphansIntoPages,
+  removeEmptyPages,
+  paginateToA4Sheets,
 } from "../utils/documentLayout";
 import {
   embedExcelWorkbookInHtml,
@@ -167,6 +169,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   const hydratedNoteKeyRef = useRef<string>("");
   const toolbarSentinelRef = useRef<HTMLDivElement | null>(null);
   const [toolbarStuck, setToolbarStuck] = useState(false);
+  const activePageRef = useRef<HTMLElement | null>(null);
 
   const checkHasContent = useCallback(() => {
     if (formData.excelWorkbook && (formData.excelWorkbook.sheetNames || []).length > 0) {
@@ -323,14 +326,25 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
 
     const getCursorPage = (): HTMLElement | null => {
       const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) return null;
-      const node = sel.anchorNode;
-      const el =
-        node?.nodeType === Node.ELEMENT_NODE
-          ? (node as HTMLElement)
-          : node?.parentElement;
-      if (!el || !editor.contains(el)) return null;
-      return el.closest(".page") as HTMLElement | null;
+      if (sel && sel.rangeCount > 0) {
+        const node = sel.anchorNode;
+        const el =
+          node?.nodeType === Node.ELEMENT_NODE
+            ? (node as HTMLElement)
+            : node?.parentElement;
+        if (el && editor.contains(el)) {
+          const page = el.closest(".page") as HTMLElement | null;
+          if (page && editor.contains(page)) {
+            activePageRef.current = page;
+            return page;
+          }
+        }
+      }
+      if (activePageRef.current && editor.contains(activePageRef.current)) {
+        return activePageRef.current;
+      }
+      const pages = Array.from(editor.querySelectorAll(":scope > .page")) as HTMLElement[];
+      return pages[0] || null;
     };
 
     const onPaste = (e: ClipboardEvent) => {
@@ -342,7 +356,82 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       const html = e.clipboardData?.getData("text/html");
       const plain = e.clipboardData?.getData("text/plain") || "";
       const activeCell = getActiveTableCell();
-      const cursorPage = getCursorPage();
+      const pages = Array.from(editor.querySelectorAll(":scope > .page")) as HTMLElement[];
+      const docText = (editor.textContent || "").replace(/\u00a0/g, " ").trim();
+      const docMedia = Boolean(editor.querySelector("img, table, canvas, iframe"));
+      const isDocEmpty = !docText && !docMedia;
+
+      // If document is empty, ALWAYS target Page 1 and clear any lingering sheets!
+      let cursorPage = isDocEmpty ? (pages[0] || null) : (getCursorPage() || pages[0] || null);
+      if (isDocEmpty && pages.length > 1) {
+        pages.slice(1).forEach((p) => p.remove());
+      }
+
+      // Ensure selection is firmly inside cursorPage before inserting
+      if (cursorPage && !activeCell) {
+        const sel = window.getSelection();
+        const currentAnchor = sel?.anchorNode;
+        const anchorEl =
+          currentAnchor?.nodeType === Node.ELEMENT_NODE
+            ? (currentAnchor as HTMLElement)
+            : currentAnchor?.parentElement;
+        const isInTargetPage = Boolean(anchorEl && cursorPage.contains(anchorEl));
+
+        // Check if the page is essentially empty (no visible text, no media)
+        const pageText = (cursorPage.textContent || "").replace(/\u00a0/g, " ").trim();
+        const hasMedia = Boolean(cursorPage.querySelector("img, table, svg, canvas, iframe"));
+        const isPageEmpty = !pageText && !hasMedia;
+
+        if (isPageEmpty) {
+          // Empty page: clear any existing blank <p><br></p> so paste starts flush at the very top!
+          cursorPage.innerHTML = "";
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          cursorPage.appendChild(p);
+          if (sel) {
+            const range = document.createRange();
+            range.selectNode(p);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        } else if (!isInTargetPage) {
+          let targetBlock = cursorPage.querySelector("p, div, h1, h2, h3, h4, h5, h6, pre, blockquote") as HTMLElement | null;
+          if (!targetBlock) {
+            targetBlock = document.createElement("p");
+            targetBlock.innerHTML = "<br>";
+            cursorPage.appendChild(targetBlock);
+          }
+          if (sel) {
+            const range = document.createRange();
+            range.selectNodeContents(targetBlock);
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        } else if (sel && sel.rangeCount > 0) {
+          // If the cursor is currently on an empty line/block (e.g. <p><br></p>), select the entire empty block
+          // so insertHTML REPLACES it directly at the cursor, leaving zero gap above!
+          const anchorNode = sel.anchorNode;
+          const currentBlock = (
+            anchorNode?.nodeType === Node.ELEMENT_NODE
+              ? (anchorNode as HTMLElement)
+              : anchorNode?.parentElement
+          )?.closest("p, div, li, h1, h2, h3, h4, h5, h6");
+
+          if (
+            currentBlock &&
+            cursorPage.contains(currentBlock) &&
+            !currentBlock.classList.contains("page") &&
+            (!currentBlock.textContent || !currentBlock.textContent.trim()) &&
+            !currentBlock.querySelector("img, table, svg, canvas")
+          ) {
+            const range = document.createRange();
+            range.selectNode(currentBlock);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        }
+      }
 
       // Image-only clipboard (screenshots) — no HTML/plain text
       const imageFiles: File[] = [];
@@ -374,6 +463,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
           // Keep paste on the cursor's page — do not reflow onto the next sheet
           absorbOrphansIntoPages(editorRef.current, landscape, cursorPage);
           wrapNoteInlineImages(editorRef.current);
+          removeEmptyPages(editorRef.current);
           handleEditorInputWrapper({ skipPagination: true });
           if (onPersistInlineImages) {
             try {
@@ -426,18 +516,20 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       if (!clean && plain) {
         clean = plainTextToPasteHtml(plain);
       }
-      if (!clean) {
+      if (isDocEmpty && cursorPage && clean) {
+        // Direct insertion into empty Page 1 — starts right at the top!
+        cursorPage.innerHTML = clean;
+      } else if (!clean) {
         document.execCommand("insertText", false, collapseVerticalCharPaste(plain));
       } else {
         document.execCommand("insertHTML", false, clean);
       }
       isTypingSessionRef.current = true;
-      markPasteSkipPagination();
       const pasteGen = ++pasteGenerationRef.current;
       requestAnimationFrame(async () => {
         if (!editorRef.current || isHistoryNavigatingRef.current) return;
         const landscape = editorRef.current.classList.contains("is-landscape");
-        // Stay at cursor page: pull orphans into that page, skip A4 reflow (avoids next-page jump)
+        // Pull any loose nodes back into sheets
         absorbOrphansIntoPages(editorRef.current, landscape, cursorPage);
         wrapWideTablesInRoot(editorRef.current);
         wrapNoteInlineImages(editorRef.current);
@@ -446,7 +538,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         });
         const workspace = editorRef.current.closest(".a4-page-workspace") as HTMLElement | null;
         if (workspace) workspace.scrollLeft = 0;
-        handleEditorInputWrapper({ skipPagination: true });
+        // Reflow across A4 sheets starting firmly from Page 1 (reflow = true)
+        paginateToA4Sheets(editorRef.current, landscape, true);
+        removeEmptyPages(editorRef.current);
+        handleEditorInputWrapper();
         if (onPersistInlineImages) {
           try {
             await onPersistInlineImages(
@@ -500,13 +595,49 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       onPreviewImage(src, img.getAttribute("alt") || img.getAttribute("title") || "Screenshot");
     };
 
+    const onEditorMouseDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target || !editor.contains(target)) return;
+      const page = target.closest(".page") as HTMLElement | null;
+      if (page && editor.contains(page)) {
+        activePageRef.current = page;
+      }
+    };
+
+    const onEditorClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target || !editor.contains(target)) return;
+      const page = target.closest(".page") as HTMLElement | null;
+      if (page && editor.contains(page)) {
+        activePageRef.current = page;
+        // Only if the page is completely empty with no children at all, seed a paragraph
+        if (page.children.length === 0) {
+          const p = document.createElement("p");
+          p.innerHTML = "<br>";
+          page.appendChild(p);
+          const sel = window.getSelection();
+          if (sel) {
+            const range = document.createRange();
+            range.selectNodeContents(p);
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        }
+      }
+    };
+
     editor.addEventListener("beforeinput", onBeforeInput);
     editor.addEventListener("paste", onPaste);
+    editor.addEventListener("mousedown", onEditorMouseDown);
+    editor.addEventListener("click", onEditorClick);
     editor.addEventListener("click", onClickImage, true);
     editor.addEventListener(NOTE_EDITOR_CHECKPOINT_EVENT, onExternalCheckpoint);
     return () => {
       editor.removeEventListener("beforeinput", onBeforeInput);
       editor.removeEventListener("paste", onPaste);
+      editor.removeEventListener("mousedown", onEditorMouseDown);
+      editor.removeEventListener("click", onEditorClick);
       editor.removeEventListener("click", onClickImage, true);
       editor.removeEventListener(NOTE_EDITOR_CHECKPOINT_EVENT, onExternalCheckpoint);
     };
@@ -790,6 +921,62 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     restoreEditorSelection();
     applyFontSizeToSelection(String(size));
     handleEditorInputWrapper();
+  };
+
+  /**
+   * Apply Heading 1, Heading 2, or Normal text to the selection or current line.
+   * Directly transforms any block (including nested DIVs from chat/pasted content)
+   * without browser execCommand failures or caret jumping.
+   */
+  const applyHeading = (tag: "h1" | "h2" | "p") => {
+    saveUndoSnapshot();
+    if (!editorRef.current) return;
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+
+    let range = sel.getRangeAt(0);
+    if (!editorRef.current.contains(range.commonAncestorContainer)) {
+      if (!restoreEditorSelection()) return;
+      range = sel.getRangeAt(0);
+    }
+
+    const anchor =
+      range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? (range.startContainer as HTMLElement)
+        : range.startContainer.parentElement;
+
+    const page = anchor?.closest(".page") as HTMLElement | null;
+    if (!page || !editorRef.current.contains(page)) return;
+
+    const targetBlock = anchor?.closest(
+      "h1, h2, h3, h4, h5, h6, p, div, li, blockquote"
+    ) as HTMLElement | null;
+
+    if (targetBlock && targetBlock !== page && !targetBlock.classList.contains("page")) {
+      const currentTag = targetBlock.tagName.toLowerCase();
+      const newTag = currentTag === tag && tag !== "p" ? "p" : tag;
+      const newEl = document.createElement(newTag);
+
+      while (targetBlock.firstChild) {
+        newEl.appendChild(targetBlock.firstChild);
+      }
+      if (targetBlock.style.textAlign) {
+        newEl.style.textAlign = targetBlock.style.textAlign;
+      }
+      targetBlock.replaceWith(newEl);
+
+      const newRange = document.createRange();
+      newRange.selectNodeContents(newEl);
+      newRange.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(newRange);
+
+      handleEditorInputWrapper();
+      return;
+    }
+
+    runToolbarCommand("formatBlock", `<${tag}>`);
   };
 
   const handleCopyAll = async () => {
@@ -1205,7 +1392,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    runToolbarCommand("formatBlock", "<h1>");
+                    applyHeading("h1");
                   }}
                   className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
                   title="Heading 1"
@@ -1218,7 +1405,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    runToolbarCommand("formatBlock", "<h2>");
+                    applyHeading("h2");
                   }}
                   className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
                   title="Heading 2"
@@ -1231,7 +1418,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    runToolbarCommand("formatBlock", "<p>");
+                    applyHeading("p");
                   }}
                   className="w-8 h-8 shrink-0 flex items-center justify-center rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
                   title="Normal Text"
@@ -1868,7 +2055,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                             if (!page) {
                               e.preventDefault();
                               const pages = editorRef.current.querySelectorAll(":scope > .page");
-                              const target = (pages[pages.length - 1] as HTMLElement) || null;
+                              const target =
+                                (activePageRef.current && editorRef.current.contains(activePageRef.current)
+                                  ? activePageRef.current
+                                  : (pages[0] as HTMLElement)) || null;
                               if (!target) {
                                 document.execCommand("insertHTML", false, "<p><br></p>");
                                 return;
