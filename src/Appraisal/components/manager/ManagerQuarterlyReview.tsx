@@ -571,18 +571,18 @@ export const ManagerQuarterlyReview: React.FC = () => {
         </div>
 
         {/* Main Section Card */}
-        <Card className="w-full p-5 sm:p-7 manager-review-glass-card min-h-[calc(100vh-230px)]">
-          <CardHeader className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
+        <Card className="w-full p-4 sm:px-6 sm:py-6 manager-review-glass-card min-h-[calc(100vh-230px)]">
+          <CardHeader className="flex flex-row items-center justify-between gap-2.5 mb-5 flex-nowrap w-full">
             <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title whitespace-nowrap shrink-0">
               Quarterly Reviews
             </CardTitle>
 
-            {/* Filters beside title */}
+            {/* Filters beside title on one line - calibrated to never overflow outside card */}
             <div
               ref={filtersDockRef}
-              className="manager-review-filters-dock flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar flex-nowrap py-1 flex-1 justify-start xl:justify-end"
+              className="manager-review-filters-dock flex items-center gap-1.5 flex-nowrap shrink-0 justify-end"
             >
-              <div className="w-32 sm:w-36 md:w-40 xl:w-44 shrink-0 filter-item-stagger-1">
+              <div className="w-28 sm:w-32 lg:w-36 shrink-0 filter-item-stagger-1">
                 <SearchBox
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -606,8 +606,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 options={departmentOptions}
                 value={department}
                 onChange={(value) => setDepartment(value || AppraisalFilterAll.ALL)}
-                maxLabelWidth="max-w-[124px]"
-                buttonClassName="manager-review-filter-btn rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[155px]"
+                maxLabelWidth="max-w-[100px]"
+                buttonClassName="manager-review-filter-btn rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[136px]"
               />
 
               <Dropdown
@@ -628,10 +628,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 }}
                 onOpen={loadFinancialYears}
                 loading={yearsLoading}
-                maxLabelWidth="max-w-[124px]"
+                maxLabelWidth="max-w-[95px]"
                 buttonClassName={`manager-review-filter-btn filter-btn-fy ${
                   financialYear && financialYear !== defaultYear.current ? "filter-active" : ""
-                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[172px]`}
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[145px]`}
               />
 
               <Dropdown
@@ -647,10 +647,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 options={quarterOptions}
                 value={quarter}
                 onChange={(value) => setQuarter(value || AppraisalFilterAll.ALL)}
-                maxLabelWidth="max-w-[100px]"
+                maxLabelWidth="max-w-[85px]"
                 buttonClassName={`manager-review-filter-btn filter-btn-quarters ${
                   quarter && quarter !== AppraisalFilterAll.ALL ? "filter-active" : ""
-                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[150px]`}
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[122px]`}
               />
 
               <Dropdown
@@ -666,11 +666,11 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 options={statusOptions}
                 value={statusFilter}
                 onChange={setStatusFilter}
-                maxLabelWidth="max-w-[80px]"
+                maxLabelWidth="max-w-[75px]"
                 contentWidth
                 buttonClassName={`manager-review-filter-btn filter-btn-status ${
                   statusFilter ? "filter-active" : ""
-                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[124px]`}
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[110px]`}
               />
 
               {hasActiveFilters && (
