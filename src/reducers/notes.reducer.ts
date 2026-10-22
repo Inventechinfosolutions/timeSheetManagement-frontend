@@ -68,6 +68,9 @@ export const fetchNotes = createAsyncThunk(
       if (params.toDate) searchParams.append("toDate", params.toDate);
       if (params.isPinned !== undefined) searchParams.append("isPinned", String(params.isPinned));
       if (params.isArchived !== undefined) searchParams.append("isArchived", String(params.isArchived));
+      if (params.page !== undefined) searchParams.append("page", String(params.page));
+      if (params.limit !== undefined) searchParams.append("limit", String(params.limit));
+      else if (params.pageSize !== undefined) searchParams.append("limit", String(params.pageSize));
 
       const queryStr = searchParams.toString();
       const url = queryStr ? `${API_BASE}?${queryStr}` : API_BASE;
@@ -512,8 +515,8 @@ const notesSlice = createSlice({
       })
       .addCase(fetchNotes.fulfilled, (state, action) => {
         state.loading = false;
-        state.notes = action.payload?.data || [];
-        state.totalNotesCount = action.payload?.total || 0;
+        state.notes = action.payload?.data || (Array.isArray(action.payload) ? action.payload : []);
+        state.totalNotesCount = action.payload?.total ?? (Array.isArray(action.payload) ? action.payload.length : 0);
       })
       .addCase(fetchNotes.rejected, (state, action) => {
         if (action.payload === null || action.meta.aborted) {

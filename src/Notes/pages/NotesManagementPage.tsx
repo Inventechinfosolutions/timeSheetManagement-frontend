@@ -16,6 +16,7 @@ export const NotesManagementPage: React.FC = () => {
     notes,
     displayNotes,
     paginatedNotes,
+    totalNotesCount,
     totalPages,
     currentPage,
     pageSize,
@@ -195,6 +196,7 @@ export const NotesManagementPage: React.FC = () => {
             loading={loading}
             notes={displayNotes}
             paginatedNotes={paginatedNotes}
+            totalNotesCount={totalNotesCount}
             currentPage={currentPage}
             pageSize={pageSize}
             totalPages={totalPages}
