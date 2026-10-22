@@ -34,6 +34,7 @@ interface NoteListProps {
   fromDate: string;
   toDate: string;
   expandedNotes: Record<number, boolean>;
+  loadingSubNotes?: Record<number, boolean>;
   currentUser?: { loginId?: string } | null;
   dragDrop?: ReturnType<typeof useNoteDragDrop>;
   onToggleExpand: (noteId: number) => void;
@@ -60,6 +61,7 @@ export const NoteList: React.FC<NoteListProps> = ({
   fromDate,
   toDate,
   expandedNotes,
+  loadingSubNotes,
   currentUser,
   onToggleExpand,
   onStartView,
@@ -390,7 +392,16 @@ export const NoteList: React.FC<NoteListProps> = ({
                                 </thead>
 
                                 <tbody className="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
-                                  {visibleSubNotes.length === 0 ? (
+                                  {loadingSubNotes?.[note.id] ? (
+                                    <tr>
+                                      <td colSpan={5} className="py-8 text-center text-slate-500">
+                                        <div className="flex items-center justify-center gap-2">
+                                          <div className="w-4 h-4 border-2 border-[#4318FF] border-t-transparent rounded-full animate-spin" />
+                                          <span className="text-xs">Loading child notes...</span>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ) : visibleSubNotes.length === 0 ? (
                                     <tr>
                                       <td colSpan={5} className="py-8 text-center text-slate-400">
                                         {subNotes.length === 0 ? (
