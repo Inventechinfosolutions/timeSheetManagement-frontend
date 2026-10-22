@@ -146,17 +146,21 @@ export const InboxManagement: React.FC = () => {
     if (!item.isRead) {
       dispatch(markInboxAsRead(item.inboxId));
     }
-    if (item.note) {
-      await notesMgr.handleStartView(noteForInboxAccess(item, item.note as Note));
-    } else if (item.notesId) {
+    if (item.notesId) {
       try {
         const note = await dispatch(fetchNoteById(item.notesId)).unwrap();
         if (note) {
           await notesMgr.handleStartView(noteForInboxAccess(item, note));
+          return;
         }
       } catch (err) {
-        message.error('Failed to load note details');
+        // Fallback to item.note below
       }
+    }
+    if (item.note) {
+      await notesMgr.handleStartView(noteForInboxAccess(item, item.note as Note));
+    } else {
+      message.error('Failed to load note details');
     }
   };
 
@@ -166,17 +170,21 @@ export const InboxManagement: React.FC = () => {
     if (!item.isRead) {
       dispatch(markInboxAsRead(item.inboxId));
     }
-    if (item.note) {
-      await notesMgr.handleStartEdit(noteForInboxAccess(item, item.note as Note));
-    } else if (item.notesId) {
+    if (item.notesId) {
       try {
         const note = await dispatch(fetchNoteById(item.notesId)).unwrap();
         if (note) {
           await notesMgr.handleStartEdit(noteForInboxAccess(item, note));
+          return;
         }
       } catch (err) {
-        message.error('Failed to load note details for editing');
+        // Fallback to item.note below
       }
+    }
+    if (item.note) {
+      await notesMgr.handleStartEdit(noteForInboxAccess(item, item.note as Note));
+    } else {
+      message.error('Failed to load note details for editing');
     }
   };
 

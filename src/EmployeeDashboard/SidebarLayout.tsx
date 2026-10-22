@@ -17,6 +17,7 @@ import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
 import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
+import { fetchNotes } from "../reducers/notes.reducer";
 import { UserType } from "../enums";
 import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
@@ -48,6 +49,7 @@ const SidebarLayout = ({
 
   useEffect(() => {
     dispatch(fetchInboxUnreadCount());
+    dispatch(fetchNotes({ type: "PROJECT" as any, isArchived: false, page: 1, limit: 5 }));
   }, [dispatch]);
 
   // Track whether citizen is inside Note Workspace (Create/Edit/View) alone vs List mode / other pages
