@@ -79,6 +79,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     searchQuery,
     loading,
     actionLoading,
+    totalNotesCount,
   } = useAppSelector((state) => state.notes);
 
   const currentUser = useAppSelector((state) => state.user.currentUser);
@@ -88,7 +89,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 5;
 
   // Accordion expansion state for sub-tables
   const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
@@ -207,14 +208,14 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   // searchQuery is already debounced via SearchBox (useDebounce)
   useEffect(() => {
     if (!loadList) return;
-    loadNotes();
-  }, [activeTab, selectedProject, searchQuery, fromDate, toDate, loadList]);
+    loadNotes(currentPage);
+  }, [currentPage, activeTab, selectedProject, searchQuery, fromDate, toDate, loadList]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, selectedProject, searchInput, searchQuery, fromDate, toDate]);
 
-  const loadNotes = () => {
+  const loadNotes = (page = currentPage) => {
     if (activeTab === "ARCHIVED") {
       dispatch(
         fetchNotes({
@@ -222,6 +223,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
           search: searchQuery || undefined,
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
+          page,
+          limit: pageSize,
         })
       );
     } else {
@@ -233,6 +236,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
           search: searchQuery || undefined,
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
+          page,
+          limit: pageSize,
         })
       );
     }
@@ -1763,11 +1768,9 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   }, [displayNotes, searchInput, fromDate, toDate]);
 
   // Paginated Notes
-  const totalPages = Math.max(1, Math.ceil(displayNotes.length / pageSize));
-  const paginatedNotes = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return displayNotes.slice(start, start + pageSize);
-  }, [displayNotes, currentPage, pageSize]);
+  const effectiveTotal = Math.max(totalNotesCount || 0, displayNotes.length);
+  const totalPages = Math.max(1, Math.ceil(effectiveTotal / pageSize));
+  const paginatedNotes = displayNotes;
 
   // Drag and Drop Hook integration
   const dragDrop = useNoteDragDrop(displayNotes, (noteId) => {
@@ -1845,6 +1848,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     notes,
     displayNotes,
     paginatedNotes,
+    totalNotesCount,
     totalPages,
     currentPage,
     setCurrentPage,

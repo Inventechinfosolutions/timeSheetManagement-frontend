@@ -84,7 +84,7 @@ const apiUrl = '/api/inbox';
 export const fetchInbox = createAsyncThunk(
   'inbox/fetchInbox',
   async (
-    params: { isRead?: boolean; search?: string; folder?: InboxFolder | string } | undefined,
+    params: { isRead?: boolean; search?: string; folder?: InboxFolder | string; page?: number; limit?: number; pageSize?: number; fromDate?: string; toDate?: string } | undefined,
     { rejectWithValue, signal }
   ) => {
     try {
@@ -234,7 +234,7 @@ const inboxSlice = createSlice({
     });
     builder.addCase(fetchInbox.fulfilled, (state, action) => {
       state.loading = false;
-      state.items = action.payload || [];
+      state.items = action.payload?.data || (Array.isArray(action.payload) ? action.payload : []);
     });
     builder.addCase(fetchInbox.rejected, (state, action) => {
       // Ignore aborted/superseded requests so a newer search keeps loading state clean
