@@ -186,7 +186,8 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
     const single = children[0];
     if (
       single.children.length > 0 &&
-      ["DIV", "SECTION", "ARTICLE", "MAIN"].includes(single.tagName)
+      ["DIV", "SECTION", "ARTICLE", "MAIN", "BODY", "BLOCKQUOTE"].includes(single.tagName) &&
+      !single.classList.contains("note-table-scroll")
     ) {
       while (single.firstChild) {
         page.insertBefore(single.firstChild, single);
@@ -197,25 +198,30 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
   }
 
   const sheetHeight = a4SheetHeightPx(landscape);
+  // Bottom padding of the A4 page (around 75px in portrait)
+  const padBottom = parseFloat(getComputedStyle(page).paddingBottom || "0") || 75;
+  const maxUsableHeight = sheetHeight - padBottom;
+
   // Calculate bottom of actual children inside page (independent of scroll/viewport)
   const maxChildBottom = Math.max(
     0,
     ...children.map((c) => c.offsetTop + c.offsetHeight)
   );
 
-  // If children fit comfortably inside the A4 sheet, no overflow to next page
-  if (maxChildBottom <= sheetHeight + 8) return null;
+  // If children fit comfortably inside the A4 sheet usable area, no overflow to next page
+  if (maxChildBottom <= maxUsableHeight + 4) return null;
 
   const overflowChild = children.find(
-    (child) => child.offsetTop + child.offsetHeight > sheetHeight + 1
+    (child) => child.offsetTop + child.offsetHeight > maxUsableHeight
   );
   if (!overflowChild) return null;
 
-  // If the overflowing child is a container with multiple children, unwrap it to split cleanly
+  // If the overflowing child is a container with children, unwrap it so its inner children can paginate cleanly
   if (
     overflowChild &&
-    overflowChild.children.length > 1 &&
-    ["DIV", "SECTION", "ARTICLE"].includes(overflowChild.tagName)
+    overflowChild.children.length > 0 &&
+    ["DIV", "SECTION", "ARTICLE", "MAIN", "BLOCKQUOTE", "ASIDE"].includes(overflowChild.tagName) &&
+    !overflowChild.classList.contains("note-table-scroll")
   ) {
     while (overflowChild.firstChild) {
       page.insertBefore(overflowChild.firstChild, overflowChild);
@@ -227,7 +233,7 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
   // Enter / blank lines past the fold stay on this page — only real content starts a new sheet
   if (isTrivialOverflowNode(overflowChild)) return null;
 
-  const isFirst = overflowChild === children[0];
+  // Handle table splitting
   if (overflowChild.tagName === "TABLE") {
     const leftover = splitTableAcrossPage(overflowChild as HTMLTableElement, page, landscape);
     if (leftover) {
@@ -238,10 +244,29 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
       return next;
     }
   }
-  // Never move all children off the current page (a page must never be stripped to 0 children)
+
+  // Handle list splitting (UL / OL)
+  if (overflowChild.tagName === "UL" || overflowChild.tagName === "OL") {
+    const list = overflowChild as HTMLUListElement | HTMLOListElement;
+    const items = Array.from(list.children) as HTMLElement[];
+    const overflowItemIndex = items.findIndex(
+      (item) => item.offsetTop + item.offsetHeight > maxUsableHeight
+    );
+    if (overflowItemIndex > 0) {
+      const nextList = list.cloneNode(false) as HTMLElement;
+      items.slice(overflowItemIndex).forEach((item) => nextList.appendChild(item));
+      const next = createSheet(0, landscape);
+      next.appendChild(nextList);
+      const startIndex = children.indexOf(overflowChild);
+      children.slice(startIndex + 1).forEach((child) => next.appendChild(child));
+      return next;
+    }
+  }
+
+  // If there's only 1 child and it cannot be unwrapped, don't leave page empty
   if (children.length <= 1) return null;
 
-  // If everything from overflow onward is trivial (blank lines), do not create a page
+  // Move the overflowing child and all following children onto the next sheet
   const startIndex = Math.max(1, children.indexOf(overflowChild));
   const moving = children.slice(startIndex);
   if (moving.length === 0 || moving.every(isTrivialOverflowNode)) return null;
@@ -281,8 +306,20 @@ export function paginateToA4Sheets(root: HTMLElement, landscape: boolean, reflow
   for (let index = 0; index < pages.length; index += 1) {
     const page = pages[index];
     applySheetBox(page, landscape, index + 1);
+    const sheetHeight = a4SheetHeightPx(landscape);
+    const padBottom = parseFloat(getComputedStyle(page).paddingBottom || "0") || 75;
+    const maxUsableHeight = sheetHeight - padBottom;
+
     let guard = 0;
-    while (page.scrollHeight > a4SheetHeightPx(landscape) + 2 && guard < 200) {
+    while (guard < 200) {
+      const children = Array.from(page.children) as HTMLElement[];
+      const maxChildBottom = Math.max(
+        0,
+        ...children.map((c) => c.offsetTop + c.offsetHeight)
+      );
+      const hasOverflow = maxChildBottom > maxUsableHeight + 4 || page.scrollHeight > sheetHeight + 2;
+      if (!hasOverflow) break;
+
       guard += 1;
       const overflow = pushOverflowToNextPage(page, landscape);
       if (!overflow || !overflow.childNodes.length) break;

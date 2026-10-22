@@ -2,7 +2,6 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '../hooks';
 import {
   fetchInbox,
-  fetchInboxCounts,
   markInboxAsRead,
   toggleInboxStar,
   deleteInboxItem,
@@ -45,8 +44,6 @@ const canEditNote = (permission?: string): boolean => {
 export const InboxManagement: React.FC = () => {
   const dispatch = useAppDispatch();
   const { items, counts, loading } = useAppSelector((state) => state.inbox);
-  const notesMgr = useNotesManagement({ loadList: false });
-
   const [folder, setFolder] = useState<InboxFolder>(InboxFolder.INBOX);
   const [activeTab, setActiveTab] = useState<InboxTab>(InboxTab.ALL);
   /** Immediate text — drives client-side list filter (same as employee Notes). */
@@ -55,6 +52,19 @@ export const InboxManagement: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedInboxItem, setSelectedInboxItem] = useState<InboxItem | null>(null);
 
+  const folderCounts = useMemo(() => {
+    const unread = items.filter((i) => !i.isRead).length;
+    const read = items.filter((i) => i.isRead).length;
+    const total = items.length;
+    return {
+      inbox: folder === InboxFolder.INBOX ? total : (counts?.inbox ?? total),
+      unread: folder === InboxFolder.INBOX ? unread : (counts?.unread ?? unread),
+      read: folder === InboxFolder.INBOX ? read : (counts?.read ?? read),
+      sent: folder === InboxFolder.SENT ? total : (counts?.sent ?? 0),
+    };
+  }, [items, folder, counts]);
+  const notesMgr = useNotesManagement({ loadList: false });
+
   useEffect(() => {
     dispatch(
       fetchInbox({
@@ -62,7 +72,6 @@ export const InboxManagement: React.FC = () => {
         search: debouncedSearch.trim() || undefined,
       })
     );
-    dispatch(fetchInboxCounts());
   }, [dispatch, folder, debouncedSearch]);
 
   // Notify layout when user is inside the Note Workspace (create, edit, view) vs List mode in Inbox
@@ -282,7 +291,6 @@ export const InboxManagement: React.FC = () => {
                 search: debouncedSearch.trim() || undefined,
               })
             );
-            dispatch(fetchInboxCounts());
           }}
           onBack={() => {
             notesMgr.handleBackToList();
@@ -396,9 +404,9 @@ export const InboxManagement: React.FC = () => {
           >
             <Inbox className="w-4 h-4" />
             <span>Inbox</span>
-            {(counts?.unread ?? 0) > 0 && (
+            {(folderCounts.unread ?? 0) > 0 && (
               <span className="px-1.5 py-0.2 bg-[#4318FF] text-white text-[10px] font-bold rounded-full">
-                {counts.unread}
+                {folderCounts.unread}
               </span>
             )}
           </button>
@@ -417,11 +425,11 @@ export const InboxManagement: React.FC = () => {
           >
             <Send className="w-4 h-4" />
             <span>Sent</span>
-            {(counts?.sent ?? 0) > 0 && (
+            {(folderCounts.sent ?? 0) > 0 && (
               <span className={`px-1.5 py-0.2 text-[10px] font-bold rounded-full ${
                 folder === InboxFolder.SENT ? 'bg-[#4318FF]/10 text-[#4318FF]' : 'bg-slate-200 text-slate-700'
               }`}>
-                {counts.sent}
+                {folderCounts.sent}
               </span>
             )}
           </button>
@@ -443,7 +451,7 @@ export const InboxManagement: React.FC = () => {
             >
               <span>All Notes</span>
               <span className="text-[11px] px-1.5 py-0.2 bg-slate-200/60 rounded-full">
-                {searchInput.trim() ? searchMatchedItems.length : (counts?.inbox ?? 0)}
+                {searchInput.trim() ? searchMatchedItems.length : (folderCounts.inbox ?? 0)}
               </span>
             </button>
 
@@ -458,11 +466,11 @@ export const InboxManagement: React.FC = () => {
               <span>Unread</span>
               {(searchInput.trim()
                 ? searchMatchedItems.filter((i) => !i.isRead).length
-                : (counts?.unread ?? 0)) > 0 && (
+                : (folderCounts.unread ?? 0)) > 0 && (
                 <span className="text-[11px] px-1.5 py-0.2 bg-[#4318FF] text-white rounded-full">
                   {searchInput.trim()
                     ? searchMatchedItems.filter((i) => !i.isRead).length
-                    : (counts?.unread ?? 0)}
+                    : (folderCounts.unread ?? 0)}
                 </span>
               )}
             </button>
@@ -479,7 +487,7 @@ export const InboxManagement: React.FC = () => {
               <span className="text-[11px] px-1.5 py-0.2 bg-slate-200/60 rounded-full">
                 {searchInput.trim()
                   ? searchMatchedItems.filter((i) => i.isRead).length
-                  : (counts?.read ?? 0)}
+                  : (folderCounts.read ?? 0)}
               </span>
             </button>
 
@@ -510,7 +518,7 @@ export const InboxManagement: React.FC = () => {
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 px-2 py-1">
             <span>Sent Messages</span>
             <span className="px-2 py-0.5 bg-[#4318FF]/10 text-[#4318FF] font-bold rounded-full text-xs">
-              {searchInput.trim() ? searchMatchedItems.length : (counts?.sent ?? 0)}
+              {searchInput.trim() ? searchMatchedItems.length : (folderCounts.sent ?? 0)}
             </span>
           </div>
         )}
