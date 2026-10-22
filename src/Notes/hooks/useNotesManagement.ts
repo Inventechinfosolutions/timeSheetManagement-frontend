@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { message } from "antd";
 import { useAppDispatch, useAppSelector } from "../../hooks";
@@ -197,23 +197,29 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
 
   const editorRef = useRef<HTMLDivElement>(null);
 
-  // Always open Notes on Project Notes (Redux tab survives route changes)
-  useEffect(() => {
-    if (!loadList) return;
-    dispatch(setActiveTab("PROJECT"));
-    dispatch(setSelectedProject(""));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadList]);
+  // Synchronize filter resets and load notes without cascading calls
+  const prevFilterRef = useRef({ activeTab, selectedProject, searchQuery, fromDate, toDate });
 
-  // searchQuery is already debounced via SearchBox (useDebounce)
   useEffect(() => {
     if (!loadList) return;
+    const prev = prevFilterRef.current;
+    const filterChanged =
+      prev.activeTab !== activeTab ||
+      prev.selectedProject !== selectedProject ||
+      prev.searchQuery !== searchQuery ||
+      prev.fromDate !== fromDate ||
+      prev.toDate !== toDate;
+
+    prevFilterRef.current = { activeTab, selectedProject, searchQuery, fromDate, toDate };
+
+    if (filterChanged && currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+
     loadNotes(currentPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, activeTab, selectedProject, searchQuery, fromDate, toDate, loadList]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, selectedProject, searchInput, searchQuery, fromDate, toDate]);
 
   const loadNotes = (page = currentPage) => {
     if (activeTab === "ARCHIVED") {
@@ -588,7 +594,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     );
     if (editorRef.current && withoutBase64 !== editorRef.current.innerHTML) {
       editorRef.current.innerHTML = withoutBase64;
-      await hydrateEditorInlineImages(editorRef.current);
     }
     if (!formData.excelWorkbook) {
       setFormData((prev) => ({ ...prev, description: withoutBase64 }));
@@ -740,7 +745,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   };
 
   // Start Edit Note or Sub-Note (fetches fresh details from API)
-  const handleStartEdit = async (note: Note) => {
+  const handleStartEdit = async (note: Note, detailedData?: Note) => {
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
@@ -775,7 +780,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
 
     // Call API GET /api/notes/:id to fetch fresh detailed note data
     try {
-      const detailedNote = await dispatch(fetchNoteById(note.id)).unwrap();
+      const detailedNote = detailedData || (await dispatch(fetchNoteById(note.id)).unwrap());
       if (detailedNote) {
         setActiveNote(detailedNote);
         const workbook = await hydrateExcelWorkbook(detailedNote);
@@ -825,12 +830,12 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   };
 
   // Start View Note
-  const handleStartView = async (note: Note) => {
+  const handleStartView = async (note: Note, detailedData?: Note) => {
     setActiveNote(note);
     setPageMode("view");
     window.scrollTo({ top: 0, behavior: "smooth" });
     try {
-      const detailedNote = await dispatch(fetchNoteById(note.id)).unwrap();
+      const detailedNote = detailedData || (await dispatch(fetchNoteById(note.id)).unwrap());
       if (detailedNote) {
         setActiveNote(detailedNote);
         const workbook = await hydrateExcelWorkbook(detailedNote);
@@ -846,25 +851,32 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   };
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Listen to navigation state (e.g. navigating to edit or view a specific note)
   useEffect(() => {
     const state = location.state as { editNoteId?: number; viewNoteId?: number } | null;
-    if (state?.editNoteId) {
-      dispatch(fetchNoteById(state.editNoteId))
+    if (!state?.editNoteId && !state?.viewNoteId) return;
+
+    const targetEditId = state.editNoteId;
+    const targetViewId = state.viewNoteId;
+    navigate(location.pathname, { replace: true, state: {} });
+
+    if (targetEditId) {
+      dispatch(fetchNoteById(targetEditId))
         .unwrap()
         .then((note) => {
           if (note) {
-            handleStartEdit(note);
+            handleStartEdit(note, note);
           }
         })
         .catch((err) => console.warn("Failed to load note for edit from location state:", err));
-    } else if (state?.viewNoteId) {
-      dispatch(fetchNoteById(state.viewNoteId))
+    } else if (targetViewId) {
+      dispatch(fetchNoteById(targetViewId))
         .unwrap()
         .then((note) => {
           if (note) {
-            handleStartView(note);
+            handleStartView(note, note);
           }
         })
         .catch((err) => console.warn("Failed to load note for view from location state:", err));
@@ -872,7 +884,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   }, [location.state]);
 
   // Back to Main List View
-  const handleBackToList = () => {
+  const handleBackToList = (shouldReload = false) => {
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
@@ -880,7 +892,9 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     setPageMode("list");
     setActiveNote(null);
     setParentNoteContext(null);
-    loadNotes();
+    if (shouldReload) {
+      loadNotes();
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -1258,8 +1272,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
             setActiveNote(createdSub);
             setPageMode("edit");
             setAutoSaveStatus("saved");
-            dispatch(fetchNoteStats());
-            loadNotes();
           }
         } else {
           const created = await dispatch(
@@ -1320,7 +1332,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
           };
           setActiveNote(updated);
           setAutoSaveStatus("saved");
-          dispatch(fetchNoteStats());
         }
       }
     } catch (err) {
@@ -1508,9 +1519,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       };
       setAutoSaveStatus("saved");
       triggerSuccessToast();
-      dispatch(fetchNoteStats());
-      dispatch(fetchProjectsList());
-      handleBackToList();
+      handleBackToList(false);
     } catch (err: any) {
       const msg =
         typeof err === "string"
