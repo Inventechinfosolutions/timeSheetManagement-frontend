@@ -79,6 +79,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     searchQuery,
     loading,
     actionLoading,
+    totalNotesCount,
   } = useAppSelector((state) => state.notes);
 
   const currentUser = useAppSelector((state) => state.user.currentUser);
@@ -88,7 +89,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 5;
 
   // Accordion expansion state for sub-tables
   const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
@@ -207,14 +208,14 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   // searchQuery is already debounced via SearchBox (useDebounce)
   useEffect(() => {
     if (!loadList) return;
-    loadNotes();
-  }, [activeTab, selectedProject, searchQuery, fromDate, toDate, loadList]);
+    loadNotes(currentPage);
+  }, [currentPage, activeTab, selectedProject, searchQuery, fromDate, toDate, loadList]);
 
   useEffect(() => {
     setCurrentPage(1);
   }, [activeTab, selectedProject, searchInput, searchQuery, fromDate, toDate]);
 
-  const loadNotes = () => {
+  const loadNotes = (page = currentPage) => {
     if (activeTab === "ARCHIVED") {
       dispatch(
         fetchNotes({
@@ -222,6 +223,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
           search: searchQuery || undefined,
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
+          page,
+          limit: pageSize,
         })
       );
     } else {
@@ -233,6 +236,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
           search: searchQuery || undefined,
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
+          page,
+          limit: pageSize,
         })
       );
     }
@@ -268,32 +273,36 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     }
 
     const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
+
     const anchor =
-      sel?.anchorNode?.nodeType === Node.ELEMENT_NODE
+      sel.anchorNode?.nodeType === Node.ELEMENT_NODE
         ? (sel.anchorNode as HTMLElement)
-        : sel?.anchorNode?.parentElement || null;
+        : sel.anchorNode?.parentElement || null;
 
-    // If caret is on the page/editor itself, put it in a paragraph first
-    const onSheet =
-      !anchor ||
-      anchor === editor ||
-      anchor === page ||
-      (anchor.classList?.contains("page") && page.contains(anchor) && anchor.tagName === "DIV");
-
-    let block = anchor?.closest?.("p, h1, h2, h3, h4, h5, h6, li, blockquote, pre") as HTMLElement | null;
-    if (!block || !page.contains(block) || onSheet) {
-      block = page.querySelector("p, h1, h2, h3, h4, h5, h6") as HTMLElement | null;
-      if (!block) {
-        block = document.createElement("p");
-        block.innerHTML = "<br>";
-        page.appendChild(block);
+    // Check if anchor is already inside a valid block within page (including div)
+    if (anchor && page.contains(anchor)) {
+      const block = anchor.closest(
+        "p, div, h1, h2, h3, h4, h5, h6, li, blockquote, pre"
+      ) as HTMLElement | null;
+      if (block && block !== page && !block.classList.contains("page")) {
+        // User already has their selection/caret in a valid block — preserve it!
+        return block;
       }
-      const range = document.createRange();
-      range.selectNodeContents(block);
-      range.collapse(true);
-      sel?.removeAllRanges();
-      sel?.addRange(range);
     }
+
+    // Caret was directly on page root or outside: place in first block or create one
+    let block = page.querySelector("p, div, h1, h2, h3, h4, h5, h6") as HTMLElement | null;
+    if (!block || block === page || block.classList.contains("page")) {
+      block = document.createElement("p");
+      block.innerHTML = "<br>";
+      page.appendChild(block);
+    }
+    const range = document.createRange();
+    range.selectNodeContents(block);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
     return block;
   };
 
@@ -325,7 +334,14 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
         page.setAttribute("data-page", "1");
         editor.appendChild(page);
       }
-      looseBlocks.forEach((el) => page!.appendChild(el));
+      looseBlocks.forEach((el) => {
+        // If loose block was before the page in DOM, keep it at the top of the page, NOT the bottom!
+        if (el.compareDocumentPosition(page) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          page.insertBefore(el, page.firstChild);
+        } else {
+          page.appendChild(el);
+        }
+      });
     }
 
     removeEmptyPages(editor);
@@ -1752,11 +1768,9 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   }, [displayNotes, searchInput, fromDate, toDate]);
 
   // Paginated Notes
-  const totalPages = Math.max(1, Math.ceil(displayNotes.length / pageSize));
-  const paginatedNotes = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return displayNotes.slice(start, start + pageSize);
-  }, [displayNotes, currentPage, pageSize]);
+  const effectiveTotal = Math.max(totalNotesCount || 0, displayNotes.length);
+  const totalPages = Math.max(1, Math.ceil(effectiveTotal / pageSize));
+  const paginatedNotes = displayNotes;
 
   // Drag and Drop Hook integration
   const dragDrop = useNoteDragDrop(displayNotes, (noteId) => {
@@ -1834,6 +1848,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     notes,
     displayNotes,
     paginatedNotes,
+    totalNotesCount,
     totalPages,
     currentPage,
     setCurrentPage,
