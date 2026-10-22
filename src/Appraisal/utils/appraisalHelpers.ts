@@ -312,11 +312,13 @@ export const toManagerReviewRecord = (
   deadline: formatAppraisalDisplayDate(review.deadlineDate),
   assignedOn: formatAppraisalDisplayDate(review.assignedDate),
   assignedBy:
-    "assignerId" in review && review.assignerId
-      ? review.assignerId
-      : "managerName" in review && review.managerName
+    ("managerName" in review && review.managerName && review.managerName !== ("assignerId" in review ? review.assignerId : ""))
+      ? review.managerName
+      : ("managerName" in review && review.managerName)
         ? review.managerName
-        : "",
+        : ("assignerId" in review && review.assignerId)
+          ? review.assignerId
+          : "",
   finalRating:
     review.finalRating == null
       ? ""

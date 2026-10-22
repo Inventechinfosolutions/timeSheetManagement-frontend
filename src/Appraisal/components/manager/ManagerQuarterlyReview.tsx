@@ -238,7 +238,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
     statusFilter ||
     (quarter && quarter !== AppraisalFilterAll.ALL) ||
     (financialYear && financialYear !== defaultYear.current) ||
-    (department && department !== AppraisalFilterAll.ALL)
+    (isAdmin && department && department !== AppraisalFilterAll.ALL)
   );
 
   const handleOpenCreateModal = () => {
@@ -347,7 +347,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
         ? undefined
         : (statusFilter as QuarterlyReviewStatus);
     const selectedDept =
-      department && department !== AppraisalFilterAll.ALL ? department : undefined;
+      isAdmin && department && department !== AppraisalFilterAll.ALL ? department : undefined;
 
     const query = {
       ...(!isAdmin && managerId ? { assignerId: managerId } : {}),
@@ -598,18 +598,20 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 />
               </div>
 
-              <Dropdown
-                className="shrink-0 filter-item-stagger-2"
-                placeholder="Department"
-                allowClear={true}
-                defaultValue=""
-                prefixIcon={<Building2 size={14} className="filter-icon-dept text-[#4318FF]" />}
-                options={departmentOptions}
-                value={department}
-                onChange={(value) => setDepartment(value || AppraisalFilterAll.ALL)}
-                maxLabelWidth="max-w-[100px]"
-                buttonClassName="manager-review-filter-btn rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[136px]"
-              />
+              {isAdmin && (
+                <Dropdown
+                  className="shrink-0 filter-item-stagger-2"
+                  placeholder="Department"
+                  allowClear={true}
+                  defaultValue=""
+                  prefixIcon={<Building2 size={14} className="filter-icon-dept text-[#4318FF]" />}
+                  options={departmentOptions}
+                  value={department}
+                  onChange={(value) => setDepartment(value || AppraisalFilterAll.ALL)}
+                  maxLabelWidth="max-w-[100px]"
+                  buttonClassName="manager-review-filter-btn rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[136px]"
+                />
+              )}
 
               <Dropdown
                 className="shrink-0 filter-item-stagger-2"
