@@ -58,6 +58,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const [masterQuarters, setMasterQuarters] = useState<MasterQuarterRecord[]>([]);
   const [yearsLoading, setYearsLoading] = useState(false);
   const [assignmentType, setAssignmentType] = useState<AssignmentType | null>(null);
+  const [selectedReviewDepartment, setSelectedReviewDepartment] = useState<string>("");
 
   const [assignments, setAssignments] = useState<ManagerQuarterlyReviewRecord[]>([]);
   const [tablePage, setTablePage] = useState(1);
@@ -148,7 +149,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   };
 
   const handleEditRecord = (item: ManagerQuarterlyReviewRecord) => {
-    void openRecordFromApi(item, isAdmin ? "view" : "edit");
+    void openRecordFromApi(item, "edit");
   };
 
   const handleViewRecord = (item: ManagerQuarterlyReviewRecord) => {
@@ -242,6 +243,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
   const handleOpenCreateModal = () => {
     setAssignmentType(null);
+    setSelectedReviewDepartment("");
     setIsCreateModalOpen(true);
   };
 
@@ -249,8 +251,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
     setIsCreateModalOpen(false);
   };
 
-  const handleContinueToAssign = (type: AssignmentType) => {
+  const handleContinueToAssign = (type: AssignmentType, dept?: string) => {
     setAssignmentType(type);
+    setSelectedReviewDepartment(dept || "");
     setIsCreateModalOpen(false);
     setAssignFormKey((current) => current + 1);
     setIsAssignModalOpen(true);
@@ -524,50 +527,48 @@ export const ManagerQuarterlyReview: React.FC = () => {
             </p>
           </div>
 
-          {/* Create Button at top of card (hidden for Admin view-only) */}
-          {!isAdmin && (
-            <div className="flex w-full sm:w-auto gap-2">
-              <Button
-                variant="primary"
-                size="lg"
-                leftIcon={
-                  <span className="manager-create-icon-wrap" aria-hidden="true">
-                    <svg
-                      className="manager-create-icon-svg"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="9.5"
-                        className="manager-create-svg-circle"
-                        stroke="currentColor"
-                        strokeWidth="1.6"
-                        strokeDasharray="4 3"
-                        opacity="0.8"
-                      />
-                      <path
-                        d="M12 7V17M7 12H17"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="manager-create-svg-plus"
-                      />
-                    </svg>
-                  </span>
-                }
-                onClick={handleOpenCreateModal}
-                className="w-full sm:w-auto font-bold manager-review-create-btn shrink-0"
-              >
-                Create
-              </Button>
-            </div>
-          )}
+          {/* Create Button at top of card */}
+          <div className="flex w-full sm:w-auto gap-2">
+            <Button
+              variant="primary"
+              size="lg"
+              leftIcon={
+                <span className="manager-create-icon-wrap" aria-hidden="true">
+                  <svg
+                    className="manager-create-icon-svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9.5"
+                      className="manager-create-svg-circle"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeDasharray="4 3"
+                      opacity="0.8"
+                    />
+                    <path
+                      d="M12 7V17M7 12H17"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="manager-create-svg-plus"
+                    />
+                  </svg>
+                </span>
+              }
+              onClick={handleOpenCreateModal}
+              className="w-full sm:w-auto font-bold manager-review-create-btn shrink-0"
+            >
+              Create
+            </Button>
+          </div>
         </div>
 
         {/* Main Section Card */}
@@ -668,6 +669,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 onChange={setStatusFilter}
                 maxLabelWidth="max-w-[75px]"
                 contentWidth
+                align="right"
                 buttonClassName={`manager-review-filter-btn filter-btn-status ${
                   statusFilter ? "filter-active" : ""
                 } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[110px]`}
@@ -698,7 +700,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 <QuarterlyReviewTable
                   data={assignments}
                   highlightedId={highlightedRowId}
-                  viewOnly={isAdmin}
+                  viewOnly={false}
                   onEdit={handleEditRecord}
                   onView={handleViewRecord}
                   onOpenAccessGrant={(record) => {
@@ -735,6 +737,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
           onClose={handleCloseCreateModal}
           onContinue={handleContinueToAssign}
           initialType={null}
+          isAdmin={isAdmin}
         />
 
         <AssignQuarterlyReviewModal
@@ -742,6 +745,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
           isOpen={isAssignModalOpen}
           onClose={handleCloseAssignModal}
           assignmentType={assignmentType}
+          selectedDepartment={selectedReviewDepartment}
+          isAdmin={isAdmin}
           onAssign={handleAssignSuccess}
         />
       </div>

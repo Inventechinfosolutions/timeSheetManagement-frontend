@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Users, CheckCircle2 } from "lucide-react";
+import { Plus, Users, CheckCircle2, Building2 } from "lucide-react";
 import { AssignmentType, CreateReviewAssignmentModalProps } from "../../types/appraisal.types";
-import { Modal, Button, Card } from "../../../components/ui";
+import { Modal, Button, Card, Dropdown } from "../../../components/ui";
+import { useAppDispatch, useAppSelector } from "../../../hooks";
+import { fetchDepartments } from "../../../reducers/masterDepartment.reducer";
 import "./CreateReviewAssignmentModal.css";
 
 export const CreateReviewAssignmentModal: React.FC<CreateReviewAssignmentModalProps> = ({
@@ -9,21 +11,38 @@ export const CreateReviewAssignmentModal: React.FC<CreateReviewAssignmentModalPr
   onClose,
   onContinue,
   initialType = null,
+  isAdmin = false,
 }) => {
+  const dispatch = useAppDispatch();
+  const { departments } = useAppSelector((state) => state.masterDepartments);
+  const [selectedDept, setSelectedDept] = useState<string>("");
   const [selectedType, setSelectedType] = useState<AssignmentType | null>(initialType ?? null);
 
-  // Ensure no default selection when opening
   useEffect(() => {
     if (isOpen) {
       setSelectedType(initialType ?? null);
+      setSelectedDept("");
+      if (isAdmin && (!departments || departments.length === 0)) {
+        dispatch(fetchDepartments());
+      }
     }
-  }, [isOpen, initialType]);
+  }, [isOpen, initialType, isAdmin, dispatch, departments]);
 
   if (!isOpen) return null;
 
+  const departmentOptions = [
+    { value: "", label: "Select Department" },
+    ...(departments || []).map((dept) => ({
+      value: dept.departmentName,
+      label: dept.departmentName,
+    })),
+  ];
+
+  const canContinue = Boolean(selectedType && (!isAdmin || selectedDept));
+
   const handleContinue = () => {
-    if (selectedType) {
-      onContinue(selectedType);
+    if (selectedType && (!isAdmin || selectedDept)) {
+      onContinue(selectedType, selectedDept);
     }
   };
 
@@ -37,7 +56,9 @@ export const CreateReviewAssignmentModal: React.FC<CreateReviewAssignmentModalPr
           Create Review Assignment
         </h2>
         <p className="create-modal-subtitle">
-          Choose how you want to assign the quarterly review
+          {isAdmin
+            ? "Select a department and choose how to assign the quarterly review"
+            : "Choose how you want to assign the quarterly review"}
         </p>
       </div>
     </div>
@@ -46,12 +67,12 @@ export const CreateReviewAssignmentModal: React.FC<CreateReviewAssignmentModalPr
   const modalFooter = (
     <div className="flex justify-end w-full">
       <Button
-        variant={selectedType ? "primary" : "secondary"}
+        variant={canContinue ? "primary" : "secondary"}
         size="md"
-        disabled={!selectedType}
+        disabled={!canContinue}
         onClick={handleContinue}
         className={`create-modal-continue-btn ${
-          selectedType ? "is-active" : "is-disabled"
+          canContinue ? "is-active" : "is-disabled"
         }`}
       >
         Continue
@@ -72,8 +93,26 @@ export const CreateReviewAssignmentModal: React.FC<CreateReviewAssignmentModalPr
       closeOnEsc={false}
       className="create-assignment-modal-dialog p-6 sm:p-7 [&>div:first-child]:border-none [&>div:first-child]:pb-2 [&>div:last-child]:border-none [&>div:last-child]:pt-2"
     >
+      {/* Admin Department Selection */}
+      {isAdmin && (
+        <div className="pb-3 border-b border-gray-100 mb-3">
+          <label className="flex items-center gap-1.5 text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">
+            <Building2 className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Select Department</span>
+            <span className="text-red-500">*</span>
+          </label>
+          <Dropdown
+            options={departmentOptions}
+            value={selectedDept}
+            onChange={(val) => setSelectedDept(val)}
+            placeholder="Choose Department"
+            className="w-full"
+          />
+        </div>
+      )}
+
       {/* Options */}
-      <div className="space-y-3.5 pt-2">
+      <div className="space-y-3.5 pt-1">
         {/* Option 1: Individual Member(s) */}
         <Card
           onClick={() => setSelectedType("individual")}

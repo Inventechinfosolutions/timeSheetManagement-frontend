@@ -415,7 +415,7 @@ const DeadlineHeaderCard: React.FC<DeadlineHeaderCardProps> = ({
           ? "employee-stat-card-executive-warning"
           : ""
         } ${isClickable ? "cursor-pointer" : "cursor-default"}`}
-      title={isClickable ? `Click to open ${deadlineInfo.assignment.quarter} review` : undefined}
+      title={isClickable && deadlineInfo ? `Click to open ${deadlineInfo.assignment.quarter} review` : undefined}
     >
       {/* Colored Left Edge Bar */}
       <div className="employee-stat-edge-bar" />
@@ -1380,8 +1380,12 @@ export const AppraisalDashboard: React.FC = () => {
                         </thead>
                         <tbody>
                           {paginatedAssignments.map((assignment, index) => {
+                            const pendingItem = deadlineInfo?.pendingMap?.get(assignment.id);
+                            const daysLeft = pendingItem?.days ?? null;
+                            const showRowMarquee = pendingItem !== undefined && daysLeft === 1;
+
                             return (
-                              <tr key={assignment.id}>
+                              <tr key={assignment.id} className={showRowMarquee ? "qr-urgent-row" : ""}>
                                 <td className="text-center font-semibold text-xs text-[#475569]">
                                   {index + 1}
                                 </td>
@@ -1396,17 +1400,17 @@ export const AppraisalDashboard: React.FC = () => {
                                 {/* 3. Assigned By */}
                                 <td className="text-center">
                                   <span
-                                    className={`qr-assigned-by-pill ${assignment.assignedBy.toLowerCase() === "admin"
+                                    className={`qr-assigned-by-pill ${(assignment.assignedBy || "Admin").toLowerCase() === "admin"
                                       ? "qr-assigned-by-admin"
                                       : ""
                                       }`}
                                   >
-                                    {assignment.assignedBy.toLowerCase() === "admin" ? (
+                                    {(assignment.assignedBy || "Admin").toLowerCase() === "admin" ? (
                                       <ShieldCheck className="w-3.5 h-3.5" />
                                     ) : (
                                       <UserCheck className="w-3.5 h-3.5" />
                                     )}
-                                    {assignment.assignedBy}
+                                    {assignment.assignedBy || "Admin"}
                                   </span>
                                 </td>
 
@@ -1555,17 +1559,17 @@ export const AppraisalDashboard: React.FC = () => {
                           <div className="flex items-center justify-between">
                             <span>Assigned by:</span>
                             <span
-                              className={`qr-assigned-by-pill ${assignment.assignedBy.toLowerCase() === "admin"
+                              className={`qr-assigned-by-pill ${(assignment.assignedBy || "Admin").toLowerCase() === "admin"
                                 ? "qr-assigned-by-admin"
                                 : ""
                                 }`}
                             >
-                              {assignment.assignedBy.toLowerCase() === "admin" ? (
+                              {(assignment.assignedBy || "Admin").toLowerCase() === "admin" ? (
                                 <ShieldCheck className="w-3 h-3" />
                               ) : (
                                 <UserCheck className="w-3 h-3" />
                               )}
-                              {assignment.assignedBy}
+                              {assignment.assignedBy || "Admin"}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">

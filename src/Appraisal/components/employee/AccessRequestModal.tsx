@@ -340,7 +340,7 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
 
             {/* Title & Subtitle */}
             <h2 className="text-lg sm:text-xl font-black text-[#0B2568] tracking-tight leading-tight">
-              Request Review Access
+              Request Edit Access
             </h2>
             <p className="text-[11px] text-slate-600 mt-1 leading-relaxed font-normal">
               {isReadOnly

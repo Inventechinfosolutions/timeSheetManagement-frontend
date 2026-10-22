@@ -29,6 +29,7 @@ export interface DropdownProps<T = string> {
   onOpen?: () => void;
   loading?: boolean;
   contentWidth?: boolean;
+  align?: "left" | "right";
 }
 
 export function Dropdown<T extends string = string>({
@@ -47,6 +48,7 @@ export function Dropdown<T extends string = string>({
   onOpen,
   loading = false,
   contentWidth = false,
+  align,
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
@@ -56,16 +58,23 @@ export function Dropdown<T extends string = string>({
   const placeMenu = useCallback(() => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
+
+    const menuEl = menuRef.current;
+    const menuWidth = menuEl ? menuEl.offsetWidth : 180;
+    const wouldOverflowRight = rect.left + menuWidth > window.innerWidth - 16;
+    const shouldAlignRight = align === "right" || (align !== "left" && wouldOverflowRight);
+
     setMenuStyle({
       position: "fixed",
       top: rect.bottom + 8,
-      left: rect.left,
+      left: shouldAlignRight ? undefined : Math.max(16, rect.left),
+      right: shouldAlignRight ? Math.max(16, window.innerWidth - rect.right) : undefined,
       width: contentWidth ? "max-content" : rect.width,
       minWidth: rect.width,
-      maxWidth: contentWidth ? undefined : rect.width,
+      maxWidth: contentWidth ? "calc(100vw - 32px)" : rect.width,
       zIndex: 10050,
     });
-  }, [contentWidth]);
+  }, [contentWidth, align]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {

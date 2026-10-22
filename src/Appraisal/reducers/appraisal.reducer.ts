@@ -417,6 +417,26 @@ export const AppraisalApi = {
     });
     return response.data.items ?? [];
   },
+
+  getEmployeesByDepartment: async (department: string, search?: string): Promise<MappedEmployee[]> => {
+    const params: Record<string, string> = {};
+    if (department && department !== 'All') {
+      params.department = department;
+    }
+    if (search && search.trim()) {
+      params.search = search.trim();
+    }
+    const response = await axios.get<any[]>('/api/employee-details/list-select', {
+      params,
+      skipGlobalLoader: true,
+    });
+    return (response.data || []).map((emp: any) => ({
+      employeeId: emp.employeeId,
+      employeeName: emp.fullName || emp.employeeName || emp.employeeId,
+      department: emp.department,
+      designation: emp.role,
+    }));
+  },
 };
 
 // ==========================================

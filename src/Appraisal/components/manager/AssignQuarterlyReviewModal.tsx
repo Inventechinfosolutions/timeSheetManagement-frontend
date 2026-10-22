@@ -42,6 +42,8 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   onClose,
   assignmentType = AssignmentKind.INDIVIDUAL,
   onAssign,
+  selectedDepartment,
+  isAdmin = false,
 }) => {
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const managerId = currentUser?.employeeId || currentUser?.loginId || "";
@@ -101,6 +103,27 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   }, [mappedEmployees]);
 
   const loadEmployees = useCallback((search?: string) => {
+    if (isAdmin && selectedDepartment) {
+      setEmployeesLoading(true);
+      void AppraisalApi.getEmployeesByDepartment(selectedDepartment, search)
+        .then((employees) => {
+          setMappedEmployees(employees);
+          if (search?.trim()) return;
+          setTeamMembers(employees);
+          if (
+            assignmentType === AssignmentKind.ALL &&
+            employees.length > 0 &&
+            !teamApplied.current
+          ) {
+            teamApplied.current = true;
+            setSelectedEmployees(employees.map((employee) => employee.employeeId));
+          }
+        })
+        .catch(() => setMappedEmployees([]))
+        .finally(() => setEmployeesLoading(false));
+      return;
+    }
+
     if (!managerId) {
       setMappedEmployees([]);
       setEmployeesLoading(false);
@@ -123,7 +146,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       })
       .catch(() => setMappedEmployees([]))
       .finally(() => setEmployeesLoading(false));
-  }, [managerId, assignmentType]);
+  }, [managerId, assignmentType, isAdmin, selectedDepartment]);
 
   const loadFinancialYears = () => {
     if (yearsLoaded.current) return;
@@ -248,7 +271,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
         : assignmentType === AssignmentKind.ALL
           ? roster.map((employee) => employee.employeeId)
           : [];
-    if (!managerId || targets.length === 0) {
+    if ((!managerId && !isAdmin) || targets.length === 0) {
       showFieldError(AssignFormField.EMPLOYEES, AppraisalCopy.selectMappedEmployee);
       return;
     }
@@ -303,7 +326,8 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     const quarter = (Object.values(QuaterlyEnum) as string[]).includes(selectedQuarter)
       ? (selectedQuarter as QuaterlyEnum)
       : undefined;
-    if (!quarter || !managerId) return;
+    const assignerId = managerId || currentUser?.loginId || "ADMIN";
+    if (!quarter || !assignerId) return;
 
     setAssignError("");
     setButtonState(AssignButtonState.ANIMATING);
@@ -316,7 +340,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
           assignedDate: toIsoDate(fromDate),
           deadlineDate: toIsoDate(toDate),
           description: description || undefined,
-          assignerId: managerId,
+          assignerId,
         }),
       ),
     )
@@ -358,7 +382,9 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
           Assign Quarterly Review
         </h2>
         <p className="text-xs text-[#94A3B8] mt-0.5 font-normal">
-          Open review access for your reporting team members
+          {selectedDepartment
+            ? `Assigning reviews for ${selectedDepartment} department`
+            : "Open review access for your reporting team members"}
         </p>
       </div>
     </div>

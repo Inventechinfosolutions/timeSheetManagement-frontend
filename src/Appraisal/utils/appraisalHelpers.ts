@@ -61,9 +61,15 @@ export const readApiError = (error: unknown): string => {
 // ==========================================
 // DATE & FORMAT HELPERS
 // ==========================================
-export const formatAppraisalDisplayDate = (value: string | null | undefined): string => {
+export const formatAppraisalDisplayDate = (value: string | Date | null | undefined): string => {
   if (!value) {
     return "";
+  }
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return "";
+    const day = String(value.getDate()).padStart(2, "0");
+    const month = String(value.getMonth() + 1).padStart(2, "0");
+    return `${day}-${month}-${value.getFullYear()}`;
   }
   const text = String(value).trim();
   const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);

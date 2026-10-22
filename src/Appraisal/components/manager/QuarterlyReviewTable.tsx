@@ -834,7 +834,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-500 font-medium">Missed Deadline</span>
                   <span className="font-semibold text-rose-600">
-                    {reassignRecord.deadline || "Expired"}
+                    {reassignRecord.toDate || "Expired"}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200">

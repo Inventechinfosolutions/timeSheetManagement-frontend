@@ -10,14 +10,17 @@ export type AssignmentType = "individual" | "all";
 export interface CreateReviewAssignmentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onContinue: (type: AssignmentType) => void;
+  onContinue: (type: AssignmentType, department?: string) => void;
   initialType?: AssignmentType | null;
+  isAdmin?: boolean;
 }
 
 export interface AssignQuarterlyReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   assignmentType?: AssignmentType | null;
+  selectedDepartment?: string;
+  isAdmin?: boolean;
   onAssign?: (data: {
     quarter: string;
     employee: string;
@@ -431,6 +434,7 @@ export interface EmployeePerformanceDetail {
     fileType: string;
     objectKey: string;
   }>;
+  reassignCount?: number | null;
 }
 
 export interface EmployeeReviewDetail {
@@ -505,4 +509,5 @@ export interface EmployeePerformanceListItem extends EmployeePerformanceDetail {
   assignedDate?: string | null;
   deadlineDate?: string | null;
   reviewId?: number | null;
+  reassignCount?: number | null;
 }
