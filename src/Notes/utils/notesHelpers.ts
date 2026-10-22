@@ -1657,11 +1657,30 @@ const normalizePastedLayoutStyles = (root: ParentNode) => {
       el.style.removeProperty("position");
     }
 
-    // Strip forced heights that create massive empty bands (e.g. ChatGPT min-height: 100vh)
+    // Strip forced heights, max-heights, and overflow scrollbars that trap content in scrollable boxes
     if (!["IMG", "VIDEO", "CANVAS", "TABLE", "TD", "TH"].includes(el.tagName)) {
       el.style.removeProperty("min-height");
       el.style.removeProperty("height");
       el.style.removeProperty("max-height");
+      el.style.removeProperty("overflow");
+      el.style.removeProperty("overflow-y");
+      el.style.removeProperty("overflow-x");
+    }
+
+    // Strip classes that force internal scrolling or fixed max-height (Tailwind overflow-y-auto, max-h-*, etc.)
+    if (el.className && typeof el.className === "string") {
+      el.className = el.className
+        .split(/\s+/)
+        .filter(
+          (cls) =>
+            !cls.startsWith("overflow-") &&
+            !cls.startsWith("max-h-") &&
+            !cls.startsWith("h-") &&
+            cls !== "overflow-y-auto" &&
+            cls !== "overflow-auto" &&
+            cls !== "overflow-scroll"
+        )
+        .join(" ");
     }
 
     // Remove excessive top padding / top margin that pushes content halfway down the page
@@ -1791,17 +1810,42 @@ export const preparePastedHtmlForNote = (html?: string, plainText?: string): str
     break;
   }
 
-  // Unwrap redundant outer wrapper divs from ChatGPT / web pages so individual blocks flow across A4 pages
-  while (
-    parsed.body.children.length === 1 &&
-    parsed.body.firstElementChild &&
-    ["DIV", "SECTION", "ARTICLE", "MAIN"].includes(parsed.body.firstElementChild.tagName)
-  ) {
-    const wrapper = parsed.body.firstElementChild;
-    while (wrapper.firstChild) {
-      parsed.body.insertBefore(wrapper.firstChild, wrapper);
+  // Unwrap ALL redundant layout wrappers (div, section, article, main) from ChatGPT / web pages
+  // so individual headings, paragraphs, and cards become direct flow blocks that cleanly paginate across A4 pages
+  let unwrapPasses = 0;
+  let didUnwrap = true;
+  while (didUnwrap && unwrapPasses < 12) {
+    didUnwrap = false;
+    unwrapPasses += 1;
+    const wrappers = Array.from(
+      parsed.body.querySelectorAll<HTMLElement>("div, section, article, main")
+    );
+    for (const wrapper of wrappers) {
+      if (wrapper === parsed.body) continue;
+      if (wrapper.classList.contains("note-table-scroll") || wrapper.classList.contains("note-table-scroll-inner")) {
+        continue;
+      }
+      // If wrapper is an intermediate container that only wraps other block elements with no direct text
+      const hasDirectText = Array.from(wrapper.childNodes).some(
+        (n) => n.nodeType === Node.TEXT_NODE && (n.textContent || "").trim().length > 0
+      );
+      const isPlainBox =
+        !wrapper.style.backgroundColor &&
+        !wrapper.style.border &&
+        !wrapper.style.borderColor;
+
+      if (
+        wrapper.parentElement &&
+        wrapper.children.length > 0 &&
+        (!hasDirectText || isPlainBox || wrapper.parentElement === parsed.body || wrapper.children.length === 1)
+      ) {
+        while (wrapper.firstChild) {
+          wrapper.parentElement.insertBefore(wrapper.firstChild, wrapper);
+        }
+        wrapper.remove();
+        didUnwrap = true;
+      }
     }
-    wrapper.remove();
   }
 
   // Fragmented / OCR-style HTML → use plain text so it lays out neatly with tables
@@ -1921,6 +1965,56 @@ export const getInlineImageFileKey = (img: HTMLImageElement): string | null => {
  * Upload embedded data:image sources and normalize blob/preview srcs so saved
  * description HTML stays small (keys + view URLs instead of base64).
  */
+/** Compress a dataUrl if it exceeds 200KB using HTML Canvas to prevent huge payloads. */
+export const compressDataUrlIfNeeded = async (
+  dataUrl: string,
+  maxDimension = 1600,
+  quality = 0.82
+): Promise<string> => {
+  if (!dataUrl || dataUrl.length < 200 * 1024) return dataUrl;
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (!width || !height) {
+          resolve(dataUrl);
+          return;
+        }
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL("image/jpeg", quality);
+        resolve(compressed && compressed.length < dataUrl.length ? compressed : dataUrl);
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    } catch {
+      resolve(dataUrl);
+    }
+  });
+};
+
+/**
+ * Upload embedded data:image sources and normalize blob/preview srcs so saved
+ * description HTML stays small (keys + view URLs instead of base64).
+ */
 export const rewriteInlineDataImagesInHtml = async (
   html: string,
   upload: (file: File) => Promise<string | null | undefined>,
@@ -1943,13 +2037,24 @@ export const rewriteInlineDataImagesInHtml = async (
     const existingKey = getInlineImageFileKey(img);
 
     if (src.startsWith("data:image")) {
-      const file = dataUrlToFile(src, img.getAttribute("alt") || undefined);
+      const compressedSrc = await compressDataUrlIfNeeded(src);
+      const file = dataUrlToFile(compressedSrc, img.getAttribute("alt") || undefined);
       if (!file) continue;
-      const key = await upload(file);
-      if (!key) continue;
-      img.setAttribute(INLINE_FILE_KEY_ATTR, key);
-      img.setAttribute("src", toPreviewUrl(key));
-      changed = true;
+      try {
+        const key = await upload(file);
+        if (key) {
+          img.setAttribute(INLINE_FILE_KEY_ATTR, key);
+          img.setAttribute("src", toPreviewUrl(key));
+          changed = true;
+          continue;
+        }
+      } catch (e) {
+        console.warn("Direct upload of inline image failed, using compressed image:", e);
+      }
+      if (compressedSrc !== src) {
+        img.setAttribute("src", compressedSrc);
+        changed = true;
+      }
       continue;
     }
 
