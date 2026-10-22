@@ -164,8 +164,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   const isTypingSessionRef = useRef(false);
   /** Bumped on each paste / undo so async post-paste uploads don't overwrite Undo. */
   const pasteGenerationRef = useRef(0);
-  /** After paste, block A4 reflow so content stays on the cursor page (not the next sheet). */
-  const skipPaginationUntilRef = useRef(0);
   const hydratedNoteKeyRef = useRef<string>("");
   const toolbarSentinelRef = useRef<HTMLDivElement | null>(null);
   const [toolbarStuck, setToolbarStuck] = useState(false);
@@ -247,8 +245,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   const handleEditorInputWrapper = (opts?: { skipPagination?: boolean }) => {
     if (isHistoryNavigatingRef.current) return;
     if (editorRef.current) wrapNoteInlineImages(editorRef.current);
-    const skipPagination =
-      Boolean(opts?.skipPagination) || Date.now() < skipPaginationUntilRef.current;
+    const skipPagination = Boolean(opts?.skipPagination);
     onEditorInput(skipPagination ? { skipPagination: true } : undefined);
     setHasContent(checkHasContent());
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
@@ -258,11 +255,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         lastKnownHtmlRef.current = editorRef.current.innerHTML;
       }
     }, 700);
-  };
-
-  /** Paste must not trigger the delayed A4 split that moves content to the next page. */
-  const markPasteSkipPagination = () => {
-    skipPaginationUntilRef.current = Date.now() + 2500;
   };
 
   // Capture HTML *before* each edit so Undo always has a real previous state
@@ -455,16 +447,15 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
           .join("");
         document.execCommand("insertHTML", false, imgs);
         isTypingSessionRef.current = true;
-        markPasteSkipPagination();
         const pasteGen = ++pasteGenerationRef.current;
         requestAnimationFrame(async () => {
           if (!editorRef.current || isHistoryNavigatingRef.current) return;
           const landscape = editorRef.current.classList.contains("is-landscape");
-          // Keep paste on the cursor's page — do not reflow onto the next sheet
           absorbOrphansIntoPages(editorRef.current, landscape, cursorPage);
           wrapNoteInlineImages(editorRef.current);
+          paginateToA4Sheets(editorRef.current, landscape, true);
           removeEmptyPages(editorRef.current);
-          handleEditorInputWrapper({ skipPagination: true });
+          handleEditorInputWrapper();
           if (onPersistInlineImages) {
             try {
               await onPersistInlineImages(
@@ -498,7 +489,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
           document.execCommand("insertText", false, collapseVerticalCharPaste(plain));
         }
         isTypingSessionRef.current = true;
-        markPasteSkipPagination();
         requestAnimationFrame(() => {
           if (!editorRef.current || isHistoryNavigatingRef.current) return;
           handleEditorInputWrapper({ skipPagination: true });
