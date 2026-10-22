@@ -286,64 +286,37 @@ const AttendenceEditRequests = () => {
                 <span className="text-xs font-bold text-gray-400 pl-1">
                   Set Lock Type
                 </span>
-                <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-                  <Select
-                    value={lockType}
-                    onChange={(val) => handleLockTypeChange(val)}
+                <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center p-1.5 h-12 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleLockTypeChange("Weekly")}
                     disabled={savingLock}
-                    className="w-36 h-12 font-bold text-sm text-[#4318FF]"
-                    variant="borderless"
-                    dropdownStyle={{ borderRadius: "16px" }}
-                    suffixIcon={
-                      <ChevronDown size={18} className="text-[#4318FF]" />
-                    }
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer select-none ${
+                      lockType === "Weekly"
+                        ? "bg-[#4318FF] text-white shadow-xs"
+                        : "text-[#2B3674] hover:bg-[#F4F7FE]"
+                    } ${savingLock ? "opacity-60 cursor-not-allowed" : ""}`}
                   >
-                    <Select.Option value="Weekly">Weekly</Select.Option>
-                    <Select.Option value="Monthly">Monthly</Select.Option>
-                  </Select>
+                    Weekly
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleLockTypeChange("Monthly")}
+                    disabled={savingLock}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer select-none ${
+                      lockType === "Monthly"
+                        ? "bg-[#4318FF] text-white shadow-xs"
+                        : "text-[#2B3674] hover:bg-[#F4F7FE]"
+                    } ${savingLock ? "opacity-60 cursor-not-allowed" : ""}`}
+                  >
+                    Monthly
+                  </button>
                 </div>
               </div>
             )}
 
             {!waitingForDepartment && (
             <div className="flex flex-wrap items-end gap-3 sm:ml-auto">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-bold text-gray-400 pl-1">
-                Lock Type
-              </span>
-              <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-                <Select
-                  value={lockTypeFilter}
-                  onChange={(val) => {
-                    setLockTypeFilter(val);
-                    setPage(1);
-                  }}
-                  className={`w-36 h-12 font-bold text-sm ${
-                    lockTypeFilter !== "All"
-                      ? "text-[#4318FF]"
-                      : "text-[#2B3674]"
-                  }`}
-                  variant="borderless"
-                  dropdownStyle={{ borderRadius: "16px" }}
-                  suffixIcon={
-                    <ChevronDown
-                      size={18}
-                      className={
-                        lockTypeFilter !== "All"
-                          ? "text-[#4318FF]"
-                          : "text-gray-400"
-                      }
-                    />
-                  }
-                >
-                  {LOCK_TYPE_OPTIONS.map((option) => (
-                    <Select.Option key={option} value={option}>
-                      {option === "All" ? "All Lock Types" : option}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </div>
-            </div>
 
             <div className="flex flex-col gap-1.5 relative">
               <span className="text-xs font-bold text-gray-400 pl-1">
