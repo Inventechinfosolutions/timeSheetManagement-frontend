@@ -17,7 +17,6 @@ import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate } from "react-router-dom";
 import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
-import { fetchNotes } from "../reducers/notes.reducer";
 import { UserType } from "../enums";
 import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
@@ -49,7 +48,6 @@ const SidebarLayout = ({
 
   useEffect(() => {
     dispatch(fetchInboxUnreadCount());
-    dispatch(fetchNotes({ type: "PROJECT" as any, isArchived: false }));
   }, [dispatch]);
 
   // Track whether citizen is inside Note Workspace (Create/Edit/View) alone vs List mode / other pages
@@ -150,7 +148,7 @@ const SidebarLayout = ({
 
   return (
     <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
-      {!isWorkspaceMode && <Header />}
+      <div className={isWorkspaceMode ? "hidden" : "contents"}><Header /></div>
       <div className="flex flex-1 min-h-0 relative overflow-hidden">
         {/* Mobile Menu Trigger - Floating Pulse Button */}
         <button

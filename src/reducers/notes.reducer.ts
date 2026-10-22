@@ -74,7 +74,7 @@ export const fetchNotes = createAsyncThunk(
 
       const queryStr = searchParams.toString();
       const url = queryStr ? `${API_BASE}?${queryStr}` : API_BASE;
-      const response = await axios.get(url, { signal });
+      const response = await axios.get(url, { signal, skipGlobalLoader: true, headers: { 'x-skip-loader': 'true' } });
       return response.data; // { data: Note[], total: number }
     } catch (error: any) {
       if (axios.isCancel(error) || error?.code === "ERR_CANCELED" || signal.aborted) {
