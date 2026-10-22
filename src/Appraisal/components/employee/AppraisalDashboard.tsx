@@ -1221,7 +1221,7 @@ export const AppraisalDashboard: React.FC = () => {
   }
 
   return (
-    <div className="w-full relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
+    <div className="w-full relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 py-3 sm:py-4 lg:py-6 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
 
 
 
@@ -1331,6 +1331,7 @@ export const AppraisalDashboard: React.FC = () => {
                   { value: "NOT_STARTED", label: "Not Started" },
                   { value: "DRAFT", label: "Draft" },
                   { value: "SUBMITTED", label: "Submitted" },
+                  { value: "EVALUATION_IN_PROGRESS", label: "Evaluation In Progress" },
                   { value: "COMPLETED", label: "Completed" },
                 ]}
                 value={statusFilter}

@@ -33,7 +33,7 @@ export interface AssignQuarterlyReviewModalProps {
 
 export type ReviewStatus = "not_started" | "assigned" | "draft" | "in_progress" | "submitted" | "reviewed";
 
-export type ReviewAssignmentStatus = "NOT_STARTED" | "ASSIGNED" | "IN_PROGRESS" | "SUBMITTED" | "UNDER_REVIEW" | "COMPLETED";
+export type ReviewAssignmentStatus = "NOT_STARTED" | "ASSIGNED" | "IN_PROGRESS" | "EVALUATION_IN_PROGRESS" | "SUBMITTED" | "UNDER_REVIEW" | "COMPLETED";
 
 export interface ManagerQuarterlyReviewRecord {
   name: string;
@@ -47,6 +47,7 @@ export interface ManagerQuarterlyReviewRecord {
   deadline?: string;
   assignedOn: string;
   assignedBy: string;
+  managerId?: string;
   finalRating: string;
   status: string;
   reviewId?: number;
@@ -71,9 +72,19 @@ export interface ManagerQuarterlyReviewRecord {
     communication?: number | string | null;
     teamCollaboration?: number | string | null;
     innovationProblemSolving?: number | string | null;
+    technicalJobSkills?: number | string | null;
+    overallPerformanceRating?: number | string | null;
     performanceStrengths?: string | null;
     areasOfImprovement?: string | null;
     additionalRemarks?: string | null;
+    goalsForNextReviewPeriod?: string | null;
+    trainingDevelopmentRecommendations?: string | null;
+    careerGrowthRecommendation?: string | null;
+    reviewOutcome?: string | null;
+    performanceAction?: string | null;
+    finalManagerComments?: string | null;
+    managerConfirmation?: boolean | null;
+    finalPerformanceRating?: number | null;
   };
 }
 
@@ -235,6 +246,8 @@ export interface RevealedRating {
   communication: number;
   teamCollaboration: number;
   innovationProblemSolving: number;
+  technicalJobSkills?: number | null;
+  overallPerformanceRating?: number | null;
   performanceStrengths: string;
   areasOfImprovement: string;
   additionalRemarks: string;
@@ -295,9 +308,19 @@ export interface ManagerReviewApiRecord {
   communication?: number | string | null;
   teamCollaboration?: number | string | null;
   innovationProblemSolving?: number | string | null;
+  technicalJobSkills?: number | string | null;
+  overallPerformanceRating?: number | string | null;
   performanceStrengths?: string | null;
   areasOfImprovement?: string | null;
   additionalRemarks?: string | null;
+  goalsForNextReviewPeriod?: string | null;
+  trainingDevelopmentRecommendations?: string | null;
+  careerGrowthRecommendation?: string | null;
+  reviewOutcome?: string | null;
+  performanceAction?: string | null;
+  finalManagerComments?: string | null;
+  managerConfirmation?: boolean | null;
+  finalPerformanceRating?: number | null;
   canRequestEdit?: boolean;
   remainingRequestHours?: number;
   canEdit?: boolean;
@@ -466,9 +489,19 @@ export interface EmployeeReviewDetail {
   communication?: number | string | null;
   teamCollaboration?: number | string | null;
   innovationProblemSolving?: number | string | null;
+  technicalJobSkills?: number | string | null;
+  overallPerformanceRating?: number | string | null;
   performanceStrengths?: string | null;
   areasOfImprovement?: string | null;
   additionalRemarks?: string | null;
+  goalsForNextReviewPeriod?: string | null;
+  trainingDevelopmentRecommendations?: string | null;
+  careerGrowthRecommendation?: string | null;
+  reviewOutcome?: string | null;
+  performanceAction?: string | null;
+  finalManagerComments?: string | null;
+  managerConfirmation?: boolean | null;
+  finalPerformanceRating?: number | null;
   performanceDetails?: EmployeePerformanceDetail | null;
 }
 

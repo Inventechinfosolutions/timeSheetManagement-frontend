@@ -30,7 +30,7 @@ import {
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
 import { EmployeePerformanceStatus, QuarterlyReviewStatus } from "../../enums/appraisal.enums";
 import { AppraisalApi, formatAppraisalDisplayDate, readApiError, RevealedRating } from "../../reducers/appraisal.reducer";
-import { DatePicker } from "../../../components/ui";
+import { DatePicker, Dropdown } from "../../../components/ui";
 import { message } from "antd";
 import { getRatingTierConfig } from "../../utils/appraisalHelpers";
 import "./EvaluationPanel.css";
@@ -66,9 +66,19 @@ export interface EvaluationPanelProps {
     communication?: number | string | null;
     teamCollaboration?: number | string | null;
     innovationProblemSolving?: number | string | null;
+    technicalJobSkills?: number | string | null;
+    overallPerformanceRating?: number | string | null;
     performanceStrengths?: string | null;
     areasOfImprovement?: string | null;
     additionalRemarks?: string | null;
+    goalsForNextReviewPeriod?: string | null;
+    trainingDevelopmentRecommendations?: string | null;
+    careerGrowthRecommendation?: string | null;
+    reviewOutcome?: string | null;
+    performanceAction?: string | null;
+    finalManagerComments?: string | null;
+    managerConfirmation?: boolean | null;
+    finalPerformanceRating?: number | string | null;
   };
 }
 
@@ -79,13 +89,51 @@ interface ParameterDef {
 }
 
 const EVALUATION_PARAMETERS: ParameterDef[] = [
-  { key: "productivity", label: "Productivity" },
   { key: "qualityOfWork", label: "Quality of Work" },
-  { key: "ownership", label: "Ownership & Responsibility" },
+  { key: "productivity", label: "Productivity & Timely Delivery" },
+  { key: "technicalJobSkills", label: "Technical / Job Skills" },
+  { key: "teamCollaboration", label: "Teamwork & Collaboration" },
   { key: "communication", label: "Communication" },
-  { key: "teamCollaboration", label: "Team Collaboration" },
-  { key: "innovation", label: "Innovation & Problem Solving" },
+  { key: "ownership", label: "Ownership & Accountability" },
 ];
+
+const CAREER_GROWTH_OPTIONS = [
+  { value: "Ready for Promotion", label: "Ready for Promotion" },
+  { value: "Lateral Move", label: "Lateral Move" },
+  { value: "Retention Risk", label: "Retention Risk" },
+  { value: "Continue in Current Role", label: "Continue in Current Role" },
+  { value: "Role Change Recommended", label: "Role Change Recommended" },
+];
+
+const REVIEW_OUTCOME_OPTIONS = [
+  { value: "Satisfactory", label: "Satisfactory" },
+  { value: "Exceptional Performance", label: "Exceptional Performance" },
+  { value: "Needs Improvement", label: "Needs Improvement" },
+  { value: "Performance Improvement Plan", label: "Performance Improvement Plan (PIP)" },
+  { value: "Probation Extension", label: "Probation Extension" },
+];
+
+const PERFORMANCE_ACTION_OPTIONS = [
+  { value: "No Action Required", label: "No Action Required" },
+  { value: "Salary Increment", label: "Salary Increment" },
+  { value: "Bonus Awarded", label: "Bonus Awarded" },
+  { value: "Promotion Recommended", label: "Promotion Recommended" },
+  { value: "PIP Initiated", label: "PIP Initiated" },
+  { value: "Warning Issued", label: "Warning Issued" },
+];
+
+const RATING_LABEL_MAP: Record<number, string> = {
+  1: "Needs Improvement",
+  2: "Developing",
+  3: "Meets Expectations",
+  4: "Exceeds Expectations",
+  5: "Outstanding",
+};
+
+const getRatingLabel = (score: number): string => {
+  const rounded = Math.round(score);
+  return RATING_LABEL_MAP[rounded] || "";
+};
 
 const TEAM_CRITERIA = [
   { key: "communication", title: "Communication" },
@@ -124,6 +172,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       communication: managerEvaluation?.communication,
       teamCollaboration: managerEvaluation?.teamCollaboration,
       innovation: managerEvaluation?.innovationProblemSolving,
+      technicalJobSkills: managerEvaluation?.technicalJobSkills,
+      overallPerformanceRating: managerEvaluation?.overallPerformanceRating,
     };
     const value = Number(source[key]);
     return Number.isFinite(value) && value > 0 ? value : 0;
@@ -491,6 +541,27 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const [strengths, setStrengths] = useState<string>(managerEvaluation?.performanceStrengths || "");
   const [improvements, setImprovements] = useState<string>(managerEvaluation?.areasOfImprovement || "");
   const [remarks, setRemarks] = useState<string>(managerEvaluation?.additionalRemarks || "");
+
+  // Final Review & Submission state
+  const [goalsForNextReview, setGoalsForNextReview] = useState<string>(managerEvaluation?.goalsForNextReviewPeriod || "");
+  const [trainingRecommendations, setTrainingRecommendations] = useState<string>(managerEvaluation?.trainingDevelopmentRecommendations || "");
+  const [careerGrowthRecommendation, setCareerGrowthRecommendation] = useState<string>(managerEvaluation?.careerGrowthRecommendation || "");
+  const [reviewOutcome, setReviewOutcome] = useState<string>(managerEvaluation?.reviewOutcome || "");
+  const [performanceAction, setPerformanceAction] = useState<string>(managerEvaluation?.performanceAction || "");
+  const [finalManagerComments, setFinalManagerComments] = useState<string>(managerEvaluation?.finalManagerComments || "");
+  const [managerConfirmation, setManagerConfirmation] = useState<boolean>(Boolean(managerEvaluation?.managerConfirmation));
+  const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const [isDraftSaving, setIsDraftSaving] = useState<boolean>(false);
+  const [finalPerformanceRating, setFinalPerformanceRating] = useState<number>(
+    Number(managerEvaluation?.finalPerformanceRating) || 0
+  );
+  const [rawFinalPerformanceRating, setRawFinalPerformanceRating] = useState<string>(() => {
+    const val = Number(managerEvaluation?.finalPerformanceRating);
+    return val > 0 ? String(val) : "";
+  });
+  const [hoveredFinalStar, setHoveredFinalStar] = useState<number>(0);
+
+
   const [finalScoreText, setFinalScoreText] = useState<string>(() => {
     const parsed = parseFloat(record.finalRating);
     return !Number.isNaN(parsed) && parsed >= 1 && parsed <= 5 ? String(parsed) : "";
@@ -504,6 +575,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       communication: Number(rating.communication) || 0,
       teamCollaboration: Number(rating.teamCollaboration) || 0,
       innovation: Number(rating.innovationProblemSolving) || 0,
+      technicalJobSkills: Number(rating.technicalJobSkills) || 0,
+      overallPerformanceRating: Number(rating.overallPerformanceRating) || 0,
     };
     setScores(nextScores);
     setRawInputValues(
@@ -688,13 +761,17 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     );
   };
 
-  const averageScore = useMemo(() => {
-    const parsed = parseFloat(finalScoreText);
-    if (Number.isNaN(parsed) || parsed < 1 || parsed > 5) {
-      return null;
-    }
-    return parsed;
-  }, [finalScoreText]);
+  // System-calculated average from all 8 evaluation parameters — this IS the final rating
+  const calculatedAverage = useMemo(() => {
+    const vals = EVALUATION_PARAMETERS.map((p) => scores[p.key] || 0).filter((v) => v > 0);
+    if (vals.length === 0) return null;
+    const sum = vals.reduce((a, b) => a + b, 0);
+    return Math.round((sum / vals.length) * 10) / 10;
+  }, [scores]);
+
+  // averageScore = auto-computed (no manual entry required)
+  const averageScore = calculatedAverage;
+
 
   const suggestedRating = useMemo(() => {
     if (averageScore === null) {
@@ -731,6 +808,37 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     setFinalScoreText(String(parsed));
   };
 
+  const handleFinalRatingChange = (val: string) => {
+    if (isViewMode) return;
+    setRawFinalPerformanceRating(val);
+    clearFieldError("finalPerformanceRating");
+    if (val.trim() === "") {
+      setFinalPerformanceRating(0);
+      return;
+    }
+    const num = parseFloat(val);
+    if (!Number.isNaN(num) && num >= 1 && num <= 5) {
+      setFinalPerformanceRating(Math.round(num * 10) / 10);
+    }
+  };
+
+  const handleFinalRatingBlur = () => {
+    if (isViewMode) return;
+    const num = parseFloat(rawFinalPerformanceRating);
+    if (rawFinalPerformanceRating.trim() === "" || Number.isNaN(num) || num < 1 || num > 5) {
+      if (finalPerformanceRating > 0) {
+        setRawFinalPerformanceRating(String(finalPerformanceRating));
+      } else {
+        setRawFinalPerformanceRating("");
+        setFinalPerformanceRating(0);
+      }
+    } else {
+      const clamped = Math.min(5, Math.max(1, Math.round(num * 10) / 10));
+      setFinalPerformanceRating(clamped);
+      setRawFinalPerformanceRating(String(clamped));
+    }
+  };
+
   const scoredCount = useMemo(() => {
     return Object.values(scores).filter((v) => typeof v === "number" && v > 0).length;
   }, [scores]);
@@ -751,6 +859,20 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     return currentTier.accentHex;
   }, [averageScore, currentTier]);
 
+  const finalRatingTier = useMemo(() => {
+    if (!finalPerformanceRating || finalPerformanceRating <= 0) return null;
+    return getRatingTierConfig(finalPerformanceRating);
+  }, [finalPerformanceRating]);
+
+  const finalGaugeColor = useMemo(() => {
+    if (!finalPerformanceRating || !finalRatingTier) return "#CBD5E1";
+    return finalRatingTier.accentHex;
+  }, [finalPerformanceRating, finalRatingTier]);
+
+  const finalGaugePercent =
+    finalPerformanceRating > 0 ? Math.min(Math.max(finalPerformanceRating / 5, 0), 1) : 0;
+  const finalGaugeOffset = gaugeCircumference - gaugeCircumference * finalGaugePercent;
+
   const handleAddStrength = (tag: string) => {
     setStrengths((prev) => (prev ? `${prev.trim()}, ${tag}` : tag));
     clearFieldError("strengths");
@@ -761,14 +883,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     clearFieldError("improvements");
   };
 
-  // Handle Form Submission
+  // Handle Form Submission — opens confirm modal first
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const newErrors: Record<string, string> = {};
     let firstErrorElement: HTMLElement | null = null;
 
-    // 1. Check all evaluation parameters
+    // 1. All 8 evaluation parameters required
     const unratedParams = EVALUATION_PARAMETERS.filter(
       (p) => !scores[p.key] || scores[p.key] === 0
     );
@@ -779,22 +901,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       firstErrorElement = document.getElementById(`eval-param-${unratedParams[0].key}`);
     }
 
-    if (averageScore === null) {
-      newErrors.finalScore = "Enter a rating from 1 to 5.";
-      if (!firstErrorElement) {
-        firstErrorElement = document.getElementById("eval-field-final-score");
-      }
-    }
-
-    // 2. Check Performance Strengths
+    // 2. Key Strengths (required)
     if (!strengths.trim()) {
-      newErrors.strengths = "Please fill out the Performance Strengths.";
+      newErrors.strengths = "Please fill out the Key Strengths.";
       if (!firstErrorElement) {
         firstErrorElement = document.getElementById("eval-field-strengths");
       }
     }
 
-    // 3. Check Areas of Improvement
+    // 3. Areas of Improvement (required)
     if (!improvements.trim()) {
       newErrors.improvements = "Please fill out the Areas of Improvement.";
       if (!firstErrorElement) {
@@ -802,11 +917,48 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       }
     }
 
-    // 4. Check Additional Remarks
+    // 4. Manager Comments (required)
     if (!remarks.trim()) {
-      newErrors.remarks = "Please fill out the Additional Remarks.";
+      newErrors.remarks = "Please fill out the Manager Comments.";
       if (!firstErrorElement) {
         firstErrorElement = document.getElementById("eval-field-remarks");
+      }
+    }
+
+    // 5. Goals for Next Review (required)
+    if (!goalsForNextReview.trim()) {
+      newErrors.goalsForNextReview = "Please fill out Goals for Next Review Period.";
+      if (!firstErrorElement) {
+        firstErrorElement = document.getElementById("eval-field-goals");
+      }
+    }
+
+    // 6. Review Outcome (required)
+    if (!reviewOutcome) {
+      newErrors.reviewOutcome = "Please select a Review Outcome.";
+      if (!firstErrorElement) {
+        firstErrorElement = document.getElementById("eval-field-review-outcome");
+      }
+    }
+
+    // 7. Final Manager Comments (required)
+    if (!finalManagerComments.trim()) {
+      newErrors.finalManagerComments = "Please fill out the Final Manager Comments.";
+      if (!firstErrorElement) {
+        firstErrorElement = document.getElementById("eval-field-final-comments");
+      }
+    }
+
+    // 8. Manager Confirmation checkbox
+    if (!managerConfirmation) {
+      newErrors.managerConfirmation = "Please confirm the declaration to submit.";
+    }
+
+    // 9. Final Performance Rating (required)
+    if (!finalPerformanceRating || finalPerformanceRating < 1) {
+      newErrors.finalPerformanceRating = "Please select a Final Performance Rating (1–5 stars).";
+      if (!firstErrorElement) {
+        firstErrorElement = document.getElementById("eval-field-final-perf-rating");
       }
     }
 
@@ -824,7 +976,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     }
 
     setFieldErrors({});
+    // Open confirm modal before final submit
+    setShowConfirmModal(true);
+  };
 
+  // Called after user confirms in the modal
+  const handleConfirmedSubmit = () => {
+    setShowConfirmModal(false);
     if (submitButtonState !== "idle") return;
     if (!reviewId) {
       message.error("This review cannot be saved.");
@@ -843,17 +1001,31 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     setSubmitButtonState("animating");
     setIsSubmitting(true);
 
-    void AppraisalApi.updateReview(reviewId, {
+    void AppraisalApi.evaluateReview(reviewId, {
+      managerId: record.managerId || record.assignedBy || undefined,
       productivity: scores.productivity,
       qualityOfWork: scores.qualityOfWork,
+      ownership: scores.ownership,
       ownershipResponsibility: scores.ownership,
       communication: scores.communication,
       teamCollaboration: scores.teamCollaboration,
+      innovation: scores.innovation,
       innovationProblemSolving: scores.innovation,
+      technicalJobSkills: scores.technicalJobSkills,
+      overallPerformanceRating: scores.overallPerformanceRating,
       performanceStrengths: strengths.trim(),
       areasOfImprovement: improvements.trim(),
       additionalRemarks: remarks.trim(),
+      goalsForNextReviewPeriod: goalsForNextReview.trim(),
+      trainingDevelopmentRecommendations: trainingRecommendations.trim() || undefined,
+      careerGrowthRecommendation: careerGrowthRecommendation || undefined,
+      reviewOutcome: reviewOutcome,
+      performanceAction: performanceAction || undefined,
+      finalManagerComments: finalManagerComments.trim(),
+      managerConfirmation: true,
       finalRating: averageScore || undefined,
+      finalPerformanceRating: finalPerformanceRating || undefined,
+      isDraft: false,
     })
       .then(() => {
         setSubmitButtonState("assigned");
@@ -873,6 +1045,51 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         message.error(readApiError(error));
       });
   };
+
+  // Save as Draft — no validation required
+  const handleSaveDraft = () => {
+    if (!reviewId) {
+      message.error("This review cannot be saved.");
+      return;
+    }
+    setIsDraftSaving(true);
+    void AppraisalApi.evaluateReview(reviewId, {
+      managerId: record.managerId || record.assignedBy || undefined,
+      productivity: scores.productivity || undefined,
+      qualityOfWork: scores.qualityOfWork || undefined,
+      ownership: scores.ownership || undefined,
+      ownershipResponsibility: scores.ownership || undefined,
+      communication: scores.communication || undefined,
+      teamCollaboration: scores.teamCollaboration || undefined,
+      innovation: scores.innovation || undefined,
+      innovationProblemSolving: scores.innovation || undefined,
+      technicalJobSkills: scores.technicalJobSkills || undefined,
+      overallPerformanceRating: scores.overallPerformanceRating || undefined,
+      performanceStrengths: strengths.trim() || undefined,
+      areasOfImprovement: improvements.trim() || undefined,
+      additionalRemarks: remarks.trim() || undefined,
+      goalsForNextReviewPeriod: goalsForNextReview.trim() || undefined,
+      trainingDevelopmentRecommendations: trainingRecommendations.trim() || undefined,
+      careerGrowthRecommendation: careerGrowthRecommendation || undefined,
+      reviewOutcome: reviewOutcome || undefined,
+      performanceAction: performanceAction || undefined,
+      finalManagerComments: finalManagerComments.trim() || undefined,
+      managerConfirmation: managerConfirmation,
+      finalRating: averageScore || undefined,
+      finalPerformanceRating: finalPerformanceRating || undefined,
+      isDraft: true,
+    })
+      .then(() => {
+        message.success("Draft saved successfully.");
+      })
+      .catch((error) => {
+        message.error(readApiError(error));
+      })
+      .finally(() => {
+        setIsDraftSaving(false);
+      });
+  };
+
 
   // Team ratings calculations
   const teamRatings = formData.teamRatings || {};
@@ -1063,7 +1280,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               </h1>
               <p className="text-xs sm:text-sm font-medium text-[#64748B] mt-1 flex flex-wrap items-center gap-1.5 eval-subtitle-anim">
                 <span>{isViewMode ? "Assigned" : "Evaluating"}</span>
-                <span className="font-bold text-[#0F172A]">{record.name}</span>
+                <span className="font-bold text-[#2B3674]">{record.name}</span>
                 <span className="inline-flex items-center justify-center rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1 text-xs font-extrabold text-[#1D4ED8]">
                   {record.quarter}
                 </span>
@@ -1134,10 +1351,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               </div>
             </div>
             <div className="min-w-0">
-              <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-0.5">
+              <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-0.5">
                 EMPLOYEE NAME
               </span>
-              <span className="text-sm font-extrabold text-[#0F172A] truncate block">
+              <span className="text-sm font-bold text-[#2B3674] truncate block">
                 {record.name}
               </span>
             </div>
@@ -1146,10 +1363,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           {/* 2. Employee ID */}
           <div className="eval-meta-segment eval-meta-segment-2 sm:pl-4 eval-stagger-item eval-stagger-2">
             <div>
-              <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-0.5">
+              <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-0.5">
                 EMPLOYEE ID
               </span>
-              <span className="text-sm font-extrabold text-[#0F172A] block">
+              <span className="text-sm font-bold text-[#2B3674] block">
                 {record.id}
               </span>
             </div>
@@ -1158,10 +1375,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           {/* 3. Designation & Department */}
           <div className="eval-meta-segment eval-meta-segment-3 sm:pl-4 eval-stagger-item eval-stagger-3">
             <div className="min-w-0">
-              <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-0.5">
+              <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-0.5">
                 DESIGNATION &amp; DEPT
               </span>
-              <span className="text-sm font-extrabold text-[#0F172A] block truncate">
+              <span className="text-sm font-bold text-[#2B3674] block truncate">
                 {record.role || "—"}
               </span>
             </div>
@@ -1170,10 +1387,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           {/* 4. Submitted Date */}
           <div className="eval-meta-segment eval-meta-segment-4 sm:pl-4 eval-stagger-item eval-stagger-4">
             <div>
-              <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-0.5">
+              <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-0.5">
                 EMPLOYEE PERFORMANCE SUBMITTED DATE
               </span>
-              <span className="text-sm font-extrabold text-[#0F172A] block">
+              <span className="text-sm font-bold text-[#2B3674] block">
                 {employeeSubmitted ? record.submittedOn || "—" : "Not submitted"}
               </span>
             </div>
@@ -1189,30 +1406,30 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         {activeView === "review" && (
           <div className="w-full space-y-4 eval-submission-col">
             <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 space-y-3">
-              <h3 className="text-sm font-bold text-[#0F172A]">Assignment</h3>
+              <h3 className="text-sm font-bold text-[#2B3674]">Assignment</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-1">
+                  <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-1">
                     Assigned quarter
                   </span>
-                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
+                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#2B3674] eval-assignment-readonly-field cursor-not-allowed select-none">
                     {record.quarter} · {record.financialYear}
                   </div>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-1">
+                  <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-1">
                     Assigned date
                   </span>
-                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
+                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#2B3674] eval-assignment-readonly-field cursor-not-allowed select-none">
                     {assignedDate || "—"}
                   </div>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-1">
+                  <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-1">
                     Deadline{grantAccess ? " *" : ""}
                   </span>
                   {(isViewMode || employeeSubmitted) && !grantAccess ? (
-                    <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
+                    <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#2B3674] eval-assignment-readonly-field cursor-not-allowed select-none">
                       {deadlineDate || "—"}
                     </div>
                   ) : (
@@ -1221,7 +1438,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </div>
               </div>
               <div>
-                <span className="block text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider mb-1">
+                <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-1">
                   Description
                 </span>
                 <textarea
@@ -1259,18 +1476,18 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
                         1
                       </span>
-                      <h3 className="text-xs sm:text-sm font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
                         Role &amp; Quarter Overview
                       </h3>
                     </div>
                   </div>
 
                   <div className="eval-stagger-item eval-stagger-3">
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1.5 uppercase tracking-wider">
+                    <label className="text-[11px] font-bold text-[#A3AED0] block mb-1.5 uppercase tracking-wider">
                       Overview
                     </label>
                     <div
-                      className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
+                      className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
                       title="Employee submitted response (Read-only)"
                     >
                       {formData.overview || "—"}
@@ -1285,7 +1502,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
                         2
                       </span>
-                      <h3 className="text-xs sm:text-sm font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
                         Key Achievements &amp; Projects
                       </h3>
                     </div>
@@ -1300,21 +1517,21 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       {(formData.projects || []).map((project, index) => (
                         <div key={`${project.title}-${index}`} className="space-y-2 p-3 bg-blue-50/20 border border-blue-100 rounded-2xl">
                           <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+                            <span className="px-2 py-0.5 text-[10px] font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
                               Project {index + 1}
                             </span>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div>
-                              <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                              <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
                                 Project Title
                               </label>
-                              <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm font-extrabold text-[#0F172A]">
+                              <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm font-bold text-[#2B3674]">
                                 {project.title || "—"}
                               </div>
                               {(project.attachments || []).length > 0 && (
                                 <div className="mt-2.5">
-                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
                                     Attachments
                                   </label>
                                   <div className="flex flex-wrap gap-2">
@@ -1330,18 +1547,18 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               )}
                             </div>
                             <div>
-                              <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                              <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
                                 Project Description
                               </label>
-                              <div className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line">
+                              <div className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] whitespace-pre-line font-medium">
                                 {project.description || "—"}
                               </div>
                             </div>
                             <div>
-                              <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                              <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
                                 Challenge Overcome
                               </label>
-                              <div className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line">
+                              <div className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] whitespace-pre-line font-medium">
                                 {project.challenge || "—"}
                               </div>
                             </div>
@@ -1359,7 +1576,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
                         3
                       </span>
-                      <h3 className="text-xs sm:text-sm font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
                         Teamwork &amp; Collaboration
                       </h3>
                     </div>
@@ -1367,14 +1584,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
                         <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
                         <span className="text-[11px] font-semibold text-[#64748B]">Average:</span>
-                        <span className="text-xs sm:text-sm font-extrabold text-[#0F172A]">{avgTeamScore}</span>
+                        <span className="text-xs sm:text-sm font-bold text-[#2B3674]">{avgTeamScore}</span>
                         <span className="text-[10px] font-bold text-[#94A3B8]">/ 5.0</span>
                       </div>
                     ) : null}
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-2 uppercase tracking-wider eval-stagger-item eval-stagger-3">
+                    <label className="text-[11px] font-bold text-[#A3AED0] block mb-2 uppercase tracking-wider eval-stagger-item eval-stagger-3">
                       Evaluated Teamwork Dimensions ({ratedDimensionsCount}/6)
                     </label>
 
@@ -1389,7 +1606,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             className="eval-teamwork-item eval-readonly-field flex items-center justify-between"
                             title="Employee submitted rating (Read-only)"
                           >
-                            <span className="text-xs font-bold text-[#0F172A] leading-snug">
+                            <span className="text-xs font-bold text-[#2B3674] leading-snug">
                               {criterion.title}
                             </span>
                             <div className="flex items-center gap-1 shrink-0">
@@ -1417,14 +1634,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
                         4
                       </span>
-                      <h3 className="text-xs sm:text-sm font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
                         Continuous Learning &amp; Goals
                       </h3>
                     </div>
                   </div>
 
                   <div className="eval-stagger-item eval-stagger-3">
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1.5 uppercase tracking-wider">
+                    <label className="text-[11px] font-bold text-[#A3AED0] block mb-1.5 uppercase tracking-wider">
                       Learning Goals
                     </label>
                     {(formData.learningGoalItems || []).length === 0 ? (
@@ -1438,11 +1655,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       <div className="space-y-3">
                         {(formData.learningGoalItems || []).map((goal, index) => (
                           <div key={`${goal}-${index}`} className="space-y-1">
-                            <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+                            <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
                               Goal {index + 1}
                             </span>
                             <div
-                              className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
+                              className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
                               title="Employee submitted response (Read-only)"
                             >
                               {goal}
@@ -1461,7 +1678,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
                         5
                       </span>
-                      <h3 className="text-xs sm:text-sm font-extrabold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
                         Company Environment
                       </h3>
                     </div>
@@ -1477,11 +1694,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                   {/* Feedback on Work Culture */}
                   <div className="eval-stagger-item eval-stagger-3">
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
                       Feedback on Work Culture
                     </label>
                     <div
-                      className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
+                      className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
                       title="Employee submitted response (Read-only)"
                     >
                       {formData.workCultureFeedback || "—"}
@@ -1490,11 +1707,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                   {/* Work Life Balance */}
                   <div className="eval-stagger-item eval-stagger-4">
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
                       Work Life Balance
                     </label>
                     <div
-                      className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
+                      className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
                       title="Employee submitted response (Read-only)"
                     >
                       {formData.workLifeBalance || "—"}
@@ -1503,11 +1720,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                   {/* Suggestions for Improvement */}
                   <div className="eval-stagger-item eval-stagger-4">
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
                       Suggestions for Improvement
                     </label>
                     <div
-                      className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
+                      className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
                       title="Employee submitted response (Read-only)"
                     >
                       {formData.suggestionsForImprovement || "—"}
@@ -1565,7 +1782,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               {record.quarter} Evaluation Ready
                             </span>
                           </div>
-                          <h3 className="text-lg sm:text-xl font-bold text-[#0F172A] mt-1">
+                          <h3 className="text-lg sm:text-xl font-bold text-[#2B3674] mt-1">
                             {isViewMode ? "View Evaluation & Ratings" : "Evaluate Employee Performance"}
                           </h3>
                           <p className="text-xs text-[#64748B] mt-0.5 max-w-xl leading-relaxed">
@@ -1652,7 +1869,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <Sliders className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base sm:text-lg font-bold text-[#0F172A] eval-stagger-item eval-stagger-2">
+                  <h2 className="text-base sm:text-lg font-bold text-[#2B3674] eval-stagger-item eval-stagger-2">
                     {isViewMode
                       ? "Manager Evaluation (View Mode)"
                       : "Manager Review & Evaluation Matrix"}
@@ -1674,7 +1891,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <div className="space-y-4">
                     <div>
                       <div className="mb-2.5 eval-stagger-item eval-stagger-2">
-                        <label className="block text-xs font-extrabold text-[#64748B] uppercase tracking-wider">
+                        <label className="block text-xs font-bold text-[#A3AED0] uppercase tracking-wider">
                           Score Evaluation Parameters (1-5 Scale)
                         </label>
                       </div>
@@ -1692,7 +1909,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               <Lock className="w-4 h-4" />
                             </div>
                             <div>
-                              <span className="text-xs font-bold text-[#0F172A] block">
+                              <span className="text-xs font-bold text-[#2B3674] block">
                                 Score Evaluation Parameters (1-5 Scale)
                               </span>
                               <span className="text-[11px] text-[#64748B]">
@@ -1712,7 +1929,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               <Mail className="w-4 h-4" />
                             </div>
                             <div>
-                              <h4 className="text-xs font-bold text-[#0F172A]">
+                              <h4 className="text-xs font-bold text-[#2B3674]">
                                 Request Rating Access
                               </h4>
                               <p className="text-[11px] text-[#64748B] mt-0.5">
@@ -1741,7 +1958,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     {/* Score Evaluation Parameters Box */}
                     <div>
                       <div className="mb-2.5 eval-stagger-item eval-stagger-2">
-                        <label className="block text-xs font-extrabold text-[#64748B] uppercase tracking-wider">
+                        <label className="block text-xs font-bold text-[#A3AED0] uppercase tracking-wider">
                           Score Evaluation Parameters (1-5 Scale)
                         </label>
                       </div>
@@ -1766,7 +1983,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                                   : "border-[#E2E8F0]/70"
                                   } rounded-xl px-3.5 py-2.5 flex items-center justify-between shadow-2xs transition-all`}
                               >
-                                <span className="text-xs sm:text-[13px] font-bold text-[#0F172A] pr-2">
+                                <span className="text-xs sm:text-[13px] font-bold text-[#2B3674] pr-2">
                                   {param.label}
                                 </span>
 
@@ -1844,6 +2061,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                                 </div>
                               </div>
 
+                              {/* Rating description label shown when rated */}
+                              {currentRating > 0 && !fieldErrors[param.key] && (
+                                <div className="mt-1 px-1 flex items-center gap-1">
+                                  <span className="text-[10px] font-bold text-blue-600">
+                                    {currentRating} – {getRatingLabel(currentRating)}
+                                  </span>
+                                </div>
+                              )}
+
                               {/* Error message rendered cleanly UNDER THE CARD */}
                               {fieldErrors[param.key] && (
                                 <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 px-1 text-[11px] font-semibold text-red-600 animate-in fade-in slide-in-from-top-1">
@@ -1886,9 +2112,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         </div>
                         <div className="flex flex-col">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider">
-                              Performance Index
-                            </span>
+        
                             {currentTier && (
                               <span
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold tracking-wide uppercase transition-all duration-300"
@@ -1902,45 +2126,43 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               </span>
                             )}
                           </div>
-                          <label
-                            htmlFor="eval-field-final-score"
-                            className="text-[10px] font-extrabold text-[#64748B] uppercase tracking-wider"
-                          >
-                            Final rating <span className="text-red-500">*</span>
-                          </label>
+                          <span className="text-xs sm:text-[13px] font-bold text-[#2B3674]">
+                            Overall Performance Rating
+                            <span className="ml-1.5 text-[11px] font-medium text-[#A3AED0] normal-case">(auto-calculated)</span>
+                          </span>
                         </div>
                       </div>
 
                       <div className="flex flex-1 items-center justify-center min-w-0">
                         <div className="flex flex-col items-center gap-1">
-                          <input
+                          {/* Auto-calculated read-only badge */}
+                          <div
                             id="eval-field-final-score"
-                            type="text"
-                            inputMode="decimal"
-                            placeholder=""
-                            disabled={isViewMode}
-                            readOnly={isViewMode}
-                            value={finalScoreText}
-                            onChange={(event) => handleFinalScoreChange(event.target.value)}
-                            onBlur={handleFinalScoreBlur}
-                            className={`eval-star-score-input eval-final-score-input ${fieldErrors.finalScore ? "!border-red-500" : ""} ${isViewMode ? "eval-score-input-disabled" : ""}`}
+                            className={`eval-star-score-input eval-final-score-input pointer-events-none select-none text-center font-bold text-sm ${fieldErrors.finalScore ? "!border-red-500" : ""}`}
                             style={
-                              currentTier && !fieldErrors.finalScore
+                              currentTier && averageScore !== null
                                 ? {
                                     borderColor: currentTier.badgeBorderHex,
                                     color: currentTier.badgeTextHex,
-                                    backgroundColor: "#FFFFFF",
+                                    backgroundColor: currentTier.badgeBgHex + "33",
                                   }
-                                : undefined
+                                : { color: "#94A3B8", backgroundColor: "#F8FAFC" }
                             }
-                            aria-label="Enter final rating from 1 to 5"
-                            title="Type a rating from 1 to 5"
-                          />
+                            title="Auto-calculated from evaluation parameters"
+                            aria-label="Auto-calculated final rating"
+                          >
+                            {averageScore !== null ? averageScore.toFixed(1) : "—"}
+                          </div>
                           {fieldErrors.finalScore ? (
                             <span className="text-[11px] font-semibold text-red-600">{fieldErrors.finalScore}</span>
-                          ) : null}
+                          ) : averageScore !== null ? (
+                            <span className="text-[9px] font-bold text-[#64748B]">{getRatingLabel(averageScore)}</span>
+                          ) : (
+                            <span className="text-[9px] font-semibold text-[#94A3B8]">Rate parameters above</span>
+                          )}
                         </div>
                       </div>
+
 
                       <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
                         <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 80 80">
@@ -1967,8 +2189,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
                           <span
-                            className="text-base font-extrabold leading-none transition-colors duration-300"
-                            style={currentTier ? { color: currentTier.badgeTextHex } : { color: "#0F172A" }}
+                            className="text-base font-bold leading-none transition-colors duration-300"
+                            style={currentTier ? { color: currentTier.badgeTextHex } : { color: "#2B3674" }}
                           >
                             {averageScore !== null ? averageScore.toFixed(1) : "—"}
                           </span>
@@ -1982,11 +2204,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 {(!hideScoreParameters || isRatingUnlocked) && (
                   <div className="space-y-4">
                     <div className="eval-reveal-card" id="eval-field-container-strengths">
-                      <label className="block text-xs font-extrabold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                      <label className="block text-xs font-bold text-[#2B3674] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
                         <span>
-                          Performance Strengths <span className="text-red-500">*</span>
+                          Key Strengths <span className="text-red-500">*</span>
                         </span>
-                        <span className="text-[10px] font-semibold text-[#64748B]">
+                        <span className="text-[10px] font-bold text-[#A3AED0]">
                           Key Highlights
                         </span>
                       </label>
@@ -2019,11 +2241,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
 
                     <div className="eval-reveal-card" id="eval-field-container-improvements">
-                      <label className="block text-xs font-extrabold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                      <label className="block text-xs font-bold text-[#2B3674] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
                         <span>
                           Areas of Improvement <span className="text-red-500">*</span>
                         </span>
-                        <span className="text-[10px] font-semibold text-[#64748B]">
+                        <span className="text-[10px] font-bold text-[#A3AED0]">
                           Growth Objectives
                         </span>
                       </label>
@@ -2056,11 +2278,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
 
                     <div className="eval-reveal-card" id="eval-field-container-remarks">
-                      <label className="block text-xs font-extrabold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                      <label className="block text-xs font-bold text-[#2B3674] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
                         <span>
-                          Additional Remarks <span className="text-red-500">*</span>
+                          Manager Comments <span className="text-red-500">*</span>
                         </span>
-                        <span className="text-[10px] font-semibold text-[#64748B]">
+                        <span className="text-[10px] font-bold text-[#A3AED0]">
                           Guidance &amp; Notes
                         </span>
                       </label>
@@ -2074,7 +2296,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           setRemarks(e.target.value);
                           clearFieldError("remarks");
                         }}
-                        placeholder="General comments or HR guidelines..."
+                        placeholder="General comments or guidance..."
                         className={`eval-textarea-field eval-stagger-item eval-stagger-2 ${fieldErrors.remarks ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
                           } ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed cursor-not-allowed" : ""
                           }`}
@@ -2091,10 +2313,343 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         </div>
                       )}
                     </div>
+
+                    {/* ========== FINAL REVIEW & SUBMISSION SECTION ========== */}
+                    {(!isViewMode || managerConfirmation) && (
+                      <div className="eval-step-card eval-reveal-card space-y-4 mt-2 border-2 border-blue-200/60 rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-blue-50/30 to-white">
+                        {/* Section Header */}
+                        <div className="flex items-center gap-2.5 border-b border-blue-100 pb-3">
+                          <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider">Final Review &amp; Submission</h3>
+                          {calculatedAverage !== null && (
+                            <span className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-bold text-blue-700">
+                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              Avg: {calculatedAverage.toFixed(1)} / 5.0
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Goals for Next Review Period */}
+                        <div id="eval-field-container-goals">
+                          <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
+                            Goals for Next Review Period <span className="text-red-500">*</span>
+                          </label>
+                          <textarea
+                            id="eval-field-goals"
+                            rows={3}
+                            readOnly={isViewMode}
+                            disabled={isViewMode}
+                            value={goalsForNextReview}
+                            onChange={(e) => { setGoalsForNextReview(e.target.value); clearFieldError("goalsForNextReview"); }}
+                            placeholder="Define measurable goals and objectives for next review period..."
+                            className={`eval-textarea-field ${fieldErrors.goalsForNextReview ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
+                          />
+                          {fieldErrors.goalsForNextReview && (
+                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                              <span>{fieldErrors.goalsForNextReview}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Training / Development Recommendations */}
+                        <div>
+                          <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
+                            Training / Development Recommendations
+                            <span className="ml-1.5 text-[10px] font-bold text-[#A3AED0]">(optional)</span>
+                          </label>
+                          <textarea
+                            rows={2}
+                            readOnly={isViewMode}
+                            disabled={isViewMode}
+                            value={trainingRecommendations}
+                            onChange={(e) => setTrainingRecommendations(e.target.value)}
+                            placeholder="Suggest relevant training, courses, or learning programs..."
+                            className={`eval-textarea-field ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
+                          />
+                        </div>
+
+                        {/* 2-col: Career Growth + Review Outcome */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {/* Career Growth Recommendation */}
+                          <div>
+                            <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
+                              Career Growth Recommendation
+                              <span className="ml-1.5 text-[10px] font-bold text-[#A3AED0]">(optional)</span>
+                            </label>
+                            <Dropdown
+                              options={CAREER_GROWTH_OPTIONS}
+                              value={careerGrowthRecommendation}
+                              onChange={(val) => setCareerGrowthRecommendation(val)}
+                              placeholder="Select..."
+                              disabled={isViewMode}
+                              allowClear={!isViewMode}
+                              className="w-full"
+                              maxLabelWidth="max-w-none"
+                              buttonClassName={`eval-dropdown-btn ${
+                                isViewMode
+                                  ? "eval-dropdown-disabled"
+                                  : careerGrowthRecommendation
+                                  ? "!text-[#2B3674]"
+                                  : "!text-[#A3AED0]"
+                              }`}
+                            />
+                          </div>
+
+                          {/* Review Outcome */}
+                          <div id="eval-field-container-review-outcome">
+                            <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
+                              Review Outcome <span className="text-red-500">*</span>
+                            </label>
+                            <Dropdown
+                              options={REVIEW_OUTCOME_OPTIONS}
+                              value={reviewOutcome}
+                              onChange={(val) => {
+                                setReviewOutcome(val);
+                                clearFieldError("reviewOutcome");
+                              }}
+                              placeholder="Select outcome..."
+                              disabled={isViewMode}
+                              allowClear={false}
+                              className="w-full"
+                              maxLabelWidth="max-w-none"
+                              buttonClassName={`eval-dropdown-btn ${
+                                fieldErrors.reviewOutcome
+                                  ? "eval-dropdown-error"
+                                  : isViewMode
+                                  ? "eval-dropdown-disabled"
+                                  : reviewOutcome
+                                  ? "!text-[#2B3674]"
+                                  : "!text-[#A3AED0]"
+                              }`}
+                            />
+                            {fieldErrors.reviewOutcome && (
+                              <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                                <span>{fieldErrors.reviewOutcome}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Performance Action */}
+                        <div>
+                          <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
+                            Performance Action
+                            <span className="ml-1.5 text-[10px] font-bold text-[#A3AED0]">(optional)</span>
+                          </label>
+                          <Dropdown
+                            options={PERFORMANCE_ACTION_OPTIONS}
+                            value={performanceAction}
+                            onChange={(val) => setPerformanceAction(val)}
+                            placeholder="Select action..."
+                            disabled={isViewMode}
+                            allowClear={!isViewMode}
+                            className="w-full"
+                            maxLabelWidth="max-w-none"
+                            buttonClassName={`eval-dropdown-btn ${
+                              isViewMode
+                                ? "eval-dropdown-disabled"
+                                : performanceAction
+                                ? "!text-[#2B3674]"
+                                : "!text-[#A3AED0]"
+                            }`}
+                          />
+                        </div>
+
+                        {/* Final Performance Rating — Image 1 KPI Card Design (no stars) */}
+                        <div id="eval-field-container-final-perf-rating" className="w-full">
+                          <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
+                            Final Performance Rating <span className="text-red-500">*</span>
+                          </label>
+                          <div
+                            id="eval-field-final-perf-rating"
+                            className="eval-kpi-card eval-reveal-card flex items-center justify-between gap-4 transition-all duration-300"
+                            style={
+                              finalRatingTier
+                                ? {
+                                    borderColor: finalRatingTier.badgeBorderHex,
+                                    boxShadow: `0 4px 18px -2px ${finalRatingTier.accentHex}26`,
+                                  }
+                                : fieldErrors.finalPerformanceRating
+                                ? { borderColor: "#EF4444" }
+                                : undefined
+                            }
+                          >
+                            {/* Left: Icon + Labels */}
+                            <div className="flex items-center gap-2 min-w-0 shrink-0">
+                              <div
+                                className="w-7 h-7 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors duration-300"
+                                style={
+                                  finalRatingTier
+                                    ? {
+                                        backgroundColor: finalRatingTier.badgeBgHex,
+                                        color: finalRatingTier.badgeTextHex,
+                                        border: `1px solid ${finalRatingTier.badgeBorderHex}60`,
+                                      }
+                                    : { backgroundColor: "rgba(219, 234, 254, 0.8)", color: "#2563EB" }
+                                }
+                              >
+                                <Award className="w-4 h-4" />
+                              </div>
+                              <div className="flex flex-col">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {finalRatingTier && (
+                                    <span
+                                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold tracking-wide uppercase transition-all duration-300"
+                                      style={{
+                                        backgroundColor: finalRatingTier.badgeBgHex,
+                                        color: finalRatingTier.badgeTextHex,
+                                        border: `1.5px solid ${finalRatingTier.badgeBorderHex}`,
+                                      }}
+                                    >
+                                      {finalRatingTier.badge}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-xs sm:text-[13px] font-bold text-[#2B3674]">
+                                  Final Rating <span className="text-red-500">*</span>
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Center: Input Box */}
+                            <div className="flex flex-1 items-center justify-center min-w-0">
+                              <div className="flex flex-col items-center gap-1">
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  placeholder="—"
+                                  disabled={isViewMode}
+                                  readOnly={isViewMode}
+                                  value={rawFinalPerformanceRating}
+                                  onChange={(e) => handleFinalRatingChange(e.target.value)}
+                                  onBlur={handleFinalRatingBlur}
+                                  onFocus={isViewMode ? undefined : (e) => e.target.select()}
+                                  className={`eval-star-score-input eval-final-score-input text-center font-bold ${
+                                    isViewMode ? "eval-score-input-disabled" : ""
+                                  } ${fieldErrors.finalPerformanceRating ? "!border-red-500" : ""}`}
+                                  style={
+                                    finalRatingTier && finalPerformanceRating > 0
+                                      ? {
+                                          borderColor: finalRatingTier.badgeBorderHex,
+                                          color: finalRatingTier.badgeTextHex,
+                                          backgroundColor: finalRatingTier.badgeBgHex + "33",
+                                        }
+                                      : { color: "#94A3B8", backgroundColor: "#F8FAFC" }
+                                  }
+                                  title={
+                                    isViewMode
+                                      ? "Evaluation is in view-only mode"
+                                      : "Type final rating score (1.0 to 5.0)"
+                                  }
+                                  aria-label="Enter Final Performance Rating"
+                                />
+                                {fieldErrors.finalPerformanceRating ? (
+                                  <span className="text-[11px] font-semibold text-red-600">{fieldErrors.finalPerformanceRating}</span>
+                                ) : finalPerformanceRating > 0 ? (
+                                  <span className="text-[9px] font-bold text-[#64748B]">{getRatingLabel(finalPerformanceRating)}</span>
+                                ) : (
+                                  <span className="text-[9px] font-semibold text-[#94A3B8]">Enter 1.0 – 5.0</span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Right: Circular Gauge */}
+                            <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
+                              <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 80 80">
+                                <circle
+                                  cx="40"
+                                  cy="40"
+                                  r="32"
+                                  stroke="#E2E8F0"
+                                  strokeWidth="6"
+                                  fill="transparent"
+                                />
+                                <circle
+                                  cx="40"
+                                  cy="40"
+                                  r="32"
+                                  stroke={finalGaugeColor}
+                                  strokeWidth="6"
+                                  strokeDasharray="201.06"
+                                  strokeDashoffset={finalGaugeOffset}
+                                  strokeLinecap="round"
+                                  fill="transparent"
+                                  className="transition-all duration-700 ease-out"
+                                />
+                              </svg>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                                <span
+                                  className="text-base font-bold leading-none transition-colors duration-300"
+                                  style={finalRatingTier ? { color: finalRatingTier.badgeTextHex } : { color: "#2B3674" }}
+                                >
+                                  {finalPerformanceRating > 0 ? finalPerformanceRating.toFixed(1) : "—"}
+                                </span>
+                                <span className="text-[9px] font-bold text-[#94A3B8] mt-0.5">/ 5.0</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Error message */}
+                          {fieldErrors.finalPerformanceRating && (
+                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                              <span>{fieldErrors.finalPerformanceRating}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Final Manager Comments */}
+                        <div id="eval-field-container-final-comments">
+                          <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
+                            Final Manager Comments <span className="text-red-500">*</span>
+                          </label>
+                          <textarea
+                            id="eval-field-final-comments"
+                            rows={3}
+                            readOnly={isViewMode}
+                            disabled={isViewMode}
+                            value={finalManagerComments}
+                            onChange={(e) => { setFinalManagerComments(e.target.value); clearFieldError("finalManagerComments"); }}
+                            placeholder="Provide a comprehensive final summary and closing remarks..."
+                            className={`eval-textarea-field ${fieldErrors.finalManagerComments ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
+                          />
+                          {fieldErrors.finalManagerComments && (
+                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                              <span>{fieldErrors.finalManagerComments}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Manager Confirmation Checkbox */}
+                        {!isViewMode && (
+                          <div className={`p-3.5 rounded-xl border transition-all ${managerConfirmation ? "border-green-300 bg-green-50/60" : fieldErrors.managerConfirmation ? "border-red-400 bg-red-50/40" : "border-blue-200 bg-blue-50/30"}`}>
+                            <label className="flex items-start gap-3 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={managerConfirmation}
+                                onChange={(e) => { setManagerConfirmation(e.target.checked); clearFieldError("managerConfirmation"); }}
+                                className="mt-0.5 w-4 h-4 rounded accent-blue-600 cursor-pointer shrink-0"
+                              />
+                              <span className="text-xs font-semibold text-[#2B3674] leading-relaxed">
+                                I confirm that the information provided in this appraisal review is accurate and complete to the best of my knowledge. I understand that this evaluation will be finalized and shared with the employee.
+                              </span>
+                            </label>
+                            {fieldErrors.managerConfirmation && (
+                              <div className="eval-field-error-msg flex items-center gap-1.5 mt-2 text-xs font-semibold text-red-600">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                                <span>{fieldErrors.managerConfirmation}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* Bottom Actions: View Mode gives 'Back to Employee Review' and 'Back to Team List'. Edit Mode gives 'Back to Review' and 'Submit Evaluation' */}
+                {/* Bottom Actions */}
                 {isViewMode ? (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-blue-100 mt-3 eval-reveal-card">
                     <button
@@ -2119,18 +2674,38 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
                 ) : (
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-blue-100 mt-3 eval-reveal-card">
-                    <button
-                      type="button"
-                      onClick={handleNavigateToReview}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-blue-200/80 bg-white hover:bg-blue-50/80 text-blue-900 font-bold text-sm transition-all duration-200 shadow-xs hover:border-blue-400 hover:shadow-sm active:scale-[0.98] cursor-pointer min-h-[48px]"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span>Back to Review</span>
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={handleNavigateToReview}
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-blue-200/80 bg-white hover:bg-blue-50/80 text-blue-900 font-bold text-sm transition-all duration-200 shadow-xs hover:border-blue-400 hover:shadow-sm active:scale-[0.98] cursor-pointer min-h-[48px]"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        <span>Back to Review</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveDraft}
+                        disabled={isDraftSaving || isSubmitting}
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-sm transition-all duration-200 shadow-xs hover:border-amber-400 active:scale-[0.98] cursor-pointer min-h-[48px] disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {isDraftSaving ? (
+                          <span className="w-4 h-4 border-2 border-amber-600/40 border-t-amber-700 rounded-full animate-spin" />
+                        ) : (
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                            <polyline points="17 21 17 13 7 13 7 21" />
+                            <polyline points="7 3 7 8 15 8" />
+                          </svg>
+                        )}
+                        <span>{isDraftSaving ? "Saving..." : "Save as Draft"}</span>
+                      </button>
+                    </div>
                     <button
                       type="submit"
-                      disabled={isSubmitting || submitButtonState !== "idle"}
-                      className={`eval-submit-assign-btn ${submitButtonState === "animating"
+                      disabled={isSubmitting || submitButtonState !== "idle" || !managerConfirmation}
+                      title={!managerConfirmation ? "Please check the confirmation declaration to submit" : undefined}
+                      className={`eval-submit-assign-btn ${!managerConfirmation ? "opacity-60 cursor-not-allowed" : ""} ${submitButtonState === "animating"
                         ? "assign-btn-animating"
                         : submitButtonState === "assigned"
                           ? "assign-btn-assigned"
@@ -2149,10 +2724,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       </span>
                       <span className="assign-btn-text">
                         {submitButtonState === "assigned"
-                          ? "Evaluation Submitted"
+                          ? "Review Submitted"
                           : submitButtonState === "animating"
                             ? "Submitting..."
-                            : "Submit Evaluation"}
+                            : "Submit Review"}
                       </span>
                     </button>
                   </div>
@@ -2162,6 +2737,62 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           </div>
         )}
       </div>
+
+      {/* Submit Confirmation Modal */}
+      {showConfirmModal && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 eval-themed-modal-overlay animate-in fade-in duration-200"
+          onClick={() => setShowConfirmModal(false)}
+        >
+          <div
+            className="eval-themed-modal-card max-w-sm w-full p-6 sm:p-7 text-[#2B3674] relative shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowConfirmModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors z-20"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="text-center space-y-3 mb-6">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-amber-500/25">
+                <Send className="w-5 h-5" />
+              </div>
+              <h3 className="text-lg font-bold tracking-tight text-[#2B3674]">Submit Final Review?</h3>
+              <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
+                Once submitted, the appraisal will be <span className="font-bold text-[#2B3674]">finalized and shared with the employee</span>. This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-5">
+              <p className="text-xs font-semibold text-amber-800 text-center">
+                ⚠️ Please make sure all information is accurate before submitting.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#2B3674] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmedSubmit}
+                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Yes, Submit Review</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Themed Authentication / OTP Verification Modal */}
       {isEmailModalOpen && typeof document !== "undefined" && createPortal(
@@ -2176,7 +2807,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           }}
         >
           <div
-            className="eval-themed-modal-card max-w-sm sm:max-w-md w-full p-6 sm:p-8 text-[#0F172A] relative shadow-2xl"
+            className="eval-themed-modal-card max-w-sm sm:max-w-md w-full p-6 sm:p-8 text-[#2B3674] relative shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Ambient Energy Glow */}
@@ -2204,7 +2835,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-lg shadow-blue-500/25 mb-3">
                     <ShieldCheck className="w-6 h-6" />
                   </div>
-                  <h3 className="text-xl font-bold tracking-tight text-[#0F172A]">
+                  <h3 className="text-xl font-bold tracking-tight text-[#2B3674]">
                     Authenticate Rating Access
                   </h3>
                   <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
@@ -2214,7 +2845,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                 <form onSubmit={(event) => void handlePasswordUnlock(event)} className="space-y-4 pt-1">
                   <div>
-                    <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
+                    <label className="block text-xs font-semibold text-[#2B3674] mb-1.5">
                       Password <span className="text-red-500">*</span>
                     </label>
                     <div className="relative">
@@ -2228,7 +2859,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         }}
                         placeholder="Password"
                         autoComplete="current-password"
-                        className="w-full px-4 py-3 pl-10 pr-10 rounded-2xl bg-white border border-[#E2E8F0] text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        className="w-full px-4 py-3 pl-10 pr-10 rounded-2xl bg-white border border-[#E2E8F0] text-sm text-[#2B3674] placeholder-[#94A3B8] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                         autoFocus
                       />
                       <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -2253,7 +2884,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsEmailModalOpen(false)}
-                      className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
+                      className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#2B3674] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -2275,12 +2906,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               <div className={`relative z-10 space-y-6 ${isMorphingPhase ? "eval-otp-fade-out" : ""}`}>
                 {/* 1. Centered Header & Supporting Text */}
                 <div className="text-center space-y-1.5">
-                  <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0F172A]">
+                  <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[#2B3674]">
                     Let's verify your number
                   </h3>
                   <p className="text-xs sm:text-sm text-[#64748B] max-w-xs mx-auto leading-relaxed">
                     Enter the 6-digit verification code sent to{" "}
-                    <span className="text-[#0F172A] font-semibold">{emailInput || "your email"}</span>
+                    <span className="text-[#2B3674] font-semibold">{emailInput || "your email"}</span>
                   </p>
                 </div>
 
@@ -2351,7 +2982,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               <div className="eval-success-fade-in relative z-10 py-5 flex flex-col items-center justify-center text-center space-y-6">
                 {/* Centered text: "Verified successfully" */}
                 <div className="space-y-1.5">
-                  <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[#0F172A]">
+                  <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[#2B3674]">
                     Verified successfully
                   </h3>
                   <p className="text-xs sm:text-sm text-[#64748B] max-w-xs mx-auto">

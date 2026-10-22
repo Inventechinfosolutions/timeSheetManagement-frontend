@@ -361,8 +361,10 @@ export const AppraisalApi = {
       assignedDate?: string;
       deadlineDate?: string;
       description?: string;
+      overallPerformanceRating?: number;
       productivity?: number;
       qualityOfWork?: number;
+      technicalJobSkills?: number;
       ownershipResponsibility?: number;
       communication?: number;
       teamCollaboration?: number;
@@ -370,7 +372,15 @@ export const AppraisalApi = {
       performanceStrengths?: string;
       areasOfImprovement?: string;
       additionalRemarks?: string;
+      goalsForNextReviewPeriod?: string;
+      trainingDevelopmentRecommendations?: string;
+      careerGrowthRecommendation?: string;
+      reviewOutcome?: string;
+      performanceAction?: string;
+      finalManagerComments?: string;
+      managerConfirmation?: boolean;
       finalRating?: number;
+      isDraft?: boolean;
     },
   ): Promise<ManagerReviewApiRecord> => {
     const response = await axios.put<ManagerReviewApiRecord>(`${QUARTERLY_REVIEW_URL}/${reviewId}`, payload);
@@ -380,16 +390,30 @@ export const AppraisalApi = {
   evaluateReview: async (
     reviewId: number,
     payload: {
+      managerId?: string;
+      overallPerformanceRating?: number;
       productivity?: number;
       qualityOfWork?: number;
+      technicalJobSkills?: number;
+      ownership?: number;
       ownershipResponsibility?: number;
       communication?: number;
       teamCollaboration?: number;
+      innovation?: number;
       innovationProblemSolving?: number;
       performanceStrengths?: string;
       areasOfImprovement?: string;
       additionalRemarks?: string;
+      goalsForNextReviewPeriod?: string;
+      trainingDevelopmentRecommendations?: string;
+      careerGrowthRecommendation?: string;
+      reviewOutcome?: string;
+      performanceAction?: string;
+      finalManagerComments?: string;
+      managerConfirmation?: boolean;
       finalRating?: number;
+      finalPerformanceRating?: number;
+      isDraft?: boolean;
     },
   ): Promise<ManagerReviewApiRecord> => {
     const response = await axios.put<ManagerReviewApiRecord>(

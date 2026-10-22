@@ -429,7 +429,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
     { value: QuarterlyReviewStatus.SUBMITTED, label: "Submitted" },
     { value: QuarterlyReviewStatus.REQUESTED_FOR_EDIT, label: "Requested for edit" },
     { value: QuarterlyReviewStatus.ASSIGNED, label: "Assigned" },
-    { value: "PERFORMANCE_RECEIVED", label: "Performance Received" },
+    { value: QuarterlyReviewStatus.PERFORMANCE_RECEIVED, label: "Performance Received" },
+    { value: QuarterlyReviewStatus.EVALUATION_IN_PROGRESS, label: "Evaluation In Progress" },
     { value: QuarterlyReviewStatus.COMPLETED, label: "Completed" },
   ];
 
@@ -504,7 +505,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   }
 
   return (
-    <div className="w-full relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
+    <div className="w-full relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 py-3 sm:py-4 lg:py-6 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
       {/* LUXURY BACKGROUND CANVAS (All SVGs & animations managed and loaded via ManagerQuarterlyReview.css) */}
 
 
