@@ -44,6 +44,7 @@ export interface ManagerQuarterlyReviewRecord {
   financialYear: string;
   fromDate: string;
   toDate: string;
+  deadline?: string;
   assignedOn: string;
   assignedBy: string;
   finalRating: string;

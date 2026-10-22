@@ -309,6 +309,7 @@ export const toManagerReviewRecord = (
   financialYear: review.financialYear,
   fromDate: formatAppraisalDisplayDate(review.assignedDate),
   toDate: formatAppraisalDisplayDate(review.deadlineDate),
+  deadline: formatAppraisalDisplayDate(review.deadlineDate),
   assignedOn: formatAppraisalDisplayDate(review.assignedDate),
   assignedBy:
     "assignerId" in review && review.assignerId
