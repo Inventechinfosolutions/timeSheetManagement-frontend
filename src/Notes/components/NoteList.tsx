@@ -5,9 +5,6 @@ import {
   Trash2,
   Edit3,
   Eye,
-  GripVertical,
-  FolderInput,
-  CornerDownRight,
   Pin,
   Archive,
   ArchiveRestore,
@@ -38,7 +35,7 @@ interface NoteListProps {
   toDate: string;
   expandedNotes: Record<number, boolean>;
   currentUser?: { loginId?: string } | null;
-  dragDrop: ReturnType<typeof useNoteDragDrop>;
+  dragDrop?: ReturnType<typeof useNoteDragDrop>;
   onToggleExpand: (noteId: number) => void;
   onStartView: (note: Note) => void;
   onStartEdit: (note: Note) => void;
@@ -52,7 +49,6 @@ interface NoteListProps {
 }
 
 export const NoteList: React.FC<NoteListProps> = ({
-  loading,
   notes,
   paginatedNotes,
   totalNotesCount,
@@ -65,7 +61,6 @@ export const NoteList: React.FC<NoteListProps> = ({
   toDate,
   expandedNotes,
   currentUser,
-  dragDrop,
   onToggleExpand,
   onStartView,
   onStartEdit,
@@ -92,23 +87,7 @@ export const NoteList: React.FC<NoteListProps> = ({
       [noteId]: { ...childFilterFor(noteId), ...prev[noteId], ...patch },
     }));
   };
-  const {
-    draggedItem,
-    dragOverTarget,
-    isHeaderDropTarget,
-    fileDropTargetNoteId,
-    startNoteDrag,
-    handleDragEnd,
-    handleRowDragOver,
-    handleRowDragLeave,
-    handleRowDrop,
-    handleSubRowDragOver,
-    handleSubRowDragLeave,
-    handleSubRowDrop,
-    handleHeaderDragOver,
-    handleHeaderDragLeave,
-    handleHeaderDrop,
-  } = dragDrop;
+
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
@@ -148,22 +127,7 @@ export const NoteList: React.FC<NoteListProps> = ({
               </tr>
             </thead>
 
-            {/* Drop Target Banner for Sub-notes being promoted to root */}
-            {draggedItem && draggedItem.itemType === "sub-note" && (
-              <div
-                onDragOver={handleHeaderDragOver}
-                onDragLeave={handleHeaderDragLeave}
-                onDrop={handleHeaderDrop}
-                className={`p-3 m-4 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 text-xs font-bold transition-all ${
-                  isHeaderDropTarget
-                    ? "bg-[#4318FF] text-white border-white shadow-md scale-[1.01]"
-                    : "bg-indigo-50/80 border-[#4318FF] text-[#4318FF]"
-                }`}
-              >
-                <CornerDownRight className="w-4 h-4" />
-                <span>Drop here to promote "{draggedItem.title}" to a top-level note</span>
-              </div>
-            )}
+
 
             <tbody className="divide-y divide-slate-100 text-xs md:text-sm text-slate-700 font-medium">
               {paginatedNotes.map((note, index) => {
@@ -185,51 +149,12 @@ export const NoteList: React.FC<NoteListProps> = ({
                     noteMatchesCreatedDate(sub.createdAt, childFilter.from, childFilter.to)
                   );
                 });
-                const isBeingDragged = draggedItem?.id === note.id;
-                const isCurrentDropTarget = dragOverTarget?.id === note.id && dragOverTarget.type === "root";
-                const isFileDropTarget = fileDropTargetNoteId === note.id;
-
                 return (
                   <React.Fragment key={note.id}>
-                    <tr
-                      draggable
-                      onDragStart={(e) =>
-                        startNoteDrag(e, {
-                          id: note.id,
-                          title: note.title,
-                          itemType: "note",
-                          parentId: null,
-                          projectName: note.projectName || undefined,
-                          index,
-                        })
-                      }
-                      onDragEnd={handleDragEnd}
-                      onDragOver={(e) => handleRowDragOver(e, note, index)}
-                      onDragLeave={(e) => handleRowDragLeave(e, note)}
-                      onDrop={(e) => handleRowDrop(e, note, index)}
-                      className={`transition-all duration-150 ${
-                        isBeingDragged ? "opacity-30 bg-slate-100" : ""
-                      } ${
-                        isFileDropTarget
-                          ? "bg-emerald-50/90 ring-2 ring-emerald-500 ring-dashed shadow-inner"
-                          : isCurrentDropTarget
-                          ? dragOverTarget.position === "above"
-                            ? "border-t-2 border-t-[#4318FF] bg-indigo-50/50"
-                            : dragOverTarget.position === "below"
-                            ? "border-b-2 border-b-[#4318FF] bg-indigo-50/50"
-                            : "bg-indigo-50/90 ring-2 ring-[#4318FF] ring-inset"
-                          : "hover:bg-slate-50/80"
-                      }`}
-                    >
-                      {/* SL NO with Drag Handle & Expand Button */}
+                    <tr className="hover:bg-slate-50/80 transition-colors">
+                      {/* SL NO with Expand Button */}
                       <td className="py-4 px-6">
                         <div className="flex items-center justify-center gap-2">
-                          <div
-                            className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-[#4318FF] transition-colors rounded hover:bg-slate-100"
-                            title="Drag to reorder or nest into another note"
-                          >
-                            <GripVertical className="w-4 h-4" />
-                          </div>
                           <span className="font-bold text-slate-800">{slNo}</span>
                           <button
                             type="button"
@@ -268,12 +193,6 @@ export const NoteList: React.FC<NoteListProps> = ({
                           >
                             {note.title}
                           </span>
-                          {isCurrentDropTarget && (dragOverTarget.position === "inside" || (dragOverTarget.position as any) === "nest") && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#4318FF] text-white shadow-xs animate-pulse">
-                              <FolderInput className="w-3 h-3" />
-                              Nest as sub-note
-                            </span>
-                          )}
                         </div>
                       </td>
 
@@ -484,7 +403,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                                             >
                                               + Add Note
                                             </button>{" "}
-                                            to add one, or drag a note here.
+                                            to add one.
                                           </>
                                         ) : (
                                           "No child notes match this search or date."
@@ -493,48 +412,13 @@ export const NoteList: React.FC<NoteListProps> = ({
                                     </tr>
                                   ) : (
                                     visibleSubNotes.map((sub, subIdx) => {
-                                      const originalIndex = subNotes.findIndex((item) => item.id === sub.id);
-                                      const isSubDragged = draggedItem?.id === sub.id;
-                                      const isSubDropTarget = dragOverTarget?.id === sub.id && dragOverTarget.type === "sub";
-
                                       return (
                                         <tr
                                           key={sub.id}
-                                          draggable
-                                          onDragStart={(e) =>
-                                            startNoteDrag(e, {
-                                              id: sub.id,
-                                              title: sub.title,
-                                              itemType: "sub-note",
-                                              parentId: note.id,
-                                              projectName: note.projectName || undefined,
-                                              index: originalIndex,
-                                            })
-                                          }
-                                          onDragEnd={handleDragEnd}
-                                          onDragOver={(e) => handleSubRowDragOver(e, note, sub, originalIndex)}
-                                          onDragLeave={(e) => handleSubRowDragLeave(e, sub)}
-                                          onDrop={(e) => handleSubRowDrop(e, note, sub, originalIndex)}
-                                          className={`transition-all duration-150 ${
-                                            isSubDragged ? "opacity-30 bg-slate-100" : ""
-                                          } ${
-                                            isSubDropTarget
-                                              ? dragOverTarget.position === "above"
-                                                ? "border-t-2 border-t-[#4318FF] bg-indigo-50/50"
-                                                : "border-b-2 border-b-[#4318FF] bg-indigo-50/50"
-                                              : "hover:bg-slate-50"
-                                          }`}
+                                          className="hover:bg-slate-50 transition-colors"
                                         >
                                           <td className="py-3 px-5 text-center font-bold text-slate-700">
-                                            <div className="flex items-center justify-center gap-1.5">
-                                              <div
-                                                className="cursor-grab active:cursor-grabbing p-1 text-slate-300 hover:text-[#4318FF] transition-colors rounded hover:bg-slate-100"
-                                                title="Drag to reorder sub-note"
-                                              >
-                                                <GripVertical className="w-3.5 h-3.5" />
-                                              </div>
-                                              <span>{subIdx + 1}</span>
-                                            </div>
+                                            <span>{subIdx + 1}</span>
                                           </td>
                                           <td className="py-3 px-6">
                                             <span
