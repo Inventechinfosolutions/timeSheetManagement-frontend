@@ -473,9 +473,9 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
         <table className={`quarterly-review-table qr-header-${headerTheme}`}>
           <thead>
             <tr>
-              <th className="text-left min-w-[190px]">Name</th>
-              <th className="text-left min-w-[95px]">ID</th>
-              <th className="text-left min-w-[160px]">Role</th>
+              <th className="text-left min-w-[190px]">Employee Name</th>
+              <th className="text-left min-w-[120px]">Employee ID</th>
+              <th className="text-left min-w-[160px]">Designation</th>
               <th className="text-left min-w-[140px]">Department</th>
               <th className="text-center min-w-[90px]">Quarter</th>
               <th className="text-center min-w-[125px]">Financial Year</th>
