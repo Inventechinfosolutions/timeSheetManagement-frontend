@@ -95,6 +95,7 @@ const EVALUATION_PARAMETERS: ParameterDef[] = [
   { key: "teamCollaboration", label: "Teamwork & Collaboration" },
   { key: "communication", label: "Communication" },
   { key: "ownership", label: "Ownership & Accountability" },
+  { key: "innovation", label: "Problem Solving & Initiative" },
 ];
 
 const CAREER_GROWTH_OPTIONS = [
@@ -552,12 +553,17 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const [managerConfirmation, setManagerConfirmation] = useState<boolean>(Boolean(managerEvaluation?.managerConfirmation));
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [isDraftSaving, setIsDraftSaving] = useState<boolean>(false);
-  const [finalPerformanceRating, setFinalPerformanceRating] = useState<number>(
-    Number(managerEvaluation?.finalPerformanceRating) || 0
-  );
+  const [finalPerformanceRating, setFinalPerformanceRating] = useState<number>(() => {
+    const perfRating = Number(managerEvaluation?.finalPerformanceRating);
+    if (Number.isFinite(perfRating) && perfRating > 0) return perfRating;
+    const parsedFinal = parseFloat(record.finalRating);
+    return !Number.isNaN(parsedFinal) && parsedFinal >= 1 && parsedFinal <= 5 ? parsedFinal : 0;
+  });
   const [rawFinalPerformanceRating, setRawFinalPerformanceRating] = useState<string>(() => {
-    const val = Number(managerEvaluation?.finalPerformanceRating);
-    return val > 0 ? String(val) : "";
+    const perfRating = Number(managerEvaluation?.finalPerformanceRating);
+    if (Number.isFinite(perfRating) && perfRating > 0) return String(perfRating);
+    const parsedFinal = parseFloat(record.finalRating);
+    return !Number.isNaN(parsedFinal) && parsedFinal >= 1 && parsedFinal <= 5 ? String(parsedFinal) : "";
   });
   const [hoveredFinalStar, setHoveredFinalStar] = useState<number>(0);
 
@@ -593,6 +599,24 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         ? String(revealedScore)
         : "",
     );
+
+    // Section 5: Final Review & Submission Fields
+    setGoalsForNextReview(rating.goalsForNextReviewPeriod || "");
+    setTrainingRecommendations(rating.trainingDevelopmentRecommendations || "");
+    setCareerGrowthRecommendation(rating.careerGrowthRecommendation || "");
+    setReviewOutcome(rating.reviewOutcome || "");
+    setPerformanceAction(rating.performanceAction || "");
+    const finalRatingNum =
+      rating.finalPerformanceRating !== undefined && rating.finalPerformanceRating !== null && Number(rating.finalPerformanceRating) > 0
+        ? Number(rating.finalPerformanceRating)
+        : Number(rating.finalRating) || 0;
+    setFinalPerformanceRating(finalRatingNum);
+    setRawFinalPerformanceRating(finalRatingNum > 0 ? String(finalRatingNum) : "");
+    setFinalManagerComments(rating.finalManagerComments || "");
+    if (rating.managerConfirmation != null) {
+      setManagerConfirmation(Boolean(rating.managerConfirmation));
+    }
+
     setIsRatingUnlocked(true);
     setIsEmailModalOpen(false);
     setRatingPassword("");
@@ -610,6 +634,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         setImprovements("");
         setRemarks("");
         setFinalScoreText("");
+        setGoalsForNextReview("");
+        setTrainingRecommendations("");
+        setCareerGrowthRecommendation("");
+        setReviewOutcome("");
+        setPerformanceAction("");
+        setFinalPerformanceRating(0);
+        setRawFinalPerformanceRating("");
+        setFinalManagerComments("");
         ratingHideTimerRef.current = null;
       }, 2 * 60 * 1000);
     }
@@ -2335,8 +2367,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
 
                     {/* ========== FINAL REVIEW & SUBMISSION SECTION ========== */}
-                    {(!isViewMode || managerConfirmation) && (
-                      <div className="eval-step-card eval-reveal-card space-y-4 mt-2 border-2 border-blue-200/60 rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-blue-50/30 to-white">
+                    <div className="eval-step-card eval-reveal-card space-y-4 mt-2 border-2 border-blue-200/60 rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-blue-50/30 to-white">
                         {/* Section Header */}
                         <div className="flex items-center gap-2.5 border-b border-blue-100 pb-3">
                           <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider">Final Review &amp; Submission</h3>
@@ -2665,7 +2696,6 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           </div>
                         )}
                       </div>
-                    )}
                   </div>
                 )}
 

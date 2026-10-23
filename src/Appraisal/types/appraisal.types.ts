@@ -253,6 +253,14 @@ export interface RevealedRating {
   performanceStrengths: string;
   areasOfImprovement: string;
   additionalRemarks: string;
+  goalsForNextReviewPeriod?: string | null;
+  trainingDevelopmentRecommendations?: string | null;
+  careerGrowthRecommendation?: string | null;
+  reviewOutcome?: string | null;
+  performanceAction?: string | null;
+  finalPerformanceRating?: number | null;
+  finalManagerComments?: string | null;
+  managerConfirmation?: boolean | null;
   passwordVerified: boolean;
 }
 
