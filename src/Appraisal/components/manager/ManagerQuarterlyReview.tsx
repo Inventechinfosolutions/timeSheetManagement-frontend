@@ -48,6 +48,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const { departments } = useAppSelector((state) => state.masterDepartments);
   const isAdmin = isAdminAccess(currentUser);
+  const isGlobalLoading = useAppSelector((state) => (state.apiLoading?.activeCount ?? 0) > 0);
   const managerId = currentUser?.employeeId || currentUser?.loginId || "";
   // Modal flow state (for visual presentation / prototyping)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -114,10 +115,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
   }, [evaluatingRecord]);
 
   useEffect(() => {
-    if (!departments || departments.length === 0) {
-      dispatch(fetchDepartments());
+    if (isAdmin && (!departments || departments.length === 0)) {
+      dispatch(fetchDepartments({ skipGlobalLoader: true }));
     }
-  }, [dispatch, departments]);
+  }, [isAdmin, dispatch, departments]);
 
   const handleBackToDashboard = () => {
     triggerScrollToTop();
@@ -694,7 +695,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
           <CardContent className="p-0">
             <div className="relative min-h-[16rem]">
-              {tableLoading ? (
+              {tableLoading && !isGlobalLoading ? (
                 <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-[2px]">
                   <WorksphereLogoLoader />
                 </div>
