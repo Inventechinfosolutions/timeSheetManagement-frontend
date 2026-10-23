@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import { loginUser, clearError } from "../reducers/user.reducer";
+import { fetchNotes } from "../reducers/notes.reducer";
 import { UserType } from "../enums";
 import type { AppDispatch, RootState } from "../store";
 
