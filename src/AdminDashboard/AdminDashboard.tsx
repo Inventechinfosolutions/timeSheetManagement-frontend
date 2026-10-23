@@ -23,7 +23,10 @@ import {
   Plane,
   ClipboardCheck,
   UserPlus,
+  Lock,
 } from "lucide-react";
+import { message } from "antd";
+import { UserType } from "../enums";
 import { downloadAttendancePdfReport } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { saveAs } from "file-saver";
@@ -32,6 +35,10 @@ import { fetchAdminDashboardSummary } from "../reducers/adminDashboard.reducer";
 import { SearchBox } from "../components/ui";
 import { getAllLeaveRequests } from "../reducers/leaveRequest.reducer";
 import { isCeoUser } from "../utils/roleAccess";
+import {
+  fetchLockType,
+  updateLockType,
+} from "../reducers/managerMapping.reducer";
 import TodaySnapshotCard from "./dashboard/TodaySnapshotCard";
 import PendingApprovalsCard from "./dashboard/PendingApprovalsCard";
 import EventsScroller from "./dashboard/EventsScroller";
@@ -133,6 +140,88 @@ const AdminDashboard = () => {
     if (s.includes("cancel"))
       return "bg-orange-50 text-orange-700 border-orange-100";
     return "bg-slate-50 text-slate-600 border-slate-100";
+  };
+
+  // Department Lock Type State & Handlers
+  const [selectedLockDepartment, setSelectedLockDepartment] = useState("");
+  const [isLockDeptOpen, setIsLockDeptOpen] = useState(false);
+  const [activeLockType, setActiveLockType] = useState<"Weekly" | "Monthly">("Weekly");
+  const [isUpdatingLock, setIsUpdatingLock] = useState(false);
+
+  useEffect(() => {
+    if (isManagerView && currentUser?.department) {
+      const dept = String(currentUser.department);
+      setSelectedLockDepartment(dept);
+      dispatch(fetchLockType({ department: dept })).then((res: any) => {
+        if (res.payload?.lockType) {
+          setActiveLockType(
+            res.payload.lockType === "Monthly" ? "Monthly" : "Weekly",
+          );
+        }
+      });
+    } else if (!isManagerView && departments.length > 0 && !selectedLockDepartment) {
+      const defaultDept = departments[0].departmentName;
+      setSelectedLockDepartment(defaultDept);
+      dispatch(fetchLockType({ department: defaultDept })).then((res: any) => {
+        if (res.payload?.lockType) {
+          setActiveLockType(
+            res.payload.lockType === "Monthly" ? "Monthly" : "Weekly",
+          );
+        }
+      });
+    }
+  }, [isManagerView, currentUser?.department, departments, selectedLockDepartment, dispatch]);
+
+  const handleSelectLockDepartment = async (deptName: string) => {
+    setSelectedLockDepartment(deptName);
+    setIsLockDeptOpen(false);
+    try {
+      const res = await dispatch(
+        fetchLockType({ department: deptName }),
+      ).unwrap();
+      if (res?.lockType) {
+        setActiveLockType(
+          res.lockType === "Monthly" ? "Monthly" : "Weekly",
+        );
+      }
+    } catch (err) {
+      console.error("Failed to fetch lock type for department:", err);
+    }
+  };
+
+  const handleToggleLockType = async (type: "Weekly" | "Monthly") => {
+    if (type === activeLockType) return;
+    const targetDept =
+      selectedLockDepartment ||
+      (departments.length > 0 ? departments[0].departmentName : "") ||
+      (currentUser?.department ? String(currentUser.department) : "");
+
+    // Immediately toggle state in UI
+    setActiveLockType(type);
+    if (targetDept && !selectedLockDepartment) {
+      setSelectedLockDepartment(targetDept);
+    }
+
+    setIsUpdatingLock(true);
+    try {
+      await dispatch(
+        updateLockType({
+          lockType: type,
+          department: targetDept,
+          ...(isManagerView && currentUser?.loginId
+            ? { managerId: currentUser.loginId }
+            : {}),
+        }),
+      ).unwrap();
+      message.success(
+        `Lock type set to ${type}${targetDept ? ` for ${targetDept}` : ""}`,
+      );
+    } catch (err: any) {
+      setActiveLockType(type === "Weekly" ? "Monthly" : "Weekly");
+      message.error(err?.message || "Failed to update lock type");
+    } finally {
+      setIsUpdatingLock(false);
+    }
   };
 
   // Effects
@@ -527,6 +616,140 @@ const AdminDashboard = () => {
           </button>
         </div>
       </div>
+
+      {/* Department & Lock Type Control Row */}
+      {currentUser?.userType !== UserType.RECEPTIONIST && (
+        <div className="flex flex-wrap items-end gap-4 mb-6">
+          {/* Department Dropdown */}
+          <div className="flex flex-col gap-1.5 min-w-[240px] sm:min-w-[280px] relative">
+            <span className="text-sm font-bold text-[#5B6780] pl-1">
+              Department
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsLockDeptOpen(!isLockDeptOpen)}
+              className="w-full h-[52px] flex items-center justify-between gap-3 px-5 bg-white rounded-full shadow-[0px_4px_20px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-blue-200 transition-all text-sm font-bold text-[#2B3674] cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-[#EEF2FF] flex items-center justify-center text-[#1055E8] shrink-0">
+                  <Briefcase size={16} />
+                </div>
+                <span className="truncate">
+                  {selectedLockDepartment || "Select Department"}
+                </span>
+              </div>
+              <ChevronDown
+                size={18}
+                className={`text-[#1055E8] shrink-0 transition-transform duration-200 ${
+                  isLockDeptOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {isLockDeptOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsLockDeptOpen(false)}
+                />
+                <div className="absolute top-full left-0 mt-2 w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.12)] border border-gray-100 p-2.5 z-50 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="mb-2 px-2 pt-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-[#A3AED0]">
+                      Select Department
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {departments.map((dept) => (
+                      <button
+                        key={dept.id}
+                        type="button"
+                        onClick={() =>
+                          handleSelectLockDepartment(dept.departmentName)
+                        }
+                        className={`w-full flex items-center px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left ${
+                          selectedLockDepartment === dept.departmentName
+                            ? "bg-[#1055E8] text-white shadow-sm"
+                            : "text-[#2B3674] hover:bg-[#F4F7FE]"
+                        }`}
+                      >
+                        {dept.departmentName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Lock Type Toggle Button */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-bold text-[#5B6780] pl-1">
+              Lock Type
+            </span>
+            <div className="h-[52px] bg-white rounded-full shadow-[0px_4px_20px_rgba(0,0,0,0.05)] border border-gray-100/80 p-1 flex items-center">
+              {/* Weekly Button */}
+              <button
+                type="button"
+                disabled={isUpdatingLock}
+                onClick={() => handleToggleLockType("Weekly")}
+                className={`h-full px-6 rounded-full font-bold text-[15px] sm:text-base flex items-center gap-2.5 transition-all duration-200 cursor-pointer select-none ${
+                  activeLockType === "Weekly"
+                    ? "bg-[#1055E8] text-white shadow-[0px_2px_8px_rgba(16,85,232,0.3)]"
+                    : "bg-transparent text-[#1B2559] hover:text-[#1055E8]"
+                }`}
+              >
+                {activeLockType === "Weekly" ? (
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="2.5" />
+                    <circle cx="10" cy="10" r="3.5" fill="currentColor" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="7.5" stroke="#CBD5E1" strokeWidth="2.5" />
+                  </svg>
+                )}
+                <span>Weekly</span>
+              </button>
+
+              {/* Monthly Button */}
+              <button
+                type="button"
+                disabled={isUpdatingLock}
+                onClick={() => handleToggleLockType("Monthly")}
+                className={`h-full px-6 rounded-full font-bold text-[15px] sm:text-base flex items-center gap-2.5 transition-all duration-200 cursor-pointer select-none ${
+                  activeLockType === "Monthly"
+                    ? "bg-[#1055E8] text-white shadow-[0px_2px_8px_rgba(16,85,232,0.3)]"
+                    : "bg-transparent text-[#1B2559] hover:text-[#1055E8]"
+                }`}
+              >
+                {activeLockType === "Monthly" ? (
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="7.5" stroke="currentColor" strokeWidth="2.5" />
+                    <circle cx="10" cy="10" r="3.5" fill="currentColor" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 20 20" fill="none">
+                    <circle cx="10" cy="10" r="7.5" stroke="#CBD5E1" strokeWidth="2.5" />
+                  </svg>
+                )}
+                <span>Monthly</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Info Card */}
+          <div className="h-[52px] bg-[#EEF2FF] border border-[#E0E7FF] rounded-2xl sm:rounded-full px-5 flex items-center gap-3 flex-1 min-w-[280px]">
+            <Lock
+              size={18}
+              className="text-[#1055E8] shrink-0"
+              strokeWidth={2.2}
+            />
+            <p className="text-xs sm:text-sm font-semibold text-[#1E40AF] truncate sm:whitespace-normal mb-0">
+              Attendance will be locked for the selected department for the chosen period (Weekly / Monthly).
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div

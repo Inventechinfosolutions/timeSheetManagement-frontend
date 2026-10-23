@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { message, Modal, Select } from "antd";
+import { message, Modal } from "antd";
 import {
   ArrowRightLeft,
   Calendar,
@@ -20,14 +20,11 @@ import {
   fetchEditRequestsForReview,
   rejectEditAccessRequest,
 } from "../reducers/attendenceEditRequest.reducer";
-import { updateLockType } from "../reducers/managerMapping.reducer";
-import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { WorksphereLogoLoader } from "../components/ApiLoadingSpinner";
 import { UserType } from "../enums";
 import { isAdminAccess } from "../utils/roleAccess";
 
 const STATUS_OPTIONS = ["All", "Pending", "Approved", "Rejected"] as const;
-const LOCK_TYPE_OPTIONS = ["All", "Weekly", "Monthly"] as const;
 const PAGE_SIZE = 10;
 
 const statusBadgeClass = (status: string) => {
@@ -36,19 +33,12 @@ const statusBadgeClass = (status: string) => {
   return "bg-amber-50 text-amber-600 border-amber-200";
 };
 
-const departmentTagClass = (name: string, isSelected: boolean) =>
-  isSelected
-    ? "bg-[#4318FF] text-white border-[#4318FF] shadow-sm"
-    : name === "All"
-      ? "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100"
-      : "bg-[#F4F7FE] text-[#4318FF] border-[#4318FF]/15 hover:bg-[#4318FF]/10";
-
 const AttendenceEditRequests = () => {
   const dispatch = useAppDispatch();
-  const { entities, loading, totalItems, totalPages, lockType } =
-    useAppSelector((state) => state.attendenceEditRequest);
+  const { entities, loading, totalItems, totalPages } = useAppSelector(
+    (state) => state.attendenceEditRequest,
+  );
   const currentUser = useAppSelector((state) => state.user.currentUser);
-  const { departments } = useAppSelector((state) => state.masterDepartments);
   const isAdmin = isAdminAccess(currentUser);
   const isManager = !!(
     !isAdmin &&
@@ -59,11 +49,7 @@ const AttendenceEditRequests = () => {
   );
   const [statusFilter, setStatusFilter] =
     useState<(typeof STATUS_OPTIONS)[number]>("All");
-  const [lockTypeFilter, setLockTypeFilter] =
-    useState<(typeof LOCK_TYPE_OPTIONS)[number]>("All");
   const [isStatusOpen, setIsStatusOpen] = useState(false);
-  const [selectedDepartment, setSelectedDepartment] = useState("");
-  const [isDeptOpen, setIsDeptOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -73,91 +59,27 @@ const AttendenceEditRequests = () => {
     requestDates: string[];
   } | null>(null);
   const [actingId, setActingId] = useState<number | null>(null);
-  const [savingLock, setSavingLock] = useState(false);
 
   const currentLoginId = currentUser?.loginId || currentUser?.employeeId;
-  const waitingForDepartment = isAdmin && !selectedDepartment;
-  const showLockToggle = isManager || (isAdmin && !!selectedDepartment);
-  const displayTotalItems = waitingForDepartment ? 0 : totalItems;
-  const displayPages = waitingForDepartment ? 1 : Math.max(1, totalPages || 0);
 
   const reviewQuery = () => ({
     page,
     limit: PAGE_SIZE,
     ...(isManager && currentLoginId ? { managerId: currentLoginId } : {}),
-    ...(isAdmin && selectedDepartment
-      ? { department: selectedDepartment }
-      : {}),
     status: statusFilter,
-    lockType: lockTypeFilter,
   });
 
   useEffect(() => {
-    if (isAdmin) {
-      dispatch(fetchDepartments());
-    }
-  }, [dispatch, isAdmin]);
-
-  useEffect(() => {
-    if (waitingForDepartment) return;
     dispatch(fetchEditRequestsForReview(reviewQuery()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    dispatch,
-    isAdmin,
-    isManager,
-    currentLoginId,
-    page,
-    selectedDepartment,
-    statusFilter,
-    lockTypeFilter,
-    waitingForDepartment,
-  ]);
+  }, [dispatch, isManager, currentLoginId, page, statusFilter]);
 
-  const handleDepartmentSelect = (dept: string) => {
-    setSelectedDepartment(dept);
-    setIsDeptOpen(false);
-    setPage(1);
-  };
-
-  const hasFilters = statusFilter !== "All" || lockTypeFilter !== "All";
+  const hasFilters = statusFilter !== "All";
 
   const handleClearFilters = () => {
     setStatusFilter("All");
-    setLockTypeFilter("All");
     setIsStatusOpen(false);
-    setIsDeptOpen(false);
     setPage(1);
-  };
-
-  const handleLockTypeChange = async (next: "Weekly" | "Monthly") => {
-    if (next === lockType) return;
-    if (isAdmin && !selectedDepartment) return;
-    setSavingLock(true);
-    try {
-      const result = await dispatch(
-        updateLockType(
-          isAdmin
-            ? { lockType: next, department: selectedDepartment }
-            : {
-                lockType: next,
-                managerId: currentUser?.loginId || currentUser?.employeeId,
-              },
-        ),
-      ).unwrap();
-      message.success(
-        `Lock type set to ${next}${
-          result.updated
-            ? ` for ${result.updated} mapped employee${result.updated === 1 ? "" : "s"}`
-            : ""
-        }`,
-      );
-      dispatch(fetchEditRequestsForReview(reviewQuery()));
-    } catch (err: any) {
-      message.error(err?.message || "Failed to update lock type");
-    } finally {
-      setSavingLock(false);
-    }
   };
 
   const handleApprove = async (id: number) => {
@@ -191,7 +113,7 @@ const AttendenceEditRequests = () => {
     }
   };
 
-  const pages = displayPages;
+  const pages = Math.max(1, totalPages || 0);
 
   return (
     <div className="p-4 md:p-8 bg-[#F4F7FE] font-sans text-[#2B3674]">
@@ -206,238 +128,97 @@ const AttendenceEditRequests = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-end gap-3 w-full">
-            {isAdmin && (
-              <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap items-end justify-between gap-3 w-full">
+            <div className="flex flex-wrap items-end gap-3 ml-auto">
+              <div className="flex flex-col gap-1.5 relative">
                 <span className="text-xs font-bold text-gray-400 pl-1">
-                  Department
+                  Status
                 </span>
-                <div className="relative min-w-[240px] sm:min-w-[280px]">
+                <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden min-w-[200px] h-12">
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsDeptOpen(!isDeptOpen);
-                      setIsStatusOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between gap-3 px-5 py-3 bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all text-sm font-bold ${
-                      selectedDepartment
-                        ? "text-[#4318FF]"
-                        : "text-[#2B3674]"
+                    onClick={() => setIsStatusOpen(!isStatusOpen)}
+                    className={`w-full flex items-center justify-between gap-2 font-bold text-sm ${
+                      statusFilter !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-2">
                       <Filter
-                        size={18}
+                        size={16}
                         className={
-                          selectedDepartment
+                          statusFilter !== "All"
                             ? "text-[#4318FF]"
                             : "text-gray-400"
                         }
                       />
-                      <span className="truncate">
-                        {selectedDepartment || "Select Department"}
+                      <span className="truncate max-w-[130px]">
+                        {statusFilter === "All" ? "All Status" : statusFilter}
                       </span>
                     </div>
                     <ChevronDown
                       size={18}
-                      className={`shrink-0 transition-transform duration-300 ${
-                        isDeptOpen ? "rotate-180" : ""
+                      className={`transition-transform duration-200 shrink-0 ${
+                        isStatusOpen ? "rotate-180 text-[#4318FF]" : "text-gray-400"
                       }`}
                     />
                   </button>
-                  {isDeptOpen && (
-                    <>
-                      <div
-                        className="fixed inset-0 z-40"
-                        onClick={() => setIsDeptOpen(false)}
-                      />
-                      <div className="absolute left-0 mt-3 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="mb-2">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-[#A3AED0]">
-                            Departments
-                          </span>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          {departments.map((dept) => (
-                            <button
-                              key={dept.id}
-                              type="button"
-                              onClick={() =>
-                                handleDepartmentSelect(dept.departmentName)
-                              }
-                              className={`w-full flex items-center justify-center px-3 py-2 rounded-full text-xs font-bold border transition-all text-center ${departmentTagClass(
-                                dept.departmentName,
-                                selectedDepartment === dept.departmentName,
-                              )}`}
-                            >
-                              {dept.departmentName}
-                            </button>
-                          ))}
-                        </div>
+                </div>
+                {isStatusOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsStatusOpen(false)}
+                    />
+                    <div className="absolute top-full right-0 mt-2 w-full min-w-[200px] bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#A3AED0]">
+                          Status
+                        </span>
                       </div>
-                    </>
-                  )}
-                </div>
+                      <div className="flex flex-col gap-2">
+                        {STATUS_OPTIONS.map((status) => (
+                          <button
+                            key={status}
+                            type="button"
+                            onClick={() => {
+                              setStatusFilter(status);
+                              setIsStatusOpen(false);
+                              setPage(1);
+                            }}
+                            className={`text-left px-3 py-2 rounded-full text-xs font-bold border transition-all ${
+                              statusFilter === status
+                                ? "bg-[#4318FF] text-white border-[#4318FF] shadow-sm"
+                                : status === "All"
+                                  ? "bg-gray-50 text-[#475569] border-gray-200"
+                                  : statusBadgeClass(status)
+                            }`}
+                          >
+                            {status === "All" ? "All Status" : status}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
-            )}
 
-            {showLockToggle && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-bold text-gray-400 pl-1">
-                  Set Lock Type
-                </span>
-                <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-                  <Select
-                    value={lockType}
-                    onChange={(val) => handleLockTypeChange(val)}
-                    disabled={savingLock}
-                    className="w-36 h-12 font-bold text-sm text-[#4318FF]"
-                    variant="borderless"
-                    dropdownStyle={{ borderRadius: "16px" }}
-                    suffixIcon={
-                      <ChevronDown size={18} className="text-[#4318FF]" />
-                    }
+              {hasFilters && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-bold text-gray-400 pl-1 opacity-0">
+                    Clear
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleClearFilters}
+                    className="cursor-pointer flex items-center justify-center gap-2 px-4 h-12 bg-[#5B4FFF] text-white rounded-2xl hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap shadow-sm shadow-[#4318FF]/20"
+                    title="Clear all filters"
                   >
-                    <Select.Option value="Weekly">Weekly</Select.Option>
-                    <Select.Option value="Monthly">Monthly</Select.Option>
-                  </Select>
+                    <X size={15} />
+                    <span>Clear All</span>
+                  </button>
                 </div>
-              </div>
-            )}
-
-            {!waitingForDepartment && (
-            <div className="flex flex-wrap items-end gap-3 sm:ml-auto">
-            <div className="flex flex-col gap-1.5">
-              <span className="text-xs font-bold text-gray-400 pl-1">
-                Lock Type
-              </span>
-              <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
-                <Select
-                  value={lockTypeFilter}
-                  onChange={(val) => {
-                    setLockTypeFilter(val);
-                    setPage(1);
-                  }}
-                  className={`w-36 h-12 font-bold text-sm ${
-                    lockTypeFilter !== "All"
-                      ? "text-[#4318FF]"
-                      : "text-[#2B3674]"
-                  }`}
-                  variant="borderless"
-                  dropdownStyle={{ borderRadius: "16px" }}
-                  suffixIcon={
-                    <ChevronDown
-                      size={18}
-                      className={
-                        lockTypeFilter !== "All"
-                          ? "text-[#4318FF]"
-                          : "text-gray-400"
-                      }
-                    />
-                  }
-                >
-                  {LOCK_TYPE_OPTIONS.map((option) => (
-                    <Select.Option key={option} value={option}>
-                      {option === "All" ? "All Lock Types" : option}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1.5 relative">
-              <span className="text-xs font-bold text-gray-400 pl-1">
-                Status
-              </span>
-              <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden min-w-[200px] h-12">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsStatusOpen(!isStatusOpen);
-                    setIsDeptOpen(false);
-                  }}
-                  className={`w-full flex items-center justify-between gap-2 font-bold text-sm ${
-                    statusFilter !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Filter
-                      size={16}
-                      className={
-                        statusFilter !== "All"
-                          ? "text-[#4318FF]"
-                          : "text-gray-400"
-                      }
-                    />
-                    <span className="truncate max-w-[130px]">
-                      {statusFilter === "All" ? "All Status" : statusFilter}
-                    </span>
-                  </div>
-                  <ChevronDown
-                    size={18}
-                    className={`transition-transform duration-200 shrink-0 ${
-                      isStatusOpen ? "rotate-180 text-[#4318FF]" : "text-gray-400"
-                    }`}
-                  />
-                </button>
-              </div>
-              {isStatusOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsStatusOpen(false)}
-                  />
-                  <div className="absolute top-full left-0 mt-2 w-full min-w-[200px] bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="mb-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-[#A3AED0]">
-                        Status
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      {STATUS_OPTIONS.map((status) => (
-                        <button
-                          key={status}
-                          type="button"
-                          onClick={() => {
-                            setStatusFilter(status);
-                            setIsStatusOpen(false);
-                            setPage(1);
-                          }}
-                          className={`text-left px-3 py-2 rounded-full text-xs font-bold border ${
-                            statusFilter === status
-                              ? "bg-[#4318FF] text-white border-[#4318FF] shadow-sm"
-                              : status === "All"
-                                ? "bg-gray-50 text-[#475569] border-gray-200"
-                                : statusBadgeClass(status)
-                          }`}
-                        >
-                          {status === "All" ? "All Status" : status}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </>
               )}
             </div>
-
-            {hasFilters && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-bold text-gray-400 pl-1 opacity-0">
-                  Clear
-                </span>
-                <button
-                  type="button"
-                  onClick={handleClearFilters}
-                  className="cursor-pointer flex items-center justify-center gap-2 px-4 h-12 bg-[#5B4FFF] text-white rounded-2xl hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap shadow-sm shadow-[#4318FF]/20"
-                  title="Clear all filters"
-                >
-                  <X size={15} />
-                  <span>Clear All</span>
-                </button>
-              </div>
-            )}
-            </div>
-            )}
           </div>
         </div>
       </div>
@@ -457,9 +238,6 @@ const AttendenceEditRequests = () => {
                   Department
                 </th>
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                  Lock Type
-                </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Submitted
                 </th>
                 <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[140px] w-[180px] min-w-[180px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
@@ -471,20 +249,9 @@ const AttendenceEditRequests = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {waitingForDepartment ? (
+              {loading && entities.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-gray-400">
-                    <div className="flex flex-col items-center gap-2">
-                      <Clock size={40} className="text-gray-200" />
-                      <p className="font-medium text-lg">
-                        Select a department to view requests
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              ) : loading && entities.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-16 text-center text-gray-400">
+                  <td colSpan={6} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center justify-center py-6">
                       <WorksphereLogoLoader />
                     </div>
@@ -492,7 +259,7 @@ const AttendenceEditRequests = () => {
                 </tr>
               ) : entities.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-16 text-center text-gray-400">
+                  <td colSpan={6} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center gap-2">
                       <Clock size={40} className="text-gray-200" />
                       <p className="font-medium text-lg">No requests found</p>
@@ -538,11 +305,6 @@ const AttendenceEditRequests = () => {
                     <td className="py-4 px-4 text-center whitespace-nowrap">
                       <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
                         {req.department || "N/A"}
-                      </span>
-                    </td>
-                    <td className="py-4 px-4 text-center whitespace-nowrap">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#F3E8FF] text-[#7C3AED] border border-[#7C3AED]/20">
-                        {req.lockType || "Weekly"}
                       </span>
                     </td>
                     <td className="py-4 px-4 text-center text-sm font-semibold text-[#475569] whitespace-nowrap">
@@ -632,13 +394,13 @@ const AttendenceEditRequests = () => {
           <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">
             Showing{" "}
             <span className="text-[#2B3674]">
-              {displayTotalItems > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}
+              {totalItems > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}
             </span>{" "}
             to{" "}
             <span className="text-[#2B3674]">
-              {Math.min(page * PAGE_SIZE, displayTotalItems)}
+              {Math.min(page * PAGE_SIZE, totalItems)}
             </span>{" "}
-            of <span className="text-[#2B3674]">{displayTotalItems}</span> entries
+            of <span className="text-[#2B3674]">{totalItems}</span> entries
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -661,9 +423,9 @@ const AttendenceEditRequests = () => {
             <button
               type="button"
               onClick={() => setPage((prev) => Math.min(prev + 1, pages))}
-              disabled={page >= pages || displayTotalItems === 0}
+              disabled={page >= pages || totalItems === 0}
               className={`p-2 rounded-xl border border-[#E9EDF7] transition-all flex items-center justify-center ${
-                page >= pages || displayTotalItems === 0
+                page >= pages || totalItems === 0
                   ? "bg-gray-50 text-gray-300 cursor-not-allowed"
                   : "bg-white text-[#4318FF] hover:bg-[#4318FF]/5 active:scale-90 shadow-sm"
               }`}
