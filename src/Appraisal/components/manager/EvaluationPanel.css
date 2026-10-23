@@ -661,12 +661,17 @@
 }
 
 .eval-dropdown-btn.eval-dropdown-disabled {
-  border-color: #E2E8F0 !important;
+  border-color: #CBD5E1 !important;
   background-color: #F8FAFC !important;
-  color: #94A3B8 !important;
+  color: #1E293B !important;
   cursor: not-allowed !important;
-  opacity: 0.85 !important;
+  opacity: 1 !important;
 }
+
+.eval-dropdown-btn.eval-dropdown-disabled.eval-dropdown-empty {
+  color: #94A3B8 !important;
+}
+
 
 .eval-field-error-msg {
   display: flex;

@@ -132,7 +132,7 @@ export function Dropdown<T extends string = string>({
             setIsOpen(true);
           }}
           className={`flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F7FE] hover:bg-gray-100 rounded-xl text-xs font-bold text-[#2B3674] transition-all border border-transparent cursor-pointer select-none ${
-            disabled ? "opacity-50 cursor-not-allowed" : ""
+            disabled && !buttonClassName.includes("opacity-") ? "opacity-50 cursor-not-allowed" : disabled ? "cursor-not-allowed" : ""
           } ${buttonClassName}`}
         >
           {prefixIcon && <span className="text-[#4318FF] shrink-0">{prefixIcon}</span>}

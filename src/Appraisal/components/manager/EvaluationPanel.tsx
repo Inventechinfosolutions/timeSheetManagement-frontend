@@ -2436,9 +2436,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               allowClear={!isViewMode}
                               className="w-full"
                               maxLabelWidth="max-w-none"
-                              buttonClassName={`eval-dropdown-btn ${
+                              buttonClassName={`eval-dropdown-btn !opacity-100 ${
                                 isViewMode
-                                  ? "eval-dropdown-disabled"
+                                  ? `eval-dropdown-disabled ${careerGrowthRecommendation ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
                                   : careerGrowthRecommendation
                                   ? "!text-[#2B3674]"
                                   : "!text-[#A3AED0]"
@@ -2463,11 +2463,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               allowClear={false}
                               className="w-full"
                               maxLabelWidth="max-w-none"
-                              buttonClassName={`eval-dropdown-btn ${
+                              buttonClassName={`eval-dropdown-btn !opacity-100 ${
                                 fieldErrors.reviewOutcome
                                   ? "eval-dropdown-error"
                                   : isViewMode
-                                  ? "eval-dropdown-disabled"
+                                  ? `eval-dropdown-disabled ${reviewOutcome ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
                                   : reviewOutcome
                                   ? "!text-[#2B3674]"
                                   : "!text-[#A3AED0]"
@@ -2497,9 +2497,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             allowClear={!isViewMode}
                             className="w-full"
                             maxLabelWidth="max-w-none"
-                            buttonClassName={`eval-dropdown-btn ${
+                            buttonClassName={`eval-dropdown-btn !opacity-100 ${
                               isViewMode
-                                ? "eval-dropdown-disabled"
+                                ? `eval-dropdown-disabled ${performanceAction ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
                                 : performanceAction
                                 ? "!text-[#2B3674]"
                                 : "!text-[#A3AED0]"
