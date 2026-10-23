@@ -68,10 +68,13 @@ export const fetchNotes = createAsyncThunk(
       if (params.toDate) searchParams.append("toDate", params.toDate);
       if (params.isPinned !== undefined) searchParams.append("isPinned", String(params.isPinned));
       if (params.isArchived !== undefined) searchParams.append("isArchived", String(params.isArchived));
+      if (params.page !== undefined) searchParams.append("page", String(params.page));
+      if (params.limit !== undefined) searchParams.append("limit", String(params.limit));
+      else if (params.pageSize !== undefined) searchParams.append("limit", String(params.pageSize));
 
       const queryStr = searchParams.toString();
       const url = queryStr ? `${API_BASE}?${queryStr}` : API_BASE;
-      const response = await axios.get(url, { signal });
+      const response = await axios.get(url, { signal, skipGlobalLoader: true, headers: { 'x-skip-loader': 'true' } });
       return response.data; // { data: Note[], total: number }
     } catch (error: any) {
       if (axios.isCancel(error) || error?.code === "ERR_CANCELED" || signal.aborted) {
@@ -512,8 +515,8 @@ const notesSlice = createSlice({
       })
       .addCase(fetchNotes.fulfilled, (state, action) => {
         state.loading = false;
-        state.notes = action.payload?.data || [];
-        state.totalNotesCount = action.payload?.total || 0;
+        state.notes = action.payload?.data || (Array.isArray(action.payload) ? action.payload : []);
+        state.totalNotesCount = action.payload?.total ?? (Array.isArray(action.payload) ? action.payload.length : 0);
       })
       .addCase(fetchNotes.rejected, (state, action) => {
         if (action.payload === null || action.meta.aborted) {
@@ -536,6 +539,16 @@ const notesSlice = createSlice({
       // Note Details
       .addCase(fetchNoteById.fulfilled, (state, action) => {
         state.selectedNote = action.payload;
+        if (action.payload?.id) {
+          const index = state.notes.findIndex((n) => n.id === action.payload.id);
+          if (index !== -1) {
+            state.notes[index] = {
+              ...state.notes[index],
+              ...action.payload,
+              subNotes: action.payload.subNotes || [],
+            };
+          }
+        }
       })
 
       // Create Note

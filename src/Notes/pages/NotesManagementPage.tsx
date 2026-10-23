@@ -16,6 +16,7 @@ export const NotesManagementPage: React.FC = () => {
     notes,
     displayNotes,
     paginatedNotes,
+    totalNotesCount,
     totalPages,
     currentPage,
     pageSize,
@@ -54,6 +55,7 @@ export const NotesManagementPage: React.FC = () => {
     isExtractingExcel,
     editorRef,
     expandedNotes,
+    loadingSubNotes,
     toggleExpand,
     handleTabSwitch,
     executeEditorCommand,
@@ -195,6 +197,7 @@ export const NotesManagementPage: React.FC = () => {
             loading={loading}
             notes={displayNotes}
             paginatedNotes={paginatedNotes}
+            totalNotesCount={totalNotesCount}
             currentPage={currentPage}
             pageSize={pageSize}
             totalPages={totalPages}
@@ -203,6 +206,7 @@ export const NotesManagementPage: React.FC = () => {
             fromDate={fromDate}
             toDate={toDate}
             expandedNotes={expandedNotes}
+            loadingSubNotes={loadingSubNotes}
             currentUser={currentUser}
             dragDrop={dragDrop}
             onToggleExpand={toggleExpand}

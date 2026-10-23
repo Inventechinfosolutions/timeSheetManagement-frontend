@@ -112,6 +112,9 @@ export interface QueryNotesParams {
   isPinned?: boolean;
   isArchived?: boolean;
   isAutoSave?: boolean;
+  page?: number;
+  limit?: number;
+  pageSize?: number;
 }
 
 export interface NoteStats {

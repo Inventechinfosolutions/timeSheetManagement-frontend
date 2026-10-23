@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { message } from "antd";
 import { useAppDispatch, useAppSelector } from "../../hooks";
@@ -79,6 +79,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     searchQuery,
     loading,
     actionLoading,
+    totalNotesCount,
   } = useAppSelector((state) => state.notes);
 
   const currentUser = useAppSelector((state) => state.user.currentUser);
@@ -88,10 +89,11 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = 5;
 
   // Accordion expansion state for sub-tables
   const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
+  const [loadingSubNotes, setLoadingSubNotes] = useState<Record<number, boolean>>({});
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   /** Immediate search text for client-side filtering (Redux `searchQuery` is debounced for API). */
@@ -196,25 +198,32 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
 
   const editorRef = useRef<HTMLDivElement>(null);
 
-  // Always open Notes on Project Notes (Redux tab survives route changes)
+  // Synchronize filter resets and load notes without cascading calls
+  const prevFilterRef = useRef({ activeTab, selectedProject, searchQuery, fromDate, toDate });
+
   useEffect(() => {
     if (!loadList) return;
-    dispatch(setActiveTab("PROJECT"));
-    dispatch(setSelectedProject(""));
+    const prev = prevFilterRef.current;
+    const filterChanged =
+      prev.activeTab !== activeTab ||
+      prev.selectedProject !== selectedProject ||
+      prev.searchQuery !== searchQuery ||
+      prev.fromDate !== fromDate ||
+      prev.toDate !== toDate;
+
+    prevFilterRef.current = { activeTab, selectedProject, searchQuery, fromDate, toDate };
+
+    if (filterChanged && currentPage !== 1) {
+      setCurrentPage(1);
+      return;
+    }
+
+    // Always fetch GET /api/notes?type=... on navigation/mount
+    loadNotes(currentPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadList]);
+  }, [currentPage, activeTab, selectedProject, searchQuery, fromDate, toDate, loadList]);
 
-  // searchQuery is already debounced via SearchBox (useDebounce)
-  useEffect(() => {
-    if (!loadList) return;
-    loadNotes();
-  }, [activeTab, selectedProject, searchQuery, fromDate, toDate, loadList]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeTab, selectedProject, searchInput, searchQuery, fromDate, toDate]);
-
-  const loadNotes = () => {
+  const loadNotes = (page = currentPage) => {
     if (activeTab === "ARCHIVED") {
       dispatch(
         fetchNotes({
@@ -222,6 +231,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
           search: searchQuery || undefined,
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
+          page,
+          limit: pageSize,
         })
       );
     } else {
@@ -233,17 +244,41 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
           search: searchQuery || undefined,
           fromDate: fromDate || undefined,
           toDate: toDate || undefined,
+          page,
+          limit: pageSize,
         })
       );
     }
   };
 
-  // Toggle sub-table accordion
-  const toggleExpand = (noteId: number) => {
+  // Toggle sub-table accordion: fetch child notes on-demand via GET /notes/:id
+  const toggleExpand = async (noteId: number) => {
+    const isCurrentlyExpanded = !!expandedNotes[noteId];
+    if (isCurrentlyExpanded) {
+      setExpandedNotes((prev) => ({
+        ...prev,
+        [noteId]: false,
+      }));
+      return;
+    }
+
     setExpandedNotes((prev) => ({
       ...prev,
-      [noteId]: !prev[noteId],
+      [noteId]: true,
     }));
+
+    // On-demand fetch child sub-notes if not yet loaded
+    const note = notes.find((n) => n.id === noteId);
+    if (!note?.subNotes || note.subNotes.length === 0) {
+      try {
+        setLoadingSubNotes((prev) => ({ ...prev, [noteId]: true }));
+        await dispatch(fetchNoteById(noteId)).unwrap();
+      } catch (err) {
+        console.error("Failed to load child notes for note:", noteId, err);
+      } finally {
+        setLoadingSubNotes((prev) => ({ ...prev, [noteId]: false }));
+      }
+    }
   };
 
   // Switch between Project Notes and Personal Notes
@@ -268,32 +303,36 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     }
 
     const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
+
     const anchor =
-      sel?.anchorNode?.nodeType === Node.ELEMENT_NODE
+      sel.anchorNode?.nodeType === Node.ELEMENT_NODE
         ? (sel.anchorNode as HTMLElement)
-        : sel?.anchorNode?.parentElement || null;
+        : sel.anchorNode?.parentElement || null;
 
-    // If caret is on the page/editor itself, put it in a paragraph first
-    const onSheet =
-      !anchor ||
-      anchor === editor ||
-      anchor === page ||
-      (anchor.classList?.contains("page") && page.contains(anchor) && anchor.tagName === "DIV");
-
-    let block = anchor?.closest?.("p, h1, h2, h3, h4, h5, h6, li, blockquote, pre") as HTMLElement | null;
-    if (!block || !page.contains(block) || onSheet) {
-      block = page.querySelector("p, h1, h2, h3, h4, h5, h6") as HTMLElement | null;
-      if (!block) {
-        block = document.createElement("p");
-        block.innerHTML = "<br>";
-        page.appendChild(block);
+    // Check if anchor is already inside a valid block within page (including div)
+    if (anchor && page.contains(anchor)) {
+      const block = anchor.closest(
+        "p, div, h1, h2, h3, h4, h5, h6, li, blockquote, pre"
+      ) as HTMLElement | null;
+      if (block && block !== page && !block.classList.contains("page")) {
+        // User already has their selection/caret in a valid block — preserve it!
+        return block;
       }
-      const range = document.createRange();
-      range.selectNodeContents(block);
-      range.collapse(true);
-      sel?.removeAllRanges();
-      sel?.addRange(range);
     }
+
+    // Caret was directly on page root or outside: place in first block or create one
+    let block = page.querySelector("p, div, h1, h2, h3, h4, h5, h6") as HTMLElement | null;
+    if (!block || block === page || block.classList.contains("page")) {
+      block = document.createElement("p");
+      block.innerHTML = "<br>";
+      page.appendChild(block);
+    }
+    const range = document.createRange();
+    range.selectNodeContents(block);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
     return block;
   };
 
@@ -325,7 +364,14 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
         page.setAttribute("data-page", "1");
         editor.appendChild(page);
       }
-      looseBlocks.forEach((el) => page!.appendChild(el));
+      looseBlocks.forEach((el) => {
+        // If loose block was before the page in DOM, keep it at the top of the page, NOT the bottom!
+        if (el.compareDocumentPosition(page) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          page.insertBefore(el, page.firstChild);
+        } else {
+          page.appendChild(el);
+        }
+      });
     }
 
     removeEmptyPages(editor);
@@ -572,7 +618,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     );
     if (editorRef.current && withoutBase64 !== editorRef.current.innerHTML) {
       editorRef.current.innerHTML = withoutBase64;
-      await hydrateEditorInlineImages(editorRef.current);
     }
     if (!formData.excelWorkbook) {
       setFormData((prev) => ({ ...prev, description: withoutBase64 }));
@@ -724,7 +769,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   };
 
   // Start Edit Note or Sub-Note (fetches fresh details from API)
-  const handleStartEdit = async (note: Note) => {
+  const handleStartEdit = async (note: Note, detailedData?: Note) => {
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
@@ -759,7 +804,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
 
     // Call API GET /api/notes/:id to fetch fresh detailed note data
     try {
-      const detailedNote = await dispatch(fetchNoteById(note.id)).unwrap();
+      const detailedNote = detailedData || (await dispatch(fetchNoteById(note.id)).unwrap());
       if (detailedNote) {
         setActiveNote(detailedNote);
         const workbook = await hydrateExcelWorkbook(detailedNote);
@@ -809,12 +854,12 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   };
 
   // Start View Note
-  const handleStartView = async (note: Note) => {
+  const handleStartView = async (note: Note, detailedData?: Note) => {
     setActiveNote(note);
     setPageMode("view");
     window.scrollTo({ top: 0, behavior: "smooth" });
     try {
-      const detailedNote = await dispatch(fetchNoteById(note.id)).unwrap();
+      const detailedNote = detailedData || (await dispatch(fetchNoteById(note.id)).unwrap());
       if (detailedNote) {
         setActiveNote(detailedNote);
         const workbook = await hydrateExcelWorkbook(detailedNote);
@@ -830,25 +875,32 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   };
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Listen to navigation state (e.g. navigating to edit or view a specific note)
   useEffect(() => {
     const state = location.state as { editNoteId?: number; viewNoteId?: number } | null;
-    if (state?.editNoteId) {
-      dispatch(fetchNoteById(state.editNoteId))
+    if (!state?.editNoteId && !state?.viewNoteId) return;
+
+    const targetEditId = state.editNoteId;
+    const targetViewId = state.viewNoteId;
+    navigate(location.pathname, { replace: true, state: {} });
+
+    if (targetEditId) {
+      dispatch(fetchNoteById(targetEditId))
         .unwrap()
         .then((note) => {
           if (note) {
-            handleStartEdit(note);
+            handleStartEdit(note, note);
           }
         })
         .catch((err) => console.warn("Failed to load note for edit from location state:", err));
-    } else if (state?.viewNoteId) {
-      dispatch(fetchNoteById(state.viewNoteId))
+    } else if (targetViewId) {
+      dispatch(fetchNoteById(targetViewId))
         .unwrap()
         .then((note) => {
           if (note) {
-            handleStartView(note);
+            handleStartView(note, note);
           }
         })
         .catch((err) => console.warn("Failed to load note for view from location state:", err));
@@ -856,7 +908,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   }, [location.state]);
 
   // Back to Main List View
-  const handleBackToList = () => {
+  const handleBackToList = (shouldReload = false) => {
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
@@ -864,7 +916,9 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     setPageMode("list");
     setActiveNote(null);
     setParentNoteContext(null);
-    loadNotes();
+    if (shouldReload) {
+      loadNotes();
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -1242,8 +1296,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
             setActiveNote(createdSub);
             setPageMode("edit");
             setAutoSaveStatus("saved");
-            dispatch(fetchNoteStats());
-            loadNotes();
           }
         } else {
           const created = await dispatch(
@@ -1304,7 +1356,6 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
           };
           setActiveNote(updated);
           setAutoSaveStatus("saved");
-          dispatch(fetchNoteStats());
         }
       }
     } catch (err) {
@@ -1363,7 +1414,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
 
     autoSaveTimerRef.current = setTimeout(() => {
       performAutoSave();
-    }, 1200);
+    }, 2500);
 
     return () => {
       if (autoSaveTimerRef.current) {
@@ -1492,9 +1543,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       };
       setAutoSaveStatus("saved");
       triggerSuccessToast();
-      dispatch(fetchNoteStats());
-      dispatch(fetchProjectsList());
-      handleBackToList();
+      handleBackToList(false);
     } catch (err: any) {
       const msg =
         typeof err === "string"
@@ -1752,11 +1801,9 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   }, [displayNotes, searchInput, fromDate, toDate]);
 
   // Paginated Notes
-  const totalPages = Math.max(1, Math.ceil(displayNotes.length / pageSize));
-  const paginatedNotes = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return displayNotes.slice(start, start + pageSize);
-  }, [displayNotes, currentPage, pageSize]);
+  const effectiveTotal = Math.max(totalNotesCount || 0, displayNotes.length);
+  const totalPages = Math.max(1, Math.ceil(effectiveTotal / pageSize));
+  const paginatedNotes = displayNotes;
 
   // Drag and Drop Hook integration
   const dragDrop = useNoteDragDrop(displayNotes, (noteId) => {
@@ -1834,6 +1881,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     notes,
     displayNotes,
     paginatedNotes,
+    totalNotesCount,
     totalPages,
     currentPage,
     setCurrentPage,
@@ -1873,6 +1921,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     isExtractingExcel,
     editorRef,
     expandedNotes,
+    loadingSubNotes,
     toggleExpand,
     handleTabSwitch,
     executeEditorCommand,

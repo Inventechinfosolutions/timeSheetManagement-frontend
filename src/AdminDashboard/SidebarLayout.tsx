@@ -24,6 +24,7 @@ import { useDispatch } from "react-redux";
 import { AppDispatch } from "../store";
 import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
+import { fetchNotes } from "../reducers/notes.reducer";
 import { useAppSelector } from "../hooks";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import ScrollNavigator from "../components/ScrollNavigator";
@@ -54,6 +55,7 @@ const SidebarLayout = ({
 
   useEffect(() => {
     dispatch(fetchInboxUnreadCount());
+    dispatch(fetchNotes({ type: "PROJECT" as any, isArchived: false, page: 1, limit: 5 }));
   }, [dispatch]);
 
   // Ref for the main scrollable content area
@@ -261,7 +263,7 @@ const SidebarLayout = ({
 
   return (
     <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
-      {!isWorkspaceMode && <Header />}
+      <div className={isWorkspaceMode ? "hidden" : "contents"}><Header /></div>
       <div className="flex flex-1 min-h-0 relative overflow-hidden">
         {/* Mobile Menu Trigger - Floating Pulse Button */}
         <button

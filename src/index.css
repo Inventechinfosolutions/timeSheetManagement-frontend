@@ -437,6 +437,13 @@ input[type="password"]::-webkit-password-reveal-button {
   float: none !important;
 }
 
+.notes-rich-editor .page *:not(.note-table-scroll):not(.note-table-scroll-inner):not(table):not(img):not(video):not(canvas),
+.notes-content-view .page *:not(.note-table-scroll):not(.note-table-scroll-inner):not(table):not(img):not(video):not(canvas) {
+  max-height: none !important;
+  overflow: visible !important;
+  overflow-y: visible !important;
+}
+
 .notes-rich-editor .page > *,
 .notes-content-view .page > * {
   max-width: 100% !important;

@@ -4,6 +4,7 @@ import { User, Eye, EyeOff, Lock, ShieldCheck, ArrowRight } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { setCurrentUser } from "../reducers/employeeDetails.reducer";
 import { loginUser, clearError } from "../reducers/user.reducer";
+import { fetchNotes } from "../reducers/notes.reducer";
 import { UserType } from "../enums";
 import workspherelogo from "../assets/worksphere_white.svg";
 import SplashVideo from "./SplashVideo";

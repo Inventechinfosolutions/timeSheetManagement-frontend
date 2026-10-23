@@ -1627,7 +1627,7 @@ const isFragmentedPasteHtml = (root: ParentNode): boolean => {
   return tiny / els.length > 0.45;
 };
 
-/** Strip chat/Word layout styles that clip pasted text or stack it beside tables. */
+/** Strip chat/Word layout styles, heights, and margins that push content down or clip text. */
 const normalizePastedLayoutStyles = (root: ParentNode) => {
   root.querySelectorAll<HTMLElement>("*").forEach((el) => {
     el.style.removeProperty("margin-left");
@@ -1640,7 +1640,6 @@ const normalizePastedLayoutStyles = (root: ParentNode) => {
     el.style.removeProperty("right");
     el.style.removeProperty("top");
     el.style.removeProperty("bottom");
-    el.style.removeProperty("position");
     el.style.removeProperty("float");
     el.style.removeProperty("max-width");
     el.style.removeProperty("min-width");
@@ -1651,6 +1650,57 @@ const normalizePastedLayoutStyles = (root: ParentNode) => {
     el.style.removeProperty("flex");
     el.style.removeProperty("flex-direction");
     el.style.removeProperty("grid-template-columns");
+
+    // Remove sticky / fixed positioning which causes huge empty offsets or jumping
+    const pos = (el.style.position || "").toLowerCase();
+    if (pos === "sticky" || pos === "fixed" || pos === "absolute") {
+      el.style.removeProperty("position");
+    }
+
+    // Strip forced heights, max-heights, and overflow scrollbars that trap content in scrollable boxes
+    if (!["IMG", "VIDEO", "CANVAS", "TABLE", "TD", "TH"].includes(el.tagName)) {
+      el.style.removeProperty("min-height");
+      el.style.removeProperty("height");
+      el.style.removeProperty("max-height");
+      el.style.removeProperty("overflow");
+      el.style.removeProperty("overflow-y");
+      el.style.removeProperty("overflow-x");
+    }
+
+    // Strip classes that force internal scrolling or fixed max-height (Tailwind overflow-y-auto, max-h-*, etc.)
+    if (el.className && typeof el.className === "string") {
+      el.className = el.className
+        .split(/\s+/)
+        .filter(
+          (cls) =>
+            !cls.startsWith("overflow-") &&
+            !cls.startsWith("max-h-") &&
+            !cls.startsWith("h-") &&
+            cls !== "overflow-y-auto" &&
+            cls !== "overflow-auto" &&
+            cls !== "overflow-scroll"
+        )
+        .join(" ");
+    }
+
+    // Remove excessive top padding / top margin that pushes content halfway down the page
+    const padTop = parseFloat(el.style.paddingTop || "0");
+    if (padTop > 8 || el.style.paddingTop?.includes("vh") || el.style.paddingTop?.includes("rem")) {
+      el.style.paddingTop = "0";
+    }
+    const padBottom = parseFloat(el.style.paddingBottom || "0");
+    if (padBottom > 16 || el.style.paddingBottom?.includes("vh") || el.style.paddingBottom?.includes("rem")) {
+      el.style.paddingBottom = "0";
+    }
+    const mTop = parseFloat(el.style.marginTop || "0");
+    if (mTop > 8 || el.style.marginTop?.includes("vh") || el.style.marginTop?.includes("rem")) {
+      el.style.marginTop = "0";
+    }
+    const mBottom = parseFloat(el.style.marginBottom || "0");
+    if (mBottom > 16 || el.style.marginBottom?.includes("vh") || el.style.marginBottom?.includes("rem")) {
+      el.style.marginBottom = "0.35em";
+    }
+
     const display = (el.style.display || "").toLowerCase();
     if (
       display.includes("flex") ||
@@ -1666,7 +1716,6 @@ const normalizePastedLayoutStyles = (root: ParentNode) => {
     }
     const w = el.style.width;
     if (w && (w.includes("px") || w.includes("vw") || w.includes("%") || parseFloat(w) > 0)) {
-      // Tiny widths force one-char-per-line wrapping beside tables
       const px = parseFloat(w);
       if (w.includes("%") || px > 100 || px < 40) {
         el.style.removeProperty("width");
@@ -1682,6 +1731,41 @@ const normalizePastedLayoutStyles = (root: ParentNode) => {
       el.style.maxWidth = "100%";
     }
   });
+
+  // Ensure all top-level / leading elements start flush with zero top margin/padding
+  let cur: HTMLElement | null = (root as HTMLElement).firstElementChild as HTMLElement | null;
+  while (cur) {
+    cur.style.marginTop = "0";
+    cur.style.paddingTop = "0";
+    cur = cur.firstElementChild as HTMLElement | null;
+  }
+};
+
+/**
+ * Remove empty spacer blocks (&nbsp;, <br>-only, empty p/div/li/span/header/section)
+ * from pasted content so headers and text start flush at the top.
+ */
+const stripEmptyPastedSpacers = (root: HTMLElement) => {
+  let changed = true;
+  let passes = 0;
+  while (changed && passes < 5) {
+    changed = false;
+    passes += 1;
+    const candidates = Array.from(
+      root.querySelectorAll<HTMLElement>(
+        "p, div, span, li, header, section, article, nav, aside"
+      )
+    );
+    for (const el of candidates) {
+      if (el.closest("table, th, td, .excel-sl-col, .excel-attachment-cell")) continue;
+      if (el.querySelector("img, table, video, canvas, svg, iframe")) continue;
+      const text = (el.textContent || "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+      if (!text) {
+        el.remove();
+        changed = true;
+      }
+    }
+  }
 };
 
 /**
@@ -1695,8 +1779,74 @@ export const preparePastedHtmlForNote = (html?: string, plainText?: string): str
   if (!flat) return "";
 
   const parsed = new DOMParser().parseFromString(flat, "text/html");
-  // Drop scripts / Word conditional noise that can truncate paste
-  parsed.querySelectorAll("script, style, meta, link").forEach((el) => el.remove());
+  // Drop scripts / Word conditional noise / noscript
+  parsed.querySelectorAll("script, style, meta, link, noscript").forEach((el) => el.remove());
+
+  // Strip empty spacer divs, empty paragraphs, and empty containers
+  stripEmptyPastedSpacers(parsed.body);
+
+  // Strip leading empty nodes from the body
+  while (parsed.body.firstChild) {
+    const first = parsed.body.firstChild;
+    if (first.nodeType === Node.TEXT_NODE && !(first.textContent || "").trim()) {
+      first.remove();
+      continue;
+    }
+    if (first.nodeType === Node.ELEMENT_NODE) {
+      const el = first as HTMLElement;
+      if (
+        (el.tagName === "P" || el.tagName === "DIV" || el.tagName === "SECTION" || el.tagName === "HEADER") &&
+        (!el.textContent || !el.textContent.trim()) &&
+        !el.querySelector("img, table, svg, canvas")
+      ) {
+        first.remove();
+        continue;
+      }
+      if (el.tagName === "BR") {
+        first.remove();
+        continue;
+      }
+    }
+    break;
+  }
+
+  // Unwrap ALL redundant layout wrappers (div, section, article, main) from ChatGPT / web pages
+  // so individual headings, paragraphs, and cards become direct flow blocks that cleanly paginate across A4 pages
+  let unwrapPasses = 0;
+  let didUnwrap = true;
+  while (didUnwrap && unwrapPasses < 12) {
+    didUnwrap = false;
+    unwrapPasses += 1;
+    const wrappers = Array.from(
+      parsed.body.querySelectorAll<HTMLElement>("div, section, article, main")
+    );
+    for (const wrapper of wrappers) {
+      if (wrapper === parsed.body) continue;
+      if (wrapper.classList.contains("note-table-scroll") || wrapper.classList.contains("note-table-scroll-inner")) {
+        continue;
+      }
+      // If wrapper is an intermediate container that only wraps other block elements with no direct text
+      const hasDirectText = Array.from(wrapper.childNodes).some(
+        (n) => n.nodeType === Node.TEXT_NODE && (n.textContent || "").trim().length > 0
+      );
+      const isPlainBox =
+        !wrapper.style.backgroundColor &&
+        !wrapper.style.border &&
+        !wrapper.style.borderColor;
+
+      if (
+        wrapper.parentElement &&
+        wrapper.children.length > 0 &&
+        (!hasDirectText || isPlainBox || wrapper.parentElement === parsed.body || wrapper.children.length === 1)
+      ) {
+        while (wrapper.firstChild) {
+          wrapper.parentElement.insertBefore(wrapper.firstChild, wrapper);
+        }
+        wrapper.remove();
+        didUnwrap = true;
+      }
+    }
+  }
 
   // Fragmented / OCR-style HTML → use plain text so it lays out neatly with tables
   if (plainText && isFragmentedPasteHtml(parsed.body)) {
@@ -1815,6 +1965,56 @@ export const getInlineImageFileKey = (img: HTMLImageElement): string | null => {
  * Upload embedded data:image sources and normalize blob/preview srcs so saved
  * description HTML stays small (keys + view URLs instead of base64).
  */
+/** Compress a dataUrl if it exceeds 200KB using HTML Canvas to prevent huge payloads. */
+export const compressDataUrlIfNeeded = async (
+  dataUrl: string,
+  maxDimension = 1600,
+  quality = 0.82
+): Promise<string> => {
+  if (!dataUrl || dataUrl.length < 200 * 1024) return dataUrl;
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (!width || !height) {
+          resolve(dataUrl);
+          return;
+        }
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressed = canvas.toDataURL("image/jpeg", quality);
+        resolve(compressed && compressed.length < dataUrl.length ? compressed : dataUrl);
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    } catch {
+      resolve(dataUrl);
+    }
+  });
+};
+
+/**
+ * Upload embedded data:image sources and normalize blob/preview srcs so saved
+ * description HTML stays small (keys + view URLs instead of base64).
+ */
 export const rewriteInlineDataImagesInHtml = async (
   html: string,
   upload: (file: File) => Promise<string | null | undefined>,
@@ -1837,13 +2037,24 @@ export const rewriteInlineDataImagesInHtml = async (
     const existingKey = getInlineImageFileKey(img);
 
     if (src.startsWith("data:image")) {
-      const file = dataUrlToFile(src, img.getAttribute("alt") || undefined);
+      const compressedSrc = await compressDataUrlIfNeeded(src);
+      const file = dataUrlToFile(compressedSrc, img.getAttribute("alt") || undefined);
       if (!file) continue;
-      const key = await upload(file);
-      if (!key) continue;
-      img.setAttribute(INLINE_FILE_KEY_ATTR, key);
-      img.setAttribute("src", toPreviewUrl(key));
-      changed = true;
+      try {
+        const key = await upload(file);
+        if (key) {
+          img.setAttribute(INLINE_FILE_KEY_ATTR, key);
+          img.setAttribute("src", toPreviewUrl(key));
+          changed = true;
+          continue;
+        }
+      } catch (e) {
+        console.warn("Direct upload of inline image failed, using compressed image:", e);
+      }
+      if (compressedSrc !== src) {
+        img.setAttribute("src", compressedSrc);
+        changed = true;
+      }
       continue;
     }
 

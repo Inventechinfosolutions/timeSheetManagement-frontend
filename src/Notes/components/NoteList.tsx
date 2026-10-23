@@ -13,6 +13,8 @@ import {
   ArchiveRestore,
   Send,
   Paperclip,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Tooltip } from "antd";
 import { PopconfirmWithTooltip } from "../../components/ui/PopconfirmWithTooltip";
@@ -26,6 +28,7 @@ interface NoteListProps {
   loading?: boolean;
   notes: Note[];
   paginatedNotes: Note[];
+  totalNotesCount?: number;
   currentPage: number;
   pageSize: number;
   totalPages: number;
@@ -34,6 +37,7 @@ interface NoteListProps {
   fromDate: string;
   toDate: string;
   expandedNotes: Record<number, boolean>;
+  loadingSubNotes?: Record<number, boolean>;
   currentUser?: { loginId?: string } | null;
   dragDrop: ReturnType<typeof useNoteDragDrop>;
   onToggleExpand: (noteId: number) => void;
@@ -52,6 +56,7 @@ export const NoteList: React.FC<NoteListProps> = ({
   loading,
   notes,
   paginatedNotes,
+  totalNotesCount,
   currentPage,
   pageSize,
   totalPages,
@@ -60,6 +65,7 @@ export const NoteList: React.FC<NoteListProps> = ({
   fromDate,
   toDate,
   expandedNotes,
+  loadingSubNotes,
   currentUser,
   dragDrop,
   onToggleExpand,
@@ -467,7 +473,16 @@ export const NoteList: React.FC<NoteListProps> = ({
                                 </thead>
 
                                 <tbody className="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
-                                  {visibleSubNotes.length === 0 ? (
+                                  {loadingSubNotes?.[note.id] ? (
+                                    <tr>
+                                      <td colSpan={5} className="py-8 text-center text-slate-500">
+                                        <div className="flex items-center justify-center gap-2">
+                                          <div className="w-4 h-4 border-2 border-[#4318FF] border-t-transparent rounded-full animate-spin" />
+                                          <span className="text-xs">Loading child notes...</span>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ) : visibleSubNotes.length === 0 ? (
                                     <tr>
                                       <td colSpan={5} className="py-8 text-center text-slate-400">
                                         {subNotes.length === 0 ? (
@@ -636,30 +651,63 @@ export const NoteList: React.FC<NoteListProps> = ({
       )}
 
       {/* Table Footer: Showing X of Y notes & Pagination */}
-      {notes.length > 0 && (
-        <div className="p-4 flex items-center justify-between border-t border-slate-100 text-xs text-slate-500">
-          <div>
-            Showing {Math.min((currentPage - 1) * pageSize + 1, notes.length)} -{" "}
-            {Math.min(currentPage * pageSize, notes.length)} of {notes.length} notes
-          </div>
+      {notes.length > 0 && (() => {
+        const totalCount = totalNotesCount && totalNotesCount > 0 ? totalNotesCount : notes.length;
+        const startItem = totalCount === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+        const endItem = Math.min(startItem + notes.length - 1, totalCount);
 
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
+        return (
+          <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-slate-100 text-xs text-slate-500">
+            <div>
+              Showing <span className="font-bold text-slate-800">{startItem}</span> -{" "}
+              <span className="font-bold text-slate-800">{endItem}</span> of{" "}
+              <span className="font-bold text-slate-800">{totalCount}</span> notes
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              {/* Previous Page Button */}
               <button
-                key={`page-${pg}`}
-                onClick={() => onPageChange(pg)}
-                className={`w-7 h-7 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center ${
-                  currentPage === pg
-                    ? "bg-[#4318FF] text-white shadow-xs"
-                    : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
-                }`}
+                type="button"
+                onClick={() => onPageChange(currentPage - 1)}
+                disabled={currentPage <= 1}
+                className="px-2.5 py-1 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all flex items-center gap-1 font-semibold"
+                title="Previous page"
               >
-                {pg}
+                <ChevronLeft className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Prev</span>
               </button>
-            ))}
+
+              {/* Numbered Page Buttons */}
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
+                <button
+                  key={`page-${pg}`}
+                  type="button"
+                  onClick={() => onPageChange(pg)}
+                  className={`w-7 h-7 rounded-xl text-xs font-bold transition cursor-pointer flex items-center justify-center ${
+                    currentPage === pg
+                      ? "bg-[#4318FF] text-white shadow-xs"
+                      : "bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200"
+                  }`}
+                >
+                  {pg}
+                </button>
+              ))}
+
+              {/* Next Page Button */}
+              <button
+                type="button"
+                onClick={() => onPageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+                className="px-2.5 py-1 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all flex items-center gap-1 font-semibold"
+                title="Next page"
+              >
+                <span className="hidden sm:inline">Next</span>
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
