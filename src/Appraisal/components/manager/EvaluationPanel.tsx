@@ -137,12 +137,7 @@ const getRatingLabel = (score: number): string => {
 };
 
 const TEAM_CRITERIA = [
-  { key: "communication", title: "Communication" },
-  { key: "ownership", title: "Ownership" },
-  { key: "collaboration", title: "Collaboration" },
-  { key: "problemSolving", title: "Problem Solving" },
-  { key: "leadership", title: "Leadership" },
-  { key: "adaptability", title: "Adaptability" },
+  { key: "communication", title: "Communication & Coordination" },
 ];
 
 const ENVIRONMENT_RATINGS: Record<number, { label: string; emoji: string }> = {
@@ -1526,16 +1521,80 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
                   </div>
 
-                  <div className="eval-stagger-item eval-stagger-3">
-                    <label className="text-[11px] font-bold text-[#A3AED0] block mb-1.5 uppercase tracking-wider">
-                      Overview
-                    </label>
-                    <div
-                      className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
-                      title="Employee submitted response (Read-only)"
-                    >
-                      {formData.overview || "—"}
-                    </div>
+                  <div className="eval-stagger-item eval-stagger-3 space-y-3">
+                    {(() => {
+                      const raw = formData.overview || "";
+                      let parsed: any = null;
+                      if (raw.trim().startsWith("{") && raw.trim().endsWith("}")) {
+                        try {
+                          parsed = JSON.parse(raw);
+                        } catch {
+                          parsed = null;
+                        }
+                      }
+                      if (parsed) {
+                        return (
+                          <div className="space-y-3">
+                            {(parsed.reviewPeriodStart || parsed.reviewPeriodEnd) && (
+                              <div className="text-xs text-[#64748B] font-medium bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/70">
+                                Review Period: <strong className="text-[#0F172A]">{parsed.reviewPeriodStart || "—"}</strong> to <strong className="text-[#0F172A]">{parsed.reviewPeriodEnd || "—"}</strong>
+                              </div>
+                            )}
+                            <div>
+                              <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                Overall Performance Summary
+                              </label>
+                              <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+                                {parsed.overallPerformanceSummary || "—"}
+                              </div>
+                            </div>
+                            {Boolean(parsed.keyHighlights) && (
+                              <div>
+                                <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  Key Highlights
+                                </label>
+                                <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+                                  {parsed.keyHighlights}
+                                </div>
+                              </div>
+                            )}
+                            {Boolean(parsed.majorContributions) && (
+                              <div>
+                                <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  Major Contributions
+                                </label>
+                                <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+                                  {parsed.majorContributions}
+                                </div>
+                              </div>
+                            )}
+                            {Boolean(parsed.areasForImprovement) && (
+                              <div>
+                                <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  Areas for Improvement
+                                </label>
+                                <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
+                                  {parsed.areasForImprovement}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return (
+                        <div>
+                          <label className="text-[11px] font-extrabold text-[#64748B] block mb-1.5 uppercase tracking-wider">
+                            Overview
+                          </label>
+                          <div
+                            className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
+                            title="Employee submitted response (Read-only)"
+                          >
+                            {formData.overview || "—"}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -1559,7 +1618,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   ) : (
                     <div className="space-y-3.5">
                       {(formData.projects || []).map((project, index) => (
-                        <div key={`${project.title}-${index}`} className="space-y-2 p-3 bg-blue-50/20 border border-blue-100 rounded-2xl">
+                        <div key={`${project.projectName}-${index}`} className="space-y-2 p-3 bg-blue-50/20 border border-blue-100 rounded-2xl">
                           <div className="flex items-center gap-2">
                             <span className="px-2 py-0.5 text-[10px] font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
                               Project {index + 1}
@@ -1568,10 +1627,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div>
                               <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                                Project Title
+                                Project Name
                               </label>
                               <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm font-bold text-[#2B3674]">
-                                {project.title || "—"}
+                                {project.projectName || "—"}
                               </div>
                               {(project.attachments || []).length > 0 && (
                                 <div className="mt-2.5">
@@ -1635,8 +1694,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-[#A3AED0] block mb-2 uppercase tracking-wider eval-stagger-item eval-stagger-3">
-                      Evaluated Teamwork Dimensions ({ratedDimensionsCount}/6)
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-2 uppercase tracking-wider eval-stagger-item eval-stagger-3">
+                      Communication & Coordination Rating
                     </label>
 
                     {/* 2-Column Responsive Grid */}
@@ -1668,6 +1727,55 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         );
                       })}
                     </div>
+
+                    {/* 4 Teamwork Details in 2 columns */}
+                    {(formData.teamCollaborationSummary ||
+                      formData.crossTeamContributions ||
+                      formData.knowledgeSharingMentoring ||
+                      formData.teamworkExamples) && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-blue-100/60 mt-3">
+                        {formData.teamCollaborationSummary && (
+                          <div>
+                            <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                              Team Collaboration Summary
+                            </label>
+                            <div className="p-3.5 bg-white border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed eval-readonly-field">
+                              {formData.teamCollaborationSummary}
+                            </div>
+                          </div>
+                        )}
+                        {formData.crossTeamContributions && (
+                          <div>
+                            <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                              Cross-Team Contributions
+                            </label>
+                            <div className="p-3.5 bg-white border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed eval-readonly-field">
+                              {formData.crossTeamContributions}
+                            </div>
+                          </div>
+                        )}
+                        {formData.knowledgeSharingMentoring && (
+                          <div>
+                            <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                              Knowledge Sharing / Mentoring
+                            </label>
+                            <div className="p-3.5 bg-white border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed eval-readonly-field">
+                              {formData.knowledgeSharingMentoring}
+                            </div>
+                          </div>
+                        )}
+                        {formData.teamworkExamples && (
+                          <div>
+                            <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                              Teamwork Examples
+                            </label>
+                            <div className="p-3.5 bg-white border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed eval-readonly-field">
+                              {formData.teamworkExamples}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

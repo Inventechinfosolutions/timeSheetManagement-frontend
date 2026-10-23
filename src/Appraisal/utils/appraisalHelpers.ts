@@ -140,11 +140,21 @@ export const readProjectList = (
     return [];
   }
   return source
-    .filter((project) => project && (project.title || project.description || project.challenge))
+    .filter((project) => project && (project.projectName || (project as { title?: string }).title || project.description || project.challenge || project.challengesFaced))
     .map((project) => ({
-      title: project.title || "",
+      projectName: project.projectName || (project as { title?: string }).title || "",
       description: project.description || "",
-      challenge: project.challenge || "",
+      challenge: project.challenge || project.challengesFaced || "",
+      challengesFaced: project.challengesFaced || project.challenge || "",
+      projectRole: project.projectRole || "",
+      responsibilityType: project.responsibilityType || "",
+      leadershipQualities: project.leadershipQualities || "",
+      clientReviewFeedback: project.clientReviewFeedback || "",
+      keyResponsibilities: project.keyResponsibilities || "",
+      solutionsImplemented: project.solutionsImplemented || "",
+      keyAchievementsOutcomes: project.keyAchievementsOutcomes || "",
+      technologiesUsed: Array.isArray(project.technologiesUsed) ? project.technologiesUsed : [],
+      isDraft: Boolean(project.isDraft),
       attachments: (project.attachments || [])
         .filter((file) => file.objectKey || file.fileName)
         .map((file) => ({
@@ -294,11 +304,53 @@ export const toReviewFormData = (
     parsedEnvMeta?.confirmationAccepted ??
     Boolean(performance.confirmationAccepted);
 
+  const rawOverview = performance.overview || "";
+  let overallPerformanceSummary = "";
+  let keyHighlights = "";
+  let majorContributions = "";
+  let areasForImprovement = "";
+  let reviewPeriodStart = "";
+  let reviewPeriodEnd = "";
+
+  let teamCollaborationSummary = "";
+  let crossTeamContributions = "";
+  let knowledgeSharingMentoring = "";
+  let teamworkExamples = "";
+
+  if (rawOverview.trim().startsWith("{") && rawOverview.trim().endsWith("}")) {
+    try {
+      const parsed = JSON.parse(rawOverview);
+      overallPerformanceSummary = parsed.overallPerformanceSummary || "";
+      keyHighlights = parsed.keyHighlights || "";
+      majorContributions = parsed.majorContributions || "";
+      areasForImprovement = parsed.areasForImprovement || "";
+      reviewPeriodStart = parsed.reviewPeriodStart || "";
+      reviewPeriodEnd = parsed.reviewPeriodEnd || "";
+      teamCollaborationSummary = parsed.teamCollaborationSummary || "";
+      crossTeamContributions = parsed.crossTeamContributions || "";
+      knowledgeSharingMentoring = parsed.knowledgeSharingMentoring || "";
+      teamworkExamples = parsed.teamworkExamples || "";
+    } catch {
+      overallPerformanceSummary = rawOverview;
+    }
+  } else {
+    overallPerformanceSummary = rawOverview;
+  }
+
   return {
     ...emptyReviewFormData,
-    overview: performance.overview || "",
-    roleSummary: performance.overview || "",
-    projectTitle: "",
+    overview: rawOverview,
+    overallPerformanceSummary: overallPerformanceSummary || rawOverview,
+    keyHighlights,
+    majorContributions,
+    areasForImprovement,
+    reviewPeriodStart,
+    reviewPeriodEnd,
+    teamCollaborationSummary,
+    crossTeamContributions,
+    knowledgeSharingMentoring,
+    teamworkExamples,
+    projectName: "",
     projectDescription: "",
     projectChallenge: "",
     projects: readProjectList(performance.projects),
@@ -326,11 +378,6 @@ export const toReviewFormData = (
     finalComments: overallEmployeeComments,
     teamRatings: {
       communication: performance.communicationTransparency || 0,
-      collaboration: performance.crossDepartmentCollaboration || 0,
-      ownership: performance.reliabilityAccountability || 0,
-      problemSolving: performance.peerSupportTeamSpirit || 0,
-      leadership: performance.mentorshipKnowledgeSharing || 0,
-      adaptability: performance.adaptabilityInitiative || 0,
     },
   };
 };
@@ -344,13 +391,46 @@ export const toPerformancePayload = (
   financialYear: string,
   formData: ReviewFormData,
 ): PerformanceWritePayload => {
-  const overview = (formData.overview || formData.roleSummary || "").trim();
+  const hasStructuredOverview = Boolean(
+    formData.overallPerformanceSummary ||
+    formData.keyHighlights ||
+    formData.majorContributions ||
+    formData.areasForImprovement ||
+    formData.teamCollaborationSummary ||
+    formData.crossTeamContributions ||
+    formData.knowledgeSharingMentoring ||
+    formData.teamworkExamples
+  );
+  const overview = hasStructuredOverview
+    ? JSON.stringify({
+        overallPerformanceSummary: formData.overallPerformanceSummary || "",
+        keyHighlights: formData.keyHighlights || "",
+        majorContributions: formData.majorContributions || "",
+        areasForImprovement: formData.areasForImprovement || "",
+        reviewPeriodStart: formData.reviewPeriodStart || "",
+        reviewPeriodEnd: formData.reviewPeriodEnd || "",
+        teamCollaborationSummary: formData.teamCollaborationSummary || "",
+        crossTeamContributions: formData.crossTeamContributions || "",
+        knowledgeSharingMentoring: formData.knowledgeSharingMentoring || "",
+        teamworkExamples: formData.teamworkExamples || "",
+      })
+    : (formData.overview || formData.overallPerformanceSummary || "").trim();
   const projects = (formData.projects || [])
-    .filter((project) => project.title.trim() && project.description.trim() && project.challenge.trim())
+    .filter((project) => Boolean(project && (project.projectName?.trim() || project.description?.trim())))
     .map((project) => ({
-      title: project.title.trim(),
-      description: project.description.trim(),
-      challenge: project.challenge.trim(),
+      projectName: (project.projectName || "Untitled Project").trim(),
+      description: (project.description || "").trim(),
+      challenge: (project.challenge || project.challengesFaced || "").trim(),
+      challengesFaced: (project.challengesFaced || project.challenge || "").trim(),
+      projectRole: project.projectRole || "",
+      responsibilityType: project.responsibilityType || "",
+      leadershipQualities: (project.leadershipQualities || "").trim(),
+      clientReviewFeedback: (project.clientReviewFeedback || "").trim(),
+      keyResponsibilities: (project.keyResponsibilities || "").trim(),
+      solutionsImplemented: (project.solutionsImplemented || "").trim(),
+      keyAchievementsOutcomes: (project.keyAchievementsOutcomes || "").trim(),
+      technologiesUsed: Array.isArray(project.technologiesUsed) ? project.technologiesUsed : [],
+      isDraft: Boolean(project.isDraft),
       attachments: (project.attachments || []).map((file) => ({
         fileName: file.fileName,
         fileUrl: file.objectKey,
@@ -359,7 +439,7 @@ export const toPerformancePayload = (
         objectKey: file.objectKey,
       })),
     }));
-  const projectTitle = projects.map((project) => project.title.trim()).join("\n");
+  const projectNames = projects.map((project) => project.projectName.trim()).join("\n");
   const projectDescription = projects.map((project) => project.description.trim()).join("\n");
   const challenge = projects.map((project) => project.challenge.trim()).join("\n");
 
@@ -417,9 +497,9 @@ export const toPerformancePayload = (
     financialYear,
     overview: overview || undefined,
     projects,
-    responsibilitiesHandled: (formData.roleSummary || overview || "").trim() || undefined,
+    responsibilitiesHandled: (formData.majorContributions || overview || "").trim() || undefined,
     deliverablesCompleted: projectDescription || undefined,
-    keyAccomplishments: projectTitle || undefined,
+    keyAccomplishments: projectNames || undefined,
     challengesFaced: challenge || undefined,
     skillsAcquired: skillsLearned || undefined,
     learningGoals: learningGoalsList.length ? learningGoalsList : undefined,
@@ -429,11 +509,11 @@ export const toPerformancePayload = (
     plannedDeliverables: nextGoals || skillsLearned || undefined,
     careerDevelopmentGoals: careerGrowthInterests || nextGoals || undefined,
     communicationTransparency: scored(ratings.communication),
-    crossDepartmentCollaboration: scored(ratings.collaboration),
-    reliabilityAccountability: scored(ratings.ownership),
-    peerSupportTeamSpirit: scored(ratings.problemSolving),
-    mentorshipKnowledgeSharing: scored(ratings.leadership),
-    adaptabilityInitiative: scored(ratings.adaptability),
+    crossDepartmentCollaboration: scored(ratings.communication),
+    reliabilityAccountability: scored(ratings.communication),
+    peerSupportTeamSpirit: scored(ratings.communication),
+    mentorshipKnowledgeSharing: scored(ratings.communication),
+    adaptabilityInitiative: scored(ratings.communication),
     rateCompanyEnvironment: ENVIRONMENT_RATINGS[environmentScore],
   };
 };
