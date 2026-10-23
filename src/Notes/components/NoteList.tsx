@@ -51,6 +51,7 @@ interface NoteListProps {
 }
 
 export const NoteList: React.FC<NoteListProps> = ({
+  loading,
   notes,
   paginatedNotes,
   totalNotesCount,
