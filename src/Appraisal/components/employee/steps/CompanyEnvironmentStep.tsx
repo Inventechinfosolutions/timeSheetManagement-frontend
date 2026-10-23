@@ -1,22 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
-import { StepProps } from "../../../types/appraisal.types";
-import { Check, CheckCircle2, AlertCircle } from "lucide-react";
-import { animateEmojiClickPop } from "../../../animations/appraisalAnimations";
+import React, { useState } from "react";
+import { StepProps, ReviewFormData } from "../../../types/appraisal.types";
+import { Star, CheckCircle2, AlertCircle } from "lucide-react";
 import "../AppraisalDashboard.css";
-
-interface RatingOption {
-  id: number;
-  label: string;
-  emoji: string;
-}
-
-const RATING_OPTIONS: RatingOption[] = [
-  { id: 1, label: "Very Bad", emoji: "😡" },
-  { id: 2, label: "Bad", emoji: "🙁" },
-  { id: 3, label: "Neutral", emoji: "😐" },
-  { id: 4, label: "Good", emoji: "😊" },
-  { id: 5, label: "Excellent", emoji: "🤩" },
-];
 
 const EMOJI_MAP: Record<number, string> = {
   1: "😡",
@@ -38,60 +23,127 @@ export const renderEmojiIcon = (emoji: string) => (
   </span>
 );
 
+const RATING_DESCRIPTIONS: Record<number, string> = {
+  1: "Poor (1/5)",
+  2: "Fair (2/5)",
+  3: "Good (3/5)",
+  4: "Very Good (4/5)",
+  5: "Excellent (5/5)",
+};
+
+interface RatingCardProps {
+  id: string;
+  fieldKey: keyof ReviewFormData;
+  title: string;
+  value: number;
+  error?: string;
+  onRate: (score: number) => void;
+}
+
+const EnvironmentRatingCard: React.FC<RatingCardProps> = ({
+  id,
+  title,
+  value,
+  error,
+  onRate,
+}) => {
+  const [hoveredScore, setHoveredScore] = useState<number>(0);
+  const displayScore = hoveredScore || value || 0;
+
+  return (
+    <div
+      id={id}
+      className={`bg-white border rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between transition-all duration-200 scroll-mt-24 shadow-2xs ${
+        error
+          ? "border-red-400 bg-red-50/20 ring-2 ring-red-100"
+          : value > 0
+          ? "border-blue-400/80 bg-blue-50/15"
+          : "border-blue-200/70 hover:border-blue-300"
+      }`}
+    >
+      <div>
+        <div className="flex items-start justify-between gap-2 mb-1.5 min-h-[30px]">
+          <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] leading-tight">
+            <span>
+              {title} <span className="text-red-500">*</span>
+            </span>
+          </label>
+          {value > 0 && (
+            <span className="shrink-0 text-[10px] font-bold text-[#2563EB] bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded-md flex items-center gap-1 animate-in fade-in duration-150">
+              <CheckCircle2 className="w-3 h-3 text-[#2563EB]" />
+              <span>{value}/5</span>
+            </span>
+          )}
+        </div>
+
+        {/* 5-Star Interactive Rating */}
+        <div
+          className="flex items-center gap-1 py-0.5"
+          onMouseLeave={() => setHoveredScore(0)}
+        >
+          {[1, 2, 3, 4, 5].map((star) => {
+            const isFilled = star <= displayScore;
+            return (
+              <button
+                key={star}
+                type="button"
+                onClick={() => onRate(star)}
+                onMouseEnter={() => setHoveredScore(star)}
+                className="p-0.5 rounded hover:bg-amber-50 focus:outline-none transition-transform duration-150 hover:scale-110 active:scale-95 cursor-pointer"
+                title={`${star} Star - ${RATING_DESCRIPTIONS[star]}`}
+                aria-label={`${title} ${star} of 5`}
+              >
+                <Star
+                  className={`w-5 h-5 transition-colors duration-150 ${
+                    isFilled
+                      ? "fill-[#F59E0B] text-[#D97706] drop-shadow-[0_1px_2px_rgba(245,158,11,0.35)]"
+                      : "fill-transparent text-slate-300 hover:text-amber-300"
+                  }`}
+                />
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Score Description Pill */}
+        <div className="mt-1 text-[11px] font-semibold text-[#64748B] min-h-[16px]">
+          {displayScore > 0 ? (
+            <span className="text-[#0F172A] font-bold">
+              {RATING_DESCRIPTIONS[displayScore]}
+            </span>
+          ) : (
+            <span className="text-slate-400">Select rating (1 to 5)</span>
+          )}
+        </div>
+      </div>
+
+      {error && (
+        <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+          <span>{error}</span>
+        </p>
+      )}
+    </div>
+  );
+};
+
 export const CompanyEnvironmentStep: React.FC<StepProps> = ({
   formData,
   onChange,
   errors,
   clearError,
 }) => {
-  const [hoveredRating, setHoveredRating] = useState<number | null>(null);
-  const [animatingId, setAnimatingId] = useState<number | null>(null);
-  const emojiBtnRefs = useRef<Record<number, HTMLDivElement | null>>({});
-
-  useEffect(() => {
-    if (animatingId && emojiBtnRefs.current[animatingId]) {
-      animateEmojiClickPop(emojiBtnRefs.current[animatingId]);
-    }
-  }, [animatingId]);
-
-  const selectedRating = formData.companyEnvironmentRating ?? null;
-
-  const workCultureError = errors?.workCultureFeedback;
-  const workLifeBalanceError = errors?.workLifeBalance;
-  const suggestionsError = errors?.suggestionsForImprovement || errors?.toolingAndResources;
-  const ratingError = errors?.companyEnvironmentRating || errors?.managementSupportRating;
-
-  const handleSelect = (id: number) => {
-    setAnimatingId(id);
-    setTimeout(() => setAnimatingId(null), 400);
-    onChange("companyEnvironmentRating" as any, id);
-    onChange("managementSupportRating", id);
+  const handleRateField = (field: keyof ReviewFormData, score: number) => {
+    onChange(field, score);
     if (clearError) {
-      clearError("companyEnvironmentRating");
-      clearError("managementSupportRating");
+      clearError(field as string);
     }
   };
 
-  const handleWorkCultureChange = (val: string) => {
-    onChange("workCultureFeedback", val);
+  const handleTextChange = (field: keyof ReviewFormData, val: string) => {
+    onChange(field, val);
     if (clearError) {
-      clearError("workCultureFeedback");
-    }
-  };
-
-  const handleWorkLifeBalanceChange = (val: string) => {
-    onChange("workLifeBalance", val);
-    if (clearError) {
-      clearError("workLifeBalance");
-    }
-  };
-
-  const handleSuggestionsChange = (val: string) => {
-    onChange("suggestionsForImprovement", val);
-    onChange("toolingAndResources", val);
-    if (clearError) {
-      clearError("suggestionsForImprovement");
-      clearError("toolingAndResources");
+      clearError(field as string);
     }
   };
 
@@ -100,201 +152,102 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
       {/* Step Header */}
       <div className="border-b border-blue-100 pb-3">
         <h3 className="text-base sm:text-lg font-bold text-[#0F172A]">
-          <span className="eval-title-anim">Step 5: Company & Work Environment</span>{" "}
-          <span className="text-red-500">*</span>
+          <span className="eval-title-anim">Step 5: Environment</span>
           <span className="eval-title-accent-line" />
         </h3>
         <p className="text-xs text-[#64748B] mt-1 eval-subtitle-anim">
-          Rate your experience across key workplace culture, collaboration, and environment factors.
+          Understand whether you have the tools, support, and working conditions needed to perform effectively.
         </p>
       </div>
 
-      {/* 2x2 Side-by-Side Grid for the 4 Inputs */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* 1. Feedback on Work Culture */}
-        <div
-          id="field-workCultureFeedback"
-          className={`eval-step-card space-y-2 flex flex-col justify-between transition-all duration-200 ${workCultureError ? "eval-field-has-error" : ""
-            }`}
-        >
-          <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between">
-              <span>
-                Feedback on Work Culture <span className="text-red-500">*</span>
-              </span>
+      {/* 1. Rating Fields: 3 Cards Side-by-Side in Responsive Grid */}
+      <div>
+        <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#64748B] mb-3">
+          Environment &amp; Support Ratings
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Field 1: Work Environment Satisfaction */}
+          <EnvironmentRatingCard
+            id="field-companyEnvironmentRating"
+            fieldKey="companyEnvironmentRating"
+            title="Work Environment Satisfaction"
+            value={formData.companyEnvironmentRating || 0}
+            error={errors?.companyEnvironmentRating}
+            onRate={(score) => handleRateField("companyEnvironmentRating", score)}
+          />
+
+          {/* Field 2: Availability of Tools & Resources */}
+          <EnvironmentRatingCard
+            id="field-toolingAndResourcesRating"
+            fieldKey="toolingAndResourcesRating"
+            title="Availability of Tools & Resources"
+            value={formData.toolingAndResourcesRating || 0}
+            error={errors?.toolingAndResourcesRating}
+            onRate={(score) => handleRateField("toolingAndResourcesRating", score)}
+          />
+
+          {/* Field 3: Manager Support */}
+          <EnvironmentRatingCard
+            id="field-managementSupportRating"
+            fieldKey="managementSupportRating"
+            title="Manager Support"
+            value={formData.managementSupportRating || 0}
+            error={errors?.managementSupportRating}
+            onRate={(score) => handleRateField("managementSupportRating", score)}
+          />
+        </div>
+      </div>
+
+      {/* 2. Qualitative Feedback Textareas: Side-by-Side without outer card borders */}
+      <div>
+        <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#64748B] mb-3">
+          Productivity &amp; Suggestions
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Field 4: Challenges Affecting Productivity (Optional) */}
+          <div
+            id="field-challengesAffectingProductivity"
+            className="flex flex-col space-y-2 scroll-mt-24"
+          >
+            <label
+              htmlFor="input-challengesAffectingProductivity"
+              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+            >
+              <span>Challenges Affecting Productivity</span>
             </label>
             <textarea
-              id="input-workCultureFeedback"
-              rows={3}
-              value={formData.workCultureFeedback ?? ""}
-              onChange={(e) => handleWorkCultureChange(e.target.value)}
-              placeholder="Share feedback on culture, teamwork, and work environment...."
-              className={`eval-textarea-field mt-2 ${workCultureError ? "eval-input-error" : ""
-                }`}
+              id="input-challengesAffectingProductivity"
+              rows={4}
+              value={formData.challengesAffectingProductivity ?? ""}
+              onChange={(e) =>
+                handleTextChange("challengesAffectingProductivity", e.target.value)
+              }
+              placeholder="Describe any obstacles, bottlenecks, or challenges affecting your productivity..."
+              className="eval-textarea-field leading-relaxed text-sm flex-1"
             />
-            {workCultureError && (
-              <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-                <span>{workCultureError}</span>
-              </p>
-            )}
           </div>
-        </div>
 
-        {/* 2. Work Life Balance */}
-        <div
-          id="field-workLifeBalance"
-          className={`eval-step-card space-y-2 flex flex-col justify-between transition-all duration-200 ${workLifeBalanceError ? "eval-field-has-error" : ""
-            }`}
-        >
-          <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between">
-              <span>
-                Work Life Balance <span className="text-red-500">*</span>
-              </span>
-            </label>
-            <textarea
-              id="input-workLifeBalance"
-              rows={3}
-              value={formData.workLifeBalance ?? ""}
-              onChange={(e) => handleWorkLifeBalanceChange(e.target.value)}
-              placeholder="Describe your work-life balance, workload, and well-being...."
-              className={`eval-textarea-field mt-2 ${workLifeBalanceError ? "eval-input-error" : ""
-                }`}
-            />
-            {workLifeBalanceError && (
-              <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-                <span>{workLifeBalanceError}</span>
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* 3. Suggestions for Improvement */}
-        <div
-          id="field-suggestionsForImprovement"
-          className={`eval-step-card space-y-2 flex flex-col justify-between transition-all duration-200 ${suggestionsError ? "eval-field-has-error" : ""
-            }`}
-        >
-          <div>
-            <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between">
-              <span>
-                Suggestions for Improvement <span className="text-red-500">*</span>
-              </span>
+          {/* Field 5: Suggestions for Improvement (Optional) */}
+          <div
+            id="field-suggestionsForImprovement"
+            className="flex flex-col space-y-2 scroll-mt-24"
+          >
+            <label
+              htmlFor="input-suggestionsForImprovement"
+              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+            >
+              <span>Suggestions for Improvement</span>
             </label>
             <textarea
               id="input-suggestionsForImprovement"
-              rows={3}
+              rows={4}
               value={formData.suggestionsForImprovement ?? ""}
-              onChange={(e) => handleSuggestionsChange(e.target.value)}
-              placeholder="Suggest ideas for workplace improvement...."
-              className={`eval-textarea-field mt-2 ${suggestionsError ? "eval-input-error" : ""
-                }`}
+              onChange={(e) =>
+                handleTextChange("suggestionsForImprovement", e.target.value)
+              }
+              placeholder="Suggest ideas for tools, processes, training, or workplace improvement..."
+              className="eval-textarea-field leading-relaxed text-sm flex-1"
             />
-            {suggestionsError && (
-              <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-                <span>{suggestionsError}</span>
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* 4. Rate the Company Environment (Interactive Animated Emojis) */}
-        <div
-          id="field-companyEnvironmentRating"
-          className={`eval-step-card space-y-2 flex flex-col justify-between transition-all duration-200 ${ratingError ? "eval-field-has-error" : ""
-            }`}
-        >
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
-                Rate the Company Environment <span className="text-red-500">*</span>
-              </label>
-              {selectedRating ? (
-                <span className="text-[11px] font-bold text-[#2563EB] flex items-center gap-1 animate-in fade-in duration-200">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB]" />
-                  Selected: {RATING_OPTIONS.find((r) => r.id === selectedRating)?.label} ({selectedRating}/5)
-                </span>
-              ) : (
-                <span className="text-[11px] font-semibold text-[#64748B]">
-                  Select 1 to 5
-                </span>
-              )}
-            </div>
-
-            <div
-              className="grid grid-cols-5 gap-1.5 sm:gap-2 pt-1 select-none"
-              onMouseLeave={() => setHoveredRating(null)}
-            >
-              {RATING_OPTIONS.map((item) => {
-                const isSelected = selectedRating === item.id;
-                const isHovered = hoveredRating === item.id;
-
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleSelect(item.id)}
-                    onMouseEnter={() => setHoveredRating(item.id)}
-                    className={`group relative flex flex-col items-center justify-center py-2.5 sm:py-3 px-1 rounded-xl border-2 transition-all duration-200 cursor-pointer focus:outline-none select-none ${isSelected
-                        ? "bg-white border-[#2563EB] shadow-md shadow-blue-500/20 ring-2 ring-blue-500/20 scale-[1.03] z-10"
-                        : isHovered
-                          ? "bg-white border-blue-300 shadow-xs -translate-y-0.5"
-                          : ratingError
-                            ? "bg-white/80 border-red-300 hover:border-red-400"
-                            : "bg-white/60 border-[#E2E8F0] hover:border-[#CBD5E1]"
-                      }`}
-                  >
-                    {/* Selected Checkmark Badge on Top Right */}
-                    {isSelected && (
-                      <span className="absolute -top-1.5 -right-1 w-4 h-4 rounded-full bg-[#2563EB] text-white flex items-center justify-center shadow-xs animate-in zoom-in-75 duration-200">
-                        <Check className="w-2.5 h-2.5 stroke-[3]" />
-                      </span>
-                    )}
-
-                    {/* Animated Sentiment Emoji Icon with Grayscale Contrast Filter */}
-                    <div
-                      ref={(el) => {
-                        emojiBtnRefs.current[item.id] = el;
-                      }}
-                      className={`relative flex items-center justify-center transition-all duration-200 ${isSelected
-                          ? "scale-110 drop-shadow-md filter-none opacity-100"
-                          : isHovered
-                            ? "scale-105 filter grayscale-[15%] opacity-90"
-                            : "filter grayscale-[80%] opacity-45 group-hover:filter-none group-hover:opacity-100"
-                        }`}
-                    >
-                      {renderEmojiIcon(item.emoji)}
-                    </div>
-
-                    {/* Label */}
-                    <span
-                      className={`mt-1.5 text-[10px] sm:text-[11px] font-bold transition-all tracking-tight whitespace-nowrap text-center ${isSelected
-                          ? "text-[#2563EB] font-extrabold scale-105"
-                          : "text-[#64748B] group-hover:text-[#0F172A]"
-                        }`}
-                    >
-                      {item.label}
-                    </span>
-
-                    {/* Selected Indicator Pill */}
-                    <div
-                      className={`mt-1 h-0.5 rounded-full transition-all duration-300 ${isSelected ? "w-6 bg-[#2563EB]" : "w-0 bg-transparent"
-                        }`}
-                    />
-                  </button>
-                );
-              })}
-            </div>
-
-            {ratingError && (
-              <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-                <span>{ratingError}</span>
-              </p>
-            )}
           </div>
         </div>
       </div>

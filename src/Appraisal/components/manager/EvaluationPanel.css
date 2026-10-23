@@ -348,9 +348,53 @@
 
 .eval-assignment-readonly-field,
 .eval-readonly-field {
+  border-left: 3.5px solid #2563EB !important;
   cursor: not-allowed !important;
   user-select: text;
   transition: all 0.2s ease;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.eval-readonly-field::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.eval-readonly-field::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.eval-readonly-field::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.eval-readonly-field:hover,
+.eval-readonly-field:focus {
+  scrollbar-color: #CBD5E1 transparent;
+}
+
+.eval-readonly-field:hover::-webkit-scrollbar-thumb,
+.eval-readonly-field:focus::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+}
+
+.eval-readonly-field::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+.eval-readonly-field::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.eval-readonly-field::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .eval-readonly-field:hover {
@@ -597,10 +641,11 @@
   transform: scale(0.95);
 }
 
-/* Textareas with Modern Focus Glow */
+/* Textareas with Modern Focus Glow & Left Side Brand Accent */
 .eval-textarea-field {
   width: 100%;
   border: 1.5px solid #E2E8F0;
+  border-left: 3.5px solid #2563EB;
   border-radius: 0.85rem;
   padding: 0.8rem 1rem;
   font-size: 0.8125rem;
@@ -609,15 +654,61 @@
   line-height: 1.55;
   transition: all 0.22s ease;
   resize: none;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
 
-.eval-textarea-field:hover {
+/* Custom internal scrollbar: thumb hidden by default, visible when moved/hovered/focused */
+.eval-textarea-field::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.eval-textarea-field::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 8px 0;
+}
+
+.eval-textarea-field::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.eval-textarea-field::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.eval-textarea-field::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Only when user moves to/hovers or focuses inside the description field */
+.eval-textarea-field:hover,
+.eval-textarea-field:focus,
+.eval-textarea-field:focus-within {
+  scrollbar-color: #CBD5E1 transparent;
   border-color: #CBD5E1;
+  border-left-color: #1D4ED8;
+}
+
+.eval-textarea-field:hover::-webkit-scrollbar-thumb,
+.eval-textarea-field:focus::-webkit-scrollbar-thumb,
+.eval-textarea-field:focus-within::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+}
+
+.eval-textarea-field::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }
 
 .eval-textarea-field:focus {
   outline: none;
   border-color: #2563EB;
+  border-left-color: #2563EB;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
   background: #F8FAFC;
 }
@@ -628,8 +719,70 @@
 
 .eval-textarea-field.eval-input-error {
   border-color: #EF4444 !important;
+  border-left-color: #EF4444 !important;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14) !important;
   background-color: #FEF2F2 !important;
+}
+
+/* Consistent Description / Response Review Display Boxes with Left Side Brand Accent */
+.eval-description-box {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(191, 219, 254, 0.7);
+  border-left: 3.5px solid #2563EB;
+  border-radius: 0.75rem;
+  padding: 0.875rem;
+  font-size: 0.875rem;
+  color: #0F172A;
+  line-height: 1.625;
+  white-space: pre-line;
+  font-weight: 500;
+  max-height: 220px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: all 0.2s ease;
+}
+
+.eval-description-box::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.eval-description-box::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 6px 0;
+}
+
+.eval-description-box::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+.eval-description-box::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.eval-description-box::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.eval-description-box:hover,
+.eval-description-box:focus {
+  scrollbar-color: #CBD5E1 transparent;
+  border-color: rgba(147, 197, 253, 0.9);
+  border-left-color: #1D4ED8;
+}
+
+.eval-description-box:hover::-webkit-scrollbar-thumb,
+.eval-description-box:focus::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+}
+
+.eval-description-box::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
 }
 
 /* Distinct Crisp Border for Evaluation Dropdowns */

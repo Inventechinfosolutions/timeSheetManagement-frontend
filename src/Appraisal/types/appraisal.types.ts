@@ -182,17 +182,24 @@ export interface ReviewFormData {
   learningGoalItems?: string[];
   skillsAcquired: string;
   certificationsOrCourses: string;
+  skillsToImprove?: string;
   nextQuarterLearningGoals: string;
+  supportOrTrainingRequired?: string;
   // Step 5: Company Environment
   workCultureFeedback: string;
   toolingAndResources: string;
   workLifeBalance?: string;
   suggestionsForImprovement?: string;
   companyEnvironmentRating?: number;
+  toolingAndResourcesRating?: number;
   managementSupportRating: number;
-  // Step 6: Review & Final Comments
+  challengesAffectingProductivity?: string;
+  // Step 6: Final Review
   overallSelfRating: number;
-  finalComments: string;
+  overallEmployeeComments?: string;
+  careerGrowthInterests?: string;
+  confirmationAccepted?: boolean;
+  finalComments?: string;
 }
 
 export interface StepProps {
@@ -202,6 +209,7 @@ export interface StepProps {
   clearError?: (field: string) => void;
   onUploadAttachment?: (file: File) => Promise<StoredPerformanceFile>;
   onRemoveAttachment?: (objectKey: string) => Promise<void>;
+  onEditStep?: (step: number) => void;
 }
 
 // ==========================================
@@ -466,13 +474,22 @@ export interface EmployeePerformanceDetail {
   workLifeBalance: string | null;
   suggestionsForImprovement: string | null;
   rateCompanyEnvironment: string | null;
+  challengesAffectingProductivity?: string | null;
+  toolingAndResourcesRating?: number | null;
+  managementSupportRating?: number | null;
+  overallSelfRating?: number | null;
+  overallEmployeeComments?: string | null;
+  careerGrowthInterests?: string | null;
+  confirmationAccepted?: boolean | null;
   assignedBy?: string | null;
   assignedDate?: string | null;
   deadlineDate?: string | null;
   description?: string | null;
   reviewId?: number | null;
   skillsAcquired: string | null;
+  skillsToImprove?: string | null;
   careerDevelopmentGoals: string | null;
+  supportOrTrainingRequired?: string | null;
   canRequestEdit?: boolean;
   remainingRequestHours?: number;
   canEdit?: boolean;

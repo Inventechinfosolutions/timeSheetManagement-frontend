@@ -1684,30 +1684,79 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
                   </div>
 
-                  <div className="eval-stagger-item eval-stagger-3">
-                    <label className="text-[11px] font-bold text-[#A3AED0] block mb-1.5 uppercase tracking-wider">
-                      Learning Goals
-                    </label>
-                    {(formData.learningGoalItems || []).length === 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 eval-stagger-item eval-stagger-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                        Skills Learned During This Period
+                      </label>
                       <div
-                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#64748B] leading-relaxed font-medium"
+                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[80px]"
                         title="Employee submitted response (Read-only)"
                       >
-                        —
+                        {formData.skillsAcquired || "—"}
                       </div>
-                    ) : (
-                      <div className="space-y-3">
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                        Training / Certifications Completed
+                      </label>
+                      <div
+                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[80px]"
+                        title="Employee submitted response (Read-only)"
+                      >
+                        {formData.certificationsOrCourses || "—"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                        Skills to Improve
+                      </label>
+                      <div
+                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[80px]"
+                        title="Employee submitted response (Read-only)"
+                      >
+                        {formData.skillsToImprove || "—"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                        Support or Training Required
+                      </label>
+                      <div
+                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[80px]"
+                        title="Employee submitted response (Read-only)"
+                      >
+                        {formData.supportOrTrainingRequired || "—"}
+                      </div>
+                    </div>
+
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                        Learning Goals for Next Quarter
+                      </label>
+                      <div
+                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[70px]"
+                        title="Employee submitted response (Read-only)"
+                      >
+                        {formData.nextQuarterLearningGoals || "—"}
+                      </div>
+                    </div>
+
+                    {!formData.skillsAcquired && !formData.skillsToImprove && (formData.learningGoalItems || []).length > 0 && (
+                      <div className="col-span-1 md:col-span-2 space-y-2 pt-2 border-t border-blue-100">
+                        <label className="text-[11px] font-bold text-[#A3AED0] block uppercase tracking-wider">
+                          Previous Learning Goals
+                        </label>
                         {(formData.learningGoalItems || []).map((goal, index) => (
-                          <div key={`${goal}-${index}`} className="space-y-1">
-                            <span className="inline-flex items-center px-2 py-0.5 text-[10px] font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
-                              Goal {index + 1}
-                            </span>
-                            <div
-                              className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
-                              title="Employee submitted response (Read-only)"
-                            >
-                              {goal}
-                            </div>
+                          <div
+                            key={`${goal}-${index}`}
+                            className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
+                            title="Employee submitted response (Read-only)"
+                          >
+                            {goal}
                           </div>
                         ))}
                       </div>
@@ -1715,7 +1764,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
                 </div>
 
-                {/* STEP 5: COMPANY ENVIRONMENT */}
+                {/* STEP 5: ENVIRONMENT */}
                 <div className="eval-step-card eval-reveal-card space-y-3.5">
                   <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
                     <div className="flex items-center gap-2.5">
@@ -1723,57 +1772,224 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         5
                       </span>
                       <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                        Company Environment
+                        Environment
                       </h3>
                     </div>
-                    {envInfo ? (
+                    {formData.companyEnvironmentRating && envInfo ? (
                       <span className="text-xs font-bold text-blue-600 px-3 py-1 rounded-full bg-blue-50 flex items-center gap-1.5 border border-blue-200 shadow-xs eval-stagger-item eval-stagger-2">
                         <span className="text-sm">{envInfo.emoji}</span>
                         <span>
-                          {envInfo.label} ({envRating}/5)
+                          {envInfo.label} ({formData.companyEnvironmentRating}/5)
                         </span>
                       </span>
                     ) : null}
                   </div>
 
-                  {/* Feedback on Work Culture */}
+                  {/* 3 Rating Cards */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 eval-stagger-item eval-stagger-3">
+                    {/* Work Environment Satisfaction */}
+                    <div className="p-3 bg-white/80 border border-blue-200/60 rounded-xl space-y-1.5">
+                      <span className="text-[11px] font-bold text-[#A3AED0] uppercase tracking-wider block">
+                        Work Environment Satisfaction
+                      </span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`w-3.5 h-3.5 ${
+                                s <= (formData.companyEnvironmentRating || 0)
+                                  ? "fill-[#F59E0B] text-[#D97706]"
+                                  : "fill-transparent text-slate-200"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs font-bold text-[#2B3674]">
+                          {formData.companyEnvironmentRating ? `${formData.companyEnvironmentRating}/5` : "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Availability of Tools & Resources */}
+                    <div className="p-3 bg-white/80 border border-blue-200/60 rounded-xl space-y-1.5">
+                      <span className="text-[11px] font-bold text-[#A3AED0] uppercase tracking-wider block">
+                        Availability of Tools &amp; Resources
+                      </span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`w-3.5 h-3.5 ${
+                                s <= (formData.toolingAndResourcesRating || 0)
+                                  ? "fill-[#F59E0B] text-[#D97706]"
+                                  : "fill-transparent text-slate-200"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs font-bold text-[#2B3674]">
+                          {formData.toolingAndResourcesRating ? `${formData.toolingAndResourcesRating}/5` : "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Manager Support */}
+                    <div className="p-3 bg-white/80 border border-blue-200/60 rounded-xl space-y-1.5">
+                      <span className="text-[11px] font-bold text-[#A3AED0] uppercase tracking-wider block">
+                        Manager Support
+                      </span>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`w-3.5 h-3.5 ${
+                                s <= (formData.managementSupportRating || 0)
+                                  ? "fill-[#F59E0B] text-[#D97706]"
+                                  : "fill-transparent text-slate-200"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs font-bold text-[#2B3674]">
+                          {formData.managementSupportRating ? `${formData.managementSupportRating}/5` : "—"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Qualitative Text Areas Side by Side */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+                    {/* Challenges Affecting Productivity */}
+                    <div className="eval-stagger-item eval-stagger-3">
+                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                        Challenges Affecting Productivity
+                      </label>
+                      <div
+                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[75px]"
+                        title="Employee submitted response (Read-only)"
+                      >
+                        {formData.challengesAffectingProductivity || formData.workLifeBalance || "None reported"}
+                      </div>
+                    </div>
+
+                    {/* Suggestions for Improvement */}
+                    <div className="eval-stagger-item eval-stagger-4">
+                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                        Suggestions for Improvement
+                      </label>
+                      <div
+                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[75px]"
+                        title="Employee submitted response (Read-only)"
+                      >
+                        {formData.suggestionsForImprovement || "No suggestions provided"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Legacy Feedback on Work Culture fallback if present */}
+                  {Boolean(formData.workCultureFeedback) && (
+                    <div className="eval-stagger-item eval-stagger-4 pt-2 border-t border-blue-100">
+                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                        Additional Culture Feedback
+                      </label>
+                      <div
+                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
+                        title="Employee submitted response (Read-only)"
+                      >
+                        {formData.workCultureFeedback}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* STEP 6: FINAL REVIEW */}
+                <div className="eval-step-card eval-reveal-card space-y-3.5">
+                  <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                        6
+                      </span>
+                      <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                        Final Review &amp; Self-Evaluation
+                      </h3>
+                    </div>
+                    {formData.overallSelfRating > 0 ? (
+                      <span className="text-xs font-bold text-blue-600 px-3 py-1 rounded-full bg-blue-50 flex items-center gap-1.5 border border-blue-200 shadow-xs eval-stagger-item eval-stagger-2">
+                        <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#D97706]" />
+                        <span>Self-Rating: {formData.overallSelfRating}/5</span>
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {/* Overall Self-Rating Card */}
                   <div className="eval-stagger-item eval-stagger-3">
-                    <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                      Feedback on Work Culture
-                    </label>
-                    <div
-                      className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
-                      title="Employee submitted response (Read-only)"
-                    >
-                      {formData.workCultureFeedback || "—"}
+                    <div className="p-3.5 bg-white/80 border border-blue-200/60 rounded-xl flex items-center justify-between gap-3">
+                      <div>
+                        <span className="text-[11px] font-bold text-[#A3AED0] uppercase tracking-wider block">
+                          Overall Self-Rating
+                        </span>
+                        <span className="text-sm font-bold text-[#2B3674] mt-0.5 block">
+                          {formData.overallSelfRating > 0
+                            ? `${formData.overallSelfRating} / 5 (${RATING_LABEL_MAP[formData.overallSelfRating] || "Rated"})`
+                            : "Not provided"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={`w-4 h-4 ${
+                              s <= (formData.overallSelfRating || 0)
+                                ? "fill-[#F59E0B] text-[#D97706]"
+                                : "fill-transparent text-slate-200"
+                            }`}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Work Life Balance */}
-                  <div className="eval-stagger-item eval-stagger-4">
-                    <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                      Work Life Balance
-                    </label>
-                    <div
-                      className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
-                      title="Employee submitted response (Read-only)"
-                    >
-                      {formData.workLifeBalance || "—"}
+                  {/* Qualitative Responses Side by Side */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+                    {/* Overall Employee Comments */}
+                    <div className="eval-stagger-item eval-stagger-3">
+                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                        Overall Employee Comments
+                      </label>
+                      <div
+                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[75px]"
+                        title="Employee submitted response (Read-only)"
+                      >
+                        {formData.overallEmployeeComments || formData.finalComments || "None provided"}
+                      </div>
+                    </div>
+
+                    {/* Career Growth Interests */}
+                    <div className="eval-stagger-item eval-stagger-4">
+                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                        Career Growth Interests
+                      </label>
+                      <div
+                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[75px]"
+                        title="Employee submitted response (Read-only)"
+                      >
+                        {formData.careerGrowthInterests || "None provided"}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Suggestions for Improvement */}
-                  <div className="eval-stagger-item eval-stagger-4">
-                    <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                      Suggestions for Improvement
-                    </label>
-                    <div
-                      className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
-                      title="Employee submitted response (Read-only)"
-                    >
-                      {formData.suggestionsForImprovement || "—"}
+                  {/* Confirmation Status */}
+                  {formData.confirmationAccepted && (
+                    <div className="eval-stagger-item eval-stagger-4 pt-1">
+                      <div className="p-3 bg-emerald-50/50 border border-emerald-200/80 rounded-xl flex items-center gap-2 text-emerald-800 text-xs font-semibold">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>Confirmed and verified by employee upon submission</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Evaluation CTA Card: shown to manager if submitted/drafted/completed, but strictly hidden for employee until completed */}

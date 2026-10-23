@@ -227,17 +227,14 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       hasChanged = true;
     }
 
-    // Step 4: Auto-commit learning goal draft if filled
-    const goalDraft = (updated.learningGoals || "").trim();
-    if (goalDraft) {
-      const existingGoals = updated.learningGoalItems || [];
-      const newGoals = [...existingGoals, goalDraft];
+    // Step 4: Sync goals list if needed
+    const skillsLearned = (updated.skillsAcquired || "").trim();
+    const nextGoals = (updated.nextQuarterLearningGoals || "").trim();
+    const goalsList = [skillsLearned, nextGoals].filter(Boolean);
+    if (goalsList.length > 0 && (!updated.learningGoalItems || updated.learningGoalItems.length === 0)) {
       updated = {
         ...updated,
-        learningGoalItems: newGoals,
-        learningGoals: "",
-        skillsAcquired: newGoals.join("\n"),
-        nextQuarterLearningGoals: newGoals.join("\n"),
+        learningGoalItems: goalsList,
       };
       hasChanged = true;
     }
@@ -308,33 +305,48 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         }
       }
     } else if (stepNum === 4) {
-      const goalDraft = (data.learningGoals || "").trim();
-      const savedGoals = (data.learningGoalItems || []).filter((goal) => goal.trim());
-      if (!goalDraft && savedGoals.length === 0) {
-        stepErrors.learningGoals = "Add at least one learning goal.";
-        if (!firstFieldId) firstFieldId = "field-learningGoals";
+      const skillsLearned = (data.skillsAcquired || "").trim();
+      const skillsToImprove = (data.skillsToImprove || "").trim();
+      const nextQuarterGoals = (data.nextQuarterLearningGoals || "").trim();
+
+      if (!skillsLearned) {
+        stepErrors.skillsAcquired = "Skills learned during this period is required.";
+        if (!firstFieldId) firstFieldId = "field-skillsAcquired";
+      }
+      if (!skillsToImprove) {
+        stepErrors.skillsToImprove = "Skills to improve is required.";
+        if (!firstFieldId) firstFieldId = "field-skillsToImprove";
+      }
+      if (!nextQuarterGoals) {
+        stepErrors.nextQuarterLearningGoals = "Learning goals for next quarter is required.";
+        if (!firstFieldId) firstFieldId = "field-nextQuarterLearningGoals";
       }
     } else if (stepNum === 5) {
-      const culture = (data.workCultureFeedback || "").trim();
-      const balance = (data.workLifeBalance || "").trim();
-      const suggestions = (data.suggestionsForImprovement || data.toolingAndResources || "").trim();
-      const rating = data.companyEnvironmentRating || data.managementSupportRating || 0;
+      const envRating = data.companyEnvironmentRating || 0;
+      const toolsRating = data.toolingAndResourcesRating || 0;
+      const mgrRating = data.managementSupportRating || 0;
 
-      if (!culture) {
-        stepErrors.workCultureFeedback = "Feedback on work culture is required.";
-        if (!firstFieldId) firstFieldId = "field-workCultureFeedback";
-      }
-      if (!balance) {
-        stepErrors.workLifeBalance = "Work-life balance feedback is required.";
-        if (!firstFieldId) firstFieldId = "field-workLifeBalance";
-      }
-      if (!suggestions) {
-        stepErrors.suggestionsForImprovement = "Suggestions for improvement are required.";
-        if (!firstFieldId) firstFieldId = "field-suggestionsForImprovement";
-      }
-      if (!rating || rating <= 0) {
-        stepErrors.companyEnvironmentRating = "Please rate the company environment (1 to 5).";
+      if (!envRating || envRating <= 0) {
+        stepErrors.companyEnvironmentRating = "Please rate work environment satisfaction (1 to 5).";
         if (!firstFieldId) firstFieldId = "field-companyEnvironmentRating";
+      }
+      if (!toolsRating || toolsRating <= 0) {
+        stepErrors.toolingAndResourcesRating = "Please rate availability of tools & resources (1 to 5).";
+        if (!firstFieldId) firstFieldId = "field-toolingAndResourcesRating";
+      }
+      if (!mgrRating || mgrRating <= 0) {
+        stepErrors.managementSupportRating = "Please rate manager support (1 to 5).";
+        if (!firstFieldId) firstFieldId = "field-managementSupportRating";
+      }
+    } else if (stepNum === 6) {
+      const selfRating = data.overallSelfRating || 0;
+      if (!selfRating || selfRating <= 0) {
+        stepErrors.overallSelfRating = "Please provide your overall self-rating (1 to 5).";
+        if (!firstFieldId) firstFieldId = "field-overallSelfRating";
+      }
+      if (!data.confirmationAccepted) {
+        stepErrors.confirmationAccepted = "Please confirm the review accuracy checkbox before submitting.";
+        if (!firstFieldId) firstFieldId = "field-confirmationAccepted";
       }
     }
 
@@ -588,10 +600,12 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         formDataRef.current = currentData;
       }
     }
-    for (let s = 1; s <= 5; s++) {
+    for (let s = 1; s <= 6; s++) {
       const validation = validateStep(s, currentData);
       if (!validation.isValid) {
-        goToStep(s, false);
+        if (s !== currentStep) {
+          goToStep(s, false);
+        }
         setErrors(validation.errors);
         scrollToField(validation.firstFieldId);
         return;
@@ -682,6 +696,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onChange={handleFieldChange}
             errors={errors}
             clearError={handleClearError}
+            onEditStep={(step) => goToStep(step, true)}
           />
         );
       default:
