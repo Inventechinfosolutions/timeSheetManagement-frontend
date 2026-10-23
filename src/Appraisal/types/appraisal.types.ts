@@ -64,6 +64,7 @@ export interface ManagerQuarterlyReviewRecord {
   canEdit?: boolean;
   reassignCount?: number;
   lockedAt?: string;
+  auditHistory?: AppraisalAuditEntry[];
   submission?: ReviewFormData;
   managerEvaluation?: {
     productivity?: number | string | null;
@@ -110,6 +111,7 @@ export interface QuarterlyReviewAssignment {
   submittedAt?: string;
   editAllowedUntil?: string;
   reassignCount?: number;
+  auditHistory?: AppraisalAuditEntry[];
 }
 
 export interface AccessRequest {
@@ -286,8 +288,26 @@ export interface EditRequestQuery {
   q?: string;
 }
 
+export interface AppraisalAuditEntry {
+  employeeId: string;
+  managerId: string | null;
+  quarter: string;
+  financialYear: string;
+  createdBy: string;
+  createdDate: string;
+  assignedDate?: string | null;
+  deadlineDate: string | null;
+  submittedDate?: string | null;
+  submittedBy?: string | null;
+  status: string;
+  lastUpdatedDate: string;
+  lastModifiedBy: string;
+  details?: string | null;
+}
+
 export interface ManagerReviewApiRecord {
   id: number;
+  auditHistory?: AppraisalAuditEntry[];
   employeeId: string;
   employeeName: string | null;
   designation: string | null;
@@ -459,10 +479,12 @@ export interface EmployeePerformanceDetail {
     objectKey: string;
   }>;
   reassignCount?: number | null;
+  auditHistory?: AppraisalAuditEntry[];
 }
 
 export interface EmployeeReviewDetail {
   id: number;
+  auditHistory?: AppraisalAuditEntry[];
   employeeId: string;
   employeeName: string | null;
   designation: string | null;

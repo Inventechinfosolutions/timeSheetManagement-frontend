@@ -339,6 +339,7 @@ export const toManagerReviewRecord = (
   remainingRequestHours: review.remainingRequestHours ?? review.performanceDetails?.remainingRequestHours ?? 0,
   canEdit: review.canEdit ?? review.performanceDetails?.canEdit ?? false,
   reassignCount: review.reassignCount || 0,
+  auditHistory: review.auditHistory || review.performanceDetails?.auditHistory || undefined,
   lockedAt:
     review.status?.toUpperCase() === "LOCKED" || review.status?.toUpperCase() === "NOT_UPDATED"
       ? review.updatedAt || undefined
@@ -422,6 +423,7 @@ export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyRev
     submittedAt: review.performanceDetails?.submittedAt || undefined,
     editAllowedUntil: review.performanceDetails?.editAllowedUntil || undefined,
     reassignCount: review.reassignCount || review.performanceDetails?.reassignCount || 0,
+    auditHistory: review.auditHistory || review.performanceDetails?.auditHistory || undefined,
   };
 };
 

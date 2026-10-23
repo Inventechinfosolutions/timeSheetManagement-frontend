@@ -1138,6 +1138,18 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       EmployeePerformanceStatus.ALLOWED_TO_EDIT,
       EmployeePerformanceStatus.COMPLETED,
     ].some((s) => s && s.toUpperCase() === normalizedPerfStatus) || Boolean(record.submittedOn);
+  const canShowEvaluationCta = !isEditAccessPendingOrGranted && (
+    hideScoreParameters
+      ? managerEvaluationReady
+      : (
+          !isViewMode ||
+          managerEvaluationReady ||
+          hasManagerEvaluation ||
+          record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS ||
+          record.status === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS ||
+          employeeSubmitted
+        )
+  );
 
   const toIsoDate = (value: string): string | undefined => {
     const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value.trim());
@@ -1732,8 +1744,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
                 </div>
 
-                {/* Shown to the manager only after both review and performance are COMPLETED and edit access is not pending/granted */}
-                {(!isViewMode || managerEvaluationReady) && !isEditAccessPendingOrGranted ? (
+                {/* Evaluation CTA Card: shown to manager if submitted/drafted/completed, but strictly hidden for employee until completed */}
+                {canShowEvaluationCta ? (
                   <div className="eval-matrix-cta-card eval-reveal-card relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-blue-200/70 bg-gradient-to-br from-white via-blue-50/40 to-blue-100/20 shadow-lg shadow-blue-500/10 mt-6">
                     {/* Ambient Decorative SVG in Background */}
                     <svg
@@ -1779,15 +1791,23 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-blue-600 font-bold">
-                              {record.quarter} Evaluation Ready
+                              {record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS
+                                ? `${record.quarter} Evaluation Draft Saved`
+                                : `${record.quarter} Evaluation Ready`}
                             </span>
                           </div>
                           <h3 className="text-lg sm:text-xl font-bold text-[#2B3674] mt-1">
-                            {isViewMode ? "View Evaluation & Ratings" : "Evaluate Employee Performance"}
+                            {isViewMode
+                              ? record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS
+                                ? "View Draft Evaluation"
+                                : "View Evaluation & Ratings"
+                              : "Evaluate Employee Performance"}
                           </h3>
                           <p className="text-xs text-[#64748B] mt-0.5 max-w-xl leading-relaxed">
                             {isViewMode
-                              ? "Navigate to the scored evaluation matrix to inspect finalized competencies, ratings, and feedback."
+                              ? record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS
+                                ? "Navigate to the scored evaluation matrix to inspect draft competencies, ratings, and feedback."
+                                : "Navigate to the scored evaluation matrix to inspect finalized competencies, ratings, and feedback."
                               : "Completed review of all quarterly submissions. Proceed to the Evaluation Matrix to score parameters (1-5 scale) and finalize the appraisal."}
                           </p>
                         </div>
