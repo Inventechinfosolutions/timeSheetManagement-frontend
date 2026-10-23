@@ -539,6 +539,16 @@ const notesSlice = createSlice({
       // Note Details
       .addCase(fetchNoteById.fulfilled, (state, action) => {
         state.selectedNote = action.payload;
+        if (action.payload?.id) {
+          const index = state.notes.findIndex((n) => n.id === action.payload.id);
+          if (index !== -1) {
+            state.notes[index] = {
+              ...state.notes[index],
+              ...action.payload,
+              subNotes: action.payload.subNotes || [],
+            };
+          }
+        }
       })
 
       // Create Note

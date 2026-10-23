@@ -93,6 +93,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
 
   // Accordion expansion state for sub-tables
   const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
+  const [loadingSubNotes, setLoadingSubNotes] = useState<Record<number, boolean>>({});
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   /** Immediate search text for client-side filtering (Redux `searchQuery` is debounced for API). */
@@ -217,6 +218,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       return;
     }
 
+    // Always fetch GET /api/notes?type=... on navigation/mount
     loadNotes(currentPage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, activeTab, selectedProject, searchQuery, fromDate, toDate, loadList]);
@@ -249,12 +251,34 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     }
   };
 
-  // Toggle sub-table accordion
-  const toggleExpand = (noteId: number) => {
+  // Toggle sub-table accordion: fetch child notes on-demand via GET /notes/:id
+  const toggleExpand = async (noteId: number) => {
+    const isCurrentlyExpanded = !!expandedNotes[noteId];
+    if (isCurrentlyExpanded) {
+      setExpandedNotes((prev) => ({
+        ...prev,
+        [noteId]: false,
+      }));
+      return;
+    }
+
     setExpandedNotes((prev) => ({
       ...prev,
-      [noteId]: !prev[noteId],
+      [noteId]: true,
     }));
+
+    // On-demand fetch child sub-notes if not yet loaded
+    const note = notes.find((n) => n.id === noteId);
+    if (!note?.subNotes || note.subNotes.length === 0) {
+      try {
+        setLoadingSubNotes((prev) => ({ ...prev, [noteId]: true }));
+        await dispatch(fetchNoteById(noteId)).unwrap();
+      } catch (err) {
+        console.error("Failed to load child notes for note:", noteId, err);
+      } finally {
+        setLoadingSubNotes((prev) => ({ ...prev, [noteId]: false }));
+      }
+    }
   };
 
   // Switch between Project Notes and Personal Notes
@@ -1390,7 +1414,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
 
     autoSaveTimerRef.current = setTimeout(() => {
       performAutoSave();
-    }, 1200);
+    }, 2500);
 
     return () => {
       if (autoSaveTimerRef.current) {
@@ -1897,6 +1921,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     isExtractingExcel,
     editorRef,
     expandedNotes,
+    loadingSubNotes,
     toggleExpand,
     handleTabSwitch,
     executeEditorCommand,
