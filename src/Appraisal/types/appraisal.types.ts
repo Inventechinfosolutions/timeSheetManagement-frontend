@@ -202,6 +202,7 @@ export interface StepProps {
   clearError?: (field: string) => void;
   onUploadAttachment?: (file: File) => Promise<StoredPerformanceFile>;
   onRemoveAttachment?: (objectKey: string) => Promise<void>;
+  readOnly?: boolean;
 }
 
 // ==========================================
@@ -544,6 +545,7 @@ export interface PerformanceWritePayload {
   employeeId: string;
   quarter: QuaterlyEnum;
   financialYear: string;
+  status?: EmployeePerformanceStatus | string;
   overview?: string;
   projects?: PerformanceProject[];
   responsibilitiesHandled?: string;

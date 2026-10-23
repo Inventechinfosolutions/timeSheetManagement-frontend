@@ -201,14 +201,26 @@ export const toReviewFormData = (
   if (!performance) {
     return emptyReviewFormData;
   }
+  const rawOverview = performance.overview || (performance as any).responsibilitiesHandled || "";
+  const projectsList = readProjectList(performance.projects);
+  const fallbackProjects = projectsList.length > 0 ? projectsList : (
+    (performance as any).keyAccomplishments || (performance as any).deliverablesCompleted
+      ? [{
+          title: (performance as any).keyAccomplishments || "Project Deliverable",
+          description: (performance as any).deliverablesCompleted || "",
+          challenge: (performance as any).challengesFaced || "",
+          attachments: [],
+        }]
+      : []
+  );
   return {
     ...emptyReviewFormData,
-    overview: performance.overview || "",
-    roleSummary: performance.overview || "",
+    overview: rawOverview,
+    roleSummary: rawOverview,
     projectTitle: "",
     projectDescription: "",
     projectChallenge: "",
-    projects: readProjectList(performance.projects),
+    projects: fallbackProjects,
     projectAttachments: [],
     learningGoals: "",
     learningGoalItems: readLearningGoalList(

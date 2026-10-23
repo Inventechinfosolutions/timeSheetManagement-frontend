@@ -153,6 +153,45 @@ const ENVIRONMENT_RATINGS: Record<number, { label: string; emoji: string }> = {
   5: { label: "Excellent", emoji: "🤩" },
 };
 
+const EVAL_STEPS = [
+  { id: 1, label: "Role & Overview" },
+  { id: 2, label: "Achievements & Projects" },
+  { id: 3, label: "Teamwork & Skills" },
+  { id: 4, label: "Learning & Goals" },
+  { id: 5, label: "Environment & Feedback" },
+];
+
+const isStepCompleted = (stepId: number, data: ReviewFormData): boolean => {
+  if (stepId === 1) return Boolean((data.overview || data.roleSummary || "").trim());
+  if (stepId === 2) {
+    return Boolean(
+      (data.projects && data.projects.length > 0) ||
+      (data.projectTitle || "").trim() ||
+      (data.majorAchievements || "").trim()
+    );
+  }
+  if (stepId === 3) {
+    return Boolean(
+      data.teamRatings &&
+      Object.values(data.teamRatings).some((v) => typeof v === "number" && v > 0)
+    );
+  }
+  if (stepId === 4) {
+    return Boolean(
+      (data.learningGoalItems && data.learningGoalItems.length > 0) ||
+      (data.learningGoals || "").trim()
+    );
+  }
+  if (stepId === 5) {
+    return Boolean(
+      (data.workCultureFeedback || "").trim() ||
+      (data.workLifeBalance || "").trim() ||
+      (data.companyEnvironmentRating && data.companyEnvironmentRating > 0)
+    );
+  }
+  return false;
+};
+
 export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   record,
   mode = "edit",
@@ -233,6 +272,28 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       clearTimeout(t3);
     };
   }, [record.id, mode]);
+
+  const [stepperViewMode, setStepperViewMode] = useState<"entered_only" | "all" | number>("entered_only");
+
+  const enteredStepsCount = useMemo(() => {
+    return EVAL_STEPS.filter((s) => isStepCompleted(s.id, formData)).length;
+  }, [formData]);
+
+  const shouldShowStep = (stepId: number): boolean => {
+    if (stepperViewMode === stepId) return true;
+    if (stepperViewMode === "all") return true;
+    if (stepperViewMode === "entered_only") {
+      return isStepCompleted(stepId, formData);
+    }
+    return false;
+  };
+
+  const scrollToEvalStep = (stepId: number) => {
+    const el = document.getElementById(`eval-step-${stepId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
   const handleNavigateToMatrix = () => {
     if (isEditAccessPendingOrGranted) {
@@ -1511,10 +1572,163 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               )}
             </div>
 
-            {employeeSubmitted ? (
-              <>
-                {/* STEP 1: ROLE & QUARTER OVERVIEW */}
-                <div className="eval-step-card eval-reveal-card space-y-3">
+            {!employeeSubmitted && (
+              <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 border border-amber-200/70 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-amber-50/70 rounded-2xl shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 text-amber-700">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                      {normalizedPerfStatus === EmployeePerformanceStatus.DRAFT ||
+                      record.reviewStatus === QuarterlyReviewStatus.DRAFT
+                        ? "Quarterly Review in Progress (Draft)"
+                        : "Quarterly Review Not Submitted Yet"}
+                    </p>
+                    <p className="text-xs text-amber-700/90 mt-0.5 font-medium">
+                      {hideScoreParameters
+                        ? "You have not submitted this quarterly review yet. Saved draft steps are displayed below."
+                        : "This employee has not submitted the quarterly review yet. Saved draft steps are displayed below."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Visual Stepper Header */}
+            <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 border border-blue-100 bg-white/90 rounded-2xl shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5 border-b border-blue-50 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB]" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-[#2B3674]">
+                    Review Steppers
+                  </span>
+                  <span className="text-[11px] font-semibold text-[#2563EB] bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-full">
+                    {enteredStepsCount} of 5 entered
+                  </span>
+                </div>
+
+                {/* Filter Toggles: Entered Only (Default) vs All */}
+                <div className="flex items-center gap-1.5 p-1 bg-gray-100/80 rounded-xl border border-gray-200/60 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setStepperViewMode("entered_only")}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      stepperViewMode === "entered_only"
+                        ? "bg-white text-[#2563EB] shadow-xs"
+                        : "text-[#64748B] hover:text-[#2B3674]"
+                    }`}
+                  >
+                    Entered only ({enteredStepsCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStepperViewMode("all")}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                      stepperViewMode === "all"
+                        ? "bg-white text-[#2563EB] shadow-xs"
+                        : "text-[#64748B] hover:text-[#2B3674]"
+                    }`}
+                  >
+                    Show all (5)
+                  </button>
+                </div>
+              </div>
+
+              {/* Step Pills */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                {EVAL_STEPS.map((s) => {
+                  const done = isStepCompleted(s.id, formData);
+                  const isSelected = stepperViewMode === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        if (stepperViewMode === s.id) {
+                          setStepperViewMode("entered_only");
+                        } else {
+                          setStepperViewMode(s.id);
+                          scrollToEvalStep(s.id);
+                        }
+                      }}
+                      title={
+                        done
+                          ? `Step ${s.id}: ${s.label} (Entered)`
+                          : `Step ${s.id}: ${s.label} (Not entered yet)`
+                      }
+                      className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20"
+                          : done
+                          ? "bg-blue-50/70 border-blue-200 text-[#2563EB] hover:bg-blue-100/70 shadow-xs"
+                          : "bg-gray-50/50 border-gray-200/80 text-[#94A3B8] hover:bg-gray-100/60"
+                      }`}
+                    >
+                      <span
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-transform duration-200 ${
+                          isSelected
+                            ? "bg-white text-[#2563EB]"
+                            : done
+                            ? "bg-[#2563EB] text-white shadow-xs"
+                            : "bg-gray-200 text-[#94A3B8]"
+                        }`}
+                      >
+                        {done ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : s.id}
+                      </span>
+                      <div className="min-w-0">
+                        <p
+                          className={`text-xs font-bold truncate ${
+                            isSelected ? "text-white" : done ? "text-[#2B3674]" : "text-[#64748B]"
+                          }`}
+                        >
+                          {s.label}
+                        </p>
+                        <p
+                          className={`text-[10px] ${
+                            isSelected
+                              ? "text-blue-100"
+                              : done
+                              ? "text-[#2563EB] font-semibold"
+                              : "text-[#94A3B8]"
+                          }`}
+                        >
+                          {done ? "Entered" : "Not entered"}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Empty state when user is filtering entered_only and 0 steps are entered */}
+            {enteredStepsCount === 0 && stepperViewMode === "entered_only" && (
+              <div className="eval-glass-card eval-reveal-card p-6 sm:p-8 text-center border border-dashed border-blue-200 rounded-3xl bg-white/70">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#2563EB] mx-auto flex items-center justify-center mb-3">
+                  <Clock className="w-6 h-6" />
+                </div>
+                <h4 className="text-base font-bold text-[#2B3674]">No Review Steps Entered Yet</h4>
+                <p className="text-xs sm:text-sm text-[#64748B] mt-1 max-w-md mx-auto">
+                  {hideScoreParameters
+                    ? "You haven't entered any steps yet. Go to your quarterly review stepper to start filling in your details."
+                    : "This employee has not filled in any review steps yet. Steps with saved data will automatically appear here."}
+                </p>
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setStepperViewMode("all")}
+                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-xs font-bold text-[#2563EB] hover:bg-blue-100 cursor-pointer"
+                  >
+                    View Empty Form Template
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 1: ROLE & QUARTER OVERVIEW */}
+            {shouldShowStep(1) && (
+                <div id="eval-step-1" className="eval-step-card eval-reveal-card space-y-3">
                   <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
                     <div className="flex items-center gap-2.5">
                       <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
@@ -1538,9 +1752,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
                   </div>
                 </div>
+            )}
 
-                {/* STEP 2: KEY ACHIEVEMENTS & PROJECTS */}
-                <div className="eval-step-card eval-reveal-card space-y-3.5">
+            {/* STEP 2: KEY ACHIEVEMENTS & PROJECTS */}
+            {shouldShowStep(2) && (
+                <div id="eval-step-2" className="eval-step-card eval-reveal-card space-y-3.5">
                   <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
                     <div className="flex items-center gap-2.5">
                       <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
@@ -1612,9 +1828,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
                   )}
                 </div>
+            )}
 
-                {/* STEP 3: TEAMWORK & COLLABORATION with Interactive Score Bars */}
-                <div className="eval-step-card eval-reveal-card space-y-3.5">
+            {/* STEP 3: TEAMWORK & COLLABORATION with Interactive Score Bars */}
+            {shouldShowStep(3) && (
+                <div id="eval-step-3" className="eval-step-card eval-reveal-card space-y-3.5">
                   <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
                     <div className="flex items-center gap-2.5">
                       <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
@@ -1670,9 +1888,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
                   </div>
                 </div>
+            )}
 
-                {/* STEP 4: CONTINUOUS LEARNING & GOALS */}
-                <div className="eval-step-card eval-reveal-card space-y-3">
+            {/* STEP 4: CONTINUOUS LEARNING & GOALS */}
+            {shouldShowStep(4) && (
+                <div id="eval-step-4" className="eval-step-card eval-reveal-card space-y-3">
                   <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
                     <div className="flex items-center gap-2.5">
                       <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
@@ -1714,9 +1934,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     )}
                   </div>
                 </div>
+            )}
 
-                {/* STEP 5: COMPANY ENVIRONMENT */}
-                <div className="eval-step-card eval-reveal-card space-y-3.5">
+            {/* STEP 5: COMPANY ENVIRONMENT */}
+            {shouldShowStep(5) && (
+                <div id="eval-step-5" className="eval-step-card eval-reveal-card space-y-3.5">
                   <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
                     <div className="flex items-center gap-2.5">
                       <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
@@ -1775,6 +1997,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
                   </div>
                 </div>
+            )}
 
                 {/* Evaluation CTA Card: shown to manager if submitted/drafted/completed, but strictly hidden for employee until completed */}
                 {canShowEvaluationCta ? (
@@ -1893,20 +2116,18 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 ) : hideScoreParameters ? (
                   <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4">
                     <p className="text-sm font-medium text-[#64748B]">
-                      Quarterly review submitted. Waiting for manager review.
+                      {employeeSubmitted
+                        ? "Quarterly review submitted. Waiting for manager review."
+                        : "Quarterly review in progress. Review and complete all steps before final submission."}
+                    </p>
+                  </div>
+                ) : !employeeSubmitted ? (
+                  <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4 border border-blue-100 bg-white/60">
+                    <p className="text-xs sm:text-sm font-medium text-[#64748B]">
+                      This review is currently in progress. Manager evaluation matrix will unlock once the employee formally submits their quarterly review.
                     </p>
                   </div>
                 ) : null}
-              </>
-            ) : (
-              <div className="eval-glass-card eval-reveal-card p-4 sm:p-5">
-                <p className="text-sm font-medium text-[#64748B]">
-                  {hideScoreParameters
-                    ? "You have not submitted the quarterly review yet. The data will appear here after you submit."
-                    : "This employee has not submitted the quarterly review yet. The data appear here after they submit."}
-                </p>
-              </div>
-            )}
           </div>
         )}
 

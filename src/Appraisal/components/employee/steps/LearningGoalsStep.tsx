@@ -7,12 +7,13 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
   onChange,
   errors,
   clearError,
+  readOnly = false,
 }) => {
   const draft = formData.learningGoals || "";
   const goals = formData.learningGoalItems || [];
   const accordionContainerRef = useRef<HTMLDivElement | null>(null);
   const [addError, setAddError] = useState("");
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(readOnly && goals.length > 0 ? 0 : null);
   const listError = errors?.learningGoals;
 
   useEffect(() => {

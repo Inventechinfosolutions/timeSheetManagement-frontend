@@ -23,7 +23,7 @@ import {
 import { ReviewFormData, QuarterlyReviewAssignment, StoredPerformanceFile } from "../../types/appraisal.types";
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
 import { AppraisalApi, readApiError, toPerformancePayload, toReviewFormData } from "../../reducers/appraisal.reducer";
-import { QuaterlyEnum, QuarterlyReviewStatus } from "../../enums/appraisal.enums";
+import { EmployeePerformanceStatus, QuaterlyEnum, QuarterlyReviewStatus } from "../../enums/appraisal.enums";
 import OverviewStep from "./steps/OverviewStep";
 import AchievementsStep from "./steps/AchievementsStep";
 import TeamContributionStep from "./steps/TeamContributionStep";
@@ -40,6 +40,82 @@ interface QuarterlyReviewStepperProps {
   onBack: () => void;
   onSubmitSuccess?: () => void;
 }
+
+
+const hasCompletedFirstStep = (data: ReviewFormData): boolean => {
+  const overview = (data.overview || data.roleSummary || "").trim();
+  return overview.length > 0;
+};
+
+const hasAnyDataEntered = (data: ReviewFormData): boolean => {
+  if ((data.overview || data.roleSummary || "").trim().length > 0) return true;
+  if (
+    (data.projects || []).some(
+      (p) =>
+        (p.title || "").trim() ||
+        (p.description || "").trim() ||
+        (p.challenge || "").trim()
+    )
+  )
+    return true;
+  if (
+    (data.projectTitle || "").trim() ||
+    (data.projectDescription || "").trim() ||
+    (data.projectChallenge || "").trim()
+  )
+    return true;
+  if (
+    (data.learningGoalItems || []).some((g) => g.trim().length > 0) ||
+    (data.learningGoals || "").trim().length > 0
+  )
+    return true;
+  if (
+    (data.workCultureFeedback || "").trim() ||
+    (data.workLifeBalance || "").trim() ||
+    (data.suggestionsForImprovement || "").trim()
+  )
+    return true;
+  if (data.companyEnvironmentRating && data.companyEnvironmentRating > 0) return true;
+  if (data.managementSupportRating && data.managementSupportRating > 0) return true;
+  if (
+    data.teamRatings &&
+    Object.values(data.teamRatings).some((v) => typeof v === "number" && v > 0)
+  )
+    return true;
+  return false;
+};
+
+
+const isStepDone = (stepId: number, data: ReviewFormData): boolean => {
+  if (stepId === 1) return Boolean((data.overview || data.roleSummary || "").trim());
+  if (stepId === 2) {
+    return Boolean(
+      (data.projects && data.projects.length > 0) ||
+      (data.projectTitle || "").trim() ||
+      (data.majorAchievements || "").trim()
+    );
+  }
+  if (stepId === 3) {
+    return Boolean(
+      data.teamRatings &&
+      Object.values(data.teamRatings).some((v) => typeof v === "number" && v > 0)
+    );
+  }
+  if (stepId === 4) {
+    return Boolean(
+      (data.learningGoalItems && data.learningGoalItems.length > 0) ||
+      (data.learningGoals || "").trim()
+    );
+  }
+  if (stepId === 5) {
+    return Boolean(
+      (data.workCultureFeedback || "").trim() ||
+      (data.workLifeBalance || "").trim() ||
+      (data.companyEnvironmentRating && data.companyEnvironmentRating > 0)
+    );
+  }
+  return false;
+};
 
 const STEP_DEFINITIONS = [
   { id: 1, label: "Overview", IconComponent: StepOverviewIcon },
@@ -387,7 +463,11 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
   };
 
-  const persistStep = async (asDraft = false, dataToPersist: ReviewFormData = formData): Promise<boolean> => {
+  const persistStep = async (
+    asDraft = false,
+    dataToPersist: ReviewFormData = formData,
+    targetStatus?: EmployeePerformanceStatus | string,
+  ): Promise<boolean> => {
     const quarter = quarterValue(assignment.quarter);
     if (!assignment.employeeId || !quarter || !assignment.financialYear) {
       setSaveError("This quarter is missing an employee, quarter, or financial year.");
@@ -399,6 +479,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       assignment.financialYear,
       dataToPersist,
     );
+    if (targetStatus) {
+      payload.status = targetStatus;
+    }
     setSaving(true);
     setSaveError("");
     try {
@@ -471,7 +554,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       return;
     }
     setErrors({});
-    const saved = await persistStep(false, currentData);
+    // Advancing past Step 1 (or any step) completes the step -> save as DRAFT
+    const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT);
     if (!saved) {
       return;
     }
@@ -494,7 +578,11 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (currentStep <= 1 || saving) {
       return;
     }
-    const saved = await persistStep();
+    const finishedFirstStep = currentStep > 1 || hasCompletedFirstStep(formData);
+    const targetStatus = finishedFirstStep && !isReassignedReview
+      ? EmployeePerformanceStatus.DRAFT
+      : undefined;
+    const saved = await persistStep(Boolean(targetStatus), formData, targetStatus);
     if (!saved) {
       return;
     }
@@ -540,7 +628,11 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
 
     setErrors({});
-    const saved = await persistStep(false, currentData);
+    const finishedFirstStep = currentStep > 1 || targetStep > 1 || hasCompletedFirstStep(currentData);
+    const targetStatus = finishedFirstStep && !isReassignedReview
+      ? EmployeePerformanceStatus.DRAFT
+      : undefined;
+    const saved = await persistStep(Boolean(targetStatus), currentData, targetStatus);
     if (!saved) {
       return;
     }
@@ -568,7 +660,40 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         formDataRef.current = currentData;
       }
     }
-    const saved = await persistStep(!isReassignedReview, currentData);
+
+    const hasData = hasAnyDataEntered(currentData);
+    const finishedFirstStep = currentStep > 1 || hasCompletedFirstStep(currentData);
+    const isAlreadyDraft =
+      String(assignment.status || "").toUpperCase() === EmployeePerformanceStatus.DRAFT ||
+      String(assignment.reviewStatus || "").toUpperCase() === QuarterlyReviewStatus.DRAFT;
+
+    // 1. If user did not enter any data and review is not yet draft:
+    if (!hasData && !isAlreadyDraft && !isReassignedReview) {
+      const existingId = performanceIdRef.current || assignment.performanceId;
+      if (existingId) {
+        // Explicitly maintain/reset status as NOT_STARTED
+        await persistStep(false, currentData, EmployeePerformanceStatus.NOT_STARTED);
+      }
+      scrollToTop();
+      onBack();
+      return;
+    }
+
+    // 2. Only save as DRAFT if user entered data AND finished the one stepper (Step 1)
+    let targetStatus: EmployeePerformanceStatus | undefined = undefined;
+    if (!isReassignedReview) {
+      if (finishedFirstStep || isAlreadyDraft) {
+        targetStatus = EmployeePerformanceStatus.DRAFT;
+      } else {
+        targetStatus = EmployeePerformanceStatus.NOT_STARTED;
+      }
+    }
+
+    const saved = await persistStep(
+      targetStatus === EmployeePerformanceStatus.DRAFT,
+      currentData,
+      targetStatus,
+    );
     if (!saved) {
       return;
     }
@@ -634,6 +759,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onChange={handleFieldChange}
             errors={errors}
             clearError={handleClearError}
+            readOnly={readOnly}
           />
         );
       case 2:
@@ -645,6 +771,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             clearError={handleClearError}
             onUploadAttachment={uploadAttachment}
             onRemoveAttachment={removeAttachment}
+            readOnly={readOnly}
           />
         );
       case 3:
@@ -654,6 +781,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onChange={handleFieldChange}
             errors={errors}
             clearError={handleClearError}
+            readOnly={readOnly}
           />
         );
       case 4:
@@ -663,6 +791,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onChange={handleFieldChange}
             errors={errors}
             clearError={handleClearError}
+            readOnly={readOnly}
           />
         );
       case 5:
@@ -673,6 +802,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onChange={handleFieldChange}
             errors={errors}
             clearError={handleClearError}
+            readOnly={readOnly}
           />
         );
       case 6:
@@ -682,6 +812,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onChange={handleFieldChange}
             errors={errors}
             clearError={handleClearError}
+            readOnly={readOnly}
           />
         );
       default:
@@ -756,7 +887,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
             {/* Stepper Steps (Number in Circle, Title Below) */}
             {STEP_DEFINITIONS.map((step) => {
-              const isCompleted = currentStep > step.id;
+              const hasData = isStepDone(step.id, formData);
+              const isCompleted = currentStep > step.id || hasData;
               const isActive = currentStep === step.id;
 
               return (
@@ -890,7 +1022,16 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   >
                     Next Step
                   </Button>
-                ) : isLocked ? null : (
+                ) : isLocked ? (
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={onBack}
+                    className="px-6 py-2.5 rounded-xl font-bold border-blue-200 bg-white hover:bg-blue-50 text-[#2563EB] shadow-xs cursor-pointer"
+                  >
+                    Back to Reviews
+                  </Button>
+                ) : (
                   <Button
                     variant="primary"
                     size="md"

@@ -448,13 +448,15 @@ body.modal-open-active .sidebar-footer {
 }
 
 .qr-action-btn-view,
-.qr-action-btn-edit {
+.qr-action-btn-edit,
+.qr-action-btn-send {
   background: rgba(239, 246, 255, 0.85);
   color: #2563EB;
 }
 
 .qr-action-btn-view:hover,
-.qr-action-btn-edit:hover {
+.qr-action-btn-edit:hover,
+.qr-action-btn-send:hover {
   background: #2563EB;
   color: #FFFFFF;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
@@ -499,6 +501,7 @@ body.modal-open-active .sidebar-footer {
 
 .qr-action-btn-view:active,
 .qr-action-btn-edit:active,
+.qr-action-btn-send:active,
 .qr-action-btn-approve:active,
 .qr-action-btn-reject:active,
 .qr-action-btn-reassign:active,

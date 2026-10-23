@@ -21,6 +21,7 @@ import {
   AlertCircle,
   ArrowRight,
   Star,
+  Send,
 } from "lucide-react";
 import {
   animateKeyIconBounce,
@@ -856,10 +857,28 @@ export const AppraisalDashboard: React.FC = () => {
 
   // Scroll to top helper handlers for View and Edit
   const loadRowPerformance = async (assignment: QuarterlyReviewAssignment) => {
-    if (!assignment.performanceId) {
-      return null;
+    if (assignment.performanceId) {
+      try {
+        const perf = await AppraisalApi.getPerformanceById(Number(assignment.performanceId));
+        if (perf) return perf;
+      } catch (err) {
+        // Fallback to query by quarter
+      }
     }
-    return AppraisalApi.getPerformanceById(assignment.performanceId);
+    const q = (
+      assignment.quarter === "Q1" ||
+      assignment.quarter === "Q2" ||
+      assignment.quarter === "Q3" ||
+      assignment.quarter === "Q4"
+    ) ? (assignment.quarter as any) : undefined;
+    if (assignment.employeeId && q && assignment.financialYear) {
+      try {
+        return await AppraisalApi.getEmployeePerformance(assignment.employeeId, q, assignment.financialYear);
+      } catch (err) {
+        return null;
+      }
+    }
+    return null;
   };
 
   const handleOpenEdit = async (assignment: QuarterlyReviewAssignment) => {
@@ -891,11 +910,10 @@ export const AppraisalDashboard: React.FC = () => {
     scrollToPageTop();
     try {
       const performance = await loadRowPerformance(assignment);
-      setViewingForm(performance ? toReviewFormData(performance) : undefined);
-      setViewingPerformanceStatus(performance?.status || assignment.status || "");
-      setViewingReviewStatus(assignment.reviewStatus || "");
-      setViewingEvaluation(undefined);
-      setViewingAssignment({
+      const formData = performance ? toReviewFormData(performance) : undefined;
+      setStepperReadOnly(true);
+      setEditingForm(formData);
+      openAssignment({
         ...assignment,
         performanceId: performance?.id ?? assignment.performanceId,
         assignedBy: performance?.assignedBy || assignment.assignedBy,
@@ -1189,7 +1207,7 @@ export const AppraisalDashboard: React.FC = () => {
       <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
         <div className="relative z-10 w-full flex-1 flex flex-col min-h-0">
           <QuarterlyReviewStepper
-            key={activeAssignment.id}
+            key={`${activeAssignment.id}-${stepperReadOnly ? "view" : "edit"}`}
             assignment={activeAssignment}
             initialFormData={editingForm}
             readOnly={stepperReadOnly}
@@ -1458,15 +1476,35 @@ export const AppraisalDashboard: React.FC = () => {
                                       <Eye className="w-4 h-4" />
                                     </button>
                                     {assignment.canEdit && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleOpenEdit(assignment)}
-                                        className="qr-action-icon-btn qr-action-btn-edit"
-                                        title={`Edit review for ${assignment.quarter}`}
-                                        aria-label={`Edit review for ${assignment.quarter}`}
-                                      >
-                                        <Pencil className="w-4 h-4" />
-                                      </button>
+                                      (() => {
+                                        const rawStatus = (assignment.status || assignment.reviewStatus || "").toUpperCase();
+                                        const isDraft =
+                                          rawStatus === "DRAFT" ||
+                                          rawStatus === "EDIT_GRANTED" ||
+                                          rawStatus === "ALLOWED_TO_EDIT";
+
+                                        return isDraft ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenEdit(assignment)}
+                                            className="qr-action-icon-btn qr-action-btn-edit"
+                                            title={`Edit review for ${assignment.quarter}`}
+                                            aria-label={`Edit review for ${assignment.quarter}`}
+                                          >
+                                            <Pencil className="w-4 h-4" />
+                                          </button>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenEdit(assignment)}
+                                            className="qr-action-icon-btn qr-action-btn-send"
+                                            title={`Start review for ${assignment.quarter}`}
+                                            aria-label={`Start review for ${assignment.quarter}`}
+                                          >
+                                            <Send className="w-4 h-4" />
+                                          </button>
+                                        );
+                                      })()
                                     )}
 
                                     {(() => {
@@ -1613,14 +1651,33 @@ export const AppraisalDashboard: React.FC = () => {
                             View
                           </button>
                           {assignment.canEdit && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEdit(assignment)}
-                              className="qr-action-btn-edit flex-1 justify-center py-2 text-xs"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                              Edit
-                            </button>
+                            (() => {
+                              const rawStatus = (assignment.status || assignment.reviewStatus || "").toUpperCase();
+                              const isDraft =
+                                rawStatus === "DRAFT" ||
+                                rawStatus === "EDIT_GRANTED" ||
+                                rawStatus === "ALLOWED_TO_EDIT";
+
+                              return isDraft ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEdit(assignment)}
+                                  className="qr-action-btn-edit flex-1 justify-center py-2 text-xs"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                  Edit
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEdit(assignment)}
+                                  className="qr-action-btn-send flex-1 justify-center py-2 text-xs"
+                                >
+                                  <Send className="w-3.5 h-3.5" />
+                                  Start
+                                </button>
+                              );
+                            })()
                           )}
 
                           {(() => {

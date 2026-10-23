@@ -11,6 +11,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
   clearError,
   onUploadAttachment,
   onRemoveAttachment,
+  readOnly = false,
 }) => {
   const projectTitle = formData.projectTitle ?? "";
   const projectDescription = formData.projectDescription ?? "";
@@ -23,7 +24,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [addErrors, setAddErrors] = useState<Record<string, string>>({});
-  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(readOnly && projects.length > 0 ? 0 : null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -258,13 +259,15 @@ export const AchievementsStep: React.FC<StepProps> = ({
             Detail your key project deliverables, project description, and challenges navigated.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleAddProject}
-          className="shrink-0 inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs active:scale-[0.98] mr-0.5 mt-0.5"
-        >
-          <span className="tracking-wide">+ Add more project</span>
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={handleAddProject}
+            className="shrink-0 inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs active:scale-[0.98] mr-0.5 mt-0.5"
+          >
+            <span className="tracking-wide">+ Add more project</span>
+          </button>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -379,7 +382,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
               onDelete={handleRemoveFile}
             />
           ))}
-          {attachments.length < 5 && (
+          {!readOnly && attachments.length < 5 && (
             <button
               type="button"
               disabled={uploading}
