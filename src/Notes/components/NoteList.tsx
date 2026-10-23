@@ -23,6 +23,7 @@ import { Note, NoteType } from "../types/notes.types";
 import { noteMatchesCreatedDate, noteMatchesSearch } from "../utils/notesHelpers";
 import { SearchBox } from "../../components/ui";
 import { useNoteDragDrop } from "../hooks/useNoteDragDrop";
+import { WorksphereLogoLoader } from "../../components/ApiLoadingSpinner";
 
 interface NoteListProps {
   loading?: boolean;
@@ -114,7 +115,12 @@ export const NoteList: React.FC<NoteListProps> = ({
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_2px_12px_rgba(0,0,0,0.02)] overflow-hidden">
-      {notes.length === 0 ? (
+      {loading ? (
+        <div className="py-24 text-center flex flex-col items-center justify-center">
+          <WorksphereLogoLoader />
+          <span className="mt-3 text-xs font-semibold text-slate-500">Loading notes...</span>
+        </div>
+      ) : notes.length === 0 ? (
         <div className="p-16 text-center flex flex-col items-center justify-center">
           <div className="w-14 h-14 bg-indigo-50 text-[#4318FF] rounded-2xl flex items-center justify-center mb-4 border border-indigo-100">
             <FileText className="w-7 h-7 text-[#4318FF]" />

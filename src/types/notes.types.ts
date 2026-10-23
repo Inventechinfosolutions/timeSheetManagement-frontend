@@ -115,6 +115,7 @@ export interface QueryNotesParams {
   page?: number;
   limit?: number;
   pageSize?: number;
+  skipGlobalLoader?: boolean;
 }
 
 export interface NoteStats {

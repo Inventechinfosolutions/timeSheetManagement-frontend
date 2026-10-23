@@ -74,7 +74,11 @@ export const fetchNotes = createAsyncThunk(
 
       const queryStr = searchParams.toString();
       const url = queryStr ? `${API_BASE}?${queryStr}` : API_BASE;
-      const response = await axios.get(url, { signal, skipGlobalLoader: true, headers: { 'x-skip-loader': 'true' } });
+      const response = await axios.get(url, {
+        signal,
+        skipGlobalLoader: params.skipGlobalLoader === true,
+        headers: params.skipGlobalLoader === true ? { 'x-skip-loader': 'true' } : undefined,
+      });
       return response.data; // { data: Note[], total: number }
     } catch (error: any) {
       if (axios.isCancel(error) || error?.code === "ERR_CANCELED" || signal.aborted) {
