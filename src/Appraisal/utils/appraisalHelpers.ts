@@ -22,9 +22,9 @@ import {
 } from "../types/appraisal.types";
 import { AppraisalApi } from "../reducers/appraisal.reducer";
 
-// ==========================================
+// 
 // ERROR PARSER
-// ==========================================
+// 
 interface ApiErrorBody {
   message?: string | string[];
 }
@@ -58,9 +58,9 @@ export const readApiError = (error: unknown): string => {
   return AppraisalCopy.requestFailed;
 };
 
-// ==========================================
+// 
 // DATE & FORMAT HELPERS
-// ==========================================
+// 
 export const formatAppraisalDisplayDate = (value: string | Date | null | undefined): string => {
   if (!value) {
     return "";
@@ -95,9 +95,9 @@ export const formatStoredFileSize = (bytes: number): string => {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 };
 
-// ==========================================
+// 
 // PERMISSION CHECKERS
-// ==========================================
+// 
 export const reviewCanEdit = (review: EmployeeReviewDetail): boolean => {
   if (
     review.status?.toUpperCase() === "NOT_UPDATED" ||
@@ -123,9 +123,9 @@ export const isResubmittedStatus = (status?: string | null): boolean => {
   return normalized === "RESUBMITTED" || normalized.includes("RESUBMIT");
 };
 
-// ==========================================
+// 
 // FORM DATA & PAYLOAD PARSERS
-// ==========================================
+// 
 export const readProjectList = (
   value: EmployeePerformanceDetail["projects"],
 ): PerformanceProject[] => {
@@ -140,11 +140,21 @@ export const readProjectList = (
     return [];
   }
   return source
-    .filter((project) => project && (project.title || project.description || project.challenge))
+    .filter((project) => project && (project.projectName || (project as { title?: string }).title || project.description || project.challenge || project.challengesFaced))
     .map((project) => ({
-      title: project.title || "",
+      projectName: project.projectName || (project as { title?: string }).title || "",
       description: project.description || "",
-      challenge: project.challenge || "",
+      challenge: project.challenge || project.challengesFaced || "",
+      challengesFaced: project.challengesFaced || project.challenge || "",
+      projectRole: project.projectRole || "",
+      responsibilityType: project.responsibilityType || "",
+      leadershipQualities: project.leadershipQualities || "",
+      clientReviewFeedback: project.clientReviewFeedback || "",
+      keyResponsibilities: project.keyResponsibilities || "",
+      solutionsImplemented: project.solutionsImplemented || "",
+      keyAchievementsOutcomes: project.keyAchievementsOutcomes || "",
+      technologiesUsed: Array.isArray(project.technologiesUsed) ? project.technologiesUsed : [],
+      isDraft: Boolean(project.isDraft),
       attachments: (project.attachments || [])
         .filter((file) => file.objectKey || file.fileName)
         .map((file) => ({
@@ -213,10 +223,146 @@ export const toReviewFormData = (
         }]
       : []
   );
+
+  let parsedMeta: {
+    skillsAcquired?: string;
+    certificationsOrCourses?: string;
+    skillsToImprove?: string;
+    nextQuarterLearningGoals?: string;
+    supportOrTrainingRequired?: string;
+  } | null = null;
+
+  const rawGoals = performance.learningGoals;
+  if (Array.isArray(rawGoals) && rawGoals.length > 0) {
+    const firstItem = rawGoals[0];
+    if (typeof firstItem === "string" && firstItem.trim().startsWith("{")) {
+      try {
+        parsedMeta = JSON.parse(firstItem.trim());
+      } catch {
+        parsedMeta = null;
+      }
+    }
+  } else if (typeof rawGoals === "string" && rawGoals.trim().startsWith("{")) {
+    try {
+      parsedMeta = JSON.parse(rawGoals.trim());
+    } catch {
+      parsedMeta = null;
+    }
+  }
+
+  const skillsAcquired = parsedMeta?.skillsAcquired || performance.skillsAcquired || "";
+  const certificationsOrCourses = parsedMeta?.certificationsOrCourses || "";
+  const skillsToImprove = parsedMeta?.skillsToImprove || performance.skillsToImprove || "";
+  const nextQuarterLearningGoals =
+    parsedMeta?.nextQuarterLearningGoals || performance.careerDevelopmentGoals || "";
+  const supportOrTrainingRequired =
+    parsedMeta?.supportOrTrainingRequired || performance.supportOrTrainingRequired || "";
+
+  let parsedEnvMeta: {
+    workEnvironmentSatisfaction?: number;
+    toolsAndResourcesRating?: number;
+    managementSupportRating?: number;
+    challengesAffectingProductivity?: string;
+    suggestionsForImprovement?: string;
+    overallSelfRating?: number;
+    overallEmployeeComments?: string;
+    careerGrowthInterests?: string;
+    confirmationAccepted?: boolean;
+  } | null = null;
+
+  const rawCulture = performance.feedbackOnWorkCulture;
+  if (typeof rawCulture === "string" && rawCulture.trim().startsWith("{")) {
+    try {
+      parsedEnvMeta = JSON.parse(rawCulture.trim());
+    } catch {
+      parsedEnvMeta = null;
+    }
+  }
+
+  const companyEnvironmentRating =
+    parsedEnvMeta?.workEnvironmentSatisfaction ??
+    ENVIRONMENT_SCORES[performance.rateCompanyEnvironment || ""] ??
+    0;
+  const toolingAndResourcesRating =
+    parsedEnvMeta?.toolsAndResourcesRating ??
+    0;
+  const managementSupportRating =
+    parsedEnvMeta?.managementSupportRating ??
+    performance.managementSupportRating ??
+    0;
+  const challengesAffectingProductivity =
+    parsedEnvMeta?.challengesAffectingProductivity ||
+    performance.challengesAffectingProductivity ||
+    performance.workLifeBalance ||
+    "";
+  const suggestionsForImprovement =
+    parsedEnvMeta?.suggestionsForImprovement ||
+    performance.suggestionsForImprovement ||
+    "";
+  const overallSelfRating =
+    parsedEnvMeta?.overallSelfRating ??
+    performance.overallSelfRating ??
+    0;
+  const overallEmployeeComments =
+    parsedEnvMeta?.overallEmployeeComments ??
+    performance.overallEmployeeComments ??
+    "";
+  const careerGrowthInterests =
+    parsedEnvMeta?.careerGrowthInterests ??
+    performance.careerGrowthInterests ??
+    performance.careerDevelopmentGoals ??
+    "";
+  const confirmationAccepted =
+    parsedEnvMeta?.confirmationAccepted ??
+    Boolean(performance.confirmationAccepted);
+
+  let overallPerformanceSummary = "";
+  let keyHighlights = "";
+  let majorContributions = "";
+  let areasForImprovement = "";
+  let reviewPeriodStart = "";
+  let reviewPeriodEnd = "";
+
+  let teamCollaborationSummary = "";
+  let crossTeamContributions = "";
+  let knowledgeSharingMentoring = "";
+  let teamworkExamples = "";
+
+  if (rawOverview.trim().startsWith("{") && rawOverview.trim().endsWith("}")) {
+    try {
+      const parsed = JSON.parse(rawOverview);
+      overallPerformanceSummary = parsed.overallPerformanceSummary || "";
+      keyHighlights = parsed.keyHighlights || "";
+      majorContributions = parsed.majorContributions || "";
+      areasForImprovement = parsed.areasForImprovement || "";
+      reviewPeriodStart = parsed.reviewPeriodStart || "";
+      reviewPeriodEnd = parsed.reviewPeriodEnd || "";
+      teamCollaborationSummary = parsed.teamCollaborationSummary || "";
+      crossTeamContributions = parsed.crossTeamContributions || "";
+      knowledgeSharingMentoring = parsed.knowledgeSharingMentoring || "";
+      teamworkExamples = parsed.teamworkExamples || "";
+    } catch {
+      overallPerformanceSummary = rawOverview;
+    }
+  } else {
+    overallPerformanceSummary = rawOverview;
+  }
+
   return {
     ...emptyReviewFormData,
     overview: rawOverview,
     roleSummary: rawOverview,
+    overallPerformanceSummary: overallPerformanceSummary || rawOverview,
+    keyHighlights,
+    majorContributions,
+    areasForImprovement,
+    reviewPeriodStart,
+    reviewPeriodEnd,
+    teamCollaborationSummary,
+    crossTeamContributions,
+    knowledgeSharingMentoring,
+    teamworkExamples,
+    projectName: "",
     projectTitle: "",
     projectDescription: "",
     projectChallenge: "",
@@ -225,20 +371,26 @@ export const toReviewFormData = (
     learningGoals: "",
     learningGoalItems: readLearningGoalList(
       performance.learningGoals || performance.skillsAcquired,
-    ),
-    skillsAcquired: performance.skillsAcquired || "",
-    nextQuarterLearningGoals: performance.careerDevelopmentGoals || "",
-    workCultureFeedback: performance.feedbackOnWorkCulture || "",
+    ).filter((item) => !item.startsWith("{")),
+    skillsAcquired,
+    certificationsOrCourses,
+    skillsToImprove,
+    nextQuarterLearningGoals,
+    supportOrTrainingRequired,
+    workCultureFeedback: parsedEnvMeta ? "" : (performance.feedbackOnWorkCulture || ""),
     workLifeBalance: performance.workLifeBalance || "",
-    suggestionsForImprovement: performance.suggestionsForImprovement || "",
-    companyEnvironmentRating: ENVIRONMENT_SCORES[performance.rateCompanyEnvironment || ""] || 0,
+    suggestionsForImprovement,
+    challengesAffectingProductivity,
+    companyEnvironmentRating,
+    toolingAndResourcesRating,
+    managementSupportRating,
+    overallSelfRating,
+    overallEmployeeComments,
+    careerGrowthInterests,
+    confirmationAccepted,
+    finalComments: overallEmployeeComments,
     teamRatings: {
       communication: performance.communicationTransparency || 0,
-      collaboration: performance.crossDepartmentCollaboration || 0,
-      ownership: performance.reliabilityAccountability || 0,
-      problemSolving: performance.peerSupportTeamSpirit || 0,
-      leadership: performance.mentorshipKnowledgeSharing || 0,
-      adaptability: performance.adaptabilityInitiative || 0,
     },
   };
 };
@@ -252,13 +404,46 @@ export const toPerformancePayload = (
   financialYear: string,
   formData: ReviewFormData,
 ): PerformanceWritePayload => {
-  const overview = (formData.overview || formData.roleSummary || "").trim();
+  const hasStructuredOverview = Boolean(
+    formData.overallPerformanceSummary ||
+    formData.keyHighlights ||
+    formData.majorContributions ||
+    formData.areasForImprovement ||
+    formData.teamCollaborationSummary ||
+    formData.crossTeamContributions ||
+    formData.knowledgeSharingMentoring ||
+    formData.teamworkExamples
+  );
+  const overview = hasStructuredOverview
+    ? JSON.stringify({
+        overallPerformanceSummary: formData.overallPerformanceSummary || "",
+        keyHighlights: formData.keyHighlights || "",
+        majorContributions: formData.majorContributions || "",
+        areasForImprovement: formData.areasForImprovement || "",
+        reviewPeriodStart: formData.reviewPeriodStart || "",
+        reviewPeriodEnd: formData.reviewPeriodEnd || "",
+        teamCollaborationSummary: formData.teamCollaborationSummary || "",
+        crossTeamContributions: formData.crossTeamContributions || "",
+        knowledgeSharingMentoring: formData.knowledgeSharingMentoring || "",
+        teamworkExamples: formData.teamworkExamples || "",
+      })
+    : (formData.overview || formData.overallPerformanceSummary || "").trim();
   const projects = (formData.projects || [])
-    .filter((project) => project.title.trim() && project.description.trim() && project.challenge.trim())
+    .filter((project) => Boolean(project && (project.projectName?.trim() || project.description?.trim())))
     .map((project) => ({
-      title: project.title.trim(),
-      description: project.description.trim(),
-      challenge: project.challenge.trim(),
+      projectName: (project.projectName || "Untitled Project").trim(),
+      description: (project.description || "").trim(),
+      challenge: (project.challenge || project.challengesFaced || "").trim(),
+      challengesFaced: (project.challengesFaced || project.challenge || "").trim(),
+      projectRole: project.projectRole || "",
+      responsibilityType: project.responsibilityType || "",
+      leadershipQualities: (project.leadershipQualities || "").trim(),
+      clientReviewFeedback: (project.clientReviewFeedback || "").trim(),
+      keyResponsibilities: (project.keyResponsibilities || "").trim(),
+      solutionsImplemented: (project.solutionsImplemented || "").trim(),
+      keyAchievementsOutcomes: (project.keyAchievementsOutcomes || "").trim(),
+      technologiesUsed: Array.isArray(project.technologiesUsed) ? project.technologiesUsed : [],
+      isDraft: Boolean(project.isDraft),
       attachments: (project.attachments || []).map((file) => ({
         fileName: file.fileName,
         fileUrl: file.objectKey,
@@ -267,49 +452,88 @@ export const toPerformancePayload = (
         objectKey: file.objectKey,
       })),
     }));
-  const projectTitle = projects.map((project) => project.title.trim()).join("\n");
+  const projectNames = projects.map((project) => project.projectName.trim()).join("\n");
   const projectDescription = projects.map((project) => project.description.trim()).join("\n");
   const challenge = projects.map((project) => project.challenge.trim()).join("\n");
-  const learningGoals = (formData.learningGoalItems || [])
-    .map((goal) => goal.trim())
-    .filter(Boolean);
-  const learning = learningGoals.join("\n");
+
+  const skillsLearned = (formData.skillsAcquired || "").trim();
+  const certs = (formData.certificationsOrCourses || "").trim();
+  const toImprove = (formData.skillsToImprove || "").trim();
   const nextGoals = (formData.nextQuarterLearningGoals || "").trim();
-  const workCulture = (formData.workCultureFeedback || "").trim();
-  const workLife = (formData.workLifeBalance || "").trim();
+  const support = (formData.supportOrTrainingRequired || "").trim();
+
+  const metaGoalObj = {
+    skillsAcquired: skillsLearned,
+    certificationsOrCourses: certs,
+    skillsToImprove: toImprove,
+    nextQuarterLearningGoals: nextGoals,
+    supportOrTrainingRequired: support,
+  };
+  const metaGoalStr = JSON.stringify(metaGoalObj);
+  const learningGoalsList = [
+    metaGoalStr,
+    skillsLearned ? `Skills Learned: ${skillsLearned}` : "",
+    certs ? `Certifications: ${certs}` : "",
+    toImprove ? `Skills to Improve: ${toImprove}` : "",
+    nextGoals ? `Next Quarter Goals: ${nextGoals}` : "",
+    support ? `Support Required: ${support}` : "",
+  ].filter(Boolean);
+
+  const envRating = formData.companyEnvironmentRating || 0;
+  const toolsRating = formData.toolingAndResourcesRating || 0;
+  const mgrRating = formData.managementSupportRating || 0;
+  const challenges = (formData.challengesAffectingProductivity || formData.workLifeBalance || "").trim();
   const suggestions = (formData.suggestionsForImprovement || formData.toolingAndResources || "").trim();
+  const overallSelfRating = formData.overallSelfRating || 0;
+  const overallEmployeeComments = (formData.overallEmployeeComments || formData.finalComments || "").trim();
+  const careerGrowthInterests = (formData.careerGrowthInterests || "").trim();
+  const confirmationAccepted = Boolean(formData.confirmationAccepted);
+
+  const envMetaObj = {
+    workEnvironmentSatisfaction: envRating,
+    toolsAndResourcesRating: toolsRating,
+    managementSupportRating: mgrRating,
+    challengesAffectingProductivity: challenges,
+    suggestionsForImprovement: suggestions,
+    overallSelfRating,
+    overallEmployeeComments,
+    careerGrowthInterests,
+    confirmationAccepted,
+  };
+  const envMetaStr = JSON.stringify(envMetaObj);
+
   const ratings = formData.teamRatings || {};
-  const environmentScore = formData.companyEnvironmentRating || formData.managementSupportRating || 0;
+  const environmentScore = envRating || mgrRating || 0;
   return {
     employeeId,
     quarter,
     financialYear,
     overview: overview || undefined,
     projects,
-    responsibilitiesHandled: (formData.roleSummary || overview || "").trim() || undefined,
+    responsibilitiesHandled: (formData.majorContributions || overview || "").trim() || undefined,
     deliverablesCompleted: projectDescription || undefined,
-    keyAccomplishments: projectTitle || undefined,
+    keyAccomplishments: projectNames || undefined,
     challengesFaced: challenge || undefined,
-    skillsAcquired: learning || undefined,
-    learningGoals: learningGoals.length ? learningGoals : undefined,
-    feedbackOnWorkCulture: workCulture || undefined,
-    workLifeBalance: workLife || undefined,
+    skillsAcquired: skillsLearned || undefined,
+    learningGoals: learningGoalsList.length ? learningGoalsList : undefined,
+    feedbackOnWorkCulture: envMetaStr,
+    workLifeBalance: challenges || undefined,
     suggestionsForImprovement: suggestions || undefined,
-    plannedDeliverables: nextGoals || learning || undefined,
-    careerDevelopmentGoals: nextGoals || undefined,
+    plannedDeliverables: nextGoals || skillsLearned || undefined,
+    careerDevelopmentGoals: careerGrowthInterests || nextGoals || undefined,
     communicationTransparency: scored(ratings.communication),
-    crossDepartmentCollaboration: scored(ratings.collaboration),
-    reliabilityAccountability: scored(ratings.ownership),
-    peerSupportTeamSpirit: scored(ratings.problemSolving),
-    mentorshipKnowledgeSharing: scored(ratings.leadership),
-    adaptabilityInitiative: scored(ratings.adaptability),
+    crossDepartmentCollaboration: scored(ratings.communication),
+    reliabilityAccountability: scored(ratings.communication),
+    peerSupportTeamSpirit: scored(ratings.communication),
+    mentorshipKnowledgeSharing: scored(ratings.communication),
+    adaptabilityInitiative: scored(ratings.communication),
     rateCompanyEnvironment: ENVIRONMENT_RATINGS[environmentScore],
   };
 };
 
-// ==========================================
+// 
 // RECORD & ASSIGNMENT MAPPERS
-// ==========================================
+// 
 export const toManagerReviewRecord = (
   review: ManagerReviewApiRecord | EmployeeReviewDetail,
 ): ManagerQuarterlyReviewRecord => ({
@@ -439,9 +663,9 @@ export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyRev
   };
 };
 
-// ==========================================
+// 
 // MASTER PERIOD / CALENDAR HELPERS
-// ==========================================
+// 
 const toLocalIsoDate = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -515,9 +739,9 @@ export async function getCurrentMasterYearAndQuarter(
   return period.current;
 }
 
-// ==========================================
+// 
 // DYNAMIC RATING TIER CONFIGURATION (OUT OF 5)
-// ==========================================
+// 
 export interface RatingTierConfig {
   key: "needs_improvement" | "developing" | "meets_expectations" | "exceeds_expectations" | "outstanding";
   rangeLabel: string;

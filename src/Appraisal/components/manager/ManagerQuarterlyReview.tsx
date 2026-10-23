@@ -31,7 +31,6 @@ import { QuarterlyReviewTable } from "./QuarterlyReviewTable";
 import EvaluationPanel, { EvaluationData } from "./EvaluationPanel";
 import { QUARTERLY_REVIEW_TABLE_PAGE_SIZE } from "../../constants/appraisal.constants";
 import { loadAppraisalPeriod } from "../../utils/appraisalHelpers";
-import { WorksphereLogoLoader } from "../../../components/ApiLoadingSpinner";
 import {
   Button,
   Card,
@@ -695,11 +694,6 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
           <CardContent className="p-0">
             <div className="relative min-h-[16rem]">
-              {tableLoading && !isGlobalLoading ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-[2px]">
-                  <WorksphereLogoLoader />
-                </div>
-              ) : null}
               {assignments.length > 0 ? (
                 <QuarterlyReviewTable
                   data={assignments}
@@ -717,7 +711,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
                   defaultPageSize={QUARTERLY_REVIEW_TABLE_PAGE_SIZE}
                   onPageChange={setTablePage}
                 />
-              ) : !tableLoading ? (
+              ) : !tableLoading && !isGlobalLoading ? (
                 <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
                   <div className="relative mb-5">
                     <div className="manager-review-empty-glow" />

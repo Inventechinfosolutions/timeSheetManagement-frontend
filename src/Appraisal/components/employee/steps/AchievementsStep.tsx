@@ -1,8 +1,246 @@
-import React, { useEffect, useRef, useState } from "react";
-import { StepProps } from "../../../types/appraisal.types";
-import { AlertCircle, X, Paperclip, ChevronDown, Pencil, Trash2 } from "lucide-react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
+import { StepProps, PerformanceProject, ProjectRoleEnum, ResponsibilityTypeEnum } from "../../../types/appraisal.types";
+import { AlertCircle, X, Paperclip, ChevronDown, Pencil, Trash2, Check, Plus, UserCheck, ShieldCheck } from "lucide-react";
 import { readApiError } from "../../../reducers/appraisal.reducer";
 import AttachmentItem from "../../common/AttachmentItem";
+
+const PROJECT_ROLE_OPTIONS = [
+  ProjectRoleEnum.FRONTEND_DEVELOPER,
+  ProjectRoleEnum.BACKEND_DEVELOPER,
+  ProjectRoleEnum.FULL_STACK_DEVELOPER,
+  ProjectRoleEnum.QA_ENGINEER,
+  ProjectRoleEnum.UI_UX_DESIGNER,
+  ProjectRoleEnum.DEVOPS_ENGINEER,
+  ProjectRoleEnum.BUSINESS_ANALYST,
+  ProjectRoleEnum.PROJECT_MANAGER,
+  ProjectRoleEnum.OTHER,
+];
+
+const RESPONSIBILITY_TYPE_OPTIONS = [
+  ResponsibilityTypeEnum.PROJECT_LEADER,
+  ResponsibilityTypeEnum.TEAM_LEAD,
+  ResponsibilityTypeEnum.PROJECT_MANAGER,
+  ResponsibilityTypeEnum.MODULE_OWNER,
+  ResponsibilityTypeEnum.INDIVIDUAL_CONTRIBUTOR,
+  ResponsibilityTypeEnum.TEAM_MEMBER,
+  ResponsibilityTypeEnum.OTHER,
+];
+
+interface AppraisalSelectWithOtherProps {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  placeholder: string;
+  customPlaceholder?: string;
+  prefixIcon?: React.ReactNode;
+}
+
+const AppraisalSelectWithOther: React.FC<AppraisalSelectWithOtherProps> = ({
+  id,
+  value,
+  onChange,
+  options,
+  placeholder,
+  customPlaceholder = "Type custom value...",
+  prefixIcon,
+}) => {
+  const isStandard = options.filter((opt) => opt !== "Other").includes(value);
+  const [isCustom, setIsCustom] = useState(Boolean(value && !isStandard));
+  const [isOpen, setIsOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+  const containerRef = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (value && !isStandard) {
+      setIsCustom(true);
+    } else if (isStandard || !value) {
+      setIsCustom(false);
+    }
+  }, [value, isStandard]);
+
+  const placeMenu = useCallback(() => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    setMenuStyle({
+      position: "fixed",
+      top: rect.bottom + 6,
+      left: Math.max(16, rect.left),
+      width: rect.width,
+      minWidth: rect.width,
+      zIndex: 10050,
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target) || menuRef.current?.contains(target)) {
+        return;
+      }
+      setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    placeMenu();
+    window.addEventListener("resize", placeMenu);
+    window.addEventListener("scroll", placeMenu, true);
+    return () => {
+      window.removeEventListener("resize", placeMenu);
+      window.removeEventListener("scroll", placeMenu, true);
+    };
+  }, [isOpen, placeMenu]);
+
+  const handleSelectOption = (opt: string) => {
+    if (opt === "Other") {
+      setIsCustom(true);
+      onChange("");
+      setIsOpen(false);
+      setTimeout(() => inputRef.current?.focus(), 60);
+    } else {
+      setIsCustom(false);
+      onChange(opt);
+      setIsOpen(false);
+    }
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange("");
+    setIsCustom(false);
+  };
+
+  return (
+    <div className="relative w-full" ref={containerRef}>
+      <div
+        id={id}
+        onClick={() => {
+          if (!isCustom) {
+            setIsOpen(!isOpen);
+          }
+        }}
+        className={`eval-step-card !py-2.5 !px-3.5 flex items-center gap-2.5 transition-all duration-200 ${
+          isCustom ? "cursor-text" : "cursor-pointer select-none"
+        }`}
+      >
+        {prefixIcon && <span className="text-[#4318FF] shrink-0">{prefixIcon}</span>}
+
+        {isCustom ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={customPlaceholder}
+            className="flex-1 min-w-0 bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm font-semibold text-[#0F172A] placeholder:text-gray-400 placeholder:font-normal"
+            autoFocus
+          />
+        ) : (
+          <span
+            className={`flex-1 min-w-0 text-left text-sm font-semibold truncate ${
+              !value ? "text-gray-400 font-normal" : "text-[#0F172A]"
+            }`}
+          >
+            {value || placeholder}
+          </span>
+        )}
+
+        <div className="ml-auto inline-flex items-center gap-1.5 shrink-0">
+          {(value || isCustom) && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={handleClear}
+              className="p-1 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer shrink-0"
+              title="Clear"
+            >
+              <X size={13} />
+            </span>
+          )}
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
+            className="p-0.5 text-gray-400 hover:text-[#4318FF] cursor-pointer transition-colors"
+          >
+            <ChevronDown
+              size={14}
+              className={`transition-transform duration-200 ${isOpen ? "rotate-180 text-[#4318FF]" : ""}`}
+            />
+          </span>
+        </div>
+      </div>
+
+      {isOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={menuStyle}
+            className="bg-white rounded-2xl shadow-xl border border-gray-100 p-2 z-[10050] animate-in fade-in slide-in-from-top-2 duration-150 max-h-60 overflow-y-auto overflow-x-hidden eval-custom-scrollbar"
+          >
+            {options.map((option) => {
+              const isSelected = isCustom ? option === "Other" : option === value;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  title={option}
+                  onClick={() => handleSelectOption(option)}
+                  className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                    isSelected
+                      ? "bg-[#4318FF] text-white shadow-xs"
+                      : "text-[#2B3674] hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="truncate">{option}</span>
+                  {isSelected && <Check size={14} className="shrink-0 text-white" />}
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )}
+    </div>
+  );
+};
+
+const SUGGESTED_PROJECTS = [
+  "Timesheet Workflow Modernization & Automation",
+  "HRMS Portal & Employee Directory",
+  "Quarterly Performance Review 2.0",
+  "Client Billing & Invoice Tracking System",
+  "Cloud Infrastructure Migration & CI/CD",
+  "Analytics Dashboard & Metrics Engine",
+];
+
+const COMMON_TECH_STACK = [
+  "React",
+  "TypeScript",
+  "Node.js",
+  "NestJS",
+  "JavaScript",
+  "Python",
+  "Java",
+  "Spring Boot",
+  "MySQL",
+  "PostgreSQL",
+  "Docker",
+  "AWS",
+  "Tailwind CSS",
+  "Git",
+];
 
 export const AchievementsStep: React.FC<StepProps> = ({
   formData,
@@ -13,18 +251,35 @@ export const AchievementsStep: React.FC<StepProps> = ({
   onRemoveAttachment,
   readOnly = false,
 }) => {
-  const projectTitle = formData.projectTitle ?? "";
+  const projectName = formData.projectName || "";
   const projectDescription = formData.projectDescription ?? "";
-  const projectChallenge = formData.projectChallenge ?? "";
+  const projectRole = formData.projectRole ?? "";
+  const responsibilityType = formData.responsibilityType ?? "";
+  const leadershipQualities = formData.leadershipQualities ?? "";
+  const clientReviewFeedback = formData.clientReviewFeedback ?? "";
+  const keyResponsibilities = formData.keyResponsibilities ?? "";
+  const challengesFaced = formData.challengesFaced || formData.projectChallenge || "";
+  const projectChallenge = formData.projectChallenge || formData.challengesFaced || "";
+  const solutionsImplemented = formData.solutionsImplemented ?? "";
+  const keyAchievementsOutcomes = formData.keyAchievementsOutcomes ?? "";
+  const technologiesUsed = formData.technologiesUsed || [];
   const projects = formData.projects || [];
   const attachments = formData.projectAttachments || [];
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const accordionContainerRef = useRef<HTMLDivElement | null>(null);
+  const [techInput, setTechInput] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [addErrors, setAddErrors] = useState<Record<string, string>>({});
   const [expandedIndex, setExpandedIndex] = useState<number | null>(readOnly && projects.length > 0 ? 0 : null);
+  const editingIndex =
+    formData.editingProjectIndex !== undefined && formData.editingProjectIndex !== null
+      ? formData.editingProjectIndex
+      : null;
+  const setEditingIndex = (idx: number | null) => {
+    onChange("editingProjectIndex", idx);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -61,20 +316,31 @@ export const AchievementsStep: React.FC<StepProps> = ({
     });
   };
 
-  const draftIsEmpty = !projectTitle.trim() && !projectDescription.trim() && !projectChallenge.trim();
-  const hasSavedProject = projects.some(
-    (project) => project.title.trim() && project.description.trim() && project.challenge.trim(),
-  );
+  const draftIsEmpty =
+    !projectName.trim() &&
+    !projectDescription.trim() &&
+    !projectRole.trim() &&
+    !responsibilityType.trim() &&
+    !keyResponsibilities.trim() &&
+    !challengesFaced.trim() &&
+    !keyAchievementsOutcomes.trim() &&
+    technologiesUsed.length === 0;
+  const hasSavedProject = projects.length > 0;
   const showDraftErrors = !(draftIsEmpty && hasSavedProject);
-  const titleError = showDraftErrors ? errors?.projectTitle || addErrors.projectTitle : "";
+  const nameError = showDraftErrors ? errors?.projectName || addErrors.projectName : "";
   const descriptionError = showDraftErrors ? errors?.projectDescription || addErrors.projectDescription : "";
-  const challengeError = showDraftErrors ? errors?.projectChallenge || addErrors.projectChallenge : "";
+  const challengesError = showDraftErrors ? errors?.challengesFaced || errors?.projectChallenge || addErrors.challengesFaced : "";
+  const roleError = showDraftErrors ? errors?.projectRole || addErrors.projectRole : "";
+  const responsibilityTypeError = showDraftErrors ? errors?.responsibilityType || addErrors.responsibilityType : "";
+  const keyResponsibilitiesError = showDraftErrors ? errors?.keyResponsibilities || addErrors.keyResponsibilities : "";
+  const outcomesError = showDraftErrors ? errors?.keyAchievementsOutcomes || addErrors.keyAchievementsOutcomes : "";
+  const techError = showDraftErrors ? errors?.technologiesUsed || addErrors.technologiesUsed : "";
 
-  const handleTitleChange = (val: string) => {
-    onChange("projectTitle", val);
-    setAddErrors((prev) => ({ ...prev, projectTitle: "" }));
+  const handleNameChange = (val: string) => {
+    onChange("projectName", val);
+    setAddErrors((prev) => ({ ...prev, projectName: "" }));
     if (clearError) {
-      clearError("projectTitle");
+      clearError("projectName");
       clearError("projects");
     }
   };
@@ -88,105 +354,359 @@ export const AchievementsStep: React.FC<StepProps> = ({
     }
   };
 
-  const handleChallengeChange = (val: string) => {
+  const handleChallengesChange = (val: string) => {
+    onChange("challengesFaced", val);
     onChange("projectChallenge", val);
-    setAddErrors((prev) => ({ ...prev, projectChallenge: "" }));
+    setAddErrors((prev) => ({ ...prev, challengesFaced: "" }));
     if (clearError) {
+      clearError("challengesFaced");
       clearError("projectChallenge");
       clearError("projects");
     }
   };
 
-  const handleAddProject = () => {
-    const title = projectTitle.trim();
+  const handleRoleChange = (val: string) => {
+    onChange("projectRole", val);
+    setAddErrors((prev) => ({ ...prev, projectRole: "" }));
+    if (clearError) {
+      clearError("projectRole");
+      clearError("projects");
+    }
+  };
+
+  const handleResponsibilityTypeChange = (val: string) => {
+    onChange("responsibilityType", val);
+    setAddErrors((prev) => ({ ...prev, responsibilityType: "" }));
+    if (clearError) {
+      clearError("responsibilityType");
+      clearError("projects");
+    }
+  };
+
+  const handleLeadershipQualitiesChange = (val: string) => {
+    onChange("leadershipQualities", val);
+    if (clearError) clearError("leadershipQualities");
+  };
+
+  const handleClientReviewFeedbackChange = (val: string) => {
+    onChange("clientReviewFeedback", val);
+    if (clearError) clearError("clientReviewFeedback");
+  };
+
+  const handleKeyResponsibilitiesChange = (val: string) => {
+    onChange("keyResponsibilities", val);
+    setAddErrors((prev) => ({ ...prev, keyResponsibilities: "" }));
+    if (clearError) {
+      clearError("keyResponsibilities");
+      clearError("projects");
+    }
+  };
+
+  const handleSolutionsChange = (val: string) => {
+    onChange("solutionsImplemented", val);
+    if (clearError) clearError("solutionsImplemented");
+  };
+
+  const handleOutcomesChange = (val: string) => {
+    onChange("keyAchievementsOutcomes", val);
+    setAddErrors((prev) => ({ ...prev, keyAchievementsOutcomes: "" }));
+    if (clearError) {
+      clearError("keyAchievementsOutcomes");
+      clearError("projects");
+    }
+  };
+
+  const handleAddTechnology = (tech: string) => {
+    const trimmed = tech.trim();
+    if (!trimmed) return;
+    if (!technologiesUsed.includes(trimmed)) {
+      onChange("technologiesUsed", [...technologiesUsed, trimmed]);
+      setAddErrors((prev) => ({ ...prev, technologiesUsed: "" }));
+      if (clearError) {
+        clearError("technologiesUsed");
+        clearError("projects");
+      }
+    }
+    setTechInput("");
+  };
+
+  const handleRemoveTechnology = (techToRemove: string) => {
+    const nextTechs = technologiesUsed.filter((item) => item !== techToRemove);
+    onChange("technologiesUsed", nextTechs);
+    if (nextTechs.length === 0) {
+      setAddErrors((prev) => ({ ...prev, technologiesUsed: "At least one technology is required." }));
+    }
+  };
+
+  const handleSaveProject = () => {
+    const name = projectName.trim();
     const description = projectDescription.trim();
-    const challenge = projectChallenge.trim();
+    const challenge = challengesFaced.trim() || projectChallenge.trim();
+    const role = projectRole.trim();
+    const respType = responsibilityType.trim();
+    const keyResp = keyResponsibilities.trim();
+    const outcomes = keyAchievementsOutcomes.trim();
+    const techs = technologiesUsed;
+
     const nextErrors: Record<string, string> = {};
-    if (!title) nextErrors.projectTitle = "Project title is required.";
+    if (!name) nextErrors.projectName = "Project name is required.";
     if (!description) nextErrors.projectDescription = "Project description is required.";
-    if (!challenge) nextErrors.projectChallenge = "Challenge overcome is required.";
+    if (!role) nextErrors.projectRole = "Project role is required.";
+    if (!respType) nextErrors.responsibilityType = "Responsibility type is required.";
+    if (!keyResp) nextErrors.keyResponsibilities = "Key responsibilities is required.";
+    if (!challenge) nextErrors.challengesFaced = "Challenges faced is required.";
+    if (!outcomes) nextErrors.keyAchievementsOutcomes = "Key achievements / outcomes is required.";
+    if (techs.length === 0) nextErrors.technologiesUsed = "At least one technology is required.";
+
     setAddErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
+      if (!name) {
+        document.getElementById("input-projectName")?.focus();
+      } else if (!description) {
+        document.getElementById("input-projectDescription")?.focus();
+      } else if (!role) {
+        document.getElementById("field-projectRole")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else if (!respType) {
+        document.getElementById("field-responsibilityType")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else if (!keyResp) {
+        document.getElementById("input-keyResponsibilities")?.focus();
+      } else if (!challenge) {
+        document.getElementById("input-challengesFaced")?.focus();
+      } else if (!outcomes) {
+        document.getElementById("input-keyAchievementsOutcomes")?.focus();
+      } else if (techs.length === 0) {
+        document.getElementById("field-technologiesUsed")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
-    const newProjects = [
-      ...projects,
-      { title, description, challenge, attachments: [...attachments] },
-    ];
-    onChange("projects", newProjects);
-    onChange("projectTitle", "");
+
+    const savedProject: PerformanceProject = {
+      projectName: name,
+      description,
+      challenge,
+      challengesFaced: challenge,
+      projectRole,
+      responsibilityType,
+      leadershipQualities: leadershipQualities.trim(),
+      clientReviewFeedback: clientReviewFeedback.trim(),
+      keyResponsibilities: keyResponsibilities.trim(),
+      solutionsImplemented: solutionsImplemented.trim(),
+      keyAchievementsOutcomes: keyAchievementsOutcomes.trim(),
+      technologiesUsed: [...technologiesUsed],
+      attachments: [...attachments],
+      isDraft: false,
+    };
+
+    let nextProjects: PerformanceProject[];
+    if (editingIndex !== null && editingIndex >= 0 && editingIndex < projects.length) {
+      nextProjects = [...projects];
+      nextProjects[editingIndex] = savedProject;
+    } else {
+      nextProjects = [...projects, savedProject];
+    }
+
+    onChange("projects", nextProjects);
+    onChange("projectName", "");
     onChange("projectDescription", "");
+    onChange("projectRole", "");
+    onChange("responsibilityType", "");
+    onChange("leadershipQualities", "");
+    onChange("clientReviewFeedback", "");
+    onChange("keyResponsibilities", "");
+    onChange("challengesFaced", "");
     onChange("projectChallenge", "");
+    onChange("solutionsImplemented", "");
+    onChange("keyAchievementsOutcomes", "");
+    onChange("technologiesUsed", []);
     onChange("projectAttachments", []);
+    setEditingIndex(null);
     setAddErrors({});
     if (clearError) {
       clearError("projects");
-      clearError("projectTitle");
+      clearError("projectName");
       clearError("projectDescription");
+      clearError("challengesFaced");
       clearError("projectChallenge");
     }
+  };
+
+  const handleCancelEdit = () => {
+    onChange("projectName", "");
+    onChange("projectDescription", "");
+    onChange("projectRole", "");
+    onChange("responsibilityType", "");
+    onChange("leadershipQualities", "");
+    onChange("clientReviewFeedback", "");
+    onChange("keyResponsibilities", "");
+    onChange("challengesFaced", "");
+    onChange("projectChallenge", "");
+    onChange("solutionsImplemented", "");
+    onChange("keyAchievementsOutcomes", "");
+    onChange("technologiesUsed", []);
+    onChange("projectAttachments", []);
+    setEditingIndex(null);
+    setAddErrors({});
+    if (clearError) {
+      clearError("projects");
+      clearError("projectName");
+      clearError("projectDescription");
+      clearError("challengesFaced");
+      clearError("projectChallenge");
+    }
+  };
+
+  const handleAddMoreClick = () => {
+    if (editingIndex !== null) {
+      const originalProject = projects[editingIndex];
+      // Only preserve as draft if this item was ALREADY a draft
+      if (originalProject?.isDraft && !draftIsEmpty) {
+        const nextProjects = [...projects];
+        nextProjects[editingIndex] = {
+          ...nextProjects[editingIndex],
+          projectName: projectName.trim() || nextProjects[editingIndex]?.projectName || "Untitled Project",
+          description: projectDescription.trim(),
+          challenge: (challengesFaced || projectChallenge).trim(),
+          challengesFaced: (challengesFaced || projectChallenge).trim(),
+          projectRole,
+          responsibilityType,
+          leadershipQualities: leadershipQualities.trim(),
+          clientReviewFeedback: clientReviewFeedback.trim(),
+          keyResponsibilities: keyResponsibilities.trim(),
+          solutionsImplemented: solutionsImplemented.trim(),
+          keyAchievementsOutcomes: keyAchievementsOutcomes.trim(),
+          technologiesUsed: [...technologiesUsed],
+          attachments: [...attachments],
+          isDraft: true,
+        };
+        onChange("projects", nextProjects);
+      }
+      handleCancelEdit();
+    } else if (!draftIsEmpty) {
+      // If user was drafting a new project and clicked "+ Add more", save it as draft
+      const currentDraft: PerformanceProject = {
+        projectName: projectName.trim() || "Untitled Project",
+        description: projectDescription.trim(),
+        challenge: (challengesFaced || projectChallenge).trim(),
+        challengesFaced: (challengesFaced || projectChallenge).trim(),
+        projectRole,
+        responsibilityType,
+        leadershipQualities: leadershipQualities.trim(),
+        clientReviewFeedback: clientReviewFeedback.trim(),
+        keyResponsibilities: keyResponsibilities.trim(),
+        solutionsImplemented: solutionsImplemented.trim(),
+        keyAchievementsOutcomes: keyAchievementsOutcomes.trim(),
+        technologiesUsed: [...technologiesUsed],
+        attachments: [...attachments],
+        isDraft: true,
+      };
+      onChange("projects", [...projects, currentDraft]);
+      handleCancelEdit();
+    }
+    const inputElement = document.getElementById("field-projects");
+    if (inputElement) {
+      inputElement.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    setTimeout(() => {
+      document.getElementById("input-projectName")?.focus();
+    }, 100);
   };
 
   const handleEditProject = (targetIndex: number) => {
     const projectToEdit = projects[targetIndex];
     if (!projectToEdit) return;
 
-    const currentTitle = projectTitle.trim();
-    const currentDesc = projectDescription.trim();
-    const currentChallenge = projectChallenge.trim();
-    const hasCurrentData = Boolean(
-      currentTitle || currentDesc || currentChallenge || (attachments && attachments.length > 0)
-    );
+    if (editingIndex === targetIndex) {
+      document.getElementById("input-projectName")?.focus();
+      return;
+    }
 
-    const updatedProjects = [...projects];
+    let nextProjects = [...projects];
 
-    if (hasCurrentData) {
-      // What was currently in the input boxes moves into the accordion list at targetIndex
-      updatedProjects[targetIndex] = {
-        title: currentTitle || "Untitled Project",
-        description: projectDescription,
-        challenge: projectChallenge,
-        attachments: [...attachments],
-      };
-      if (expandedIndex === targetIndex) {
-        setExpandedIndex(null);
+    if (editingIndex === null) {
+      // Only when writing a new project in the input form, save it as a draft item
+      if (!draftIsEmpty) {
+        const currentDraft: PerformanceProject = {
+          projectName: projectName.trim() || "Untitled Project",
+          description: projectDescription.trim(),
+          challenge: (challengesFaced || projectChallenge).trim(),
+          challengesFaced: (challengesFaced || projectChallenge).trim(),
+          projectRole,
+          responsibilityType,
+          leadershipQualities: leadershipQualities.trim(),
+          clientReviewFeedback: clientReviewFeedback.trim(),
+          keyResponsibilities: keyResponsibilities.trim(),
+          solutionsImplemented: solutionsImplemented.trim(),
+          keyAchievementsOutcomes: keyAchievementsOutcomes.trim(),
+          technologiesUsed: [...technologiesUsed],
+          attachments: [...attachments],
+          isDraft: true,
+        };
+        nextProjects.push(currentDraft);
+        onChange("projects", nextProjects);
       }
-    } else {
-      // If the input boxes were empty, remove the selected project from the accordion list
-      updatedProjects.splice(targetIndex, 1);
-      if (expandedIndex === targetIndex) {
-        setExpandedIndex(null);
-      } else if (expandedIndex !== null && expandedIndex > targetIndex) {
-        setExpandedIndex(expandedIndex - 1);
+    } else if (editingIndex >= 0 && editingIndex < projects.length) {
+      const original = projects[editingIndex];
+      // If the project was already saved, it should NEVER become a draft!
+      // Only update draft text if it was ALREADY a draft project.
+      if (original?.isDraft && !draftIsEmpty) {
+        nextProjects[editingIndex] = {
+          ...original,
+          projectName: projectName.trim() || original.projectName || "Untitled Project",
+          description: projectDescription.trim(),
+          challenge: (challengesFaced || projectChallenge).trim(),
+          challengesFaced: (challengesFaced || projectChallenge).trim(),
+          projectRole,
+          responsibilityType,
+          leadershipQualities: leadershipQualities.trim(),
+          clientReviewFeedback: clientReviewFeedback.trim(),
+          keyResponsibilities: keyResponsibilities.trim(),
+          solutionsImplemented: solutionsImplemented.trim(),
+          keyAchievementsOutcomes: keyAchievementsOutcomes.trim(),
+          technologiesUsed: [...technologiesUsed],
+          attachments: [...attachments],
+          isDraft: true,
+        };
+        onChange("projects", nextProjects);
       }
     }
 
-    // Move the selected project into the active input boxes
-    onChange("projects", updatedProjects);
-    onChange("projectTitle", projectToEdit.title);
-    onChange("projectDescription", projectToEdit.description);
-    onChange("projectChallenge", projectToEdit.challenge);
-    onChange("projectAttachments", projectToEdit.attachments ? [...projectToEdit.attachments] : []);
+    const projectToLoad = nextProjects[targetIndex];
+    if (!projectToLoad) return;
 
-    // Clear validation errors
+    setEditingIndex(targetIndex);
+
+    // Populate active form
+    const editName = projectToLoad.projectName || "";
+    onChange("projectName", editName);
+    onChange("projectDescription", projectToLoad.description || "");
+    onChange("projectRole", projectToLoad.projectRole || "");
+    onChange("responsibilityType", projectToLoad.responsibilityType || "");
+    onChange("leadershipQualities", projectToLoad.leadershipQualities || "");
+    onChange("clientReviewFeedback", projectToLoad.clientReviewFeedback || "");
+    onChange("keyResponsibilities", projectToLoad.keyResponsibilities || "");
+    const editChallenge = projectToLoad.challengesFaced || projectToLoad.challenge || "";
+    onChange("challengesFaced", editChallenge);
+    onChange("projectChallenge", editChallenge);
+    onChange("solutionsImplemented", projectToLoad.solutionsImplemented || "");
+    onChange("keyAchievementsOutcomes", projectToLoad.keyAchievementsOutcomes || "");
+    onChange("technologiesUsed", projectToLoad.technologiesUsed ? [...projectToLoad.technologiesUsed] : []);
+    onChange("projectAttachments", projectToLoad.attachments ? [...projectToLoad.attachments] : []);
+
     setAddErrors({});
     if (clearError) {
       clearError("projects");
-      clearError("projectTitle");
+      clearError("projectName");
       clearError("projectDescription");
+      clearError("challengesFaced");
       clearError("projectChallenge");
     }
 
-    // Smooth scroll to the input form and focus title place
     const inputElement = document.getElementById("field-projects");
     if (inputElement) {
       inputElement.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     setTimeout(() => {
-      const titleInput = document.getElementById("input-projectTitle");
-      if (titleInput) {
-        titleInput.focus();
-      }
+      document.getElementById("input-projectName")?.focus();
     }, 100);
   };
 
@@ -202,6 +722,13 @@ export const AchievementsStep: React.FC<StepProps> = ({
     } else if (expandedIndex !== null && expandedIndex > index) {
       setExpandedIndex(expandedIndex - 1);
     }
+
+    if (editingIndex === index) {
+      handleCancelEdit();
+    } else if (editingIndex !== null && editingIndex > index) {
+      setEditingIndex(editingIndex - 1);
+    }
+
     onChange(
       "projects",
       projects.filter((_, itemIndex) => itemIndex !== index),
@@ -249,6 +776,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div id="field-projects" className="flex items-start justify-between gap-3 border-b border-blue-100 pb-4 scroll-mt-24">
         <div>
           <h3 className="text-lg font-bold text-[#0F172A]">
@@ -256,13 +784,13 @@ export const AchievementsStep: React.FC<StepProps> = ({
             <span className="eval-title-accent-line" />
           </h3>
           <p className="text-xs text-[#64748B] mt-1 eval-subtitle-anim">
-            Detail your key project deliverables, project description, and challenges navigated.
+            Detail your project deliverables, project role, key responsibilities, challenges, and solutions.
           </p>
         </div>
         {!readOnly && (
           <button
             type="button"
-            onClick={handleAddProject}
+            onClick={handleAddMoreClick}
             className="shrink-0 inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs active:scale-[0.98] mr-0.5 mt-0.5"
           >
             <span className="tracking-wide">+ Add more project</span>
@@ -271,138 +799,460 @@ export const AchievementsStep: React.FC<StepProps> = ({
       </div>
 
       <div className="space-y-4">
-        {/* Project Title Card */}
-        <div
-          id="field-projectTitle"
-          className={`eval-step-card space-y-2 transition-all duration-200 ${
-            titleError ? "eval-field-has-error" : ""
-          }`}
-        >
-          <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between">
+        {/* 1. Project Name (Dropdown or text input) */}
+        <div id="field-projectName" className="space-y-1.5 flex flex-col">
+          <label
+            htmlFor="input-projectName"
+            className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between"
+          >
             <span>
-              Project Title <span className="text-red-500">*</span>
+              Project Name <span className="text-red-500">*</span>
             </span>
           </label>
-          <input
-            id="input-projectTitle"
-            type="text"
-            value={projectTitle}
-            onChange={(e) => handleTitleChange(e.target.value)}
-            placeholder="e.g. Timesheet Workflow Modernization & Automation"
-            className={`eval-input-field ${titleError ? "eval-input-error" : ""}`}
-          />
-          {titleError && (
-            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div
+            className={`eval-step-card !py-2.5 !px-3.5 flex items-center transition-all duration-200 cursor-text ${
+              nameError ? "eval-field-has-error" : ""
+            }`}
+            onClick={() => document.getElementById("input-projectName")?.focus()}
+          >
+            <input
+              id="input-projectName"
+              type="text"
+              value={projectName}
+              onChange={(e) => handleNameChange(e.target.value)}
+              placeholder="e.g. Timesheet Workflow Modernization & Automation"
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed font-semibold"
+            />
+          </div>
+          {nameError && (
+            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-              <span>{titleError}</span>
+              <span>{nameError}</span>
             </p>
           )}
         </div>
 
-        {/* Side-by-Side Grid for Description and Challenge (Both cards equal height) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-          {/* Project Description Card */}
+        {/* 2. Project Description (Text area) */}
+        <div id="field-projectDescription" className="space-y-1.5 flex flex-col">
+          <label
+            htmlFor="input-projectDescription"
+            className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between"
+          >
+            <span>
+              Project Description <span className="text-red-500">*</span>
+            </span>
+          </label>
           <div
-            id="field-projectDescription"
-            className={`eval-step-card space-y-3 flex flex-col justify-between h-full transition-all duration-200 ${
+            className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
               descriptionError ? "eval-field-has-error" : ""
             }`}
+            onClick={() => document.getElementById("input-projectDescription")?.focus()}
           >
-            <div>
-              <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between">
-                <span>
-                  Project Description <span className="text-red-500">*</span>
-                </span>
-              </label>
-              <textarea
-                id="input-projectDescription"
-                rows={4}
-                value={projectDescription}
-                onChange={(e) => handleDescriptionChange(e.target.value)}
-                placeholder="Describe your project contributions, key deliverables, and results...."
-                className={`eval-textarea-field mt-2 ${
-                  descriptionError ? "eval-input-error" : ""
-                }`}
-              />
-              {descriptionError && (
-                <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-                  <span>{descriptionError}</span>
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Challenge Card */}
-          <div
-            id="field-projectChallenge"
-            className={`eval-step-card space-y-2 flex flex-col justify-between h-full transition-all duration-200 ${
-              challengeError ? "eval-field-has-error" : ""
-            }`}
-          >
-            <div>
-              <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between">
-                <span>
-                  Challenge Overcome <span className="text-red-500">*</span>
-                </span>
-              </label>
-              <textarea
-                id="input-projectChallenge"
-                rows={4}
-                value={projectChallenge}
-                onChange={(e) => handleChallengeChange(e.target.value)}
-                placeholder="Describe the challenges you faced and how you resolved them...."
-                className={`eval-textarea-field mt-2 ${
-                  challengeError ? "eval-input-error" : ""
-                }`}
-              />
-              {challengeError && (
-                <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-                  <span>{challengeError}</span>
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 px-1">
-          <input
-            ref={fileInputRef}
-            type="file"
-            className="hidden"
-            accept=".pdf,.doc,.docx,.xlsx,.xls,.png,.jpg,.jpeg,.zip"
-            onChange={handleFileSelect}
-          />
-          {attachments.map((file) => (
-            <AttachmentItem
-              key={file.objectKey}
-              file={file}
-              canDelete
-              onDelete={handleRemoveFile}
+            <textarea
+              id="input-projectDescription"
+              rows={3}
+              value={projectDescription}
+              onChange={(e) => handleDescriptionChange(e.target.value)}
+              placeholder="Describe your project scope, core objectives, and deliverables..."
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
             />
-          ))}
-          {!readOnly && attachments.length < 5 && (
-            <button
-              type="button"
-              disabled={uploading}
-              onClick={() => fileInputRef.current?.click()}
-              className="btn-attach-document group inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait"
-            >
-              <Paperclip className="w-4 h-4 text-[#2563EB] shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6" />
-              <span className="tracking-wide">
-                {uploading ? "Saving..." : attachments.length === 0 ? "Attach Document" : "Add more"}
-              </span>
-            </button>
-          )}
-          <span className="text-[11px] text-[#64748B] font-medium">
-            PDF, Word, Excel, or Image
-          </span>
-          {uploadError && (
-            <span className="text-xs text-red-600 font-semibold">{uploadError}</span>
+          </div>
+          {descriptionError && (
+            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{descriptionError}</span>
+            </p>
           )}
         </div>
 
+        {/* 3 & 4. Project Role & Responsibility Type (Side-by-Side Dropdowns) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Project Role Dropdown */}
+          <div id="field-projectRole" className="space-y-1.5 flex flex-col">
+            <label
+              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+            >
+              <span>
+                Project Role <span className="text-red-500">*</span>
+              </span>
+            </label>
+            <AppraisalSelectWithOther
+              id="select-projectRole"
+              value={projectRole}
+              onChange={handleRoleChange}
+              options={PROJECT_ROLE_OPTIONS}
+              placeholder="Select Project Role..."
+              customPlaceholder="Type your project role..."
+              prefixIcon={<UserCheck size={16} className="text-[#4318FF] shrink-0" />}
+            />
+            {roleError && (
+              <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                <span>{roleError}</span>
+              </p>
+            )}
+          </div>
+
+          {/* Responsibility Type Dropdown */}
+          <div id="field-responsibilityType" className="space-y-1.5 flex flex-col">
+            <label
+              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+            >
+              <span>
+                Responsibility Type <span className="text-red-500">*</span>
+              </span>
+            </label>
+            <AppraisalSelectWithOther
+              id="select-responsibilityType"
+              value={responsibilityType}
+              onChange={handleResponsibilityTypeChange}
+              options={RESPONSIBILITY_TYPE_OPTIONS}
+              placeholder="Select Responsibility Type..."
+              customPlaceholder="Type your responsibility type..."
+              prefixIcon={<ShieldCheck size={16} className="text-[#4318FF] shrink-0" />}
+            />
+            {responsibilityTypeError && (
+              <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                <span>{responsibilityTypeError}</span>
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* 5. Key Responsibilities (Text area) */}
+        <div id="field-keyResponsibilities" className="space-y-1.5 flex flex-col">
+          <label
+            htmlFor="input-keyResponsibilities"
+            className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+          >
+            <span>
+              Key Responsibilities <span className="text-red-500">*</span>
+            </span>
+          </label>
+          <div
+            className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
+              keyResponsibilitiesError ? "eval-field-has-error" : ""
+            }`}
+            onClick={() => document.getElementById("input-keyResponsibilities")?.focus()}
+          >
+            <textarea
+              id="input-keyResponsibilities"
+              rows={3}
+              value={keyResponsibilities}
+              onChange={(e) => handleKeyResponsibilitiesChange(e.target.value)}
+              placeholder="Outline your primary duties, ownership areas, and core functions for this project..."
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+            />
+          </div>
+          {keyResponsibilitiesError && (
+            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{keyResponsibilitiesError}</span>
+            </p>
+          )}
+        </div>
+
+        {/* 6 & 7. Challenges Faced & Solutions Implemented (Side-by-Side Text areas) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+          {/* Challenges Faced Card */}
+          <div id="field-challengesFaced" className="space-y-1.5 flex flex-col">
+            <label
+              htmlFor="input-challengesFaced"
+              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between"
+            >
+              <span>
+                Challenges Faced <span className="text-red-500">*</span>
+              </span>
+            </label>
+            <div
+              className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
+                challengesError ? "eval-field-has-error" : ""
+              }`}
+              onClick={() => document.getElementById("input-challengesFaced")?.focus()}
+            >
+              <textarea
+                id="input-challengesFaced"
+                rows={3}
+                value={challengesFaced}
+                onChange={(e) => handleChallengesChange(e.target.value)}
+                placeholder="Describe the technical or organizational challenges faced..."
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+              />
+            </div>
+            {challengesError && (
+              <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                <span>{challengesError}</span>
+              </p>
+            )}
+          </div>
+
+          {/* Solutions Implemented Card */}
+          <div id="field-solutionsImplemented" className="space-y-1.5 flex flex-col">
+            <label
+              htmlFor="input-solutionsImplemented"
+              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+            >
+              Solutions Implemented
+            </label>
+            <div
+              className="eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1"
+              onClick={() => document.getElementById("input-solutionsImplemented")?.focus()}
+            >
+              <textarea
+                id="input-solutionsImplemented"
+                rows={3}
+                value={solutionsImplemented}
+                onChange={(e) => handleSolutionsChange(e.target.value)}
+                placeholder="Detail the solutions, architectures, or workarounds you executed..."
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Leadership Qualities & Client Review & Feedback (Side-by-Side Text areas) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+          {/* Leadership Qualities Card */}
+          <div id="field-leadershipQualities" className="space-y-1.5 flex flex-col">
+            <label
+              htmlFor="input-leadershipQualities"
+              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+            >
+              Leadership Qualities
+            </label>
+            <div
+              className="eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1"
+              onClick={() => document.getElementById("input-leadershipQualities")?.focus()}
+            >
+              <textarea
+                id="input-leadershipQualities"
+                rows={3}
+                value={leadershipQualities}
+                onChange={(e) => handleLeadershipQualitiesChange(e.target.value)}
+                placeholder="Mention mentorship, initiative, decision-making, or team leadership examples..."
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+              />
+            </div>
+          </div>
+
+          {/* Client Review & Feedback Card */}
+          <div id="field-clientReviewFeedback" className="space-y-1.5 flex flex-col">
+            <label
+              htmlFor="input-clientReviewFeedback"
+              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+            >
+              Client Review & Feedback
+            </label>
+            <div
+              className="eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1"
+              onClick={() => document.getElementById("input-clientReviewFeedback")?.focus()}
+            >
+              <textarea
+                id="input-clientReviewFeedback"
+                rows={3}
+                value={clientReviewFeedback}
+                onChange={(e) => handleClientReviewFeedbackChange(e.target.value)}
+                placeholder="Enter client praise, appreciation, stakeholder ratings, or feedback received..."
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* 8. Key Achievements / Outcomes (Text area) */}
+        <div id="field-keyAchievementsOutcomes" className="space-y-1.5 flex flex-col">
+          <label
+            htmlFor="input-keyAchievementsOutcomes"
+            className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+          >
+            <span>
+              Key Achievements / Outcomes <span className="text-red-500">*</span>
+            </span>
+          </label>
+          <div
+            className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
+              outcomesError ? "eval-field-has-error" : ""
+            }`}
+            onClick={() => document.getElementById("input-keyAchievementsOutcomes")?.focus()}
+          >
+            <textarea
+              id="input-keyAchievementsOutcomes"
+              rows={3}
+              value={keyAchievementsOutcomes}
+              onChange={(e) => handleOutcomesChange(e.target.value)}
+              placeholder="Highlight measurable impact, performance gains, business wins, or client satisfaction..."
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+            />
+          </div>
+          {outcomesError && (
+            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{outcomesError}</span>
+            </p>
+          )}
+        </div>
+
+        {/* 9. Technologies Used (Multi-select) */}
+        <div id="field-technologiesUsed" className="space-y-1.5 flex flex-col">
+          <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
+            <span>
+              Technologies Used <span className="text-red-500">*</span>
+            </span>
+          </label>
+          <div className={`eval-step-card !p-3 space-y-2.5 ${techError ? "eval-field-has-error border-red-300" : ""}`}>
+            {/* Selected Tags */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {technologiesUsed.length === 0 ? (
+                <span className="text-xs text-[#94A3B8] italic">No technologies selected yet. Click from suggested or type below:</span>
+              ) : (
+                technologiesUsed.map((tech) => (
+                  <span
+                    key={tech}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg shadow-2xs"
+                  >
+                    {tech}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTechnology(tech)}
+                      className="hover:text-red-600 transition-colors cursor-pointer"
+                      title={`Remove ${tech}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))
+              )}
+            </div>
+
+            {/* Quick Pick Pills */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100">
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#64748B] mr-1">
+                Suggested:
+              </span>
+              {COMMON_TECH_STACK.map((tech) => {
+                const isSelected = technologiesUsed.includes(tech);
+                return (
+                  <button
+                    key={tech}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        handleRemoveTechnology(tech);
+                      } else {
+                        handleAddTechnology(tech);
+                      }
+                    }}
+                    className={`px-2 py-0.5 text-[11px] font-semibold rounded-md border transition-all cursor-pointer ${
+                      isSelected
+                        ? "bg-[#2563EB] text-white border-[#2563EB] shadow-2xs"
+                        : "bg-white text-[#334155] border-slate-200 hover:border-blue-300 hover:bg-blue-50/50"
+                    }`}
+                  >
+                    {isSelected ? `✓ ${tech}` : `+ ${tech}`}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Custom Input */}
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="text"
+                value={techInput}
+                onChange={(e) => setTechInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddTechnology(techInput);
+                  }
+                }}
+                placeholder="Or type custom technology and press Enter..."
+                className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-[#0F172A] outline-none focus:border-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => handleAddTechnology(techInput)}
+                disabled={!techInput.trim()}
+                className="px-2.5 py-1 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] hover:bg-[#DBEAFE] rounded-lg transition-all disabled:opacity-50 cursor-pointer"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+          {techError && (
+            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{techError}</span>
+            </p>
+          )}
+        </div>
+
+        {/* Attachment & Save Action Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-3 px-1 pt-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.doc,.docx,.xlsx,.xls,.png,.jpg,.jpeg,.zip"
+              onChange={handleFileSelect}
+            />
+            {attachments.map((file) => (
+              <AttachmentItem
+                key={file.objectKey}
+                file={file}
+                canDelete={!readOnly}
+                onDelete={handleRemoveFile}
+              />
+            ))}
+            {!readOnly && attachments.length < 5 && (
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => fileInputRef.current?.click()}
+                className="btn-attach-document group inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait"
+              >
+                <Paperclip className="w-4 h-4 text-[#2563EB] shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6" />
+                <span className="tracking-wide">
+                  {uploading ? "Saving..." : attachments.length === 0 ? "Attach Document" : "Add more"}
+                </span>
+              </button>
+            )}
+            <span className="text-[11px] text-[#64748B] font-medium">
+              PDF, Word, Excel, or Image
+            </span>
+            {uploadError && (
+              <span className="text-xs text-red-600 font-semibold">{uploadError}</span>
+            )}
+          </div>
+
+          {/* Save / Update Form Action Buttons */}
+          <div className="flex items-center gap-2 ml-auto">
+            {editingIndex !== null && !readOnly && (
+              <button
+                type="button"
+                onClick={handleCancelEdit}
+                className="px-3.5 py-2 text-xs font-bold text-[#64748B] hover:text-[#0F172A] bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98]"
+              >
+                Cancel
+              </button>
+            )}
+            {!readOnly && (
+              <button
+                type="button"
+                onClick={handleSaveProject}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-blue-700 border border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.98]"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>{editingIndex !== null ? "Update Project" : "Save Project"}</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Added Projects Accordion */}
         {projects.length > 0 && (
           <div ref={accordionContainerRef} className="space-y-3 pt-2">
             <div className="flex items-center justify-between px-1">
@@ -413,58 +1263,103 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
             {projects.map((project, index) => {
               const isExpanded = expandedIndex === index;
+              const displayProjectName = project.projectName || "Untitled Project";
+              const projectError =
+                errors?.[`project_${index}`] ||
+                errors?.[`projects.${index}.description`] ||
+                errors?.[`projects.${index}.projectName`] ||
+                errors?.[`projects.${index}.projectRole`] ||
+                errors?.[`projects.${index}.responsibilityType`] ||
+                errors?.[`projects.${index}.keyResponsibilities`] ||
+                errors?.[`projects.${index}.challengesFaced`] ||
+                errors?.[`projects.${index}.challenge`] ||
+                errors?.[`projects.${index}.keyAchievementsOutcomes`] ||
+                errors?.[`projects.${index}.technologiesUsed`];
+
+              const isDraftOrIncomplete =
+                project.isDraft ||
+                !project.projectName?.trim() ||
+                !project.description?.trim() ||
+                !project.projectRole?.trim() ||
+                !project.responsibilityType?.trim() ||
+                !project.keyResponsibilities?.trim() ||
+                !(project.challengesFaced?.trim() || project.challenge?.trim()) ||
+                !project.keyAchievementsOutcomes?.trim() ||
+                !Array.isArray(project.technologiesUsed) ||
+                project.technologiesUsed.length === 0;
 
               return (
                 <div
                   id={`accordion-project-${index}`}
-                  key={`${project.title}-${index}`}
-                  className="bg-white border border-blue-200/80 hover:border-blue-400/90 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 scroll-mt-24"
+                  key={`${displayProjectName}-${index}`}
+                  className={`bg-white rounded-2xl shadow-xs overflow-hidden transition-all duration-200 scroll-mt-24 border ${
+                    projectError
+                      ? "border-red-400 bg-red-50/10 ring-1 ring-red-400/30"
+                      : isDraftOrIncomplete
+                      ? "border-amber-300/90 hover:border-amber-400"
+                      : "border-blue-200/80 hover:border-blue-400/90"
+                  }`}
                 >
                   {/* Accordion Header */}
                   <div
                     onClick={() => toggleAccordion(index)}
-                    className="flex items-center justify-between gap-3 px-4 py-3.5 bg-gradient-to-r from-white via-blue-50/20 to-white hover:bg-blue-50/30 cursor-pointer select-none group transition-colors"
+                    className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-gradient-to-r from-white via-blue-50/20 to-white hover:bg-blue-50/30 cursor-pointer select-none group transition-colors"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="shrink-0 px-2.5 py-1 text-[11px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="shrink-0 px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
                         Project {index + 1}
                       </span>
-                      <h4 className="text-sm font-bold text-[#0F172A] truncate group-hover:text-[#2563EB] transition-colors">
-                        {project.title || "Untitled Project"}
+                      <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] truncate group-hover:text-[#2563EB] transition-colors">
+                        {displayProjectName}
                       </h4>
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                      {/* Edit Button - Icon Only */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditProject(index);
-                        }}
-                        className="inline-flex items-center justify-center w-8 h-8 text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-xl transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
-                        title="Edit project (swaps into input box)"
-                        aria-label="Edit project"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
+                      {project.isDraft && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-300 rounded-md shadow-2xs mr-0.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                          Draft
+                        </span>
+                      )}
 
-                      {/* Delete Button - Icon Only */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveProject(index);
-                        }}
-                        className="inline-flex items-center justify-center w-8 h-8 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 rounded-xl transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
-                        title="Delete project"
-                        aria-label="Delete project"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      {/* Edit Button */}
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditProject(index);
+                          }}
+                          className={`inline-flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${
+                            editingIndex === index
+                              ? "text-white bg-[#2563EB] border border-[#2563EB]"
+                              : "text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB]"
+                          }`}
+                          title={editingIndex === index ? "Currently editing" : "Edit project"}
+                          aria-label="Edit project"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {/* Delete Button */}
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveProject(index);
+                          }}
+                          className="inline-flex items-center justify-center w-7 h-7 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 rounded-lg transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                          title="Delete project"
+                          aria-label="Delete project"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
 
                       {/* Accordion Chevron */}
-                      <div className="p-1 rounded-lg text-[#64748B] group-hover:text-[#2563EB] group-hover:bg-blue-50/60 transition-colors ml-1">
+                      <div className="p-0.5 rounded-md text-[#64748B] group-hover:text-[#2563EB] transition-colors">
                         <ChevronDown
                           className={`w-4 h-4 transition-transform duration-300 ease-in-out ${
                             isExpanded ? "rotate-180 text-[#2563EB]" : ""
@@ -474,68 +1369,223 @@ export const AchievementsStep: React.FC<StepProps> = ({
                     </div>
                   </div>
 
-                  {/* Accordion Body with Smooth Grid Transition Animation */}
+                  {/* Inline Validation Banner for Draft / Incomplete Projects */}
+                  {(isDraftOrIncomplete || Boolean(projectError)) && (
+                    <div
+                      className={`px-3.5 py-2 border-t flex items-center justify-between gap-2 ${
+                        projectError
+                          ? "bg-red-50/90 border-red-200 text-red-700"
+                          : "bg-amber-50/80 border-amber-200/70 text-amber-800"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-semibold min-w-0">
+                        <AlertCircle
+                          className={`w-4 h-4 shrink-0 ${
+                            projectError ? "text-red-500" : "text-amber-600"
+                          }`}
+                        />
+                        <span className="truncate">
+                          {projectError ||
+                            (!project.projectName?.trim()
+                              ? "Project name is required."
+                              : !project.description?.trim()
+                              ? "Project description is required."
+                              : !project.projectRole?.trim()
+                              ? "Project role is required."
+                              : !project.responsibilityType?.trim()
+                              ? "Responsibility type is required."
+                              : !project.keyResponsibilities?.trim()
+                              ? "Key responsibilities is required."
+                              : !(project.challengesFaced?.trim() || project.challenge?.trim())
+                              ? "Challenges faced is required."
+                              : !project.keyAchievementsOutcomes?.trim()
+                              ? "Key achievements / outcomes is required."
+                              : (!project.technologiesUsed || project.technologiesUsed.length === 0)
+                              ? "At least one technology is required."
+                              : "This project is in draft. Please edit and complete all required fields.")}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditProject(index);
+                        }}
+                        className={`text-xs font-bold underline underline-offset-2 cursor-pointer shrink-0 ${
+                          projectError
+                            ? "text-red-700 hover:text-red-900"
+                            : "text-amber-800 hover:text-amber-950"
+                        }`}
+                      >
+                        Edit & complete
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Accordion Body */}
                   <div
                     className={`grid transition-all duration-300 ease-in-out ${
-                      isExpanded
-                        ? "grid-rows-[1fr] opacity-100"
-                        : "grid-rows-[0fr] opacity-0"
+                      isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                     }`}
                   >
                     <div className="overflow-hidden">
-                      <div className="px-4 pb-4 pt-3 border-t border-blue-100/70 space-y-4 bg-gradient-to-b from-blue-50/20 to-white">
-                        {/* 1. Project Title Card (matching input field position and style) */}
-                        <div className="eval-step-card space-y-2">
-                          <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
-                            <span>Project Title</span>
-                          </label>
-                          <div className="eval-input-field font-semibold text-[#0F172A] bg-white">
-                            {project.title || "—"}
+                      <div className="px-3.5 py-2.5 border-t border-blue-100/70 space-y-2.5 bg-gradient-to-b from-blue-50/15 to-white text-xs">
+                        {/* Meta Pills: Role & Responsibility */}
+                        {(project.projectRole || project.responsibilityType) && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            {project.projectRole && (
+                              <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 text-[#0F172A] rounded-md font-semibold text-[11px]">
+                                Project Role: <strong className="text-[#2563EB]">{project.projectRole}</strong>
+                              </span>
+                            )}
+                            {project.responsibilityType && (
+                              <span className="px-2 py-0.5 bg-slate-50 border border-slate-200 text-[#0F172A] rounded-md font-semibold text-[11px]">
+                                Responsibility Type: <strong>{project.responsibilityType}</strong>
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Project Description */}
+                        <div className="space-y-1 flex flex-col">
+                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                            Project Description
+                          </span>
+                          <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
+                            <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                              {project.description || "—"}
+                            </p>
                           </div>
                         </div>
 
-                        {/* 2. Side-by-Side Grid for Description and Challenge (matching input field position and style) */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-                          {/* Project Description Card */}
-                          <div className="eval-step-card space-y-3 flex flex-col justify-between h-full">
-                            <div>
-                              <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
-                                <span>Project Description</span>
-                              </label>
-                              <div className="eval-textarea-field mt-2 min-h-[96px] whitespace-pre-line leading-relaxed bg-white text-[#334155]">
-                                {project.description || "—"}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Challenge Card */}
-                          <div className="eval-step-card space-y-2 flex flex-col justify-between h-full">
-                            <div>
-                              <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
-                                <span>Challenge Overcome</span>
-                              </label>
-                              <div className="eval-textarea-field mt-2 min-h-[96px] whitespace-pre-line leading-relaxed bg-white text-[#334155]">
-                                {project.challenge || "—"}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* 3. Attached Documents (matching input field position and style) */}
-                        {(project.attachments || []).length > 0 && (
-                          <div className="space-y-1.5 pt-1">
-                            <span className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
-                              Attached Documents ({(project.attachments || []).length})
+                        {/* Key Responsibilities (if any) */}
+                        {Boolean(project.keyResponsibilities) && (
+                          <div className="space-y-1 flex flex-col">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                              Key Responsibilities
                             </span>
-                            <div className="flex flex-wrap items-center gap-2">
-                              {(project.attachments || []).map((file) => (
-                                <AttachmentItem
-                                  key={file.objectKey || file.fileName}
-                                  file={file}
-                                  readOnly
-                                />
-                              ))}
+                            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
+                              <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                {project.keyResponsibilities}
+                              </p>
                             </div>
+                          </div>
+                        )}
+
+                        {/* Challenges Faced & Solutions Implemented (only if entered) */}
+                        {Boolean(project.solutionsImplemented?.trim()) ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
+                            {/* Challenges Faced */}
+                            <div className="space-y-1 flex flex-col">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                                Challenges Faced
+                              </span>
+                              <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
+                                <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                  {project.challengesFaced || project.challenge || "—"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Solutions Implemented */}
+                            <div className="space-y-1 flex flex-col">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                                Solutions Implemented
+                              </span>
+                              <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
+                                <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                  {project.solutionsImplemented}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-1 flex flex-col">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                              Challenges Faced
+                            </span>
+                            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
+                              <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                {project.challengesFaced || project.challenge || "—"}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Leadership Qualities & Client Review Feedback (if any) */}
+                        {(Boolean(project.leadershipQualities) || Boolean(project.clientReviewFeedback)) && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
+                            {Boolean(project.leadershipQualities) && (
+                              <div className="space-y-1 flex flex-col">
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                                  Leadership Qualities
+                                </span>
+                                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
+                                  <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                    {project.leadershipQualities}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            {Boolean(project.clientReviewFeedback) && (
+                              <div className="space-y-1 flex flex-col">
+                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                                  Client Review & Feedback
+                                </span>
+                                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
+                                  <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                    {project.clientReviewFeedback}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Key Achievements / Outcomes (if any) */}
+                        {Boolean(project.keyAchievementsOutcomes) && (
+                          <div className="space-y-1 flex flex-col">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                              Key Achievements / Outcomes
+                            </span>
+                            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
+                              <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                {project.keyAchievementsOutcomes}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Technologies Used Pills */}
+                        {(project.technologiesUsed || []).length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-black mr-1">
+                              Technologies:
+                            </span>
+                            {(project.technologiesUsed || []).map((tech) => (
+                              <span
+                                key={tech}
+                                className="px-2 py-0.5 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-md"
+                              >
+                                {tech}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Attached Documents */}
+                        {(project.attachments || []).length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-black mr-1">
+                              Attachments ({(project.attachments || []).length}):
+                            </span>
+                            {(project.attachments || []).map((file) => (
+                              <AttachmentItem
+                                key={file.objectKey || file.fileName}
+                                file={file}
+                                readOnly
+                              />
+                            ))}
                           </div>
                         )}
                       </div>

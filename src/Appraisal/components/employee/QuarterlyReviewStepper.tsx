@@ -250,11 +250,24 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
 
+        // If inner layout container (main or overflow-y-auto) exists, ensure target is centered
+        const main = document.querySelector("main");
+        if (main && main.contains(el)) {
+          const mainRect = main.getBoundingClientRect();
+          const elRect = el.getBoundingClientRect();
+          const targetScrollTop = main.scrollTop + (elRect.top - mainRect.top) - main.clientHeight / 2 + elRect.height / 2;
+          main.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" });
+        }
+
         const focusTarget = el.matches("input, textarea, button")
           ? (el as HTMLElement)
           : (el.querySelector("input, textarea, button") as HTMLElement | null);
         if (focusTarget && typeof focusTarget.focus === "function") {
-          focusTarget.focus({ preventScroll: true });
+          try {
+            focusTarget.focus({ preventScroll: true });
+          } catch {
+            focusTarget.focus();
+          }
         }
 
         animateFieldError(el);
@@ -280,40 +293,131 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     let updated = { ...currentData };
     let hasChanged = false;
 
-    // Step 2: Auto-commit project draft if all required fields are filled
-    const pTitle = (updated.projectTitle || "").trim();
+    // Step 2: Auto-commit or update project draft
+    const pName = (updated.projectName || "").trim();
     const pDesc = (updated.projectDescription || "").trim();
-    const pChallenge = (updated.projectChallenge || "").trim();
-    if (pTitle && pDesc && pChallenge) {
+    const pChallenge = (updated.challengesFaced || updated.projectChallenge || "").trim();
+    const pRole = (updated.projectRole || "").trim();
+    const pResp = (updated.responsibilityType || "").trim();
+    const pKeyResp = (updated.keyResponsibilities || "").trim();
+    const pOutcomes = (updated.keyAchievementsOutcomes || "").trim();
+    const pTechs = Array.isArray(updated.technologiesUsed) ? updated.technologiesUsed : [];
+
+    const hasAnyDraft = Boolean(
+      pName ||
+      pDesc ||
+      pChallenge ||
+      pRole ||
+      pResp ||
+      updated.leadershipQualities ||
+      updated.clientReviewFeedback ||
+      pKeyResp ||
+      pOutcomes ||
+      pTechs.length > 0 ||
+      (updated.projectAttachments && updated.projectAttachments.length > 0)
+    );
+
+    const isComplete = Boolean(
+      pName &&
+      pDesc &&
+      pRole &&
+      pResp &&
+      pKeyResp &&
+      pChallenge &&
+      pOutcomes &&
+      pTechs.length > 0
+    );
+
+    const editIdx = updated.editingProjectIndex;
+    const isEditing = typeof editIdx === "number" && editIdx >= 0 && editIdx < (updated.projects || []).length;
+
+    if (isEditing) {
+      const existing = [...(updated.projects || [])];
+      existing[editIdx] = {
+        ...existing[editIdx],
+        projectName: pName || existing[editIdx].projectName || "Untitled Project",
+        description: pDesc || existing[editIdx].description || "",
+        challenge: pChallenge || existing[editIdx].challenge || "",
+        challengesFaced: pChallenge || existing[editIdx].challengesFaced || "",
+        projectRole: pRole || existing[editIdx].projectRole || "",
+        responsibilityType: pResp || existing[editIdx].responsibilityType || "",
+        leadershipQualities: updated.leadershipQualities || existing[editIdx].leadershipQualities || "",
+        clientReviewFeedback: updated.clientReviewFeedback || existing[editIdx].clientReviewFeedback || "",
+        keyResponsibilities: pKeyResp || existing[editIdx].keyResponsibilities || "",
+        solutionsImplemented: updated.solutionsImplemented || existing[editIdx].solutionsImplemented || "",
+        keyAchievementsOutcomes: pOutcomes || existing[editIdx].keyAchievementsOutcomes || "",
+        technologiesUsed: updated.technologiesUsed ? [...updated.technologiesUsed] : existing[editIdx].technologiesUsed || [],
+        attachments: updated.projectAttachments ? [...updated.projectAttachments] : existing[editIdx].attachments || [],
+        isDraft: existing[editIdx].isDraft ? !isComplete : false,
+      };
+      if (isComplete) {
+        updated = {
+          ...updated,
+          projects: existing,
+          editingProjectIndex: null,
+          projectName: "",
+          projectDescription: "",
+          projectRole: "",
+          responsibilityType: "",
+          leadershipQualities: "",
+          clientReviewFeedback: "",
+          keyResponsibilities: "",
+          challengesFaced: "",
+          projectChallenge: "",
+          solutionsImplemented: "",
+          keyAchievementsOutcomes: "",
+          technologiesUsed: [],
+          projectAttachments: [],
+        };
+        hasChanged = true;
+      }
+    } else if (hasAnyDraft && isComplete) {
       const existing = updated.projects || [];
-      const newProject = {
-        title: pTitle,
+      const newProject: PerformanceProject = {
+        projectName: pName,
         description: pDesc,
         challenge: pChallenge,
+        challengesFaced: pChallenge,
+        projectRole: pRole,
+        responsibilityType: pResp,
+        leadershipQualities: updated.leadershipQualities || "",
+        clientReviewFeedback: updated.clientReviewFeedback || "",
+        keyResponsibilities: pKeyResp,
+        solutionsImplemented: updated.solutionsImplemented || "",
+        keyAchievementsOutcomes: pOutcomes,
+        technologiesUsed: [...pTechs],
         attachments: updated.projectAttachments ? [...updated.projectAttachments] : [],
+        isDraft: false,
       };
       updated = {
         ...updated,
         projects: [...existing, newProject],
-        projectTitle: "",
+        editingProjectIndex: null,
+        projectName: "",
         projectDescription: "",
+        projectRole: "",
+        responsibilityType: "",
+        leadershipQualities: "",
+        clientReviewFeedback: "",
+        keyResponsibilities: "",
+        challengesFaced: "",
         projectChallenge: "",
+        solutionsImplemented: "",
+        keyAchievementsOutcomes: "",
+        technologiesUsed: [],
         projectAttachments: [],
       };
       hasChanged = true;
     }
 
-    // Step 4: Auto-commit learning goal draft if filled
-    const goalDraft = (updated.learningGoals || "").trim();
-    if (goalDraft) {
-      const existingGoals = updated.learningGoalItems || [];
-      const newGoals = [...existingGoals, goalDraft];
+    // Step 4: Sync goals list if needed
+    const skillsLearned = (updated.skillsAcquired || "").trim();
+    const nextGoals = (updated.nextQuarterLearningGoals || "").trim();
+    const goalsList = [skillsLearned, nextGoals].filter(Boolean);
+    if (goalsList.length > 0 && (!updated.learningGoalItems || updated.learningGoalItems.length === 0)) {
       updated = {
         ...updated,
-        learningGoalItems: newGoals,
-        learningGoals: "",
-        skillsAcquired: newGoals.join("\n"),
-        nextQuarterLearningGoals: newGoals.join("\n"),
+        learningGoalItems: goalsList,
       };
       hasChanged = true;
     }
@@ -329,88 +433,157 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     let firstFieldId: string | undefined = undefined;
 
     if (stepNum === 1) {
-      const overview = (data.overview || data.roleSummary || "").trim();
-      if (!overview) {
-        stepErrors.overview = "Role & quarter overview summary is required.";
-        if (!firstFieldId) firstFieldId = "field-overview";
+      const summary = (data.overallPerformanceSummary || data.overview || "").trim();
+      if (!summary) {
+        stepErrors.overallPerformanceSummary = "Overall performance summary is required.";
+        if (!firstFieldId) firstFieldId = "field-overallPerformanceSummary";
       }
     } else if (stepNum === 2) {
-      const pTitle = (data.projectTitle || "").trim();
+      const pName = (data.projectName || "").trim();
       const pDesc = (data.projectDescription || "").trim();
-      const pChallenge = (data.projectChallenge || "").trim();
-      const hasAnyDraft = Boolean(pTitle || pDesc || pChallenge);
-      const isDraftComplete = Boolean(pTitle && pDesc && pChallenge);
+      const pRole = (data.projectRole || "").trim();
+      const pResp = (data.responsibilityType || "").trim();
+      const pKeyResp = (data.keyResponsibilities || "").trim();
+      const pChallenge = (data.challengesFaced || data.projectChallenge || "").trim();
+      const pOutcomes = (data.keyAchievementsOutcomes || "").trim();
+      const pTechs = Array.isArray(data.technologiesUsed) ? data.technologiesUsed : [];
 
-      const savedProjects = (data.projects || []).filter(
-        (project) => project.title.trim() && project.description.trim() && project.challenge.trim(),
-      );
+      const hasAnyDraft = Boolean(pName || pDesc || pRole || pResp || pKeyResp || pChallenge || pOutcomes || pTechs.length > 0);
+      const isDraftComplete = Boolean(pName && pDesc && pRole && pResp && pKeyResp && pChallenge && pOutcomes && pTechs.length > 0);
+
+      const allProjects = data.projects || [];
+      const hasAnySavedProject = allProjects.length > 0;
 
       // If user partially filled draft in active input fields, point out missing field
       if (hasAnyDraft && !isDraftComplete) {
-        if (!pTitle) {
-          stepErrors.projectTitle = "Project title is required.";
-          if (!firstFieldId) firstFieldId = "field-projectTitle";
+        if (!pName) {
+          stepErrors.projectName = "Project name is required.";
+          if (!firstFieldId) firstFieldId = "field-projectName";
         }
         if (!pDesc) {
           stepErrors.projectDescription = "Project description is required.";
           if (!firstFieldId) firstFieldId = "field-projectDescription";
         }
-        if (!pChallenge) {
-          stepErrors.projectChallenge = "Challenge overcome is required.";
-          if (!firstFieldId) firstFieldId = "field-projectChallenge";
+        if (!pRole) {
+          stepErrors.projectRole = "Project role is required.";
+          if (!firstFieldId) firstFieldId = "field-projectRole";
         }
-      } else if (!isDraftComplete && savedProjects.length === 0) {
-        stepErrors.projectTitle = "Project title is required.";
-        stepErrors.projectDescription = "Project description is required.";
-        stepErrors.projectChallenge = "Challenge overcome is required.";
-        if (!firstFieldId) firstFieldId = "field-projectTitle";
+        if (!pResp) {
+          stepErrors.responsibilityType = "Responsibility type is required.";
+          if (!firstFieldId) firstFieldId = "field-responsibilityType";
+        }
+        if (!pKeyResp) {
+          stepErrors.keyResponsibilities = "Key responsibilities is required.";
+          if (!firstFieldId) firstFieldId = "field-keyResponsibilities";
+        }
+        if (!pChallenge) {
+          stepErrors.challengesFaced = "Challenges faced is required.";
+          if (!firstFieldId) firstFieldId = "field-challengesFaced";
+        }
+        if (!pOutcomes) {
+          stepErrors.keyAchievementsOutcomes = "Key achievements / outcomes is required.";
+          if (!firstFieldId) firstFieldId = "field-keyAchievementsOutcomes";
+        }
+        if (pTechs.length === 0) {
+          stepErrors.technologiesUsed = "At least one technology is required.";
+          if (!firstFieldId) firstFieldId = "field-technologiesUsed";
+        }
+      }
+
+      // Check if any project already in list is in draft or incomplete
+      const incompleteProjectIdx = allProjects.findIndex((p) => {
+        if (p.isDraft) return true;
+        if (!p.projectName?.trim()) return true;
+        if (!p.description?.trim()) return true;
+        if (!p.projectRole?.trim()) return true;
+        if (!p.responsibilityType?.trim()) return true;
+        if (!p.keyResponsibilities?.trim()) return true;
+        if (!(p.challengesFaced?.trim() || p.challenge?.trim())) return true;
+        if (!p.keyAchievementsOutcomes?.trim()) return true;
+        if (!Array.isArray(p.technologiesUsed) || p.technologiesUsed.length === 0) return true;
+        return false;
+      });
+
+      if (incompleteProjectIdx !== -1) {
+        const dProj = allProjects[incompleteProjectIdx];
+        const missing = !dProj.projectName?.trim()
+          ? "Project name is required."
+          : !dProj.description?.trim()
+          ? "Project description should not be empty."
+          : !dProj.projectRole?.trim()
+          ? "Project role should not be empty."
+          : !dProj.responsibilityType?.trim()
+          ? "Responsibility type should not be empty."
+          : !dProj.keyResponsibilities?.trim()
+          ? "Key responsibilities should not be empty."
+          : !(dProj.challengesFaced?.trim() || dProj.challenge?.trim())
+          ? "Challenges faced should not be empty."
+          : !dProj.keyAchievementsOutcomes?.trim()
+          ? "Key achievements / outcomes should not be empty."
+          : (!Array.isArray(dProj.technologiesUsed) || dProj.technologiesUsed.length === 0)
+          ? "At least one technology is required."
+          : "This project is in draft. Please edit and complete all required fields.";
+
+        stepErrors[`project_${incompleteProjectIdx}`] = missing;
+        stepErrors[`projects.${incompleteProjectIdx}.description`] = missing;
+        if (!firstFieldId) firstFieldId = `accordion-project-${incompleteProjectIdx}`;
+      }
+
+      // Only require adding a project if there are NO projects saved in the list at all and active form is empty
+      if (!hasAnySavedProject && !hasAnyDraft) {
+        stepErrors.projectName = "At least one project is required.";
+        if (!firstFieldId) firstFieldId = "field-projectName";
       }
     } else if (stepNum === 3) {
       const ratings = data.teamRatings || {};
-      const CRITERIA = [
-        { key: "communication", title: "Communication" },
-        { key: "ownership", title: "Ownership" },
-        { key: "collaboration", title: "Collaboration" },
-        { key: "problemSolving", title: "Problem Solving" },
-        { key: "leadership", title: "Leadership" },
-        { key: "adaptability", title: "Adaptability" },
-      ];
-
-      for (const c of CRITERIA) {
-        const val = ratings[c.key as keyof typeof ratings];
-        if (!val || val <= 0) {
-          stepErrors[c.key] = `Please select a rating for ${c.title}.`;
-          if (!firstFieldId) firstFieldId = `field-criterion-${c.key}`;
-        }
+      const commRating = ratings.communication;
+      if (!commRating || commRating <= 0) {
+        stepErrors.communication = "Please select a rating for Communication & Coordination.";
+        if (!firstFieldId) firstFieldId = "field-criterion-communication";
       }
     } else if (stepNum === 4) {
-      const goalDraft = (data.learningGoals || "").trim();
-      const savedGoals = (data.learningGoalItems || []).filter((goal) => goal.trim());
-      if (!goalDraft && savedGoals.length === 0) {
-        stepErrors.learningGoals = "Add at least one learning goal.";
-        if (!firstFieldId) firstFieldId = "field-learningGoals";
+      const skillsLearned = (data.skillsAcquired || "").trim();
+      const skillsToImprove = (data.skillsToImprove || "").trim();
+      const nextQuarterGoals = (data.nextQuarterLearningGoals || "").trim();
+
+      if (!skillsLearned) {
+        stepErrors.skillsAcquired = "Skills learned during this period is required.";
+        if (!firstFieldId) firstFieldId = "field-skillsAcquired";
+      }
+      if (!skillsToImprove) {
+        stepErrors.skillsToImprove = "Skills to improve is required.";
+        if (!firstFieldId) firstFieldId = "field-skillsToImprove";
+      }
+      if (!nextQuarterGoals) {
+        stepErrors.nextQuarterLearningGoals = "Learning goals for next quarter is required.";
+        if (!firstFieldId) firstFieldId = "field-nextQuarterLearningGoals";
       }
     } else if (stepNum === 5) {
-      const culture = (data.workCultureFeedback || "").trim();
-      const balance = (data.workLifeBalance || "").trim();
-      const suggestions = (data.suggestionsForImprovement || data.toolingAndResources || "").trim();
-      const rating = data.companyEnvironmentRating || data.managementSupportRating || 0;
+      const envRating = data.companyEnvironmentRating || 0;
+      const toolsRating = data.toolingAndResourcesRating || 0;
+      const mgrRating = data.managementSupportRating || 0;
 
-      if (!culture) {
-        stepErrors.workCultureFeedback = "Feedback on work culture is required.";
-        if (!firstFieldId) firstFieldId = "field-workCultureFeedback";
-      }
-      if (!balance) {
-        stepErrors.workLifeBalance = "Work-life balance feedback is required.";
-        if (!firstFieldId) firstFieldId = "field-workLifeBalance";
-      }
-      if (!suggestions) {
-        stepErrors.suggestionsForImprovement = "Suggestions for improvement are required.";
-        if (!firstFieldId) firstFieldId = "field-suggestionsForImprovement";
-      }
-      if (!rating || rating <= 0) {
-        stepErrors.companyEnvironmentRating = "Please rate the company environment (1 to 5).";
+      if (!envRating || envRating <= 0) {
+        stepErrors.companyEnvironmentRating = "Please rate work environment satisfaction (1 to 5).";
         if (!firstFieldId) firstFieldId = "field-companyEnvironmentRating";
+      }
+      if (!toolsRating || toolsRating <= 0) {
+        stepErrors.toolingAndResourcesRating = "Please rate availability of tools & resources (1 to 5).";
+        if (!firstFieldId) firstFieldId = "field-toolingAndResourcesRating";
+      }
+      if (!mgrRating || mgrRating <= 0) {
+        stepErrors.managementSupportRating = "Please rate manager support (1 to 5).";
+        if (!firstFieldId) firstFieldId = "field-managementSupportRating";
+      }
+    } else if (stepNum === 6) {
+      const selfRating = data.overallSelfRating || 0;
+      if (!selfRating || selfRating <= 0) {
+        stepErrors.overallSelfRating = "Please provide your overall self-rating (1 to 5).";
+        if (!firstFieldId) firstFieldId = "field-overallSelfRating";
+      }
+      if (!data.confirmationAccepted) {
+        stepErrors.confirmationAccepted = "Please confirm the review accuracy checkbox before submitting.";
+        if (!firstFieldId) firstFieldId = "field-confirmationAccepted";
       }
     }
 
@@ -500,7 +673,30 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       setPerformanceId(saved.id);
       return true;
     } catch (error) {
-      setSaveError(readApiError(error));
+      const apiErrMsg = readApiError(error);
+      const match = apiErrMsg.match(/projects\.(\d+)\.(\w+)/i);
+      if (match) {
+        const idx = parseInt(match[1], 10);
+        const field = match[2];
+        const humanField =
+          field === "description" ? "Project description" :
+          field === "projectName" ? "Project name" :
+          field === "projectRole" ? "Project role" :
+          field === "responsibilityType" ? "Responsibility type" :
+          field === "keyResponsibilities" ? "Key responsibilities" :
+          field === "challengesFaced" ? "Challenges faced" :
+          field === "keyAchievementsOutcomes" ? "Key achievements / outcomes" :
+          field === "technologiesUsed" ? "Technologies used" : field;
+        const formattedErr = `${humanField} should not be empty.`;
+        setErrors((prev) => ({
+          ...prev,
+          [`project_${idx}`]: formattedErr,
+          [`projects.${idx}.${field}`]: formattedErr,
+        }));
+        scrollToField(`accordion-project-${idx}`);
+      } else {
+        setSaveError(apiErrMsg);
+      }
       return false;
     } finally {
       setSaving(false);
@@ -713,10 +909,12 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         formDataRef.current = currentData;
       }
     }
-    for (let s = 1; s <= 5; s++) {
+    for (let s = 1; s <= 6; s++) {
       const validation = validateStep(s, currentData);
       if (!validation.isValid) {
-        goToStep(s, false);
+        if (s !== currentStep) {
+          goToStep(s, false);
+        }
         setErrors(validation.errors);
         scrollToField(validation.firstFieldId);
         return;
@@ -760,6 +958,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             errors={errors}
             clearError={handleClearError}
             readOnly={readOnly}
+            assignment={assignment}
           />
         );
       case 2:
@@ -813,6 +1012,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             errors={errors}
             clearError={handleClearError}
             readOnly={readOnly}
+            onEditStep={(step) => goToStep(step, true)}
           />
         );
       default:

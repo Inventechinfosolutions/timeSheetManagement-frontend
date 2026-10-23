@@ -55,7 +55,6 @@ const SidebarLayout = ({
 
   useEffect(() => {
     dispatch(fetchInboxUnreadCount());
-    dispatch(fetchNotes({ type: "PROJECT" as any, isArchived: false, page: 1, limit: 5 }));
   }, [dispatch]);
 
   // Ref for the main scrollable content area

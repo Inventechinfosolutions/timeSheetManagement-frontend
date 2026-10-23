@@ -318,16 +318,13 @@ export const AppraisalApi = {
 
 
   getMasterFinancialYears: async (): Promise<MasterFinancialYearOption[]> => {
-    const response = await axios.get<MasterFinancialYearOption[]>(MASTER_FINANCIAL_YEAR_PATH, {
-      skipGlobalLoader: true,
-    });
+    const response = await axios.get<MasterFinancialYearOption[]>(MASTER_FINANCIAL_YEAR_PATH);
     return response.data;
   },
 
   getMasterQuarters: async (year?: number): Promise<MasterQuarterRecord[]> => {
     const response = await axios.get<MasterQuarterRecord | MasterQuarterRecord[]>(MASTER_QUARTER_PATH, {
       params: year ? { year } : undefined,
-      skipGlobalLoader: true,
     });
     return Array.isArray(response.data) ? response.data : [response.data];
   },
@@ -335,7 +332,6 @@ export const AppraisalApi = {
   getReviews: async (query: QuarterlyReviewListQuery): Promise<QuarterlyReviewSearchResponse> => {
     const response = await axios.get<QuarterlyReviewSearchResponse>(QUARTERLY_REVIEW_PERFORMANCE_URL, {
       params: query,
-      skipGlobalLoader: true,
     });
     return response.data;
   },
@@ -343,7 +339,6 @@ export const AppraisalApi = {
   searchReviews: async (query: QuarterlyReviewSearchQuery): Promise<QuarterlyReviewSearchResponse> => {
     const response = await axios.get<QuarterlyReviewSearchResponse>(QUARTERLY_REVIEW_PERFORMANCE_URL, {
       params: query,
-      skipGlobalLoader: true,
     });
     return response.data;
   },
