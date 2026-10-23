@@ -49,7 +49,6 @@ const SidebarLayout = ({
 
   useEffect(() => {
     dispatch(fetchInboxUnreadCount());
-    dispatch(fetchNotes({ type: "PROJECT" as any, isArchived: false, page: 1, limit: 5 }));
   }, [dispatch]);
 
   // Track whether citizen is inside Note Workspace (Create/Edit/View) alone vs List mode / other pages

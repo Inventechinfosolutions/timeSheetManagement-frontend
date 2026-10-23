@@ -20,7 +20,7 @@ import { Tooltip } from "antd";
 import { PopconfirmWithTooltip } from "../../components/ui/PopconfirmWithTooltip";
 import dayjs from "dayjs";
 import { Note, NoteType } from "../types/notes.types";
-import { getCleanDescriptionSnippet, noteMatchesCreatedDate, noteMatchesSearch } from "../utils/notesHelpers";
+import { noteMatchesCreatedDate, noteMatchesSearch } from "../utils/notesHelpers";
 import { SearchBox } from "../../components/ui";
 import { useNoteDragDrop } from "../hooks/useNoteDragDrop";
 
@@ -144,7 +144,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                 <th className="py-4 px-6 text-center w-28">SL NO</th>
                 {isProjectNotesTab && <th className="py-4 px-6">PROJECT NAME</th>}
                 <th className="py-4 px-6">TITLE</th>
-                <th className="py-4 px-6">DESCRIPTION</th>
+                {/* <th className="py-4 px-6">DESCRIPTION</th> */}
                 <th className="py-4 px-6">CREATED BY</th>
                 <th className="py-4 px-6 text-center w-48">ACTION</th>
               </tr>
@@ -241,7 +241,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                                 ? "border-[#4318FF] bg-[#4318FF] text-white"
                                 : "border-slate-300 hover:border-[#4318FF] text-slate-600 hover:text-[#4318FF] bg-white shadow-xs"
                             }`}
-                            title={isExpanded ? "Collapse sub-notes" : "Expand sub-notes"}
+                            title={isExpanded ? "Collapse sub-notes" : `Expand sub-notes${(note as any).subNotesCount ? ` (${(note as any).subNotesCount})` : ""}`}
                           >
                             {isExpanded ? "−" : "+"}
                           </button>
@@ -277,24 +277,37 @@ export const NoteList: React.FC<NoteListProps> = ({
                             </span>
                           )}
                         </div>
-                      </td>
-
-                      {/* Description Column */}
-                      <td className="py-4 px-6">
-                        <div className="max-w-xs sm:max-w-sm text-slate-500 text-xs line-clamp-2">
-                          {getCleanDescriptionSnippet(note.description, 75) || (
-                            <span className="text-slate-300 italic">No description</span>
-                          )}
-                        </div>
-                        {note.attachments && note.attachments.length > 0 && (
+                        {(((note as any).attachmentsCount ?? 0) > 0 || (note.attachments && note.attachments.length > 0)) && (
                           <div className="mt-1 flex items-center gap-1 text-[11px] text-[#4318FF] font-semibold">
                             <Paperclip className="w-3 h-3 text-[#4318FF]" />
                             <span>
-                              {note.attachments.length} attachment{note.attachments.length > 1 ? "s" : ""}
+                              {(note as any).attachmentsCount ?? note.attachments?.length} attachment{((note as any).attachmentsCount ?? note.attachments?.length) > 1 ? "s" : ""}
                             </span>
                           </div>
                         )}
                       </td>
+
+                      {/* Description Column */}
+                      {/* <td className="py-4 px-6">
+                        <div className="max-w-xs sm:max-w-sm text-slate-500 text-xs line-clamp-2">
+                          {getCleanDescriptionSnippet(note.description, 75) || (
+                            <span
+                              onClick={() => onStartView(note)}
+                              className="text-[#4318FF] hover:underline cursor-pointer"
+                            >
+                              Click View to read
+                            </span>
+                          )}
+                        </div>
+                        {(((note as any).attachmentsCount ?? 0) > 0 || (note.attachments && note.attachments.length > 0)) && (
+                          <div className="mt-1 flex items-center gap-1 text-[11px] text-[#4318FF] font-semibold">
+                            <Paperclip className="w-3 h-3 text-[#4318FF]" />
+                            <span>
+                              {(note as any).attachmentsCount ?? note.attachments?.length} attachment{((note as any).attachmentsCount ?? note.attachments?.length) > 1 ? "s" : ""}
+                            </span>
+                          </div>
+                        )}
+                      </td> */}
 
                       {/* Created By */}
                       <td className="py-4 px-6 text-slate-600">
@@ -404,7 +417,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                     {/* Sub-Table Expansion */}
                     {isExpanded && (
                       <tr>
-                        <td colSpan={isProjectNotesTab ? 6 : 5} className="p-0 bg-slate-50/50">
+                        <td colSpan={isProjectNotesTab ? 5 : 4} className="p-0 bg-slate-50/50">
                           <div className="p-5 pl-12 space-y-3">
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                               <div className="flex flex-wrap items-center gap-2">
@@ -466,7 +479,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                                   <tr className="bg-[#4318FF] text-white text-xs font-bold uppercase tracking-wider">
                                     <th className="py-3 px-5 text-center w-24">SL NO</th>
                                     <th className="py-3 px-6">TITLE</th>
-                                    <th className="py-3 px-6">DESCRIPTION</th>
+                                    {/* <th className="py-3 px-6">DESCRIPTION</th> */}
                                     <th className="py-3 px-6">CREATED BY</th>
                                     <th className="py-3 px-6 text-center w-44">ACTIONS</th>
                                   </tr>
@@ -475,7 +488,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                                 <tbody className="divide-y divide-slate-100 text-xs md:text-sm text-slate-700">
                                   {loadingSubNotes?.[note.id] ? (
                                     <tr>
-                                      <td colSpan={5} className="py-8 text-center text-slate-500">
+                                      <td colSpan={4} className="py-8 text-center text-slate-500">
                                         <div className="flex items-center justify-center gap-2">
                                           <div className="w-4 h-4 border-2 border-[#4318FF] border-t-transparent rounded-full animate-spin" />
                                           <span className="text-xs">Loading child notes...</span>
@@ -484,7 +497,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                                     </tr>
                                   ) : visibleSubNotes.length === 0 ? (
                                     <tr>
-                                      <td colSpan={5} className="py-8 text-center text-slate-400">
+                                      <td colSpan={4} className="py-8 text-center text-slate-400">
                                         {subNotes.length === 0 ? (
                                           <>
                                             No notes yet. Click{" "}
@@ -554,9 +567,17 @@ export const NoteList: React.FC<NoteListProps> = ({
                                             >
                                               {sub.title}
                                             </span>
+                                            {sub.attachments && sub.attachments.length > 0 && (
+                                              <div className="mt-0.5 flex items-center gap-1 text-[10px] text-[#4318FF] font-semibold">
+                                                <Paperclip className="w-2.5 h-2.5 text-[#4318FF]" />
+                                                <span>
+                                                  {sub.attachments.length} attachment{sub.attachments.length > 1 ? "s" : ""}
+                                                </span>
+                                              </div>
+                                            )}
                                           </td>
                                           {/* Sub-note Description Column */}
-                                          <td className="py-3 px-6">
+                                          {/* <td className="py-3 px-6">
                                             <div className="max-w-xs text-slate-500 text-xs line-clamp-2">
                                               {getCleanDescriptionSnippet(sub.description, 60) || (
                                                 <span className="text-slate-300 italic">No description</span>
@@ -570,7 +591,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                                                 </span>
                                               </div>
                                             )}
-                                          </td>
+                                          </td> */}
                                           <td className="py-3 px-6 text-slate-600">
                                             <div>{dayjs(sub.createdAt).format("MMM DD, YYYY hh:mm A")}</div>
                                             <div className="text-[11px] text-slate-400">
