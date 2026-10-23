@@ -209,13 +209,13 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
                   {/* Accordion Header */}
                   <div
                     onClick={() => toggleAccordion(index)}
-                    className="flex items-center justify-between gap-3 px-4 py-3.5 bg-gradient-to-r from-white via-blue-50/20 to-white hover:bg-blue-50/30 cursor-pointer select-none group transition-colors"
+                    className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-gradient-to-r from-white via-blue-50/20 to-white hover:bg-blue-50/30 cursor-pointer select-none group transition-colors"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="shrink-0 px-2.5 py-1 text-[11px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="shrink-0 px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
                         Goal {index + 1}
                       </span>
-                      <h4 className="text-sm font-bold text-[#0F172A] truncate group-hover:text-[#2563EB] transition-colors">
+                      <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] truncate group-hover:text-[#2563EB] transition-colors">
                         {goal.split("\n")[0] || "Untitled Goal"}
                       </h4>
                     </div>
@@ -228,7 +228,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
                           e.stopPropagation();
                           handleEditGoal(index);
                         }}
-                        className="inline-flex items-center justify-center w-8 h-8 text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-xl transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                        className="inline-flex items-center justify-center w-7 h-7 text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-lg transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
                         title="Edit goal (swaps into input box)"
                         aria-label="Edit goal"
                       >
@@ -242,7 +242,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
                           e.stopPropagation();
                           handleRemoveGoal(index);
                         }}
-                        className="inline-flex items-center justify-center w-8 h-8 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 rounded-xl transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                        className="inline-flex items-center justify-center w-7 h-7 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 rounded-lg transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
                         title="Delete goal"
                         aria-label="Delete goal"
                       >
@@ -250,7 +250,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
                       </button>
 
                       {/* Accordion Chevron */}
-                      <div className="p-1 rounded-lg text-[#64748B] group-hover:text-[#2563EB] group-hover:bg-blue-50/60 transition-colors ml-1">
+                      <div className="p-0.5 rounded-md text-[#64748B] group-hover:text-[#2563EB] transition-colors">
                         <ChevronDown
                           className={`w-4 h-4 transition-transform duration-300 ease-in-out ${
                             isExpanded ? "rotate-180 text-[#2563EB]" : ""
@@ -269,14 +269,14 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
                     }`}
                   >
                     <div className="overflow-hidden">
-                      <div className="px-4 pb-4 pt-3 border-t border-blue-100/70 space-y-4 bg-gradient-to-b from-blue-50/20 to-white">
-                        <div className="eval-step-card space-y-2">
-                          <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
-                            <span>Learning Goal Details</span>
-                          </label>
-                          <div className="eval-textarea-field mt-2 min-h-[96px] whitespace-pre-line leading-relaxed bg-white text-[#334155]">
+                      <div className="px-3.5 py-2.5 border-t border-blue-100/70 bg-gradient-to-b from-blue-50/15 to-white text-xs space-y-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                          Learning Goal Details
+                        </span>
+                        <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
+                          <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
                             {goal || "—"}
-                          </div>
+                          </p>
                         </div>
                       </div>
                     </div>

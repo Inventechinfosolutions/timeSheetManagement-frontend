@@ -135,24 +135,69 @@ export interface StoredPerformanceFile {
   sizeLabel?: string;
 }
 
+export enum ProjectRoleEnum {
+  FRONTEND_DEVELOPER = "Frontend Developer",
+  BACKEND_DEVELOPER = "Backend Developer",
+  FULL_STACK_DEVELOPER = "Full Stack Developer",
+  QA_ENGINEER = "QA Engineer",
+  UI_UX_DESIGNER = "UI/UX Designer",
+  DEVOPS_ENGINEER = "DevOps Engineer",
+  BUSINESS_ANALYST = "Business Analyst",
+  PROJECT_MANAGER = "Project Manager",
+  OTHER = "Other",
+}
+
+export enum ResponsibilityTypeEnum {
+  PROJECT_LEADER = "Project Leader",
+  TEAM_LEAD = "Team Lead",
+  PROJECT_MANAGER = "Project Manager",
+  MODULE_OWNER = "Module Owner",
+  INDIVIDUAL_CONTRIBUTOR = "Individual Contributor",
+  TEAM_MEMBER = "Team Member",
+  OTHER = "Other",
+}
+
 export interface PerformanceProject {
-  title: string;
+  projectName: string;
   description: string;
   challenge: string;
+  projectRole?: string;
+  responsibilityType?: string;
+  leadershipQualities?: string;
+  clientReviewFeedback?: string;
+  keyResponsibilities?: string;
+  challengesFaced?: string;
+  solutionsImplemented?: string;
+  keyAchievementsOutcomes?: string;
+  technologiesUsed?: string[];
   attachments?: StoredPerformanceFile[];
+  isDraft?: boolean;
 }
 
 export interface ReviewFormData {
   // Step 1: Overview
   overview?: string;
-  roleSummary: string;
-  keyResponsibilities: string;
-  quarterHighlights: string;
+  overallPerformanceSummary?: string;
+  keyHighlights?: string;
+  majorContributions?: string;
+  areasForImprovement?: string;
+  reviewPeriodStart?: string;
+  reviewPeriodEnd?: string;
   // Step 2: Achievements & Projects
-  projectTitle?: string;
+  projectName?: string;
   projectDescription?: string;
+  projectRole?: string;
+  responsibilityType?: string;
+  leadershipQualities?: string;
+  clientReviewFeedback?: string;
+  keyResponsibilities?: string;
+  challengesFaced?: string;
   projectChallenge?: string;
+  solutionsImplemented?: string;
+  keyAchievementsOutcomes?: string;
+  technologiesUsed?: string[];
   projects?: PerformanceProject[];
+  editingProjectIndex?: number | null;
   projectAttachment?: string | null;
   projectAttachmentName?: string;
   projectAttachmentSize?: string;
@@ -161,21 +206,12 @@ export interface ReviewFormData {
   challengesOvercome: string;
   selfRatingAchievements: number;
   // Step 3: Team Contribution & Ratings
-  collaborationDetails: string;
-  mentorshipAssistance: string;
-  peerSupport: string;
+  teamCollaborationSummary?: string;
+  crossTeamContributions?: string;
+  knowledgeSharingMentoring?: string;
+  teamworkExamples?: string;
   teamRatings?: {
     communication?: number;
-    ownership?: number;
-    collaboration?: number;
-    problemSolving?: number;
-    leadership?: number;
-    adaptability?: number;
-    crossCollaboration?: number;
-    mentorship?: number;
-    peerSupport?: number;
-    reliability?: number;
-    initiative?: number;
   };
   // Step 4: Learning Goals
   learningGoals?: string;
@@ -202,6 +238,7 @@ export interface StepProps {
   clearError?: (field: string) => void;
   onUploadAttachment?: (file: File) => Promise<StoredPerformanceFile>;
   onRemoveAttachment?: (objectKey: string) => Promise<void>;
+  assignment?: QuarterlyReviewAssignment;
 }
 
 // ==========================================

@@ -772,6 +772,53 @@
   animation: buildTargetDot 0.35s 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
+/* ==========================================================================
+   Thin, sleek scrollbar that only appears when cursor hovers or focuses on field
+   ========================================================================== */
+.eval-custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.2s ease;
+  overflow-y: auto;
+}
+
+.eval-custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.eval-custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.eval-custom-scrollbar::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.eval-custom-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+.eval-custom-scrollbar:hover,
+.eval-custom-scrollbar:focus,
+.eval-custom-scrollbar:focus-within {
+  scrollbar-color: #94A3B8 transparent;
+}
+
+.eval-custom-scrollbar:hover::-webkit-scrollbar-thumb,
+.eval-custom-scrollbar:focus::-webkit-scrollbar-thumb,
+.eval-custom-scrollbar:focus-within::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+}
+
+.eval-custom-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
 
 
 
