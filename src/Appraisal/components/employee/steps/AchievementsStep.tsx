@@ -509,6 +509,49 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
   const handleAddMoreClick = () => {
     if (editingIndex !== null) {
+      const originalProject = projects[editingIndex];
+      // Only preserve as draft if this item was ALREADY a draft
+      if (originalProject?.isDraft && !draftIsEmpty) {
+        const nextProjects = [...projects];
+        nextProjects[editingIndex] = {
+          ...nextProjects[editingIndex],
+          projectName: projectName.trim() || nextProjects[editingIndex]?.projectName || "Untitled Project",
+          description: projectDescription.trim(),
+          challenge: (challengesFaced || projectChallenge).trim(),
+          challengesFaced: (challengesFaced || projectChallenge).trim(),
+          projectRole,
+          responsibilityType,
+          leadershipQualities: leadershipQualities.trim(),
+          clientReviewFeedback: clientReviewFeedback.trim(),
+          keyResponsibilities: keyResponsibilities.trim(),
+          solutionsImplemented: solutionsImplemented.trim(),
+          keyAchievementsOutcomes: keyAchievementsOutcomes.trim(),
+          technologiesUsed: [...technologiesUsed],
+          attachments: [...attachments],
+          isDraft: true,
+        };
+        onChange("projects", nextProjects);
+      }
+      handleCancelEdit();
+    } else if (!draftIsEmpty) {
+      // If user was drafting a new project and clicked "+ Add more", save it as draft
+      const currentDraft: PerformanceProject = {
+        projectName: projectName.trim() || "Untitled Project",
+        description: projectDescription.trim(),
+        challenge: (challengesFaced || projectChallenge).trim(),
+        challengesFaced: (challengesFaced || projectChallenge).trim(),
+        projectRole,
+        responsibilityType,
+        leadershipQualities: leadershipQualities.trim(),
+        clientReviewFeedback: clientReviewFeedback.trim(),
+        keyResponsibilities: keyResponsibilities.trim(),
+        solutionsImplemented: solutionsImplemented.trim(),
+        keyAchievementsOutcomes: keyAchievementsOutcomes.trim(),
+        technologiesUsed: [...technologiesUsed],
+        attachments: [...attachments],
+        isDraft: true,
+      };
+      onChange("projects", [...projects, currentDraft]);
       handleCancelEdit();
     }
     const inputElement = document.getElementById("field-projects");
@@ -529,24 +572,77 @@ export const AchievementsStep: React.FC<StepProps> = ({
       return;
     }
 
+    let nextProjects = [...projects];
+
+    if (editingIndex === null) {
+      // Only when writing a new project in the input form, save it as a draft item
+      if (!draftIsEmpty) {
+        const currentDraft: PerformanceProject = {
+          projectName: projectName.trim() || "Untitled Project",
+          description: projectDescription.trim(),
+          challenge: (challengesFaced || projectChallenge).trim(),
+          challengesFaced: (challengesFaced || projectChallenge).trim(),
+          projectRole,
+          responsibilityType,
+          leadershipQualities: leadershipQualities.trim(),
+          clientReviewFeedback: clientReviewFeedback.trim(),
+          keyResponsibilities: keyResponsibilities.trim(),
+          solutionsImplemented: solutionsImplemented.trim(),
+          keyAchievementsOutcomes: keyAchievementsOutcomes.trim(),
+          technologiesUsed: [...technologiesUsed],
+          attachments: [...attachments],
+          isDraft: true,
+        };
+        nextProjects.push(currentDraft);
+        onChange("projects", nextProjects);
+      }
+    } else if (editingIndex >= 0 && editingIndex < projects.length) {
+      const original = projects[editingIndex];
+      // If the project was already saved, it should NEVER become a draft!
+      // Only update draft text if it was ALREADY a draft project.
+      if (original?.isDraft && !draftIsEmpty) {
+        nextProjects[editingIndex] = {
+          ...original,
+          projectName: projectName.trim() || original.projectName || "Untitled Project",
+          description: projectDescription.trim(),
+          challenge: (challengesFaced || projectChallenge).trim(),
+          challengesFaced: (challengesFaced || projectChallenge).trim(),
+          projectRole,
+          responsibilityType,
+          leadershipQualities: leadershipQualities.trim(),
+          clientReviewFeedback: clientReviewFeedback.trim(),
+          keyResponsibilities: keyResponsibilities.trim(),
+          solutionsImplemented: solutionsImplemented.trim(),
+          keyAchievementsOutcomes: keyAchievementsOutcomes.trim(),
+          technologiesUsed: [...technologiesUsed],
+          attachments: [...attachments],
+          isDraft: true,
+        };
+        onChange("projects", nextProjects);
+      }
+    }
+
+    const projectToLoad = nextProjects[targetIndex];
+    if (!projectToLoad) return;
+
     setEditingIndex(targetIndex);
 
     // Populate active form
-    const editName = projectToEdit.projectName || "";
+    const editName = projectToLoad.projectName || "";
     onChange("projectName", editName);
-    onChange("projectDescription", projectToEdit.description || "");
-    onChange("projectRole", projectToEdit.projectRole || "");
-    onChange("responsibilityType", projectToEdit.responsibilityType || "");
-    onChange("leadershipQualities", projectToEdit.leadershipQualities || "");
-    onChange("clientReviewFeedback", projectToEdit.clientReviewFeedback || "");
-    onChange("keyResponsibilities", projectToEdit.keyResponsibilities || "");
-    const editChallenge = projectToEdit.challengesFaced || projectToEdit.challenge || "";
+    onChange("projectDescription", projectToLoad.description || "");
+    onChange("projectRole", projectToLoad.projectRole || "");
+    onChange("responsibilityType", projectToLoad.responsibilityType || "");
+    onChange("leadershipQualities", projectToLoad.leadershipQualities || "");
+    onChange("clientReviewFeedback", projectToLoad.clientReviewFeedback || "");
+    onChange("keyResponsibilities", projectToLoad.keyResponsibilities || "");
+    const editChallenge = projectToLoad.challengesFaced || projectToLoad.challenge || "";
     onChange("challengesFaced", editChallenge);
     onChange("projectChallenge", editChallenge);
-    onChange("solutionsImplemented", projectToEdit.solutionsImplemented || "");
-    onChange("keyAchievementsOutcomes", projectToEdit.keyAchievementsOutcomes || "");
-    onChange("technologiesUsed", projectToEdit.technologiesUsed ? [...projectToEdit.technologiesUsed] : []);
-    onChange("projectAttachments", projectToEdit.attachments ? [...projectToEdit.attachments] : []);
+    onChange("solutionsImplemented", projectToLoad.solutionsImplemented || "");
+    onChange("keyAchievementsOutcomes", projectToLoad.keyAchievementsOutcomes || "");
+    onChange("technologiesUsed", projectToLoad.technologiesUsed ? [...projectToLoad.technologiesUsed] : []);
+    onChange("projectAttachments", projectToLoad.attachments ? [...projectToLoad.attachments] : []);
 
     setAddErrors({});
     if (clearError) {
