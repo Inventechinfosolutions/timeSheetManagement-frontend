@@ -258,6 +258,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
   const clientReviewFeedback = formData.clientReviewFeedback ?? "";
   const keyResponsibilities = formData.keyResponsibilities ?? "";
   const challengesFaced = formData.challengesFaced || formData.projectChallenge || "";
+  const projectChallenge = formData.projectChallenge || formData.challengesFaced || "";
   const solutionsImplemented = formData.solutionsImplemented ?? "";
   const keyAchievementsOutcomes = formData.keyAchievementsOutcomes ?? "";
   const technologiesUsed = formData.technologiesUsed || [];
@@ -317,18 +318,22 @@ export const AchievementsStep: React.FC<StepProps> = ({
   const draftIsEmpty =
     !projectName.trim() &&
     !projectDescription.trim() &&
+    !projectRole.trim() &&
+    !responsibilityType.trim() &&
+    !keyResponsibilities.trim() &&
     !challengesFaced.trim() &&
-    !keyResponsibilities.trim();
-  const hasSavedProject = projects.some(
-    (project) =>
-      project.projectName?.trim() &&
-      project.description?.trim() &&
-      !project.isDraft,
-  );
+    !keyAchievementsOutcomes.trim() &&
+    technologiesUsed.length === 0;
+  const hasSavedProject = projects.length > 0;
   const showDraftErrors = !(draftIsEmpty && hasSavedProject);
   const nameError = showDraftErrors ? errors?.projectName || addErrors.projectName : "";
   const descriptionError = showDraftErrors ? errors?.projectDescription || addErrors.projectDescription : "";
   const challengesError = showDraftErrors ? errors?.challengesFaced || errors?.projectChallenge || addErrors.challengesFaced : "";
+  const roleError = showDraftErrors ? errors?.projectRole || addErrors.projectRole : "";
+  const responsibilityTypeError = showDraftErrors ? errors?.responsibilityType || addErrors.responsibilityType : "";
+  const keyResponsibilitiesError = showDraftErrors ? errors?.keyResponsibilities || addErrors.keyResponsibilities : "";
+  const outcomesError = showDraftErrors ? errors?.keyAchievementsOutcomes || addErrors.keyAchievementsOutcomes : "";
+  const techError = showDraftErrors ? errors?.technologiesUsed || addErrors.technologiesUsed : "";
 
   const handleNameChange = (val: string) => {
     onChange("projectName", val);
@@ -362,13 +367,19 @@ export const AchievementsStep: React.FC<StepProps> = ({
   const handleRoleChange = (val: string) => {
     onChange("projectRole", val);
     setAddErrors((prev) => ({ ...prev, projectRole: "" }));
-    if (clearError) clearError("projectRole");
+    if (clearError) {
+      clearError("projectRole");
+      clearError("projects");
+    }
   };
 
   const handleResponsibilityTypeChange = (val: string) => {
     onChange("responsibilityType", val);
     setAddErrors((prev) => ({ ...prev, responsibilityType: "" }));
-    if (clearError) clearError("responsibilityType");
+    if (clearError) {
+      clearError("responsibilityType");
+      clearError("projects");
+    }
   };
 
   const handleLeadershipQualitiesChange = (val: string) => {
@@ -383,7 +394,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
   const handleKeyResponsibilitiesChange = (val: string) => {
     onChange("keyResponsibilities", val);
-    if (clearError) clearError("keyResponsibilities");
+    setAddErrors((prev) => ({ ...prev, keyResponsibilities: "" }));
+    if (clearError) {
+      clearError("keyResponsibilities");
+      clearError("projects");
+    }
   };
 
   const handleSolutionsChange = (val: string) => {
@@ -393,7 +408,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
   const handleOutcomesChange = (val: string) => {
     onChange("keyAchievementsOutcomes", val);
-    if (clearError) clearError("keyAchievementsOutcomes");
+    setAddErrors((prev) => ({ ...prev, keyAchievementsOutcomes: "" }));
+    if (clearError) {
+      clearError("keyAchievementsOutcomes");
+      clearError("projects");
+    }
   };
 
   const handleAddTechnology = (tech: string) => {
@@ -401,33 +420,61 @@ export const AchievementsStep: React.FC<StepProps> = ({
     if (!trimmed) return;
     if (!technologiesUsed.includes(trimmed)) {
       onChange("technologiesUsed", [...technologiesUsed, trimmed]);
+      setAddErrors((prev) => ({ ...prev, technologiesUsed: "" }));
+      if (clearError) {
+        clearError("technologiesUsed");
+        clearError("projects");
+      }
     }
     setTechInput("");
   };
 
   const handleRemoveTechnology = (techToRemove: string) => {
-    onChange(
-      "technologiesUsed",
-      technologiesUsed.filter((item) => item !== techToRemove),
-    );
+    const nextTechs = technologiesUsed.filter((item) => item !== techToRemove);
+    onChange("technologiesUsed", nextTechs);
+    if (nextTechs.length === 0) {
+      setAddErrors((prev) => ({ ...prev, technologiesUsed: "At least one technology is required." }));
+    }
   };
 
   const handleSaveProject = () => {
     const name = projectName.trim();
     const description = projectDescription.trim();
-    const challenge = challengesFaced.trim();
+    const challenge = challengesFaced.trim() || projectChallenge.trim();
+    const role = projectRole.trim();
+    const respType = responsibilityType.trim();
+    const keyResp = keyResponsibilities.trim();
+    const outcomes = keyAchievementsOutcomes.trim();
+    const techs = technologiesUsed;
+
     const nextErrors: Record<string, string> = {};
     if (!name) nextErrors.projectName = "Project name is required.";
     if (!description) nextErrors.projectDescription = "Project description is required.";
+    if (!role) nextErrors.projectRole = "Project role is required.";
+    if (!respType) nextErrors.responsibilityType = "Responsibility type is required.";
+    if (!keyResp) nextErrors.keyResponsibilities = "Key responsibilities is required.";
     if (!challenge) nextErrors.challengesFaced = "Challenges faced is required.";
+    if (!outcomes) nextErrors.keyAchievementsOutcomes = "Key achievements / outcomes is required.";
+    if (techs.length === 0) nextErrors.technologiesUsed = "At least one technology is required.";
+
     setAddErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) {
       if (!name) {
         document.getElementById("input-projectName")?.focus();
       } else if (!description) {
         document.getElementById("input-projectDescription")?.focus();
+      } else if (!role) {
+        document.getElementById("field-projectRole")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else if (!respType) {
+        document.getElementById("field-responsibilityType")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      } else if (!keyResp) {
+        document.getElementById("input-keyResponsibilities")?.focus();
       } else if (!challenge) {
         document.getElementById("input-challengesFaced")?.focus();
+      } else if (!outcomes) {
+        document.getElementById("input-keyAchievementsOutcomes")?.focus();
+      } else if (techs.length === 0) {
+        document.getElementById("field-technologiesUsed")?.scrollIntoView({ behavior: "smooth", block: "center" });
       }
       return;
     }
@@ -822,7 +869,9 @@ export const AchievementsStep: React.FC<StepProps> = ({
             <label
               className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
             >
-              Project Role
+              <span>
+                Project Role <span className="text-red-500">*</span>
+              </span>
             </label>
             <AppraisalSelectWithOther
               id="select-projectRole"
@@ -833,6 +882,12 @@ export const AchievementsStep: React.FC<StepProps> = ({
               customPlaceholder="Type your project role..."
               prefixIcon={<UserCheck size={16} className="text-[#4318FF] shrink-0" />}
             />
+            {roleError && (
+              <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                <span>{roleError}</span>
+              </p>
+            )}
           </div>
 
           {/* Responsibility Type Dropdown */}
@@ -840,7 +895,9 @@ export const AchievementsStep: React.FC<StepProps> = ({
             <label
               className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
             >
-              Responsibility Type
+              <span>
+                Responsibility Type <span className="text-red-500">*</span>
+              </span>
             </label>
             <AppraisalSelectWithOther
               id="select-responsibilityType"
@@ -851,6 +908,12 @@ export const AchievementsStep: React.FC<StepProps> = ({
               customPlaceholder="Type your responsibility type..."
               prefixIcon={<ShieldCheck size={16} className="text-[#4318FF] shrink-0" />}
             />
+            {responsibilityTypeError && (
+              <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                <span>{responsibilityTypeError}</span>
+              </p>
+            )}
           </div>
         </div>
 
@@ -860,10 +923,14 @@ export const AchievementsStep: React.FC<StepProps> = ({
             htmlFor="input-keyResponsibilities"
             className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
           >
-            Key Responsibilities
+            <span>
+              Key Responsibilities <span className="text-red-500">*</span>
+            </span>
           </label>
           <div
-            className="eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1"
+            className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
+              keyResponsibilitiesError ? "eval-field-has-error" : ""
+            }`}
             onClick={() => document.getElementById("input-keyResponsibilities")?.focus()}
           >
             <textarea
@@ -875,6 +942,12 @@ export const AchievementsStep: React.FC<StepProps> = ({
               className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
             />
           </div>
+          {keyResponsibilitiesError && (
+            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{keyResponsibilitiesError}</span>
+            </p>
+          )}
         </div>
 
         {/* 6 & 7. Challenges Faced & Solutions Implemented (Side-by-Side Text areas) */}
@@ -991,10 +1064,14 @@ export const AchievementsStep: React.FC<StepProps> = ({
             htmlFor="input-keyAchievementsOutcomes"
             className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
           >
-            Key Achievements / Outcomes
+            <span>
+              Key Achievements / Outcomes <span className="text-red-500">*</span>
+            </span>
           </label>
           <div
-            className="eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1"
+            className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
+              outcomesError ? "eval-field-has-error" : ""
+            }`}
             onClick={() => document.getElementById("input-keyAchievementsOutcomes")?.focus()}
           >
             <textarea
@@ -1006,14 +1083,22 @@ export const AchievementsStep: React.FC<StepProps> = ({
               className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
             />
           </div>
+          {outcomesError && (
+            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{outcomesError}</span>
+            </p>
+          )}
         </div>
 
         {/* 9. Technologies Used (Multi-select) */}
         <div id="field-technologiesUsed" className="space-y-1.5 flex flex-col">
           <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
-            Technologies Used
+            <span>
+              Technologies Used <span className="text-red-500">*</span>
+            </span>
           </label>
-          <div className="eval-step-card !p-3 space-y-2.5">
+          <div className={`eval-step-card !p-3 space-y-2.5 ${techError ? "eval-field-has-error border-red-300" : ""}`}>
             {/* Selected Tags */}
             <div className="flex flex-wrap items-center gap-1.5">
               {technologiesUsed.length === 0 ? (
@@ -1093,6 +1178,12 @@ export const AchievementsStep: React.FC<StepProps> = ({
               </button>
             </div>
           </div>
+          {techError && (
+            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span>{techError}</span>
+            </p>
+          )}
         </div>
 
         {/* Attachment & Save Action Bar */}
@@ -1168,12 +1259,41 @@ export const AchievementsStep: React.FC<StepProps> = ({
             {projects.map((project, index) => {
               const isExpanded = expandedIndex === index;
               const displayProjectName = project.projectName || "Untitled Project";
+              const projectError =
+                errors?.[`project_${index}`] ||
+                errors?.[`projects.${index}.description`] ||
+                errors?.[`projects.${index}.projectName`] ||
+                errors?.[`projects.${index}.projectRole`] ||
+                errors?.[`projects.${index}.responsibilityType`] ||
+                errors?.[`projects.${index}.keyResponsibilities`] ||
+                errors?.[`projects.${index}.challengesFaced`] ||
+                errors?.[`projects.${index}.challenge`] ||
+                errors?.[`projects.${index}.keyAchievementsOutcomes`] ||
+                errors?.[`projects.${index}.technologiesUsed`];
+
+              const isDraftOrIncomplete =
+                project.isDraft ||
+                !project.projectName?.trim() ||
+                !project.description?.trim() ||
+                !project.projectRole?.trim() ||
+                !project.responsibilityType?.trim() ||
+                !project.keyResponsibilities?.trim() ||
+                !(project.challengesFaced?.trim() || project.challenge?.trim()) ||
+                !project.keyAchievementsOutcomes?.trim() ||
+                !Array.isArray(project.technologiesUsed) ||
+                project.technologiesUsed.length === 0;
 
               return (
                 <div
                   id={`accordion-project-${index}`}
                   key={`${displayProjectName}-${index}`}
-                  className="bg-white border border-blue-200/80 hover:border-blue-400/90 rounded-2xl shadow-xs overflow-hidden transition-all duration-200 scroll-mt-24"
+                  className={`bg-white rounded-2xl shadow-xs overflow-hidden transition-all duration-200 scroll-mt-24 border ${
+                    projectError
+                      ? "border-red-400 bg-red-50/10 ring-1 ring-red-400/30"
+                      : isDraftOrIncomplete
+                      ? "border-amber-300/90 hover:border-amber-400"
+                      : "border-blue-200/80 hover:border-blue-400/90"
+                  }`}
                 >
                   {/* Accordion Header */}
                   <div
@@ -1187,11 +1307,6 @@ export const AchievementsStep: React.FC<StepProps> = ({
                       <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] truncate group-hover:text-[#2563EB] transition-colors">
                         {displayProjectName}
                       </h4>
-                      {project.projectRole && (
-                        <span className="hidden sm:inline-block text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200/60">
-                          {project.projectRole}
-                        </span>
-                      )}
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -1245,6 +1360,59 @@ export const AchievementsStep: React.FC<StepProps> = ({
                     </div>
                   </div>
 
+                  {/* Inline Validation Banner for Draft / Incomplete Projects */}
+                  {(isDraftOrIncomplete || Boolean(projectError)) && (
+                    <div
+                      className={`px-3.5 py-2 border-t flex items-center justify-between gap-2 ${
+                        projectError
+                          ? "bg-red-50/90 border-red-200 text-red-700"
+                          : "bg-amber-50/80 border-amber-200/70 text-amber-800"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-semibold min-w-0">
+                        <AlertCircle
+                          className={`w-4 h-4 shrink-0 ${
+                            projectError ? "text-red-500" : "text-amber-600"
+                          }`}
+                        />
+                        <span className="truncate">
+                          {projectError ||
+                            (!project.projectName?.trim()
+                              ? "Project name is required."
+                              : !project.description?.trim()
+                              ? "Project description is required."
+                              : !project.projectRole?.trim()
+                              ? "Project role is required."
+                              : !project.responsibilityType?.trim()
+                              ? "Responsibility type is required."
+                              : !project.keyResponsibilities?.trim()
+                              ? "Key responsibilities is required."
+                              : !(project.challengesFaced?.trim() || project.challenge?.trim())
+                              ? "Challenges faced is required."
+                              : !project.keyAchievementsOutcomes?.trim()
+                              ? "Key achievements / outcomes is required."
+                              : (!project.technologiesUsed || project.technologiesUsed.length === 0)
+                              ? "At least one technology is required."
+                              : "This project is in draft. Please edit and complete all required fields.")}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditProject(index);
+                        }}
+                        className={`text-xs font-bold underline underline-offset-2 cursor-pointer shrink-0 ${
+                          projectError
+                            ? "text-red-700 hover:text-red-900"
+                            : "text-amber-800 hover:text-amber-950"
+                        }`}
+                      >
+                        Edit & complete
+                      </button>
+                    </div>
+                  )}
+
                   {/* Accordion Body */}
                   <div
                     className={`grid transition-all duration-300 ease-in-out ${
@@ -1258,12 +1426,12 @@ export const AchievementsStep: React.FC<StepProps> = ({
                           <div className="flex flex-wrap items-center gap-2">
                             {project.projectRole && (
                               <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 text-[#0F172A] rounded-md font-semibold text-[11px]">
-                                Role: <strong className="text-[#2563EB]">{project.projectRole}</strong>
+                                Project Role: <strong className="text-[#2563EB]">{project.projectRole}</strong>
                               </span>
                             )}
                             {project.responsibilityType && (
                               <span className="px-2 py-0.5 bg-slate-50 border border-slate-200 text-[#0F172A] rounded-md font-semibold text-[11px]">
-                                Type: <strong>{project.responsibilityType}</strong>
+                                Responsibility Type: <strong>{project.responsibilityType}</strong>
                               </span>
                             )}
                           </div>
@@ -1295,32 +1463,45 @@ export const AchievementsStep: React.FC<StepProps> = ({
                           </div>
                         )}
 
-                        {/* Side-by-Side: Challenges Faced & Solutions Implemented */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
-                          {/* Challenges Faced */}
+                        {/* Challenges Faced & Solutions Implemented (only if entered) */}
+                        {Boolean(project.solutionsImplemented?.trim()) ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
+                            {/* Challenges Faced */}
+                            <div className="space-y-1 flex flex-col">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                                Challenges Faced
+                              </span>
+                              <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
+                                <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                  {project.challengesFaced || project.challenge || "—"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Solutions Implemented */}
+                            <div className="space-y-1 flex flex-col">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                                Solutions Implemented
+                              </span>
+                              <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
+                                <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                  {project.solutionsImplemented}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
                           <div className="space-y-1 flex flex-col">
                             <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
                               Challenges Faced
                             </span>
-                            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
+                            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
                               <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
                                 {project.challengesFaced || project.challenge || "—"}
                               </p>
                             </div>
                           </div>
-
-                          {/* Solutions Implemented */}
-                          <div className="space-y-1 flex flex-col">
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
-                              Solutions Implemented
-                            </span>
-                            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
-                              <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
-                                {project.solutionsImplemented || "—"}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
+                        )}
 
                         {/* Leadership Qualities & Client Review Feedback (if any) */}
                         {(Boolean(project.leadershipQualities) || Boolean(project.clientReviewFeedback)) && (

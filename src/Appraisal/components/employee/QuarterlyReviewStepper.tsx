@@ -174,11 +174,24 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
 
+        // If inner layout container (main or overflow-y-auto) exists, ensure target is centered
+        const main = document.querySelector("main");
+        if (main && main.contains(el)) {
+          const mainRect = main.getBoundingClientRect();
+          const elRect = el.getBoundingClientRect();
+          const targetScrollTop = main.scrollTop + (elRect.top - mainRect.top) - main.clientHeight / 2 + elRect.height / 2;
+          main.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" });
+        }
+
         const focusTarget = el.matches("input, textarea, button")
           ? (el as HTMLElement)
           : (el.querySelector("input, textarea, button") as HTMLElement | null);
         if (focusTarget && typeof focusTarget.focus === "function") {
-          focusTarget.focus({ preventScroll: true });
+          try {
+            focusTarget.focus({ preventScroll: true });
+          } catch {
+            focusTarget.focus();
+          }
         }
 
         animateFieldError(el);
@@ -208,17 +221,35 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     const pName = (updated.projectName || "").trim();
     const pDesc = (updated.projectDescription || "").trim();
     const pChallenge = (updated.challengesFaced || updated.projectChallenge || "").trim();
+    const pRole = (updated.projectRole || "").trim();
+    const pResp = (updated.responsibilityType || "").trim();
+    const pKeyResp = (updated.keyResponsibilities || "").trim();
+    const pOutcomes = (updated.keyAchievementsOutcomes || "").trim();
+    const pTechs = Array.isArray(updated.technologiesUsed) ? updated.technologiesUsed : [];
+
     const hasAnyDraft = Boolean(
       pName ||
       pDesc ||
       pChallenge ||
-      updated.projectRole ||
-      updated.responsibilityType ||
+      pRole ||
+      pResp ||
       updated.leadershipQualities ||
       updated.clientReviewFeedback ||
-      updated.keyResponsibilities ||
-      (updated.technologiesUsed && updated.technologiesUsed.length > 0) ||
+      pKeyResp ||
+      pOutcomes ||
+      pTechs.length > 0 ||
       (updated.projectAttachments && updated.projectAttachments.length > 0)
+    );
+
+    const isComplete = Boolean(
+      pName &&
+      pDesc &&
+      pRole &&
+      pResp &&
+      pKeyResp &&
+      pChallenge &&
+      pOutcomes &&
+      pTechs.length > 0
     );
 
     const editIdx = updated.editingProjectIndex;
@@ -232,58 +263,59 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         description: pDesc || existing[editIdx].description || "",
         challenge: pChallenge || existing[editIdx].challenge || "",
         challengesFaced: pChallenge || existing[editIdx].challengesFaced || "",
-        projectRole: updated.projectRole || existing[editIdx].projectRole || "",
-        responsibilityType: updated.responsibilityType || existing[editIdx].responsibilityType || "",
+        projectRole: pRole || existing[editIdx].projectRole || "",
+        responsibilityType: pResp || existing[editIdx].responsibilityType || "",
         leadershipQualities: updated.leadershipQualities || existing[editIdx].leadershipQualities || "",
         clientReviewFeedback: updated.clientReviewFeedback || existing[editIdx].clientReviewFeedback || "",
-        keyResponsibilities: updated.keyResponsibilities || existing[editIdx].keyResponsibilities || "",
+        keyResponsibilities: pKeyResp || existing[editIdx].keyResponsibilities || "",
         solutionsImplemented: updated.solutionsImplemented || existing[editIdx].solutionsImplemented || "",
-        keyAchievementsOutcomes: updated.keyAchievementsOutcomes || existing[editIdx].keyAchievementsOutcomes || "",
+        keyAchievementsOutcomes: pOutcomes || existing[editIdx].keyAchievementsOutcomes || "",
         technologiesUsed: updated.technologiesUsed ? [...updated.technologiesUsed] : existing[editIdx].technologiesUsed || [],
         attachments: updated.projectAttachments ? [...updated.projectAttachments] : existing[editIdx].attachments || [],
+        isDraft: existing[editIdx].isDraft ? !isComplete : false,
+      };
+      if (isComplete) {
+        updated = {
+          ...updated,
+          projects: existing,
+          editingProjectIndex: null,
+          projectName: "",
+          projectDescription: "",
+          projectRole: "",
+          responsibilityType: "",
+          leadershipQualities: "",
+          clientReviewFeedback: "",
+          keyResponsibilities: "",
+          challengesFaced: "",
+          projectChallenge: "",
+          solutionsImplemented: "",
+          keyAchievementsOutcomes: "",
+          technologiesUsed: [],
+          projectAttachments: [],
+        };
+        hasChanged = true;
+      }
+    } else if (hasAnyDraft && isComplete) {
+      const existing = updated.projects || [];
+      const newProject: PerformanceProject = {
+        projectName: pName,
+        description: pDesc,
+        challenge: pChallenge,
+        challengesFaced: pChallenge,
+        projectRole: pRole,
+        responsibilityType: pResp,
+        leadershipQualities: updated.leadershipQualities || "",
+        clientReviewFeedback: updated.clientReviewFeedback || "",
+        keyResponsibilities: pKeyResp,
+        solutionsImplemented: updated.solutionsImplemented || "",
+        keyAchievementsOutcomes: pOutcomes,
+        technologiesUsed: [...pTechs],
+        attachments: updated.projectAttachments ? [...updated.projectAttachments] : [],
         isDraft: false,
       };
       updated = {
         ...updated,
-        projects: existing,
-        editingProjectIndex: null,
-        projectName: "",
-        projectDescription: "",
-        projectRole: "",
-        responsibilityType: "",
-        leadershipQualities: "",
-        clientReviewFeedback: "",
-        keyResponsibilities: "",
-        challengesFaced: "",
-        projectChallenge: "",
-        solutionsImplemented: "",
-        keyAchievementsOutcomes: "",
-        technologiesUsed: [],
-        projectAttachments: [],
-      };
-      hasChanged = true;
-    } else if (hasAnyDraft) {
-      const existing = updated.projects || [];
-      const isComplete = Boolean(pName && pDesc && pChallenge);
-      const draftProject = {
-        projectName: pName || "Untitled Draft",
-        description: pDesc,
-        challenge: pChallenge,
-        challengesFaced: pChallenge,
-        projectRole: updated.projectRole || "",
-        responsibilityType: updated.responsibilityType || "",
-        leadershipQualities: updated.leadershipQualities || "",
-        clientReviewFeedback: updated.clientReviewFeedback || "",
-        keyResponsibilities: updated.keyResponsibilities || "",
-        solutionsImplemented: updated.solutionsImplemented || "",
-        keyAchievementsOutcomes: updated.keyAchievementsOutcomes || "",
-        technologiesUsed: updated.technologiesUsed ? [...updated.technologiesUsed] : [],
-        attachments: updated.projectAttachments ? [...updated.projectAttachments] : [],
-        isDraft: !isComplete,
-      };
-      updated = {
-        ...updated,
-        projects: [...existing, draftProject],
+        projects: [...existing, newProject],
         editingProjectIndex: null,
         projectName: "",
         projectDescription: "",
@@ -333,13 +365,18 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     } else if (stepNum === 2) {
       const pName = (data.projectName || "").trim();
       const pDesc = (data.projectDescription || "").trim();
+      const pRole = (data.projectRole || "").trim();
+      const pResp = (data.responsibilityType || "").trim();
+      const pKeyResp = (data.keyResponsibilities || "").trim();
       const pChallenge = (data.challengesFaced || data.projectChallenge || "").trim();
-      const hasAnyDraft = Boolean(pName || pDesc || pChallenge);
-      const isDraftComplete = Boolean(pName && pDesc && pChallenge);
+      const pOutcomes = (data.keyAchievementsOutcomes || "").trim();
+      const pTechs = Array.isArray(data.technologiesUsed) ? data.technologiesUsed : [];
 
-      const savedProjects = (data.projects || []).filter(
-        (project) => project.projectName?.trim() && project.description?.trim() && !project.isDraft,
-      );
+      const hasAnyDraft = Boolean(pName || pDesc || pRole || pResp || pKeyResp || pChallenge || pOutcomes || pTechs.length > 0);
+      const isDraftComplete = Boolean(pName && pDesc && pRole && pResp && pKeyResp && pChallenge && pOutcomes && pTechs.length > 0);
+
+      const allProjects = data.projects || [];
+      const hasAnySavedProject = allProjects.length > 0;
 
       // If user partially filled draft in active input fields, point out missing field
       if (hasAnyDraft && !isDraftComplete) {
@@ -351,14 +388,74 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
           stepErrors.projectDescription = "Project description is required.";
           if (!firstFieldId) firstFieldId = "field-projectDescription";
         }
+        if (!pRole) {
+          stepErrors.projectRole = "Project role is required.";
+          if (!firstFieldId) firstFieldId = "field-projectRole";
+        }
+        if (!pResp) {
+          stepErrors.responsibilityType = "Responsibility type is required.";
+          if (!firstFieldId) firstFieldId = "field-responsibilityType";
+        }
+        if (!pKeyResp) {
+          stepErrors.keyResponsibilities = "Key responsibilities is required.";
+          if (!firstFieldId) firstFieldId = "field-keyResponsibilities";
+        }
         if (!pChallenge) {
           stepErrors.challengesFaced = "Challenges faced is required.";
           if (!firstFieldId) firstFieldId = "field-challengesFaced";
         }
-      } else if (!isDraftComplete && savedProjects.length === 0) {
-        stepErrors.projectName = "Project name is required.";
-        stepErrors.projectDescription = "Project description is required.";
-        stepErrors.challengesFaced = "Challenges faced is required.";
+        if (!pOutcomes) {
+          stepErrors.keyAchievementsOutcomes = "Key achievements / outcomes is required.";
+          if (!firstFieldId) firstFieldId = "field-keyAchievementsOutcomes";
+        }
+        if (pTechs.length === 0) {
+          stepErrors.technologiesUsed = "At least one technology is required.";
+          if (!firstFieldId) firstFieldId = "field-technologiesUsed";
+        }
+      }
+
+      // Check if any project already in list is in draft or incomplete
+      const incompleteProjectIdx = allProjects.findIndex((p) => {
+        if (p.isDraft) return true;
+        if (!p.projectName?.trim()) return true;
+        if (!p.description?.trim()) return true;
+        if (!p.projectRole?.trim()) return true;
+        if (!p.responsibilityType?.trim()) return true;
+        if (!p.keyResponsibilities?.trim()) return true;
+        if (!(p.challengesFaced?.trim() || p.challenge?.trim())) return true;
+        if (!p.keyAchievementsOutcomes?.trim()) return true;
+        if (!Array.isArray(p.technologiesUsed) || p.technologiesUsed.length === 0) return true;
+        return false;
+      });
+
+      if (incompleteProjectIdx !== -1) {
+        const dProj = allProjects[incompleteProjectIdx];
+        const missing = !dProj.projectName?.trim()
+          ? "Project name is required."
+          : !dProj.description?.trim()
+          ? "Project description should not be empty."
+          : !dProj.projectRole?.trim()
+          ? "Project role should not be empty."
+          : !dProj.responsibilityType?.trim()
+          ? "Responsibility type should not be empty."
+          : !dProj.keyResponsibilities?.trim()
+          ? "Key responsibilities should not be empty."
+          : !(dProj.challengesFaced?.trim() || dProj.challenge?.trim())
+          ? "Challenges faced should not be empty."
+          : !dProj.keyAchievementsOutcomes?.trim()
+          ? "Key achievements / outcomes should not be empty."
+          : (!Array.isArray(dProj.technologiesUsed) || dProj.technologiesUsed.length === 0)
+          ? "At least one technology is required."
+          : "This project is in draft. Please edit and complete all required fields.";
+
+        stepErrors[`project_${incompleteProjectIdx}`] = missing;
+        stepErrors[`projects.${incompleteProjectIdx}.description`] = missing;
+        if (!firstFieldId) firstFieldId = `accordion-project-${incompleteProjectIdx}`;
+      }
+
+      // Only require adding a project if there are NO projects saved in the list at all and active form is empty
+      if (!hasAnySavedProject && !hasAnyDraft) {
+        stepErrors.projectName = "At least one project is required.";
         if (!firstFieldId) firstFieldId = "field-projectName";
       }
     } else if (stepNum === 3) {
@@ -493,7 +590,30 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       setPerformanceId(saved.id);
       return true;
     } catch (error) {
-      setSaveError(readApiError(error));
+      const apiErrMsg = readApiError(error);
+      const match = apiErrMsg.match(/projects\.(\d+)\.(\w+)/i);
+      if (match) {
+        const idx = parseInt(match[1], 10);
+        const field = match[2];
+        const humanField =
+          field === "description" ? "Project description" :
+          field === "projectName" ? "Project name" :
+          field === "projectRole" ? "Project role" :
+          field === "responsibilityType" ? "Responsibility type" :
+          field === "keyResponsibilities" ? "Key responsibilities" :
+          field === "challengesFaced" ? "Challenges faced" :
+          field === "keyAchievementsOutcomes" ? "Key achievements / outcomes" :
+          field === "technologiesUsed" ? "Technologies used" : field;
+        const formattedErr = `${humanField} should not be empty.`;
+        setErrors((prev) => ({
+          ...prev,
+          [`project_${idx}`]: formattedErr,
+          [`projects.${idx}.${field}`]: formattedErr,
+        }));
+        scrollToField(`accordion-project-${idx}`);
+      } else {
+        setSaveError(apiErrMsg);
+      }
       return false;
     } finally {
       setSaving(false);
