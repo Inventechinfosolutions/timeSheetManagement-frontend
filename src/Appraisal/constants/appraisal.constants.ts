@@ -42,19 +42,19 @@ export const QUARTERLY_REVIEW_PERFORMANCE_URL = "/api/quarterly-review&performan
 export const EMPLOYEE_PERFORMANCE_URL = "/api/employee-performance";
 
 export const ENVIRONMENT_SCORES: Record<string, number> = {
-  ONE_STAR: 1,
-  TWO_STAR: 2,
-  THREE_STAR: 3,
-  FOUR_STAR: 4,
-  FIVE_STAR: 5,
+  VERY_BAD: 1,
+  BAD: 2,
+  NEUTRAL: 3,
+  GOOD: 4,
+  EXCELLENT: 5,
 };
 
 export const ENVIRONMENT_RATINGS: Record<number, string> = {
-  1: "ONE_STAR",
-  2: "TWO_STAR",
-  3: "THREE_STAR",
-  4: "FOUR_STAR",
-  5: "FIVE_STAR",
+  1: "VERY_BAD",
+  2: "BAD",
+  3: "NEUTRAL",
+  4: "GOOD",
+  5: "EXCELLENT",
 };
 
 export const editGrantedBody = (deadline: string): string =>

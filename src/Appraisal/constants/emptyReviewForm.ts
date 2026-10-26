@@ -48,6 +48,7 @@ export const emptyReviewFormData: ReviewFormData = {
   workLifeBalance: "",
   suggestionsForImprovement: "",
   toolingAndResources: "",
+  rateCompanyEnvironment: "",
   companyEnvironmentRating: undefined,
   toolingAndResourcesRating: undefined,
   managementSupportRating: 0,

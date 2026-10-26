@@ -296,7 +296,6 @@ export const toReviewFormData = (
   const companyEnvironmentRating =
     performance.workEnvironmentRating ??
     parsedEnvMeta?.workEnvironmentSatisfaction ??
-    ENVIRONMENT_SCORES[performance.rateCompanyEnvironment || ""] ??
     0;
   const toolingAndResourcesRating =
     performance.toolsResourcesRating ??
@@ -428,10 +427,18 @@ export const toReviewFormData = (
     skillsToImprove,
     nextQuarterLearningGoals,
     supportOrTrainingRequired,
-    workCultureFeedback: parsedEnvMeta ? "" : (performance.feedbackOnWorkCulture || ""),
+    workCultureFeedback:
+      performance.feedbackOnWorkCulture && !performance.feedbackOnWorkCulture.trim().startsWith("{")
+        ? performance.feedbackOnWorkCulture
+        : "",
+    feedbackOnWorkCulture:
+      performance.feedbackOnWorkCulture && !performance.feedbackOnWorkCulture.trim().startsWith("{")
+        ? performance.feedbackOnWorkCulture
+        : "",
     workLifeBalance: performance.workLifeBalance || "",
     suggestionsForImprovement,
     challengesAffectingProductivity,
+    rateCompanyEnvironment: performance.rateCompanyEnvironment || "",
     companyEnvironmentRating,
     toolingAndResourcesRating,
     managementSupportRating,
@@ -534,16 +541,19 @@ export const toPerformancePayload = (
   const toolsRating = formData.toolingAndResourcesRating || 0;
   const mgrRating = formData.managementSupportRating || 0;
   const challenges = (formData.challengesAffectingProductivity || "").trim();
-  const suggestions = (formData.suggestionsForImprovement || "").trim();
+  const workCulture = (formData.workCultureFeedback || formData.feedbackOnWorkCulture || "").trim();
+  const workLife = (formData.workLifeBalance || "").trim();
+  const suggestions = (formData.suggestionsForImprovement || formData.toolingAndResources || "").trim();
   const overallSelfRating = formData.overallSelfRating || 0;
   const overallEmployeeComments = (formData.overallEmployeeComments || "").trim();
   const careerGrowthInterests = (formData.careerGrowthInterests || "").trim();
   const confirmationAccepted = Boolean(formData.confirmationAccepted);
 
-  const workCultureFeedback = (formData.workCultureFeedback || "").trim();
-
   const ratings = formData.teamRatings || {};
-  const responsibilitiesHandled = (formData.majorContributions || "").trim();
+  const rateCompanyEnv = formData.rateCompanyEnvironment || null;
+  const responsibilitiesHandled =
+    (formData.majorContributions || "").trim() ||
+    (hasStructuredOverview ? overview : plainOverview);
 
   return {
     employeeId,
@@ -557,18 +567,18 @@ export const toPerformancePayload = (
     challengesFaced: challenge || null,
     skillsAcquired: skillsLearned || null,
     learningGoals: learningGoalsList.length ? learningGoalsList : [],
-    feedbackOnWorkCulture: workCultureFeedback || null,
-    workLifeBalance: (formData.workLifeBalance || "").trim() || null,
+    feedbackOnWorkCulture: workCulture || null,
+    workLifeBalance: workLife || null,
     suggestionsForImprovement: suggestions || null,
     plannedDeliverables: nextGoals || null,
     careerDevelopmentGoals: careerGrowthInterests || null,
     communicationTransparency: scored(ratings.communication) ?? null,
-    crossDepartmentCollaboration: scored(ratings.collaboration) ?? null,
-    reliabilityAccountability: scored(ratings.ownership) ?? null,
-    peerSupportTeamSpirit: scored(ratings.leadership) ?? null,
-    mentorshipKnowledgeSharing: scored(ratings.collaboration) ?? null,
-    adaptabilityInitiative: scored(ratings.adaptability || ratings.problemSolving) ?? null,
-    rateCompanyEnvironment: ENVIRONMENT_RATINGS[envRating] || null,
+    crossDepartmentCollaboration: scored(ratings.collaboration || ratings.communication) ?? null,
+    reliabilityAccountability: scored(ratings.ownership || ratings.communication) ?? null,
+    peerSupportTeamSpirit: scored(ratings.leadership || ratings.communication) ?? null,
+    mentorshipKnowledgeSharing: scored(ratings.collaboration || ratings.communication) ?? null,
+    adaptabilityInitiative: scored(ratings.adaptability || ratings.problemSolving || ratings.communication) ?? null,
+    rateCompanyEnvironment: rateCompanyEnv || null,
 
     // --- Step 1: Role & Quarter Overview ---
     overallPerformanceSummary: (formData.overallPerformanceSummary || "").trim() || null,

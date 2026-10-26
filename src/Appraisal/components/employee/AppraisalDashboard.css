@@ -837,6 +837,188 @@
   background: #94A3B8;
 }
 
+/* ==========================================================================
+   Animated SVG Sentiment Emoji Keyframes & Classes
+   ========================================================================== */
+
+/* 1. Angry Emoji: Steam Puffs & Head Shake */
+@keyframes angrySteamPuffL {
+  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { transform: translate(-6px, -7px) scale(1.3); opacity: 0; }
+}
+
+@keyframes angrySteamPuffR {
+  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { transform: translate(6px, -7px) scale(1.3); opacity: 0; }
+}
+
+@keyframes angerVeinPulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.35); opacity: 1; filter: drop-shadow(0 0 3px #EF4444); }
+}
+
+@keyframes angryHeadShake {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: translate(-1.5px, -0.5px) rotate(-4deg); }
+  40% { transform: translate(1.5px, 0.5px) rotate(4deg); }
+  60% { transform: translate(-1px, 0.5px) rotate(-3deg); }
+  80% { transform: translate(1px, -0.5px) rotate(3deg); }
+}
+
+.anim-steam-puff-l {
+  animation: angrySteamPuffL 1.2s infinite ease-out;
+  transform-origin: 8px 14px;
+}
+.anim-steam-puff-r {
+  animation: angrySteamPuffR 1.2s infinite ease-out 0.2s;
+  transform-origin: 36px 14px;
+}
+.anim-anger-vein {
+  animation: angerVeinPulse 0.9s infinite ease-in-out;
+  transform-origin: 29px 10.5px;
+}
+.anim-angry-head {
+  animation: angryHeadShake 1s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+
+/* 2. Sad Emoji: Falling Tear Drop & Sigh */
+@keyframes tearDropFall {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  25% { opacity: 1; transform: translateY(2px) scale(1); }
+  80% { transform: translateY(11px) scale(1.1); opacity: 0.9; }
+  100% { transform: translateY(15px) scale(0.4); opacity: 0; }
+}
+
+@keyframes sadHeadSigh {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  35% { transform: translateY(2.5px) rotate(-4deg); }
+  70% { transform: translateY(1.5px) rotate(3deg); }
+}
+
+.anim-tear-drop {
+  animation: tearDropFall 1.8s infinite ease-in;
+  transform-origin: center top;
+}
+.anim-sad-head {
+  animation: sadHeadSigh 2.2s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+
+/* 3. Neutral Emoji: Eyelid Blink & Gentle Float */
+@keyframes eyeLidBlink {
+  0%, 45%, 55%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.08); }
+}
+
+@keyframes neutralFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.anim-eye-blink {
+  animation: eyeLidBlink 3.2s infinite ease-in-out;
+  transform-origin: 22px 20.5px;
+}
+.anim-neutral-head {
+  animation: neutralFloat 2.4s infinite ease-in-out;
+  transform-origin: center;
+}
+
+/* 4. Good Emoji: Cheerful Bounce, Blush & Twinkling Sparkle */
+@keyframes happyBounceHead {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-5px) rotate(3deg); }
+  60% { transform: translateY(1px) rotate(-2deg); }
+  80% { transform: translateY(-2px) rotate(1deg); }
+}
+
+@keyframes blushPulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+@keyframes sparkleSpin {
+  0% { transform: scale(0.5) rotate(0deg); opacity: 0.3; }
+  50% { transform: scale(1.2) rotate(180deg); opacity: 1; filter: drop-shadow(0 0 4px #FACC15); }
+  100% { transform: scale(0.5) rotate(360deg); opacity: 0.3; }
+}
+
+.anim-happy-head {
+  animation: happyBounceHead 1.7s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+.anim-blush {
+  animation: blushPulse 1.8s infinite ease-in-out;
+  transform-origin: center;
+}
+.anim-sparkle {
+  animation: sparkleSpin 2s infinite linear;
+  transform-origin: 36px 13.5px;
+}
+
+/* 5. Excellent Emoji: Star Eyes Rotate & Celebration Twinkles */
+@keyframes starEyeSpinPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 2px #F59E0B); }
+  50% { transform: scale(1.28) rotate(35deg); filter: drop-shadow(0 0 6px #EC4899); }
+}
+
+@keyframes starEyeSpinPulseAlt {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 2px #F59E0B); }
+  50% { transform: scale(1.28) rotate(-35deg); filter: drop-shadow(0 0 6px #EC4899); }
+}
+
+@keyframes starTwinkleParticle1 {
+  0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.2; }
+  50% { transform: scale(1.25) rotate(90deg); opacity: 1; filter: drop-shadow(0 0 4px #FDE047); }
+}
+
+@keyframes starTwinkleParticle2 {
+  0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.2; }
+  50% { transform: scale(1.25) rotate(-90deg); opacity: 1; filter: drop-shadow(0 0 4px #EC4899); }
+}
+
+@keyframes excellentCelebrationHead {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25% { transform: translateY(-4px) rotate(-6deg) scale(1.04); }
+  50% { transform: translateY(0) rotate(0deg) scale(1); }
+  75% { transform: translateY(-4px) rotate(6deg) scale(1.04); }
+}
+
+.anim-star-eye-l {
+  animation: starEyeSpinPulse 1.5s infinite ease-in-out;
+  transform-origin: 16px 18.5px;
+}
+.anim-star-eye-r {
+  animation: starEyeSpinPulseAlt 1.5s infinite ease-in-out 0.25s;
+  transform-origin: 28px 18.5px;
+}
+.anim-star-twinkle-1 {
+  animation: starTwinkleParticle1 1.4s infinite ease-in-out;
+  transform-origin: 6px 14.5px;
+}
+.anim-star-twinkle-2 {
+  animation: starTwinkleParticle2 1.4s infinite ease-in-out 0.5s;
+  transform-origin: 38px 12.5px;
+}
+.anim-excellent-head {
+  animation: excellentCelebrationHead 1.6s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+
+@keyframes emojiClickPopEffect {
+  0% { transform: scale(0.9); }
+  45% { transform: scale(1.38) rotate(10deg); }
+  80% { transform: scale(1.15) rotate(-3deg); }
+  100% { transform: scale(1.22) rotate(0deg); }
+}
+
+.emoji-btn-pop {
+  animation: emojiClickPopEffect 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
+
 
 
 
