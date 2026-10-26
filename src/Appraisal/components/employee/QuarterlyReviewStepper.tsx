@@ -1259,72 +1259,76 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             </div>
           </div>
 
-          <div className="text-right hidden sm:block">
-            <span className="text-xs text-[#64748B] block">Progress</span>
-            <span className="text-sm font-bold text-[#2563EB]">Step {currentStep} of 6</span>
-          </div>
-        </div>
-
-        {/* Numbered Stepper with Title Below and Click Navigation */}
-        <div className="mt-7 pt-6 border-t border-blue-100 overflow-x-auto no-scrollbar pb-2">
-          <div className="relative flex items-center justify-between min-w-[620px] px-6">
-            {/* Background connecting progress line */}
-            <div className="absolute top-5 -translate-y-1/2 left-[44px] right-[44px] h-[3px] bg-blue-100 rounded-full z-0">
-              <div
-                className="h-full bg-gradient-to-r from-blue-400 to-[#2563EB] rounded-full transition-all duration-500 ease-out shadow-xs"
-                style={{
-                  width: `${((currentStep - 1) / (STEP_DEFINITIONS.length - 1)) * 100}%`,
-                }}
-              />
+          {!readOnly && (
+            <div className="text-right hidden sm:block">
+              <span className="text-xs text-[#64748B] block">Progress</span>
+              <span className="text-sm font-bold text-[#2563EB]">Step {currentStep} of 6</span>
             </div>
-
-            {/* Stepper Steps (Number in Circle, Title Below) */}
-            {STEP_DEFINITIONS.map((step) => {
-              const hasData = isStepDone(step.id, formData);
-              const isCompleted = isAlreadySubmitted ? true : hasData;
-              const isActive = currentStep === step.id;
-
-              return (
-                <button
-                  key={step.id}
-                  type="button"
-                  onClick={() => handleStepClick(step.id)}
-                  title={`Go to Step ${step.id}: ${step.label}`}
-                  className="group relative z-10 flex flex-col items-center cursor-pointer select-none focus:outline-none"
-                >
-                  {/* Circle with Step Icon */}
-                  <div
-                    ref={isActive ? activeCircleRef : undefined}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-200 ${isActive
-                        ? "bg-[#2563EB] text-white ring-4 ring-blue-400/25 shadow-md shadow-blue-500/20"
-                        : isCompleted
-                          ? "bg-blue-500 text-white border-2 border-blue-500 shadow-xs"
-                          : "bg-white text-[#64748B] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB]"
-                      }`}
-                  >
-                    {isCompleted ? (
-                      <Check className="w-5 h-5 stroke-[2.8]" />
-                    ) : (
-                      <step.IconComponent isActive={isActive} />
-                    )}
-                  </div>
-
-                  {/* Title Placed Below Circle */}
-                  <span
-                    className={`mt-2 text-xs font-semibold text-center whitespace-nowrap transition-colors duration-200 ${isActive
-                        ? "text-[#2563EB] font-bold"
-                        : isCompleted
-                          ? "text-[#0F172A] font-semibold"
-                          : "text-[#64748B] group-hover:text-[#0F172A]"
-                      }`}
-                  >
-                    {step.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          )}
         </div>
+
+        {/* Numbered Stepper with Title Below and Click Navigation (Hidden in View Mode) */}
+        {!readOnly && (
+          <div className="mt-7 pt-6 border-t border-blue-100 overflow-x-auto no-scrollbar pb-2">
+            <div className="relative flex items-center justify-between min-w-[620px] px-6">
+              {/* Background connecting progress line */}
+              <div className="absolute top-5 -translate-y-1/2 left-[44px] right-[44px] h-[3px] bg-blue-100 rounded-full z-0">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-400 to-[#2563EB] rounded-full transition-all duration-500 ease-out shadow-xs"
+                  style={{
+                    width: `${((currentStep - 1) / (STEP_DEFINITIONS.length - 1)) * 100}%`,
+                  }}
+                />
+              </div>
+
+              {/* Stepper Steps (Number in Circle, Title Below) */}
+              {STEP_DEFINITIONS.map((step) => {
+                const hasData = isStepDone(step.id, formData);
+                const isCompleted = isAlreadySubmitted ? true : hasData;
+                const isActive = currentStep === step.id;
+
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    onClick={() => handleStepClick(step.id)}
+                    title={`Go to Step ${step.id}: ${step.label}`}
+                    className="group relative z-10 flex flex-col items-center cursor-pointer select-none focus:outline-none"
+                  >
+                    {/* Circle with Step Icon */}
+                    <div
+                      ref={isActive ? activeCircleRef : undefined}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-200 ${isActive
+                          ? "bg-[#2563EB] text-white ring-4 ring-blue-400/25 shadow-md shadow-blue-500/20"
+                          : isCompleted
+                            ? "bg-blue-500 text-white border-2 border-blue-500 shadow-xs"
+                            : "bg-white text-[#64748B] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB]"
+                        }`}
+                    >
+                      {isCompleted ? (
+                        <Check className="w-5 h-5 stroke-[2.8]" />
+                      ) : (
+                        <step.IconComponent isActive={isActive} />
+                      )}
+                    </div>
+
+                    {/* Title Placed Below Circle */}
+                    <span
+                      className={`mt-2 text-xs font-semibold text-center whitespace-nowrap transition-colors duration-200 ${isActive
+                          ? "text-[#2563EB] font-bold"
+                          : isCompleted
+                            ? "text-[#0F172A] font-semibold"
+                            : "text-[#64748B] group-hover:text-[#0F172A]"
+                        }`}
+                    >
+                      {step.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Main Step Body Card */}

@@ -346,11 +346,18 @@
   transform: translateY(0) scale(1) !important;
 }
 
-/* Maintain hover interactions after reveal */
+/* Maintain hover interactions after reveal with prominent shadow and border */
+.eval-step-card.eval-reveal-card.is-revealed {
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04) !important;
+  background: #FFFFFF !important;
+}
+
 .eval-step-card.eval-reveal-card.is-revealed:hover {
-  transform: none !important;
-  border-color: #60A5FA !important;
-  box-shadow: none !important;
+  transform: translateY(-2px) !important;
+  border-color: #93C5FD !important;
+  box-shadow: 0 16px 32px -4px rgba(15, 23, 42, 0.12), 0 6px 14px -2px rgba(15, 23, 42, 0.06) !important;
 }
 
 /* Internal Content Stagger System */

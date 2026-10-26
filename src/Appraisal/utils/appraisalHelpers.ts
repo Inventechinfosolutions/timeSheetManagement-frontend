@@ -231,18 +231,9 @@ export const toReviewFormData = (
   if (!performance) {
     return emptyReviewFormData;
   }
-  const rawOverview = performance.overview || (performance as any).responsibilitiesHandled || "";
+  const rawOverview = performance.overview || "";
   const projectsList = readProjectList(performance.projects);
-  const fallbackProjects: PerformanceProject[] = projectsList.length > 0 ? projectsList : (
-    (performance as any).keyAccomplishments || (performance as any).deliverablesCompleted
-      ? [{
-          projectName: (performance as any).keyAccomplishments || "Project Deliverable",
-          description: (performance as any).deliverablesCompleted || "",
-          challenge: (performance as any).challengesFaced || "",
-          attachments: [],
-        }]
-      : []
-  );
+  const fallbackProjects: PerformanceProject[] = projectsList;
 
   let parsedMeta: {
     skillsAcquired?: string;
@@ -277,7 +268,6 @@ export const toReviewFormData = (
   const nextQuarterLearningGoals =
     performance.nextQuarterLearningGoals ||
     parsedMeta?.nextQuarterLearningGoals ||
-    performance.careerDevelopmentGoals ||
     "";
   const supportOrTrainingRequired =
     performance.supportOrTrainingRequired || parsedMeta?.supportOrTrainingRequired || "";
@@ -315,12 +305,10 @@ export const toReviewFormData = (
   const managementSupportRating =
     performance.managerSupportRating ??
     parsedEnvMeta?.managementSupportRating ??
-    performance.managementSupportRating ??
     0;
   const challengesAffectingProductivity =
     performance.challengesAffectingProductivity ||
     parsedEnvMeta?.challengesAffectingProductivity ||
-    performance.workLifeBalance ||
     "";
   const suggestionsForImprovement =
     performance.suggestionsForImprovement ||
@@ -337,7 +325,6 @@ export const toReviewFormData = (
   const careerGrowthInterests =
     performance.careerGrowthInterests ||
     parsedEnvMeta?.careerGrowthInterests ||
-    performance.careerDevelopmentGoals ||
     "";
   const confirmationAccepted =
     performance.confirmationAccepted ??
@@ -353,10 +340,23 @@ export const toReviewFormData = (
     }
   }
 
+  let rawSummary = (performance.overallPerformanceSummary || "").trim();
+  if (rawSummary.startsWith("{") && rawSummary.endsWith("}")) {
+    try {
+      const parsedSum = JSON.parse(rawSummary);
+      if (parsedSum && typeof parsedSum === "object") {
+        if (!parsedOverview) parsedOverview = parsedSum;
+        rawSummary = parsedSum.overallPerformanceSummary || "";
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   const overallPerformanceSummary =
-    performance.overallPerformanceSummary ||
+    rawSummary ||
     parsedOverview?.overallPerformanceSummary ||
-    rawOverview;
+    "";
   const keyHighlights =
     performance.keyHighlights || parsedOverview?.keyHighlights || "";
   const majorContributions =
@@ -421,7 +421,7 @@ export const toReviewFormData = (
     projectAttachments: [],
     learningGoals: "",
     learningGoalItems: readLearningGoalList(
-      performance.learningGoals || performance.skillsAcquired,
+      performance.learningGoals,
     ).filter((item) => !item.startsWith("{")),
     skillsAcquired,
     certificationsOrCourses,
@@ -533,25 +533,23 @@ export const toPerformancePayload = (
   const envRating = formData.companyEnvironmentRating || 0;
   const toolsRating = formData.toolingAndResourcesRating || 0;
   const mgrRating = formData.managementSupportRating || 0;
-  const challenges = (formData.challengesAffectingProductivity || formData.workLifeBalance || "").trim();
-  const suggestions = (formData.suggestionsForImprovement || formData.toolingAndResources || "").trim();
+  const challenges = (formData.challengesAffectingProductivity || "").trim();
+  const suggestions = (formData.suggestionsForImprovement || "").trim();
   const overallSelfRating = formData.overallSelfRating || 0;
-  const overallEmployeeComments = (formData.overallEmployeeComments || formData.finalComments || "").trim();
+  const overallEmployeeComments = (formData.overallEmployeeComments || "").trim();
   const careerGrowthInterests = (formData.careerGrowthInterests || "").trim();
   const confirmationAccepted = Boolean(formData.confirmationAccepted);
 
   const workCultureFeedback = (formData.workCultureFeedback || "").trim();
 
   const ratings = formData.teamRatings || {};
-  const environmentScore = envRating || mgrRating || 0;
-  const responsibilitiesHandled = (formData.majorContributions || "").trim()
-    || (hasStructuredOverview ? overview : plainOverview);
+  const responsibilitiesHandled = (formData.majorContributions || "").trim();
 
   return {
     employeeId,
     quarter,
     financialYear,
-    overview: overview || null,
+    overview: (formData.overview || "").trim() || (hasStructuredOverview ? overview : null),
     projects,
     responsibilitiesHandled: responsibilitiesHandled || null,
     deliverablesCompleted: projectDescription || null,
@@ -560,17 +558,17 @@ export const toPerformancePayload = (
     skillsAcquired: skillsLearned || null,
     learningGoals: learningGoalsList.length ? learningGoalsList : [],
     feedbackOnWorkCulture: workCultureFeedback || null,
-    workLifeBalance: challenges || null,
+    workLifeBalance: (formData.workLifeBalance || "").trim() || null,
     suggestionsForImprovement: suggestions || null,
-    plannedDeliverables: nextGoals || skillsLearned || null,
-    careerDevelopmentGoals: careerGrowthInterests || nextGoals || null,
+    plannedDeliverables: nextGoals || null,
+    careerDevelopmentGoals: careerGrowthInterests || null,
     communicationTransparency: scored(ratings.communication) ?? null,
-    crossDepartmentCollaboration: scored(ratings.collaboration || ratings.communication) ?? null,
-    reliabilityAccountability: scored(ratings.ownership || ratings.communication) ?? null,
-    peerSupportTeamSpirit: scored(ratings.leadership || ratings.communication) ?? null,
-    mentorshipKnowledgeSharing: scored(ratings.collaboration || ratings.communication) ?? null,
-    adaptabilityInitiative: scored(ratings.adaptability || ratings.problemSolving || ratings.communication) ?? null,
-    rateCompanyEnvironment: ENVIRONMENT_RATINGS[environmentScore] || null,
+    crossDepartmentCollaboration: scored(ratings.collaboration) ?? null,
+    reliabilityAccountability: scored(ratings.ownership) ?? null,
+    peerSupportTeamSpirit: scored(ratings.leadership) ?? null,
+    mentorshipKnowledgeSharing: scored(ratings.collaboration) ?? null,
+    adaptabilityInitiative: scored(ratings.adaptability || ratings.problemSolving) ?? null,
+    rateCompanyEnvironment: ENVIRONMENT_RATINGS[envRating] || null,
 
     // --- Step 1: Role & Quarter Overview ---
     overallPerformanceSummary: (formData.overallPerformanceSummary || "").trim() || null,

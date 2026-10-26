@@ -2100,7 +2100,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
-                        {formData.challengesAffectingProductivity || formData.workLifeBalance || "—"}
+                        {formData.challengesAffectingProductivity || "—"}
                       </div>
                     </div>
 
@@ -2113,7 +2113,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
-                        {formData.suggestionsForImprovement || formData.toolingAndResources || "—"}
+                        {formData.suggestionsForImprovement || "—"}
                       </div>
                     </div>
                   </div>
@@ -2204,7 +2204,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
-                        {formData.overallEmployeeComments || formData.finalComments || "—"}
+                        {formData.overallEmployeeComments || "—"}
                       </div>
                     </div>
 

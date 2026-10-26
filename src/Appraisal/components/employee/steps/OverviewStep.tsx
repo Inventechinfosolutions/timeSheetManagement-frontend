@@ -145,10 +145,10 @@ export const OverviewStep: React.FC<StepProps> = ({
         </p>
       </div>
 
-      {/* Review Period: Compact, clean single-line bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-xs shadow-2xs">
+      {/* Review Period: Compact, clean card bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-white border border-[#E2E8F0] hover:border-blue-300 rounded-2xl text-xs shadow-sm hover:shadow-md transition-all">
         <div className="flex items-center gap-2">
-          <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+          <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
           <span className="font-bold text-[#0F172A]">
             Review Period ({quarter} • {financialYear || "FY"}):
           </span>
@@ -169,7 +169,7 @@ export const OverviewStep: React.FC<StepProps> = ({
 
       {/* Manager Instructions Banner if provided */}
       {assignment?.description?.trim() && (
-        <div className="p-3.5 bg-blue-50/70 border border-blue-200/70 rounded-xl text-xs space-y-1 shadow-2xs">
+        <div className="p-4 bg-blue-50/70 border border-blue-200/80 rounded-2xl text-xs space-y-1.5 shadow-sm hover:shadow-md transition-all">
           <span className="font-bold text-[#0F172A] uppercase tracking-wider block text-[11px]">
             Manager Instructions:
           </span>
@@ -179,40 +179,40 @@ export const OverviewStep: React.FC<StepProps> = ({
         </div>
       )}
 
-      {/* Form Fields: Side by side 2-column grid with eval-step-card hover animation and titles outside */}
+      {/* Form Fields: Side by side 2-column grid with eval-step-card wrapper cards and integrated labels */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {OVERVIEW_FIELD_CONFIGS.map((field) => {
           const value = formData[field.key] || "";
           const error = errors?.[field.key];
 
           return (
-            <div key={field.key} id={field.containerId} className="space-y-1.5 flex flex-col">
+            <div
+              key={field.key}
+              id={field.containerId}
+              className={`eval-step-card p-4 rounded-2xl border border-[#E2E8F0] hover:border-blue-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 shadow-sm hover:shadow-md transition-all duration-200 bg-white flex flex-col justify-between cursor-text ${
+                error ? "eval-field-has-error border-red-400 bg-red-50/10 ring-2 ring-red-100" : ""
+              }`}
+              onClick={() => document.getElementById(field.inputId)?.focus()}
+            >
               <label
                 htmlFor={field.inputId}
-                className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1 flex items-center justify-between"
+                className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-2 flex items-center justify-between cursor-pointer"
               >
                 <span>
                   {field.label} {field.required && <span className="text-red-500">*</span>}
                 </span>
               </label>
-              <div
-                className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
-                  error ? "eval-field-has-error" : ""
-                }`}
-                onClick={() => document.getElementById(field.inputId)?.focus()}
-              >
-                <textarea
-                  id={field.inputId}
-                  rows={4}
-                  value={value}
-                  disabled={readOnly}
-                  onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                  placeholder={field.placeholder}
-                  className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
-                />
-              </div>
+              <textarea
+                id={field.inputId}
+                rows={4}
+                value={value}
+                disabled={readOnly}
+                onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                placeholder={field.placeholder}
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
+              />
               {error && (
-                <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+                <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-2 animate-in fade-in duration-200">
                   <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
                   <span>{error}</span>
                 </p>
