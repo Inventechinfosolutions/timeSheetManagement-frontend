@@ -85,6 +85,26 @@ export const formatAppraisalDisplayDate = (value: string | Date | null | undefin
   return `${day}-${month}-${date.getFullYear()}`;
 };
 
+export const getQuarterPeriod = (
+  quarter?: string,
+  financialYear?: string,
+): { start: string; end: string } => {
+  const fromYearMatch = (financialYear || "").match(/^(\d{4})/);
+  const fromYear = fromYearMatch ? parseInt(fromYearMatch[1], 10) : new Date().getFullYear();
+  const toYear = fromYear + 1;
+
+  if (quarter === "Q1") {
+    return { start: `01-04-${fromYear}`, end: `30-06-${fromYear}` };
+  } else if (quarter === "Q2") {
+    return { start: `01-07-${fromYear}`, end: `30-09-${fromYear}` };
+  } else if (quarter === "Q3") {
+    return { start: `01-10-${fromYear}`, end: `31-12-${fromYear}` };
+  } else if (quarter === "Q4") {
+    return { start: `01-01-${toYear}`, end: `31-03-${toYear}` };
+  }
+  return { start: "", end: "" };
+};
+
 export const formatStoredFileSize = (bytes: number): string => {
   if (!bytes) {
     return "";
@@ -697,7 +717,7 @@ export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyRev
     quarter: review.performanceDetails?.quarter || review.quarter,
     financialYear: review.performanceDetails?.financialYear || review.financialYear,
     assignedBy:
-      String(review.assignedBy || "").toUpperCase() === "ADMIN" ||
+      String((review as any).assignedBy || review.assignerId || "").toUpperCase() === "ADMIN" ||
       String(review.assignerId || "").toLowerCase() === "admin"
         ? "Admin"
         : review.managerName || review.assignerId || "",

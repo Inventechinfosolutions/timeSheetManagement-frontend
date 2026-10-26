@@ -16,11 +16,28 @@ import {
   Button,
   Dropdown,
   SearchDropdown,
-  DatePicker,
 } from "../../../components/ui";
+import { DatePicker as AntDatePicker, ConfigProvider } from "antd";
+import dayjs from "dayjs";
 import { AssignSubmitPanel, AssignSubmitSummary } from "./AssignSubmitPanel";
 import { loadAppraisalPeriod } from "../../utils/appraisalHelpers";
 import "./AssignQuarterlyReviewModal.css";
+
+const datePickerTheme = {
+  token: {
+    borderRadius: 12,
+    controlHeight: 42,
+    colorBgContainer: "#FFFFFF",
+    colorBorder: "#BFDBFE",
+    colorPrimary: "#2563EB",
+  },
+  components: {
+    DatePicker: {
+      cellHeight: 28,
+      cellWidth: 28,
+    },
+  },
+};
 
 const todayDisplayDate = (): string => {
   const now = new Date();
@@ -597,22 +614,34 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
                 TO (DEADLINE) <span className="text-red-500">*</span>
               </label>
-              <DatePicker
-                value={toDate}
-                onChange={(value) => {
-                  setToDate(value);
-                  const deadlineIso = toIsoDate(value);
-                  const assignedIso = toIsoDate(fromDate);
-                  if (deadlineIso && assignedIso && deadlineIso <= assignedIso) {
-                    showFieldError(AssignFormField.DEADLINE, AppraisalCopy.deadlineAfterAssigned);
-                    return;
-                  }
-                  clearFieldError(AssignFormField.DEADLINE);
-                }}
-                placeholder="dd-mm-yyyy"
-                className={`assign-input-control ${errorField === AssignFormField.DEADLINE ? "is-error !border-red-500" : ""
+              <ConfigProvider theme={datePickerTheme}>
+                <AntDatePicker
+                  inputReadOnly={true}
+                  disabledDate={(currentDate) => {
+                    if (!fromDate || !currentDate) return false;
+                    const assignedMoment = dayjs(fromDate, "DD-MM-YYYY");
+                    return currentDate.isSame(assignedMoment, "day") || currentDate.isBefore(assignedMoment, "day");
+                  }}
+                  value={toDate ? dayjs(toDate, "DD-MM-YYYY") : null}
+                  onChange={(date) => {
+                    const formatted = date ? date.format("DD-MM-YYYY") : "";
+                    setToDate(formatted);
+                    const deadlineIso = toIsoDate(formatted);
+                    const assignedIso = toIsoDate(fromDate);
+                    if (deadlineIso && assignedIso && deadlineIso <= assignedIso) {
+                      showFieldError(AssignFormField.DEADLINE, AppraisalCopy.deadlineAfterAssigned);
+                      return;
+                    }
+                    clearFieldError(AssignFormField.DEADLINE);
+                  }}
+                  format="DD-MM-YYYY"
+                  placeholder="dd-mm-yyyy"
+                  className={`w-full! h-[42px]! px-3.5! py-2! rounded-xl! bg-white! border! border-blue-200/70! hover:border-[#2563EB]! focus:border-[#2563EB]! transition-all text-sm! font-medium! text-[#0F172A]! shadow-none ${
+                    errorField === AssignFormField.DEADLINE ? "is-error !border-red-500" : ""
                   }`}
-              />
+                  getPopupContainer={() => document.body}
+                />
+              </ConfigProvider>
               {errorField === AssignFormField.DEADLINE ? (
                 <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
               ) : null}

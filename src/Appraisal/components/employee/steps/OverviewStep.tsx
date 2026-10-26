@@ -167,7 +167,19 @@ export const OverviewStep: React.FC<StepProps> = ({
         )}
       </div>
 
-      {/* Form Fields: Side-by-side 2-column grid driven by structured config */}
+      {/* Manager Instructions Banner if provided */}
+      {assignment?.description?.trim() && (
+        <div className="p-3.5 bg-blue-50/70 border border-blue-200/70 rounded-xl text-xs space-y-1 shadow-2xs">
+          <span className="font-bold text-[#0F172A] uppercase tracking-wider block text-[11px]">
+            Manager Instructions:
+          </span>
+          <p className="text-[#334155] whitespace-pre-line font-medium leading-relaxed">
+            {assignment.description.trim()}
+          </p>
+        </div>
+      )}
+
+      {/* Form Fields: Side by side 2-column grid with eval-step-card hover animation and titles outside */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {OVERVIEW_FIELD_CONFIGS.map((field) => {
           const value = formData[field.key] || "";
