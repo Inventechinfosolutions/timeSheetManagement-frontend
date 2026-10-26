@@ -227,18 +227,20 @@ export const ReviewStep: React.FC<StepProps> = ({
 
   return (
     <div ref={containerRef} className="space-y-6">
-      {/* Step Header */}
-      <div className="border-b border-blue-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h3 className="text-lg font-bold text-[#0F172A]">
-            <span className="eval-title-anim">Step 6: Review & Final Submission</span>
-            <span className="eval-title-accent-line" />
-          </h3>
-          <p className="text-xs text-[#64748B] mt-1 eval-subtitle-anim">
-            Review all responses from previous steps. You can use Edit on any section to make changes before final submission.
-          </p>
+      {/* Step Header: hidden in view mode */}
+      {!readOnly && (
+        <div className="border-b border-blue-100 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-bold text-[#0F172A]">
+              <span className="eval-title-anim">Step 6: Review & Final Submission</span>
+              <span className="eval-title-accent-line" />
+            </h3>
+            <p className="text-xs text-[#64748B] mt-1 eval-subtitle-anim">
+              Review all responses from previous steps. You can use Edit on any section to make changes before final submission.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="space-y-4">
         {/* ===================================================================

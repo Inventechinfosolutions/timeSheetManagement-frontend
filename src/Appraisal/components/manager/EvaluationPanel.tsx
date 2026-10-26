@@ -243,10 +243,50 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     return submissionData || emptyReviewFormData;
   }, [submissionData]);
 
-  const shouldShowStep = (_stepId: number): boolean => true;
+  const normalizedPerfStatus = String(record.performanceStatus || record.status || "").toUpperCase();
+
+  const isEditAccessGranted =
+    Boolean(grantAccess) ||
+    [
+      QuarterlyReviewStatus.EDIT_GRANTED,
+      QuarterlyReviewStatus.APPROVED_FOR_EDITING,
+      QuarterlyReviewStatus.ALLOWED_TO_EDIT,
+    ].some(
+      (s) =>
+        s &&
+        (s.toUpperCase() === normalizedPerfStatus ||
+          s.toUpperCase() === String(record.reviewStatus || "").toUpperCase() ||
+          s.toUpperCase() === String(record.status || "").toUpperCase())
+    );
+
+  const employeeSubmitted =
+    [
+      EmployeePerformanceStatus.SUBMITTED,
+      EmployeePerformanceStatus.UNDER_REVIEW,
+      EmployeePerformanceStatus.REVIEWED,
+      EmployeePerformanceStatus.APPROVED,
+      EmployeePerformanceStatus.REQUESTED_FOR_EDIT,
+      EmployeePerformanceStatus.APPROVED_FOR_EDITING,
+      EmployeePerformanceStatus.ALLOWED_TO_EDIT,
+      EmployeePerformanceStatus.COMPLETED,
+      "RE_SUBMITTED",
+      "RESUBMITTED",
+      "EDIT_REQUESTED",
+      "EDIT_GRANTED",
+    ].some((s) =>
+      s &&
+      (s.toUpperCase() === normalizedPerfStatus ||
+        s.toUpperCase() === String(record.reviewStatus || "").toUpperCase() ||
+        s.toUpperCase() === String(record.status || "").toUpperCase())
+    ) ||
+    Boolean(record.submittedOn);
+
+  const shouldShowStep = (_stepId: number): boolean => {
+    return employeeSubmitted;
+  };
 
   const handleNavigateToMatrix = () => {
-    if (isEditAccessPendingOrGranted) {
+    if (isEditAccessGranted || !employeeSubmitted) {
       return;
     }
     setActiveView("matrix");
@@ -1154,47 +1194,17 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       ).toFixed(1)
       : null;
 
-  const managerEvaluationReady =
-    record.reviewStatus === QuarterlyReviewStatus.COMPLETED &&
-    record.performanceStatus === EmployeePerformanceStatus.COMPLETED;
-  const normalizedPerfStatus = String(record.performanceStatus || record.status || "").toUpperCase();
-  const isEditAccessPendingOrGranted =
-    Boolean(grantAccess) ||
-    [
-      QuarterlyReviewStatus.REQUESTED_FOR_EDIT,
-      QuarterlyReviewStatus.EDIT_GRANTED,
-      QuarterlyReviewStatus.APPROVED_FOR_EDITING,
-      QuarterlyReviewStatus.ALLOWED_TO_EDIT,
-    ].some(
-      (s) =>
-        s &&
-        (s.toUpperCase() === normalizedPerfStatus ||
-          s.toUpperCase() === String(record.reviewStatus || "").toUpperCase() ||
-          s.toUpperCase() === String(record.status || "").toUpperCase())
-    );
-  const employeeSubmitted =
-    [
-      EmployeePerformanceStatus.SUBMITTED,
-      EmployeePerformanceStatus.UNDER_REVIEW,
-      EmployeePerformanceStatus.REVIEWED,
-      EmployeePerformanceStatus.APPROVED,
-      EmployeePerformanceStatus.REQUESTED_FOR_EDIT,
-      EmployeePerformanceStatus.APPROVED_FOR_EDITING,
-      EmployeePerformanceStatus.ALLOWED_TO_EDIT,
-      EmployeePerformanceStatus.COMPLETED,
-    ].some((s) => s && s.toUpperCase() === normalizedPerfStatus) || Boolean(record.submittedOn);
-  const canShowEvaluationCta = !isEditAccessPendingOrGranted && (
-    hideScoreParameters
-      ? managerEvaluationReady
-      : (
-        !isViewMode ||
-        managerEvaluationReady ||
-        hasManagerEvaluation ||
-        record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS ||
-        record.status === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS ||
-        employeeSubmitted
-      )
-  );
+  const isRecordCompleted =
+    String(record.reviewStatus || "").toUpperCase() === "COMPLETED" ||
+    String(record.performanceStatus || "").toUpperCase() === "COMPLETED" ||
+    String(record.status || "").toUpperCase() === "COMPLETED";
+
+  const managerEvaluationReady = isRecordCompleted;
+
+  const canShowEvaluationCta =
+    employeeSubmitted &&
+    !isEditAccessGranted &&
+    (hideScoreParameters ? managerEvaluationReady : true);
 
   const toIsoDate = (value: string): string | undefined => {
     const match = /^(\d{2})-(\d{2})-(\d{4})$/.exec(value.trim());
@@ -1532,15 +1542,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
                   <div>
                     <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
-                      {normalizedPerfStatus === EmployeePerformanceStatus.DRAFT ||
-                        record.reviewStatus === QuarterlyReviewStatus.DRAFT
-                        ? "Quarterly Review in Progress (Draft)"
-                        : "Quarterly Review Not Submitted Yet"}
+                      Quarterly Performance Not Received Yet
                     </p>
                     <p className="text-xs text-amber-700/90 mt-0.5 font-medium">
                       {hideScoreParameters
-                        ? "You have not submitted this quarterly review yet. Saved draft steps are displayed below."
-                        : "This employee has not submitted the quarterly review yet. Saved draft steps are displayed below."}
+                        ? "You have not submitted your quarterly performance review yet. The review answers will appear here once submitted."
+                        : "This employee has not submitted their quarterly performance yet. The review answers will appear here once submitted."}
                     </p>
                   </div>
                 </div>
@@ -1660,9 +1667,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               {/* Accordion Chevron */}
                               <div className="p-0.5 rounded-md text-[#64748B] group-hover:text-[#2563EB] transition-colors">
                                 <ChevronDown
-                                  className={`w-4 h-4 transition-transform duration-300 ease-in-out ${
-                                    isExpanded ? "rotate-180 text-[#2563EB]" : ""
-                                  }`}
+                                  className={`w-4 h-4 transition-transform duration-300 ease-in-out ${isExpanded ? "rotate-180 text-[#2563EB]" : ""
+                                    }`}
                                 />
                               </div>
                             </div>
@@ -1807,84 +1813,84 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   ) : null}
                 </div>
 
-                  <div className="eval-stagger-item eval-stagger-3 space-y-2">
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                      Teamwork &amp; Collaboration Dimensions
-                    </label>
+                <div className="eval-stagger-item eval-stagger-3 space-y-2">
+                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    Teamwork &amp; Collaboration Dimensions
+                  </label>
 
-                    {/* 2-Column Responsive Grid (Image 2 style) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                      {TEAM_CRITERIA.map((criterion) => {
-                        const score =
-                          teamRatings[criterion.key as keyof typeof teamRatings] || 0;
-                        return (
-                          <div
-                            key={criterion.key}
-                            className="p-3 bg-white border border-[#E2E8F0] rounded-xl flex items-center justify-between gap-2 shadow-2xs"
-                            title="Employee submitted rating (Read-only)"
-                          >
-                            <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug">
-                              {criterion.title}
-                            </span>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <div className="flex items-center gap-1">
-                                {[1, 2, 3, 4, 5].map((s) => (
-                                  <Star
-                                    key={s}
-                                    className={`w-4 h-4 transition-colors duration-150 ${s <= score
-                                      ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
-                                      : "fill-transparent text-gray-300"
-                                      }`}
-                                  />
-                                ))}
-                              </div>
-                              {score > 0 && (
-                                <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200">
-                                  {score}.0
-                                </span>
-                              )}
+                  {/* 2-Column Responsive Grid (Image 2 style) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {TEAM_CRITERIA.map((criterion) => {
+                      const score =
+                        teamRatings[criterion.key as keyof typeof teamRatings] || 0;
+                      return (
+                        <div
+                          key={criterion.key}
+                          className="p-3 bg-white border border-[#E2E8F0] rounded-xl flex items-center justify-between gap-2 shadow-2xs"
+                          title="Employee submitted rating (Read-only)"
+                        >
+                          <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug">
+                            {criterion.title}
+                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className={`w-4 h-4 transition-colors duration-150 ${s <= score
+                                    ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
+                                    : "fill-transparent text-gray-300"
+                                    }`}
+                                />
+                              ))}
                             </div>
+                            {score > 0 && (
+                              <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200">
+                                {score}.0
+                              </span>
+                            )}
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      );
+                    })}
                   </div>
+                </div>
 
-                  {/* 4 Teamwork Details in 2 columns */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 mt-1">
-                    <div>
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                        Team Collaboration Summary
-                      </label>
-                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
-                        {formData.teamCollaborationSummary || "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                        Cross-Team Contributions
-                      </label>
-                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
-                        {formData.crossTeamContributions || "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                        Knowledge Sharing / Mentoring
-                      </label>
-                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
-                        {formData.knowledgeSharingMentoring || "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                        Teamwork Examples
-                      </label>
-                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
-                        {formData.teamworkExamples || "—"}
-                      </div>
+                {/* 4 Teamwork Details in 2 columns */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 mt-1">
+                  <div>
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Team Collaboration Summary
+                    </label>
+                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                      {formData.teamCollaborationSummary || "—"}
                     </div>
                   </div>
+                  <div>
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Cross-Team Contributions
+                    </label>
+                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                      {formData.crossTeamContributions || "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Knowledge Sharing / Mentoring
+                    </label>
+                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                      {formData.knowledgeSharingMentoring || "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Teamwork Examples
+                    </label>
+                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                      {formData.teamworkExamples || "—"}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -2157,11 +2163,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           {[1, 2, 3, 4, 5].map((s) => (
                             <Star
                               key={s}
-                              className={`w-4 h-4 transition-colors duration-150 ${
-                                s <= (formData.overallSelfRating || 0)
-                                  ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
-                                  : "fill-transparent text-gray-300"
-                              }`}
+                              className={`w-4 h-4 transition-colors duration-150 ${s <= (formData.overallSelfRating || 0)
+                                ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
+                                : "fill-transparent text-gray-300"
+                                }`}
                             />
                           ))}
                         </div>
@@ -2316,7 +2321,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </button>
                 </div>
               </div>
-            ) : isEditAccessPendingOrGranted ? (
+            ) : isEditAccessGranted ? (
               <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-6 border border-amber-200/70 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-amber-50/70 rounded-2xl shadow-xs">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 text-amber-700">
@@ -2324,14 +2329,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
                   <div>
                     <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
-                      {grantAccess || [QuarterlyReviewStatus.EDIT_GRANTED, QuarterlyReviewStatus.APPROVED_FOR_EDITING, QuarterlyReviewStatus.ALLOWED_TO_EDIT].some((s) => s && (s.toUpperCase() === normalizedPerfStatus || s.toUpperCase() === String(record.reviewStatus || "").toUpperCase()))
-                        ? "Edit Window Active"
-                        : "Edit Access Requested"}
+                      Edit Window Active
                     </p>
                     <p className="text-xs text-amber-700/90 mt-0.5 font-medium">
-                      {grantAccess || [QuarterlyReviewStatus.EDIT_GRANTED, QuarterlyReviewStatus.APPROVED_FOR_EDITING, QuarterlyReviewStatus.ALLOWED_TO_EDIT].some((s) => s && (s.toUpperCase() === normalizedPerfStatus || s.toUpperCase() === String(record.reviewStatus || "").toUpperCase()))
-                        ? "Employee has been granted edit access. The Evaluation Matrix will become accessible once they resubmit their review."
-                        : "Employee has submitted an access request to update this review. The Evaluation Matrix will become accessible once the review is resubmitted."}
+                      Employee has been granted edit access. The Evaluation Matrix will become accessible once they resubmit their review.
                     </p>
                   </div>
                 </div>
@@ -2340,14 +2341,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4">
                 <p className="text-sm font-medium text-[#64748B]">
                   {employeeSubmitted
-                    ? "Quarterly review submitted. Waiting for manager review."
-                    : "Quarterly review in progress. Review and complete all steps before final submission."}
+                    ? "Quarterly performance review submitted. Waiting for manager review."
+                    : "Quarterly performance review in progress. Review and complete all steps before final submission."}
                 </p>
               </div>
             ) : !employeeSubmitted ? (
               <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4 border border-blue-100 bg-white/60">
                 <p className="text-xs sm:text-sm font-medium text-[#64748B]">
-                  This review is currently in progress. Manager evaluation matrix will unlock once the employee formally submits their quarterly review.
+                  The evaluation matrix will unlock once the employee submits their review.
                 </p>
               </div>
             ) : null}
@@ -2878,10 +2879,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             className="w-full"
                             maxLabelWidth="max-w-none"
                             buttonClassName={`eval-dropdown-btn !opacity-100 ${isViewMode
-                                ? `eval-dropdown-disabled ${careerGrowthRecommendation ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
-                                : careerGrowthRecommendation
-                                  ? "!text-[#1E293B] !font-medium"
-                                  : "!text-[#94A3B8]"
+                              ? `eval-dropdown-disabled ${careerGrowthRecommendation ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
+                              : careerGrowthRecommendation
+                                ? "!text-[#1E293B] !font-medium"
+                                : "!text-[#94A3B8]"
                               }`}
                           />
                         </div>
@@ -2904,12 +2905,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             className="w-full"
                             maxLabelWidth="max-w-none"
                             buttonClassName={`eval-dropdown-btn !opacity-100 ${fieldErrors.reviewOutcome
-                                ? "eval-dropdown-error"
-                                : isViewMode
-                                  ? `eval-dropdown-disabled ${reviewOutcome ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
-                                  : reviewOutcome
-                                    ? "!text-[#1E293B] !font-medium"
-                                    : "!text-[#94A3B8]"
+                              ? "eval-dropdown-error"
+                              : isViewMode
+                                ? `eval-dropdown-disabled ${reviewOutcome ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
+                                : reviewOutcome
+                                  ? "!text-[#1E293B] !font-medium"
+                                  : "!text-[#94A3B8]"
                               }`}
                           />
                           {fieldErrors.reviewOutcome && (
@@ -2937,10 +2938,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           className="w-full"
                           maxLabelWidth="max-w-none"
                           buttonClassName={`eval-dropdown-btn !opacity-100 ${isViewMode
-                              ? `eval-dropdown-disabled ${performanceAction ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
-                              : performanceAction
-                                ? "!text-[#1E293B] !font-medium"
-                                : "!text-[#94A3B8]"
+                            ? `eval-dropdown-disabled ${performanceAction ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
+                            : performanceAction
+                              ? "!text-[#1E293B] !font-medium"
+                              : "!text-[#94A3B8]"
                             }`}
                         />
                       </div>

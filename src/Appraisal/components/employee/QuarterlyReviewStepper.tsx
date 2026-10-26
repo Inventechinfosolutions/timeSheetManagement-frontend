@@ -171,6 +171,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     Boolean(assignment.submittedAt)
   );
   const normalizedStatus = String(assignment.status || assignment.reviewStatus || "").toUpperCase();
+  const isCompleted =
+    normalizedStatus === "COMPLETED" ||
+    String(assignment.status || "").toUpperCase() === "COMPLETED" ||
+    String(assignment.reviewStatus || "").toUpperCase() === "COMPLETED";
   const isAlreadySubmitted =
     Boolean(assignment.submittedAt) ||
     Boolean(assignment.performanceDate) ||
@@ -537,20 +541,20 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         const missing = !dProj.projectName?.trim()
           ? "Project name is required."
           : !dProj.description?.trim()
-          ? "Project description should not be empty."
-          : !dProj.projectRole?.trim()
-          ? "Project role should not be empty."
-          : !dProj.responsibilityType?.trim()
-          ? "Responsibility type should not be empty."
-          : !dProj.keyResponsibilities?.trim()
-          ? "Key responsibilities should not be empty."
-          : !(dProj.challengesFaced?.trim() || dProj.challenge?.trim())
-          ? "Challenges faced should not be empty."
-          : !dProj.keyAchievementsOutcomes?.trim()
-          ? "Key achievements / outcomes should not be empty."
-          : (!Array.isArray(dProj.technologiesUsed) || dProj.technologiesUsed.length === 0)
-          ? "At least one technology is required."
-          : "This project is in draft. Please edit and complete all required fields.";
+            ? "Project description should not be empty."
+            : !dProj.projectRole?.trim()
+              ? "Project role should not be empty."
+              : !dProj.responsibilityType?.trim()
+                ? "Responsibility type should not be empty."
+                : !dProj.keyResponsibilities?.trim()
+                  ? "Key responsibilities should not be empty."
+                  : !(dProj.challengesFaced?.trim() || dProj.challenge?.trim())
+                    ? "Challenges faced should not be empty."
+                    : !dProj.keyAchievementsOutcomes?.trim()
+                      ? "Key achievements / outcomes should not be empty."
+                      : (!Array.isArray(dProj.technologiesUsed) || dProj.technologiesUsed.length === 0)
+                        ? "At least one technology is required."
+                        : "This project is in draft. Please edit and complete all required fields.";
 
         stepErrors[`project_${incompleteProjectIdx}`] = missing;
         stepErrors[`projects.${incompleteProjectIdx}.description`] = missing;
@@ -708,13 +712,13 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         const field = match[2];
         const humanField =
           field === "description" ? "Project description" :
-          field === "projectName" ? "Project name" :
-          field === "projectRole" ? "Project role" :
-          field === "responsibilityType" ? "Responsibility type" :
-          field === "keyResponsibilities" ? "Key responsibilities" :
-          field === "challengesFaced" ? "Challenges faced" :
-          field === "keyAchievementsOutcomes" ? "Key achievements / outcomes" :
-          field === "technologiesUsed" ? "Technologies used" : field;
+            field === "projectName" ? "Project name" :
+              field === "projectRole" ? "Project role" :
+                field === "responsibilityType" ? "Responsibility type" :
+                  field === "keyResponsibilities" ? "Key responsibilities" :
+                    field === "challengesFaced" ? "Challenges faced" :
+                      field === "keyAchievementsOutcomes" ? "Key achievements / outcomes" :
+                        field === "technologiesUsed" ? "Technologies used" : field;
         const formattedErr = `${humanField} should not be empty.`;
         setErrors((prev) => ({
           ...prev,
@@ -1079,7 +1083,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               <div className="flex items-center gap-2.5">
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight w-fit">
                   <span className="manager-review-title-anim">
-                    {assignment.quarter} Performance Review
+                    {assignment.quarter} Performance Review{readOnly ? " (View Mode)" : ""}
                   </span>
                 </h1>
               </div>
@@ -1116,7 +1120,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             {/* Stepper Steps (Number in Circle, Title Below) */}
             {STEP_DEFINITIONS.map((step) => {
               const hasData = isStepDone(step.id, formData);
-              const isCompleted = currentStep > step.id || hasData;
+              const isCompleted = isAlreadySubmitted ? true : hasData;
               const isActive = currentStep === step.id;
 
               return (
@@ -1130,13 +1134,12 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   {/* Circle with Step Icon */}
                   <div
                     ref={isActive ? activeCircleRef : undefined}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-200 ${
-                      isActive
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-200 ${isActive
                         ? "bg-[#2563EB] text-white ring-4 ring-blue-400/25 shadow-md shadow-blue-500/20"
                         : isCompleted
-                        ? "bg-blue-500 text-white border-2 border-blue-500 shadow-xs"
-                        : "bg-white text-[#64748B] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB]"
-                    }`}
+                          ? "bg-blue-500 text-white border-2 border-blue-500 shadow-xs"
+                          : "bg-white text-[#64748B] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB]"
+                      }`}
                   >
                     {isCompleted ? (
                       <Check className="w-5 h-5 stroke-[2.8]" />
@@ -1147,13 +1150,12 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
                   {/* Title Placed Below Circle */}
                   <span
-                    className={`mt-2 text-xs font-semibold text-center whitespace-nowrap transition-colors duration-200 ${
-                      isActive
+                    className={`mt-2 text-xs font-semibold text-center whitespace-nowrap transition-colors duration-200 ${isActive
                         ? "text-[#2563EB] font-bold"
                         : isCompleted
-                        ? "text-[#0F172A] font-semibold"
-                        : "text-[#64748B] group-hover:text-[#0F172A]"
-                    }`}
+                          ? "text-[#0F172A] font-semibold"
+                          : "text-[#64748B] group-hover:text-[#0F172A]"
+                      }`}
                   >
                     {step.label}
                   </span>
@@ -1180,9 +1182,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
           <>
             <fieldset
               disabled={readOnly}
-              className={`relative min-h-[380px] border-0 p-0 m-0 min-w-0 ${
-                exitingStep !== null ? "overflow-hidden" : "overflow-visible"
-              }`}
+              className={`relative min-h-[380px] border-0 p-0 m-0 min-w-0 ${exitingStep !== null ? "overflow-hidden" : "overflow-visible"
+                }`}
             >
               {exitingStep !== null && (
                 <div
@@ -1202,8 +1203,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               </div>
             </fieldset>
 
-            {/* Evaluation CTA Card: shown on Step 6 when viewing review */}
-            {currentStep === 6 && onGoToEvaluation && (
+            {/* Evaluation CTA Card: strictly shown on Step 6 only when evaluation is completed */}
+            {currentStep === 6 && onGoToEvaluation && isCompleted && (
               <div className="eval-matrix-cta-card relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-blue-200/70 bg-gradient-to-br from-white via-blue-50/40 to-blue-100/20 shadow-lg shadow-blue-500/10 mt-6 !opacity-100">
                 {/* Ambient Decorative SVG in Background */}
                 <svg
@@ -1314,15 +1315,15 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               <div className="flex items-center gap-3">
                 {saveError ? <p className="text-xs font-bold text-red-600">{saveError}</p> : null}
                 {!isLocked && (
-                <Button
-                  variant="ghost"
-                  size="md"
-                  onClick={() => void handleSaveAndExit()}
-                  disabled={saving}
-                  className="text-[#64748B] hover:text-[#0F172A]"
-                >
-                  {saving ? "Saving" : "Save & Exit"}
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    onClick={() => void handleSaveAndExit()}
+                    disabled={saving}
+                    className="text-[#64748B] hover:text-[#0F172A]"
+                  >
+                    {saving ? "Saving" : "Save & Exit"}
+                  </Button>
                 )}
 
                 {currentStep < 6 ? (
