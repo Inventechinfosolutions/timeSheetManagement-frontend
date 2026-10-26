@@ -12,12 +12,14 @@ export interface CreateReviewAssignmentModalProps {
   onClose: () => void;
   onContinue: (type: AssignmentType, department?: string) => void;
   initialType?: AssignmentType | null;
+  initialDepartment?: string;
   isAdmin?: boolean;
 }
 
 export interface AssignQuarterlyReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onBack?: () => void;
   assignmentType?: AssignmentType | null;
   selectedDepartment?: string;
   isAdmin?: boolean;

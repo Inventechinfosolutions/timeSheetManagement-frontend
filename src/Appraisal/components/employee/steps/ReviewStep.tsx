@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { StepProps, ReviewFormData } from "../../../types/appraisal.types";
-import { Star, Edit3, AlertCircle, CheckCircle2, ChevronDown } from "lucide-react";
+import { Star, Edit3, AlertCircle, CheckCircle2, ChevronDown, Calendar, FileText } from "lucide-react";
+import { getQuarterPeriod } from "../../../utils/appraisalHelpers";
 import {
   initScrollRevealCards,
   animateStarPop,
@@ -116,11 +117,10 @@ const CriterionStarButton: React.FC<CriterionStarButtonProps> = ({
       className="relative p-1 rounded-lg cursor-pointer focus:outline-none select-none overflow-visible"
     >
       <Star
-        className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-200 ${
-          isFilled && !isShattering
+        className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-200 ${isFilled && !isShattering
             ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_2px_4px_rgba(245,158,11,0.5)]"
             : "text-gray-300 fill-transparent hover:text-[#F59E0B]"
-        }`}
+          }`}
       />
       {isShattering && <ShatteringStar />}
     </button>
@@ -134,11 +134,16 @@ export const ReviewStep: React.FC<StepProps> = ({
   clearError,
   onEditStep,
   readOnly,
+  assignment,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [hoveredRating, setHoveredRating] = useState<number>(0);
   const [animatingStar, setAnimatingStar] = useState<number | null>(null);
   const [shatteringStars, setShatteringStars] = useState<number[]>([]);
+
+  const fallbackPeriod = getQuarterPeriod(assignment?.quarter, assignment?.financialYear);
+  const reviewPeriodStart = formData.reviewPeriodStart || fallbackPeriod.start || "—";
+  const reviewPeriodEnd = formData.reviewPeriodEnd || fallbackPeriod.end || "—";
 
   const teamRatings = formData.teamRatings || {};
 
@@ -244,6 +249,58 @@ export const ReviewStep: React.FC<StepProps> = ({
 
       <div className="space-y-4">
         {/* ===================================================================
+            ASSIGNMENT & MANAGER INSTRUCTIONS (View Mode / Review)
+           =================================================================== */}
+        {assignment && (
+          <div id="review-assignment-details" className="eval-step-card eval-reveal-card eval-review-card-noborder is-revealed space-y-3.5 !border-none shadow-md hover:shadow-lg transition-all duration-300">
+            <div className="flex items-center gap-2 border-b border-blue-100 pb-2.5">
+              <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold">
+                ℹ
+              </span>
+              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider">
+                Assignment & Instructions
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                  Assigned Quarter
+                </label>
+                <div className="p-3 bg-white border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#0F172A] shadow-2xs">
+                  {assignment.quarter} · {assignment.financialYear}
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                  Assigned Date
+                </label>
+                <div className="p-3 bg-white border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#0F172A] shadow-2xs">
+                  {assignment.assignedDate || "—"}
+                </div>
+              </div>
+              <div>
+                <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                  Deadline
+                </label>
+                <div className="p-3 bg-white border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#0F172A] shadow-2xs">
+                  {assignment.deadline || "—"}
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                Manager Instructions
+              </label>
+              <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[50px] shadow-2xs">
+                {assignment.description?.trim() || "No instructions provided."}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===================================================================
             STEP 1: ROLE & QUARTER OVERVIEW
            =================================================================== */}
         <div id="review-step-1" className="eval-step-card eval-reveal-card eval-review-card-noborder is-revealed space-y-3 !border-none shadow-md hover:shadow-lg transition-all duration-300">
@@ -271,7 +328,7 @@ export const ReviewStep: React.FC<StepProps> = ({
 
           <div className="eval-stagger-item eval-stagger-3 space-y-3">
             <div className="text-xs text-[#64748B] font-medium bg-white p-2.5 rounded-lg border border-[#E2E8F0] shadow-2xs">
-              Review Period: <strong className="text-[#0F172A]">{formData.reviewPeriodStart || "—"}</strong> to <strong className="text-[#0F172A]">{formData.reviewPeriodEnd || "—"}</strong>
+              Review Period: <strong className="text-[#0F172A]">{reviewPeriodStart}</strong> to <strong className="text-[#0F172A]">{reviewPeriodEnd}</strong>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
@@ -378,9 +435,8 @@ export const ReviewStep: React.FC<StepProps> = ({
                         {/* Accordion Chevron */}
                         <div className="p-0.5 rounded-md text-[#64748B] group-hover:text-[#2563EB] transition-colors">
                           <ChevronDown
-                            className={`w-4 h-4 transition-transform duration-300 ease-in-out ${
-                              isExpanded ? "rotate-180 text-[#2563EB]" : ""
-                            }`}
+                            className={`w-4 h-4 transition-transform duration-300 ease-in-out ${isExpanded ? "rotate-180 text-[#2563EB]" : ""
+                              }`}
                           />
                         </div>
                       </div>
@@ -554,15 +610,15 @@ export const ReviewStep: React.FC<StepProps> = ({
               const avgScore =
                 ratedCriteria.length > 0
                   ? (
-                      ratedCriteria.reduce(
-                        (sum, c) =>
-                          sum + (teamRatings[c.key as keyof typeof teamRatings] || 0),
-                        0
-                      ) / ratedCriteria.length
-                    ).toFixed(1)
+                    ratedCriteria.reduce(
+                      (sum, c) =>
+                        sum + (teamRatings[c.key as keyof typeof teamRatings] || 0),
+                      0
+                    ) / ratedCriteria.length
+                  ).toFixed(1)
                   : teamRatings.communication
-                  ? `${teamRatings.communication}.0`
-                  : null;
+                    ? `${teamRatings.communication}.0`
+                    : null;
 
               return avgScore ? (
                 <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
@@ -598,11 +654,10 @@ export const ReviewStep: React.FC<StepProps> = ({
                         {[1, 2, 3, 4, 5].map((s) => (
                           <Star
                             key={s}
-                            className={`w-4 h-4 transition-colors duration-150 ${
-                              s <= score
+                            className={`w-4 h-4 transition-colors duration-150 ${s <= score
                                 ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
                                 : "fill-transparent text-gray-300"
-                            }`}
+                              }`}
                           />
                         ))}
                       </div>
@@ -825,11 +880,10 @@ export const ReviewStep: React.FC<StepProps> = ({
                       {[1, 2, 3, 4, 5].map((s) => (
                         <Star
                           key={s}
-                          className={`w-4 h-4 transition-colors duration-150 ${
-                            s <= item.score
+                          className={`w-4 h-4 transition-colors duration-150 ${s <= item.score
                               ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
                               : "fill-transparent text-gray-300"
-                          }`}
+                            }`}
                         />
                       ))}
                     </div>
@@ -902,11 +956,10 @@ export const ReviewStep: React.FC<StepProps> = ({
           {/* 1. Overall Self-Rating (Exact Image 2 Single-Row Pill Style) */}
           <div
             id="field-overallSelfRating"
-            className={`p-3 sm:py-2.5 sm:px-3.5 rounded-2xl border-[1.5px] bg-white flex flex-wrap items-center justify-between gap-2.5 transition-all duration-300 scroll-mt-24 ${
-              (!formData.overallSelfRating || formData.overallSelfRating <= 0) && errors?.overallSelfRating
+            className={`p-3 sm:py-2.5 sm:px-3.5 rounded-2xl border-[1.5px] bg-white flex flex-wrap items-center justify-between gap-2.5 transition-all duration-300 scroll-mt-24 ${(!formData.overallSelfRating || formData.overallSelfRating <= 0) && errors?.overallSelfRating
                 ? "eval-field-has-error"
                 : "border-[#E2E8F0] hover:border-[#CBD5E1]"
-            }`}
+              }`}
           >
             {/* Left: Checkmark, Title, and Qualitative Badge */}
             <div className="flex items-center gap-2 min-w-0">
@@ -943,8 +996,8 @@ export const ReviewStep: React.FC<StepProps> = ({
                       hovered={readOnly ? 0 : hoveredRating}
                       isDirectlyClicked={isDirectlyClicked}
                       isShattering={isShattering}
-                      onRate={readOnly ? () => {} : (_, score) => handleRatingClick(score)}
-                      onHover={readOnly ? () => {} : (_, score) => setHoveredRating(score)}
+                      onRate={readOnly ? () => { } : (_, score) => handleRatingClick(score)}
+                      onHover={readOnly ? () => { } : (_, score) => setHoveredRating(score)}
                     />
                   );
                 })}
@@ -1021,13 +1074,12 @@ export const ReviewStep: React.FC<StepProps> = ({
           {/* 4. Confirmation Checkbox (Required) */}
           <div
             id="field-confirmationAccepted"
-            className={`p-4 rounded-2xl border transition-all duration-200 scroll-mt-24 ${
-              !readOnly && !formData.confirmationAccepted && errors?.confirmationAccepted
+            className={`p-4 rounded-2xl border transition-all duration-200 scroll-mt-24 ${!readOnly && !formData.confirmationAccepted && errors?.confirmationAccepted
                 ? "border-red-400 bg-red-50/20 ring-2 ring-red-100"
                 : formData.confirmationAccepted
-                ? "border-emerald-400 bg-emerald-50/30"
-                : "border-[#E2E8F0] bg-white shadow-2xs"
-            }`}
+                  ? "border-emerald-400 bg-emerald-50/30"
+                  : "border-[#E2E8F0] bg-white shadow-2xs"
+              }`}
           >
             <label className={`flex items-start gap-3 select-none ${readOnly ? "cursor-default" : "cursor-pointer"}`}>
               <input
@@ -1045,8 +1097,8 @@ export const ReviewStep: React.FC<StepProps> = ({
                   {formData.confirmationAccepted
                     ? "Confirmed and verified by employee upon submission."
                     : readOnly
-                    ? "Draft review — pending final employee submission and confirmation."
-                    : "Once submitted, this review will be forwarded to your reporting manager for evaluation and scoring."}
+                      ? "Draft review — pending final employee submission and confirmation."
+                      : "Once submitted, this review will be forwarded to your reporting manager for evaluation and scoring."}
                 </p>
               </div>
             </label>

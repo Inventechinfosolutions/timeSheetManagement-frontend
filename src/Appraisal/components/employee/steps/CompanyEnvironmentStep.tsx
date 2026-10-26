@@ -252,11 +252,37 @@ const EnvironmentRatingCard: React.FC<EnvironmentRatingCardProps> = ({
   );
 };
 
+interface EnvironmentFieldConfig {
+  key: "challengesAffectingProductivity" | "suggestionsForImprovement";
+  containerId: string;
+  inputId: string;
+  label: string;
+  placeholder: string;
+}
+
+const ENVIRONMENT_FIELD_CONFIGS: readonly EnvironmentFieldConfig[] = [
+  {
+    key: "challengesAffectingProductivity",
+    containerId: "field-challengesAffectingProductivity",
+    inputId: "input-challengesAffectingProductivity",
+    label: "Challenges Affecting Productivity",
+    placeholder: "Obstacles, bottlenecks, or challenges affecting productivity...",
+  },
+  {
+    key: "suggestionsForImprovement",
+    containerId: "field-suggestionsForImprovement",
+    inputId: "input-suggestionsForImprovement",
+    label: "Suggestions for Improvement",
+    placeholder: "Ideas for tools, processes, training, or improvements...",
+  },
+] as const;
+
 export const CompanyEnvironmentStep: React.FC<StepProps> = ({
   formData,
   onChange,
   errors,
   clearError,
+  readOnly,
 }) => {
   const [animatingStars, setAnimatingStars] = useState<Record<string, number | null>>({});
   const [shatteringStars, setShatteringStars] = useState<ShatteringStarItem[]>([]);
@@ -376,54 +402,32 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
         </div>
       </div>
 
-      {/* 2. Qualitative Feedback Textareas: Side-by-Side plain textareas */}
+      {/* 2. Qualitative Feedback Textareas: Side-by-Side plain textareas driven by structured config */}
       <div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Field 4: Challenges Affecting Productivity (Optional) */}
-          <div
-            id="field-challengesAffectingProductivity"
-            className="flex flex-col space-y-1.5 scroll-mt-24"
-          >
-            <label
-              htmlFor="input-challengesAffectingProductivity"
-              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+          {ENVIRONMENT_FIELD_CONFIGS.map((field) => (
+            <div
+              key={field.key}
+              id={field.containerId}
+              className="flex flex-col space-y-1.5 scroll-mt-24"
             >
-              <span>Challenges Affecting Productivity</span>
-            </label>
-            <textarea
-              id="input-challengesAffectingProductivity"
-              rows={4}
-              value={formData.challengesAffectingProductivity ?? ""}
-              onChange={(e) =>
-                handleTextChange("challengesAffectingProductivity", e.target.value)
-              }
-              placeholder="Describe any obstacles, bottlenecks, or challenges affecting your productivity..."
-              className="eval-textarea-field leading-relaxed text-sm flex-1 font-medium"
-            />
-          </div>
-
-          {/* Field 5: Suggestions for Improvement (Optional) */}
-          <div
-            id="field-suggestionsForImprovement"
-            className="flex flex-col space-y-1.5 scroll-mt-24"
-          >
-            <label
-              htmlFor="input-suggestionsForImprovement"
-              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-            >
-              <span>Suggestions for Improvement</span>
-            </label>
-            <textarea
-              id="input-suggestionsForImprovement"
-              rows={4}
-              value={formData.suggestionsForImprovement ?? ""}
-              onChange={(e) =>
-                handleTextChange("suggestionsForImprovement", e.target.value)
-              }
-              placeholder="Suggest ideas for tools, processes, training, or workplace improvement..."
-              className="eval-textarea-field leading-relaxed text-sm flex-1 font-medium"
-            />
-          </div>
+              <label
+                htmlFor={field.inputId}
+                className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+              >
+                <span>{field.label}</span>
+              </label>
+              <textarea
+                id={field.inputId}
+                rows={4}
+                value={formData[field.key] ?? ""}
+                disabled={readOnly}
+                onChange={(e) => handleTextChange(field.key, e.target.value)}
+                placeholder={field.placeholder}
+                className="eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
+              />
+            </div>
+          ))}
         </div>
       </div>
     </div>

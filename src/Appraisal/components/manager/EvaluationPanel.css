@@ -70,7 +70,9 @@
 
 /* Maintain hover interactions after reveal */
 .eval-step-card.eval-reveal-card.is-revealed:hover {
-  transform: translateY(-3px) !important;
+  transform: none !important;
+  border-color: #60A5FA;
+  box-shadow: none;
 }
 
 .eval-glass-card.eval-reveal-card.is-revealed:hover {
@@ -172,11 +174,11 @@
 /* Step Cards in Employee Submission */
 .eval-step-card {
   background: #FFFFFF;
-  border: 1.5px solid #E2E8F0;
-  border-radius: 1.15rem;
+  border: 1px solid rgba(191, 219, 254, 0.85);
+  border-radius: 0.5rem;
   padding: 1.35rem 1.45rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-  transition: all 0.25s ease;
+  box-shadow: 0 2px 10px rgba(30, 64, 175, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   position: relative;
   overflow: hidden;
   animation: cardSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -188,48 +190,18 @@
 .eval-step-card:nth-of-type(4) { animation-delay: 0.24s; }
 .eval-step-card:nth-of-type(5) { animation-delay: 0.30s; }
 
-.eval-step-card::before {
-  display: none !important;
-}
-
+.eval-step-card::before,
 .eval-step-card::after {
   display: none !important;
+  content: none !important;
+  height: 0 !important;
+  width: 0 !important;
 }
 
 .eval-step-card:hover {
-  border-color: #CBD5E1;
-  box-shadow: 0 6px 18px -4px rgba(15, 23, 42, 0.06);
-  transform: translateY(-1px);
-}
-
-.eval-step-card:hover::before {
-  display: none !important;
-}
-
-.eval-step-card:hover::after {
-  display: none !important;
-}
-
-/* Outer review cards: completely remove border blue lines & add premium shadow effect */
-.eval-step-card.eval-review-card-noborder,
-.eval-step-card.\!border-0,
-.eval-step-card.\!border-none {
-  border: none !important;
-  border-color: transparent !important;
-  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 8px -1px rgba(15, 23, 42, 0.04) !important;
-  transition: box-shadow 0.25s ease, transform 0.25s ease !important;
-}
-
-.eval-step-card.eval-review-card-noborder:hover,
-.eval-step-card.\!border-0:hover,
-.eval-step-card.\!border-none:hover,
-.eval-step-card.eval-review-card-noborder:focus-within,
-.eval-step-card.\!border-0:focus-within,
-.eval-step-card.\!border-none:focus-within {
-  border: none !important;
-  border-color: transparent !important;
-  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06) !important;
-  transform: translateY(-2px) !important;
+  border-color: #60A5FA;
+  box-shadow: none;
+  transform: none;
 }
 
 /* Back Button */
@@ -648,17 +620,17 @@
   transform: scale(0.95);
 }
 
-/* Textareas with Modern Focus Glow */
+/* Textareas with Modern Focus Glow & Clean Hover Highlight */
 .eval-textarea-field {
   width: 100%;
   border: 1.5px solid #E2E8F0;
-  border-radius: 0.85rem;
+  border-radius: 0.5rem;
   padding: 0.8rem 1rem;
   font-size: 0.875rem;
   color: #0F172A;
   background: #FFFFFF;
-  line-height: 1.625;
-  transition: all 0.22s ease;
+  line-height: 1.55;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   resize: none;
   overflow-y: auto;
   scrollbar-width: thin;
@@ -693,11 +665,10 @@
 }
 
 /* Only when user moves to/hovers or focuses inside the description field */
-.eval-textarea-field:hover,
-.eval-textarea-field:focus,
-.eval-textarea-field:focus-within {
+.eval-textarea-field:hover {
   scrollbar-color: #CBD5E1 transparent;
-  border-color: #CBD5E1;
+  border-color: #60A5FA;
+  box-shadow: none;
 }
 
 .eval-textarea-field:hover::-webkit-scrollbar-thumb,
@@ -710,20 +681,28 @@
   background: #94A3B8;
 }
 
-.eval-textarea-field:focus {
+.eval-textarea-field:focus,
+.eval-textarea-field:focus-within {
   outline: none;
-  border-color: #2563EB !important;
-  box-shadow: none !important;
-  background: #FFFFFF !important;
+  scrollbar-color: #CBD5E1 transparent;
+  border-color: #60A5FA;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+  background: #FFFFFF;
 }
 
-.eval-textarea-field::placeholder {
-  color: #A0AEC0;
+.eval-textarea-field::placeholder,
+.eval-textarea-field::-webkit-input-placeholder,
+.eval-textarea-field::-moz-placeholder {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #94A3B8 !important;
 }
 
-.eval-textarea-field.eval-input-error {
+.eval-textarea-field.eval-input-error,
+.eval-textarea-field.eval-input-error:hover,
+.eval-textarea-field.eval-input-error:focus {
   border-color: #EF4444 !important;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14) !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15) !important;
   background-color: #FEF2F2 !important;
 }
 
@@ -828,6 +807,14 @@
 }
 
 .eval-dropdown-btn.eval-dropdown-disabled.eval-dropdown-empty {
+  color: #94A3B8 !important;
+}
+
+.eval-dropdown-btn.eval-dropdown-placeholder span,
+.eval-dropdown-btn.\!text-\[\#94A3B8\] span,
+.eval-dropdown-btn.eval-dropdown-disabled.eval-dropdown-empty span {
+  font-size: 10px !important;
+  font-weight: 600 !important;
   color: #94A3B8 !important;
 }
 

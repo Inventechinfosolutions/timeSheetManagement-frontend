@@ -140,13 +140,13 @@ const AppraisalSelectWithOther: React.FC<AppraisalSelectWithOtherProps> = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={customPlaceholder}
-            className="flex-1 min-w-0 bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm font-semibold text-[#0F172A] placeholder:text-gray-400 placeholder:font-normal"
+            className="flex-1 min-w-0 bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm font-semibold text-[#0F172A] placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
             autoFocus
           />
         ) : (
           <span
-            className={`flex-1 min-w-0 text-left text-sm font-semibold truncate ${
-              !value ? "text-gray-400 font-normal" : "text-[#0F172A]"
+            className={`flex-1 min-w-0 text-left truncate ${
+              !value ? "text-slate-400 font-semibold text-[10px]" : "text-[#0F172A] text-sm font-semibold"
             }`}
           >
             {value || placeholder}
@@ -820,8 +820,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
               type="text"
               value={projectName}
               onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="e.g. Timesheet Workflow Modernization & Automation"
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed font-semibold"
+              placeholder="e.g. Timesheet Modernization & Automation"
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed font-semibold placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
             />
           </div>
           {nameError && (
@@ -853,8 +853,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
               rows={3}
               value={projectDescription}
               onChange={(e) => handleDescriptionChange(e.target.value)}
-              placeholder="Describe your project scope, core objectives, and deliverables..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+              placeholder="Project scope, core objectives, and deliverables..."
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
             />
           </div>
           {descriptionError && (
@@ -941,8 +941,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
               rows={3}
               value={keyResponsibilities}
               onChange={(e) => handleKeyResponsibilitiesChange(e.target.value)}
-              placeholder="Outline your primary duties, ownership areas, and core functions for this project..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+              placeholder="Primary duties, ownership areas, and core functions..."
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
             />
           </div>
           {keyResponsibilitiesError && (
@@ -976,8 +976,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 rows={3}
                 value={challengesFaced}
                 onChange={(e) => handleChallengesChange(e.target.value)}
-                placeholder="Describe the technical or organizational challenges faced..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+                placeholder="Technical or organizational challenges faced..."
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
               />
             </div>
             {challengesError && (
@@ -1005,8 +1005,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 rows={3}
                 value={solutionsImplemented}
                 onChange={(e) => handleSolutionsChange(e.target.value)}
-                placeholder="Detail the solutions, architectures, or workarounds you executed..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+                placeholder="Solutions, architectures, or workarounds executed..."
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
               />
             </div>
           </div>
@@ -1031,8 +1031,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 rows={3}
                 value={leadershipQualities}
                 onChange={(e) => handleLeadershipQualitiesChange(e.target.value)}
-                placeholder="Mention mentorship, initiative, decision-making, or team leadership examples..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+                placeholder="Mentorship, initiative, or leadership examples..."
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
               />
             </div>
           </div>
@@ -1054,8 +1054,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 rows={3}
                 value={clientReviewFeedback}
                 onChange={(e) => handleClientReviewFeedbackChange(e.target.value)}
-                placeholder="Enter client praise, appreciation, stakeholder ratings, or feedback received..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+                placeholder="Client feedback, appreciation, or stakeholder ratings..."
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
               />
             </div>
           </div>
@@ -1082,8 +1082,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
               rows={3}
               value={keyAchievementsOutcomes}
               onChange={(e) => handleOutcomesChange(e.target.value)}
-              placeholder="Highlight measurable impact, performance gains, business wins, or client satisfaction..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+              placeholder="Measurable impact, performance gains, or business wins..."
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
             />
           </div>
           {outcomesError && (
@@ -1168,8 +1168,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
                     handleAddTechnology(techInput);
                   }
                 }}
-                placeholder="Or type custom technology and press Enter..."
-                className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-[#0F172A] outline-none focus:border-blue-500"
+                placeholder="Custom technology (press Enter)..."
+                className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-[#0F172A] outline-none focus:border-blue-500 placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
               />
               <button
                 type="button"
@@ -1251,349 +1251,332 @@ export const AchievementsStep: React.FC<StepProps> = ({
             )}
           </div>
         </div>
-
         {/* Added Projects Accordion */}
         {projects.length > 0 && (
-          <div ref={accordionContainerRef} className="space-y-3 pt-2">
+          <div ref={accordionContainerRef} className="space-y-2 pt-2">
             <div className="flex items-center justify-between px-1">
               <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
                 Added Projects ({projects.length})
               </span>
             </div>
 
-            {projects.map((project, index) => {
-              const isExpanded = expandedIndex === index;
-              const displayProjectName = project.projectName || "Untitled Project";
-              const projectError =
-                errors?.[`project_${index}`] ||
-                errors?.[`projects.${index}.description`] ||
-                errors?.[`projects.${index}.projectName`] ||
-                errors?.[`projects.${index}.projectRole`] ||
-                errors?.[`projects.${index}.responsibilityType`] ||
-                errors?.[`projects.${index}.keyResponsibilities`] ||
-                errors?.[`projects.${index}.challengesFaced`] ||
-                errors?.[`projects.${index}.challenge`] ||
-                errors?.[`projects.${index}.keyAchievementsOutcomes`] ||
-                errors?.[`projects.${index}.technologiesUsed`];
+            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs divide-y divide-slate-100 overflow-hidden">
+              {projects.map((project, index) => {
+                const isExpanded = expandedIndex === index;
+                const displayProjectName = project.projectName || `Project ${index + 1}`;
+                const projectError =
+                  errors?.[`project_${index}`] ||
+                  errors?.[`projects.${index}.description`] ||
+                  errors?.[`projects.${index}.projectName`] ||
+                  errors?.[`projects.${index}.projectRole`] ||
+                  errors?.[`projects.${index}.responsibilityType`] ||
+                  errors?.[`projects.${index}.keyResponsibilities`] ||
+                  errors?.[`projects.${index}.challengesFaced`] ||
+                  errors?.[`projects.${index}.challenge`] ||
+                  errors?.[`projects.${index}.keyAchievementsOutcomes`] ||
+                  errors?.[`projects.${index}.technologiesUsed`];
 
-              const isDraftOrIncomplete =
-                project.isDraft ||
-                !project.projectName?.trim() ||
-                !project.description?.trim() ||
-                !project.projectRole?.trim() ||
-                !project.responsibilityType?.trim() ||
-                !project.keyResponsibilities?.trim() ||
-                !(project.challengesFaced?.trim() || project.challenge?.trim()) ||
-                !project.keyAchievementsOutcomes?.trim() ||
-                !Array.isArray(project.technologiesUsed) ||
-                project.technologiesUsed.length === 0;
+                const isDraftOrIncomplete =
+                  project.isDraft ||
+                  !project.projectName?.trim() ||
+                  !project.description?.trim() ||
+                  !project.projectRole?.trim() ||
+                  !project.responsibilityType?.trim() ||
+                  !project.keyResponsibilities?.trim() ||
+                  !(project.challengesFaced?.trim() || project.challenge?.trim()) ||
+                  !project.keyAchievementsOutcomes?.trim() ||
+                  !Array.isArray(project.technologiesUsed) ||
+                  project.technologiesUsed.length === 0;
 
-              return (
-                <div
-                  id={`accordion-project-${index}`}
-                  key={`${displayProjectName}-${index}`}
-                  className={`bg-white rounded-2xl shadow-xs overflow-hidden transition-all duration-200 scroll-mt-24 border ${
-                    projectError
-                      ? "border-red-400 bg-red-50/10 ring-1 ring-red-400/30"
-                      : isDraftOrIncomplete
-                      ? "border-amber-300/90 hover:border-amber-400"
-                      : "border-[#E2E8F0] hover:border-[#CBD5E1]"
-                  }`}
-                >
-                  {/* Accordion Header */}
+                return (
                   <div
-                    onClick={() => toggleAccordion(index)}
-                    className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-white hover:bg-slate-50/60 cursor-pointer select-none group transition-colors"
+                    id={`accordion-project-${index}`}
+                    key={`${displayProjectName}-${index}`}
+                    className={`transition-colors ${
+                      projectError ? "bg-red-50/15" : isDraftOrIncomplete ? "bg-amber-50/10" : "bg-white"
+                    }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                      <span className="shrink-0 px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
-                        Project {index + 1}
-                      </span>
-                      <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] leading-snug group-hover:text-[#2563EB] transition-colors">
-                        {displayProjectName}
-                      </h4>
+                    {/* Accordion Header (Old Design for Badge and Action Icons) */}
+                    <div
+                      onClick={() => toggleAccordion(index)}
+                      className="flex items-center justify-between gap-3 px-4 py-3 bg-white hover:bg-slate-50/70 cursor-pointer select-none group transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="shrink-0 px-2.5 py-0.5 text-[11px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+                          Project {index + 1}
+                        </span>
+                        <h4 className="text-sm font-bold text-[#0F172A] truncate group-hover:text-[#2563EB] transition-colors">
+                          {displayProjectName}
+                        </h4>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {project.isDraft && (
+                          <span className="px-2 py-0.5 text-[10px] font-bold text-white bg-[#10B981] rounded-md tracking-wide">
+                            Draft
+                          </span>
+                        )}
+
+                        {/* Edit Button */}
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditProject(index);
+                            }}
+                            className={`inline-flex items-center justify-center w-7 h-7 rounded-lg border transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${
+                              editingIndex === index
+                                ? "text-white bg-[#2563EB] border-[#2563EB]"
+                                : "text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border-[#BFDBFE] hover:border-[#2563EB]"
+                            }`}
+                            title={editingIndex === index ? "Currently editing" : "Edit project"}
+                            aria-label="Edit project"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
+                        {/* Delete Button */}
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveProject(index);
+                            }}
+                            className="inline-flex items-center justify-center w-7 h-7 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 rounded-lg transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+                            title="Delete project"
+                            aria-label="Delete project"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
+                        {/* Accordion Chevron */}
+                        <div className="p-1 rounded-lg text-[#64748B] group-hover:text-[#2563EB] transition-colors">
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform duration-200 ease-in-out ${
+                              isExpanded ? "rotate-180 text-[#2563EB]" : ""
+                            }`}
+                          />
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {project.isDraft && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-300 rounded-md shadow-2xs mr-0.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                          Draft
-                        </span>
-                      )}
-
-                      {/* Edit Button */}
-                      {!readOnly && (
+                    {/* Inline Validation Banner for Draft / Incomplete Projects */}
+                    {(isDraftOrIncomplete || Boolean(projectError)) && (
+                      <div
+                        className={`px-4 py-1.5 border-t flex items-center justify-between gap-2 text-[11px] ${
+                          projectError
+                            ? "bg-red-50/90 border-red-200 text-red-700"
+                            : "bg-amber-50/70 border-amber-200/70 text-amber-800"
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5 font-medium min-w-0">
+                          <AlertCircle
+                            className={`w-3.5 h-3.5 shrink-0 ${
+                              projectError ? "text-red-500" : "text-amber-600"
+                            }`}
+                          />
+                          <span className="truncate">
+                            {projectError ||
+                              (!project.projectName?.trim()
+                                ? "Project name is required."
+                                : !project.description?.trim()
+                                ? "Project description is required."
+                                : !project.projectRole?.trim()
+                                ? "Project role is required."
+                                : !project.responsibilityType?.trim()
+                                ? "Responsibility type is required."
+                                : !project.keyResponsibilities?.trim()
+                                ? "Key responsibilities is required."
+                                : !(project.challengesFaced?.trim() || project.challenge?.trim())
+                                ? "Challenges faced is required."
+                                : !project.keyAchievementsOutcomes?.trim()
+                                ? "Key achievements / outcomes is required."
+                                : (!project.technologiesUsed || project.technologiesUsed.length === 0)
+                                ? "At least one technology is required."
+                                : "Incomplete draft project.")}
+                          </span>
+                        </div>
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleEditProject(index);
                           }}
-                          className={`inline-flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${
-                            editingIndex === index
-                              ? "text-white bg-[#2563EB] border border-[#2563EB]"
-                              : "text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB]"
+                          className={`font-bold underline underline-offset-2 cursor-pointer shrink-0 ${
+                            projectError ? "text-red-700 hover:text-red-900" : "text-amber-800 hover:text-amber-950"
                           }`}
-                          title={editingIndex === index ? "Currently editing" : "Edit project"}
-                          aria-label="Edit project"
                         >
-                          <Pencil className="w-3.5 h-3.5" />
+                          Edit
                         </button>
-                      )}
-
-                      {/* Delete Button */}
-                      {!readOnly && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveProject(index);
-                          }}
-                          className="inline-flex items-center justify-center w-7 h-7 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 rounded-lg transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
-                          title="Delete project"
-                          aria-label="Delete project"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-
-                      {/* Accordion Chevron */}
-                      <div className="p-0.5 rounded-md text-[#64748B] group-hover:text-[#2563EB] transition-colors">
-                        <ChevronDown
-                          className={`w-4 h-4 transition-transform duration-300 ease-in-out ${
-                            isExpanded ? "rotate-180 text-[#2563EB]" : ""
-                          }`}
-                        />
                       </div>
-                    </div>
-                  </div>
+                    )}
 
-                  {/* Inline Validation Banner for Draft / Incomplete Projects */}
-                  {(isDraftOrIncomplete || Boolean(projectError)) && (
+                    {/* Accordion Body with Clear Field Titles */}
                     <div
-                      className={`px-3.5 py-2 border-t flex items-center justify-between gap-2 ${
-                        projectError
-                          ? "bg-red-50/90 border-red-200 text-red-700"
-                          : "bg-amber-50/80 border-amber-200/70 text-amber-800"
+                      className={`grid transition-all duration-200 ease-in-out ${
+                        isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                       }`}
                     >
-                      <div className="flex items-center gap-1.5 text-xs font-semibold min-w-0">
-                        <AlertCircle
-                          className={`w-4 h-4 shrink-0 ${
-                            projectError ? "text-red-500" : "text-amber-600"
-                          }`}
-                        />
-                        <span className="truncate">
-                          {projectError ||
-                            (!project.projectName?.trim()
-                              ? "Project name is required."
-                              : !project.description?.trim()
-                              ? "Project description is required."
-                              : !project.projectRole?.trim()
-                              ? "Project role is required."
-                              : !project.responsibilityType?.trim()
-                              ? "Responsibility type is required."
-                              : !project.keyResponsibilities?.trim()
-                              ? "Key responsibilities is required."
-                              : !(project.challengesFaced?.trim() || project.challenge?.trim())
-                              ? "Challenges faced is required."
-                              : !project.keyAchievementsOutcomes?.trim()
-                              ? "Key achievements / outcomes is required."
-                              : (!project.technologiesUsed || project.technologiesUsed.length === 0)
-                              ? "At least one technology is required."
-                              : "This project is in draft. Please edit and complete all required fields.")}
-                        </span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditProject(index);
-                        }}
-                        className={`text-xs font-bold underline underline-offset-2 cursor-pointer shrink-0 ${
-                          projectError
-                            ? "text-red-700 hover:text-red-900"
-                            : "text-amber-800 hover:text-amber-950"
-                        }`}
-                      >
-                        Edit & complete
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Accordion Body */}
-                  <div
-                    className={`grid transition-all duration-300 ease-in-out ${
-                      isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-                    }`}
-                  >
-                    <div className="overflow-hidden">
-                      <div className="px-3.5 py-2.5 border-t border-blue-100/70 space-y-2.5 bg-gradient-to-b from-blue-50/15 to-white text-xs">
-                        {/* Meta Pills: Role & Responsibility */}
-                        {(project.projectRole || project.responsibilityType) && (
-                          <div className="flex flex-wrap items-center gap-2">
-                            {project.projectRole && (
-                              <span className="px-2 py-0.5 bg-blue-50 border border-blue-200 text-[#0F172A] rounded-md font-semibold text-[11px]">
-                                Project Role: <strong className="text-[#2563EB]">{project.projectRole}</strong>
-                              </span>
-                            )}
-                            {project.responsibilityType && (
-                              <span className="px-2 py-0.5 bg-slate-50 border border-slate-200 text-[#0F172A] rounded-md font-semibold text-[11px]">
-                                Responsibility Type: <strong>{project.responsibilityType}</strong>
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Project Description */}
-                        <div className="space-y-1 flex flex-col">
-                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
-                            Project Description
-                          </span>
-                          <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
-                            <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
-                              {project.description || "—"}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Key Responsibilities (if any) */}
-                        {Boolean(project.keyResponsibilities) && (
-                          <div className="space-y-1 flex flex-col">
-                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
-                              Key Responsibilities
+                      <div className="overflow-hidden">
+                        <div className="px-4 pb-4 pt-2.5 space-y-3 text-xs border-t border-slate-100">
+                          {/* Project Description with proper title */}
+                          <div>
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                              Project Description
                             </span>
-                            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
-                              <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
-                                {project.keyResponsibilities}
+                            <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
+                              <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line break-words">
+                                {project.description || "No description provided."}
                               </p>
                             </div>
                           </div>
-                        )}
 
-                        {/* Challenges Faced & Solutions Implemented (only if entered) */}
-                        {Boolean(project.solutionsImplemented?.trim()) ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
-                            {/* Challenges Faced */}
-                            <div className="space-y-1 flex flex-col">
-                              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
-                                Challenges Faced
-                              </span>
-                              <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
-                                <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
-                                  {project.challengesFaced || project.challenge || "—"}
-                                </p>
-                              </div>
+                          {/* Role & Responsibility Type */}
+                          {(project.projectRole || project.responsibilityType) && (
+                            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-600">
+                              {project.projectRole && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                                    Project Role:
+                                  </span>
+                                  <span className="font-semibold text-slate-800">{project.projectRole}</span>
+                                </div>
+                              )}
+                              {project.projectRole && project.responsibilityType && (
+                                <span className="text-slate-300">•</span>
+                              )}
+                              {project.responsibilityType && (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                                    Responsibility Type:
+                                  </span>
+                                  <span className="font-semibold text-slate-800">{project.responsibilityType}</span>
+                                </div>
+                              )}
                             </div>
+                          )}
 
-                            {/* Solutions Implemented */}
-                            <div className="space-y-1 flex flex-col">
-                              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
-                                Solutions Implemented
-                              </span>
-                              <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
-                                <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
-                                  {project.solutionsImplemented}
-                                </p>
-                              </div>
+                          {/* Key Responsibilities & Key Achievements */}
+                          {(Boolean(project.keyResponsibilities) || Boolean(project.keyAchievementsOutcomes)) && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              {Boolean(project.keyResponsibilities) && (
+                                <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
+                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                                    Key Responsibilities
+                                  </span>
+                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                                    {project.keyResponsibilities}
+                                  </p>
+                                </div>
+                              )}
+                              {Boolean(project.keyAchievementsOutcomes) && (
+                                <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
+                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                                    Key Achievements / Outcomes
+                                  </span>
+                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                                    {project.keyAchievementsOutcomes}
+                                  </p>
+                                </div>
+                              )}
                             </div>
-                          </div>
-                        ) : (
-                          <div className="space-y-1 flex flex-col">
-                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
-                              Challenges Faced
-                            </span>
-                            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
-                              <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
-                                {project.challengesFaced || project.challenge || "—"}
-                              </p>
-                            </div>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Leadership Qualities & Client Review Feedback (if any) */}
-                        {(Boolean(project.leadershipQualities) || Boolean(project.clientReviewFeedback)) && (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
-                            {Boolean(project.leadershipQualities) && (
-                              <div className="space-y-1 flex flex-col">
-                                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
-                                  Leadership Qualities
-                                </span>
-                                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
-                                  <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                          {/* Challenges Faced & Solutions Implemented */}
+                          {(Boolean(project.challengesFaced || project.challenge) || Boolean(project.solutionsImplemented?.trim())) && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              {(project.challengesFaced || project.challenge) && (
+                                <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
+                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                                    Challenges Faced
+                                  </span>
+                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                                    {project.challengesFaced || project.challenge}
+                                  </p>
+                                </div>
+                              )}
+                              {Boolean(project.solutionsImplemented?.trim()) && (
+                                <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
+                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                                    Solutions Implemented
+                                  </span>
+                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                                    {project.solutionsImplemented}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Leadership Qualities & Client Review Feedback (if entered) */}
+                          {(Boolean(project.leadershipQualities) || Boolean(project.clientReviewFeedback)) && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              {Boolean(project.leadershipQualities) && (
+                                <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
+                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                                    Leadership Qualities
+                                  </span>
+                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
                                     {project.leadershipQualities}
                                   </p>
                                 </div>
-                              </div>
-                            )}
-                            {Boolean(project.clientReviewFeedback) && (
-                              <div className="space-y-1 flex flex-col">
-                                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
-                                  Client Review & Feedback
-                                </span>
-                                <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
-                                  <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                              )}
+                              {Boolean(project.clientReviewFeedback) && (
+                                <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
+                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                                    Client Review & Feedback
+                                  </span>
+                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
                                     {project.clientReviewFeedback}
                                   </p>
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Key Achievements / Outcomes (if any) */}
-                        {Boolean(project.keyAchievementsOutcomes) && (
-                          <div className="space-y-1 flex flex-col">
-                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
-                              Key Achievements / Outcomes
-                            </span>
-                            <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
-                              <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
-                                {project.keyAchievementsOutcomes}
-                              </p>
+                              )}
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {/* Technologies Used Pills */}
-                        {(project.technologiesUsed || []).length > 0 && (
-                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mr-1">
-                              Technologies:
-                            </span>
-                            {(project.technologiesUsed || []).map((tech) => (
-                              <span
-                                key={tech}
-                                className="px-2 py-0.5 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-md"
-                              >
-                                {tech}
+                          {/* Technologies Used */}
+                          {(project.technologiesUsed || []).length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mr-1">
+                                Technologies Used:
                               </span>
-                            ))}
-                          </div>
-                        )}
+                              {(project.technologiesUsed || []).map((tech) => (
+                                <span
+                                  key={tech}
+                                  className="px-2 py-0.5 text-[10px] font-medium text-slate-700 bg-slate-100 border border-slate-200/60 rounded"
+                                >
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+                          )}
 
-                        {/* Attached Documents */}
-                        {(project.attachments || []).length > 0 && (
-                          <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mr-1">
-                              Attachments ({(project.attachments || []).length}):
-                            </span>
-                            {(project.attachments || []).map((file) => (
-                              <AttachmentItem
-                                key={file.objectKey || file.fileName}
-                                file={file}
-                                readOnly
-                              />
-                            ))}
-                          </div>
-                        )}
+                          {/* Attachments */}
+                          {(project.attachments || []).length > 0 && (
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mr-1">
+                                Attachments:
+                              </span>
+                              {(project.attachments || []).map((file) => (
+                                <AttachmentItem
+                                  key={file.objectKey || file.fileName}
+                                  file={file}
+                                  readOnly
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

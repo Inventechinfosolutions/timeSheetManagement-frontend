@@ -264,6 +264,11 @@ export const ManagerQuarterlyReview: React.FC = () => {
     setAssignFormKey((current) => current + 1);
   };
 
+  const handleBackToCreateModal = () => {
+    setIsAssignModalOpen(false);
+    setIsCreateModalOpen(true);
+  };
+
   const handleAssignSuccess = () => {
     setReloadKey((current) => current + 1);
   };
@@ -734,7 +739,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
           isOpen={isCreateModalOpen}
           onClose={handleCloseCreateModal}
           onContinue={handleContinueToAssign}
-          initialType={null}
+          initialType={assignmentType}
+          initialDepartment={selectedReviewDepartment}
           isAdmin={isAdmin}
         />
 
@@ -742,6 +748,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
           key={assignFormKey}
           isOpen={isAssignModalOpen}
           onClose={handleCloseAssignModal}
+          onBack={handleBackToCreateModal}
           assignmentType={assignmentType}
           selectedDepartment={selectedReviewDepartment}
           isAdmin={isAdmin}

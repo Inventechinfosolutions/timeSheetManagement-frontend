@@ -11,22 +11,23 @@ export const CreateReviewAssignmentModal: React.FC<CreateReviewAssignmentModalPr
   onClose,
   onContinue,
   initialType = null,
+  initialDepartment = "",
   isAdmin = false,
 }) => {
   const dispatch = useAppDispatch();
   const { departments } = useAppSelector((state) => state.masterDepartments);
-  const [selectedDept, setSelectedDept] = useState<string>("");
+  const [selectedDept, setSelectedDept] = useState<string>(initialDepartment || "");
   const [selectedType, setSelectedType] = useState<AssignmentType | null>(initialType ?? null);
 
   useEffect(() => {
     if (isOpen) {
       setSelectedType(initialType ?? null);
-      setSelectedDept("");
+      setSelectedDept(initialDepartment || "");
       if (isAdmin && (!departments || departments.length === 0)) {
         dispatch(fetchDepartments());
       }
     }
-  }, [isOpen, initialType, isAdmin, dispatch, departments]);
+  }, [isOpen, initialType, initialDepartment, isAdmin, dispatch, departments]);
 
   if (!isOpen) return null;
 
@@ -107,6 +108,8 @@ export const CreateReviewAssignmentModal: React.FC<CreateReviewAssignmentModalPr
             onChange={(val) => setSelectedDept(val)}
             placeholder="Choose Department"
             className="w-full"
+            maxLabelWidth="max-w-none"
+            buttonClassName="create-modal-dept-dropdown-btn w-full"
           />
         </div>
       )}

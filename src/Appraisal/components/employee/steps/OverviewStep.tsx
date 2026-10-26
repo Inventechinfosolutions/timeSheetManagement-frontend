@@ -7,12 +7,54 @@ import {
 import { AppraisalApi } from "../../../reducers/appraisal.reducer";
 import { formatAppraisalDisplayDate } from "../../../utils/appraisalHelpers";
 
+interface OverviewFieldConfig {
+  key: "overallPerformanceSummary" | "keyHighlights" | "majorContributions" | "areasForImprovement";
+  containerId: string;
+  inputId: string;
+  label: string;
+  placeholder: string;
+  required?: boolean;
+}
+
+const OVERVIEW_FIELD_CONFIGS: readonly OverviewFieldConfig[] = [
+  {
+    key: "overallPerformanceSummary",
+    containerId: "field-overallPerformanceSummary",
+    inputId: "input-overall-summary",
+    label: "Overall Performance Summary",
+    placeholder: "Key deliverables, core responsibilities, and performance summary...",
+    required: true,
+  },
+  {
+    key: "keyHighlights",
+    containerId: "field-keyHighlights",
+    inputId: "input-key-highlights",
+    label: "Key Highlights",
+    placeholder: "Major milestones, improvements, and key wins...",
+  },
+  {
+    key: "majorContributions",
+    containerId: "field-majorContributions",
+    inputId: "input-major-contributions",
+    label: "Major Contributions",
+    placeholder: "Key contributions to projects, teams, or initiatives...",
+  },
+  {
+    key: "areasForImprovement",
+    containerId: "field-areasForImprovement",
+    inputId: "input-areas-for-improvement",
+    label: "Areas for Improvement",
+    placeholder: "Skills to develop, challenges, or improvement areas...",
+  },
+] as const;
+
 export const OverviewStep: React.FC<StepProps> = ({
   formData,
   onChange,
   errors,
   clearError,
   assignment,
+  readOnly,
 }) => {
   const quarter = assignment?.quarter || "Q1";
   const financialYear = assignment?.financialYear || "";
@@ -82,30 +124,12 @@ export const OverviewStep: React.FC<StepProps> = ({
     };
   }, [quarter, financialYear]);
 
-  // Overall Performance Summary handlers
-  const overallVal = formData.overallPerformanceSummary || "";
-  const overallError = errors?.overallPerformanceSummary;
-
-  const handleOverallChange = (val: string) => {
-    onChange("overallPerformanceSummary", val);
+  // Unified field change handler
+  const handleFieldChange = (key: string, val: string) => {
+    onChange(key, val);
     if (clearError) {
-      clearError("overallPerformanceSummary");
+      clearError(key);
     }
-  };
-
-  const handleKeyHighlightsChange = (val: string) => {
-    onChange("keyHighlights", val);
-    if (clearError) clearError("keyHighlights");
-  };
-
-  const handleMajorContributionsChange = (val: string) => {
-    onChange("majorContributions", val);
-    if (clearError) clearError("majorContributions");
-  };
-
-  const handleAreasForImprovementChange = (val: string) => {
-    onChange("areasForImprovement", val);
-    if (clearError) clearError("areasForImprovement");
   };
 
   return (
@@ -143,109 +167,59 @@ export const OverviewStep: React.FC<StepProps> = ({
         )}
       </div>
 
+      {/* Manager Instructions Banner if provided */}
+      {assignment?.description?.trim() && (
+        <div className="p-3.5 bg-blue-50/70 border border-blue-200/70 rounded-xl text-xs space-y-1 shadow-2xs">
+          <span className="font-bold text-[#0F172A] uppercase tracking-wider block text-[11px]">
+            Manager Instructions:
+          </span>
+          <p className="text-[#334155] whitespace-pre-line font-medium leading-relaxed">
+            {assignment.description.trim()}
+          </p>
+        </div>
+      )}
+
       {/* Form Fields: Side by side 2-column grid with eval-step-card hover animation and titles outside */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Overall Performance Summary */}
-        <div id="field-overallPerformanceSummary" className="space-y-1.5 flex flex-col">
-          <label
-            htmlFor="input-overall-summary"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1 flex items-center justify-between"
-          >
-            <span>
-              Overall Performance Summary <span className="text-red-500">*</span>
-            </span>
-          </label>
-          <div
-            className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
-              overallError ? "eval-field-has-error" : ""
-            }`}
-            onClick={() => document.getElementById("input-overall-summary")?.focus()}
-          >
-            <textarea
-              id="input-overall-summary"
-              rows={4}
-              value={overallVal}
-              onChange={(e) => handleOverallChange(e.target.value)}
-              placeholder="Summarize your overall performance, main deliverables, and core responsibilities for this quarter..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
-            />
-          </div>
-          {overallError && (
-            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-              <span>{overallError}</span>
-            </p>
-          )}
-        </div>
+        {OVERVIEW_FIELD_CONFIGS.map((field) => {
+          const value = formData[field.key] || "";
+          const error = errors?.[field.key];
 
-        {/* Key Highlights */}
-        <div id="field-keyHighlights" className="space-y-1.5 flex flex-col">
-          <label
-            htmlFor="input-key-highlights"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-          >
-            Key Highlights
-          </label>
-          <div
-            className="eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1"
-            onClick={() => document.getElementById("input-key-highlights")?.focus()}
-          >
-            <textarea
-              id="input-key-highlights"
-              rows={4}
-              value={formData.keyHighlights || ""}
-              onChange={(e) => handleKeyHighlightsChange(e.target.value)}
-              placeholder="Highlight major milestones achieved, process improvements, or notable wins..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
-            />
-          </div>
-        </div>
-
-        {/* Major Contributions */}
-        <div id="field-majorContributions" className="space-y-1.5 flex flex-col">
-          <label
-            htmlFor="input-major-contributions"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-          >
-            Major Contributions
-          </label>
-          <div
-            className="eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1"
-            onClick={() => document.getElementById("input-major-contributions")?.focus()}
-          >
-            <textarea
-              id="input-major-contributions"
-              rows={4}
-              value={formData.majorContributions || ""}
-              onChange={(e) => handleMajorContributionsChange(e.target.value)}
-              placeholder="Detail your impactful contributions to specific projects, team members, or company initiatives..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
-            />
-          </div>
-        </div>
-
-        {/* Areas for Improvement */}
-        <div id="field-areasForImprovement" className="space-y-1.5 flex flex-col">
-          <label
-            htmlFor="input-areas-for-improvement"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-          >
-            Areas for Improvement
-          </label>
-          <div
-            className="eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1"
-            onClick={() => document.getElementById("input-areas-for-improvement")?.focus()}
-          >
-            <textarea
-              id="input-areas-for-improvement"
-              rows={4}
-              value={formData.areasForImprovement || ""}
-              onChange={(e) => handleAreasForImprovementChange(e.target.value)}
-              placeholder="Mention skills to develop, challenges encountered, or areas where you plan to improve next quarter..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
-            />
-          </div>
-        </div>
+          return (
+            <div key={field.key} id={field.containerId} className="space-y-1.5 flex flex-col">
+              <label
+                htmlFor={field.inputId}
+                className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1 flex items-center justify-between"
+              >
+                <span>
+                  {field.label} {field.required && <span className="text-red-500">*</span>}
+                </span>
+              </label>
+              <div
+                className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
+                  error ? "eval-field-has-error" : ""
+                }`}
+                onClick={() => document.getElementById(field.inputId)?.focus()}
+              >
+                <textarea
+                  id={field.inputId}
+                  rows={4}
+                  value={value}
+                  disabled={readOnly}
+                  onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                  placeholder={field.placeholder}
+                  className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
+                />
+              </div>
+              {error && (
+                <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{error}</span>
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

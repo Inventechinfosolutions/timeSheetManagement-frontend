@@ -1121,6 +1121,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             errors={errors}
             clearError={handleClearError}
             readOnly={readOnly}
+            assignment={assignment}
             onEditStep={readOnly ? undefined : (step) => goToStep(step, true)}
           />
         );

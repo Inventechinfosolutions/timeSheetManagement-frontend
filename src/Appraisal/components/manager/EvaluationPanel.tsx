@@ -748,6 +748,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     });
   };
 
+
+
   // Click on a star
   const handleStarClick = (paramKey: string, ratingValue: number) => {
     if (isViewMode) return;
@@ -1513,8 +1515,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   readOnly={isViewMode || employeeSubmitted || grantAccess}
                   value={assignmentDescription}
                   onChange={(event) => setAssignmentDescription(event.target.value)}
-                  placeholder="Assignment description"
-                  className={`eval-textarea-field w-full ${isViewMode || employeeSubmitted || grantAccess ? "eval-textarea-readonly !cursor-not-allowed" : "!cursor-text cursor-text"}`}
+                  placeholder="Assignment description..."
+                  className={`eval-textarea-field w-full placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${isViewMode || employeeSubmitted || grantAccess ? "eval-textarea-readonly !cursor-not-allowed" : "!cursor-text cursor-text"}`}
                 />
               </div>
               {((!isViewMode && !employeeSubmitted) || grantAccess) && (
@@ -2716,8 +2718,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           setStrengths(e.target.value);
                           clearFieldError("strengths");
                         }}
-                        placeholder="Highlight major strengths and positive attributes..."
-                        className={`eval-textarea-field eval-stagger-item eval-stagger-2 ${fieldErrors.strengths ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
+                        placeholder="Major strengths and positive attributes..."
+                        className={`eval-textarea-field eval-stagger-item eval-stagger-2 placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${fieldErrors.strengths ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
                           } ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed cursor-not-allowed" : ""
                           }`}
                         title={
@@ -2753,8 +2755,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           setImprovements(e.target.value);
                           clearFieldError("improvements");
                         }}
-                        placeholder="Identify growth areas and learning objectives..."
-                        className={`eval-textarea-field eval-stagger-item eval-stagger-2 ${fieldErrors.improvements ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
+                        placeholder="Growth areas and learning objectives..."
+                        className={`eval-textarea-field eval-stagger-item eval-stagger-2 placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${fieldErrors.improvements ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
                           } ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed cursor-not-allowed" : ""
                           }`}
                         title={
@@ -2790,8 +2792,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           setRemarks(e.target.value);
                           clearFieldError("remarks");
                         }}
-                        placeholder="General comments or guidance..."
-                        className={`eval-textarea-field eval-stagger-item eval-stagger-2 ${fieldErrors.remarks ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
+                        placeholder="Comments or guidance..."
+                        className={`eval-textarea-field eval-stagger-item eval-stagger-2 placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${fieldErrors.remarks ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
                           } ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed cursor-not-allowed" : ""
                           }`}
                         title={
@@ -2833,8 +2835,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           disabled={isViewMode}
                           value={goalsForNextReview}
                           onChange={(e) => { setGoalsForNextReview(e.target.value); clearFieldError("goalsForNextReview"); }}
-                          placeholder="Define measurable goals and objectives for next review period..."
-                          className={`eval-textarea-field ${fieldErrors.goalsForNextReview ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
+                          placeholder="Measurable goals and objectives for next review..."
+                          className={`eval-textarea-field placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${fieldErrors.goalsForNextReview ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
                         />
                         {fieldErrors.goalsForNextReview && (
                           <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
@@ -2856,8 +2858,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           disabled={isViewMode}
                           value={trainingRecommendations}
                           onChange={(e) => setTrainingRecommendations(e.target.value)}
-                          placeholder="Suggest relevant training, courses, or learning programs..."
-                          className={`eval-textarea-field ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
+                          placeholder="Relevant training, courses, or learning programs..."
+                          className={`eval-textarea-field placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
                         />
                       </div>
 
@@ -2879,10 +2881,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             className="w-full"
                             maxLabelWidth="max-w-none"
                             buttonClassName={`eval-dropdown-btn !opacity-100 ${isViewMode
-                              ? `eval-dropdown-disabled ${careerGrowthRecommendation ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
-                              : careerGrowthRecommendation
-                                ? "!text-[#1E293B] !font-medium"
-                                : "!text-[#94A3B8]"
+                                ? `eval-dropdown-disabled ${careerGrowthRecommendation ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
+                                : careerGrowthRecommendation
+                                  ? "!text-[#1E293B] !font-medium"
+                                  : "!text-[#94A3B8]"
                               }`}
                           />
                         </div>
@@ -2905,12 +2907,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             className="w-full"
                             maxLabelWidth="max-w-none"
                             buttonClassName={`eval-dropdown-btn !opacity-100 ${fieldErrors.reviewOutcome
-                              ? "eval-dropdown-error"
-                              : isViewMode
-                                ? `eval-dropdown-disabled ${reviewOutcome ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
-                                : reviewOutcome
-                                  ? "!text-[#1E293B] !font-medium"
-                                  : "!text-[#94A3B8]"
+                                ? "eval-dropdown-error"
+                                : isViewMode
+                                  ? `eval-dropdown-disabled ${reviewOutcome ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
+                                  : reviewOutcome
+                                    ? "!text-[#1E293B] !font-medium"
+                                    : "!text-[#94A3B8]"
                               }`}
                           />
                           {fieldErrors.reviewOutcome && (
@@ -2938,10 +2940,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           className="w-full"
                           maxLabelWidth="max-w-none"
                           buttonClassName={`eval-dropdown-btn !opacity-100 ${isViewMode
-                            ? `eval-dropdown-disabled ${performanceAction ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
-                            : performanceAction
-                              ? "!text-[#1E293B] !font-medium"
-                              : "!text-[#94A3B8]"
+                              ? `eval-dropdown-disabled ${performanceAction ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
+                              : performanceAction
+                                ? "!text-[#1E293B] !font-medium"
+                                : "!text-[#94A3B8]"
                             }`}
                         />
                       </div>
@@ -3099,8 +3101,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           disabled={isViewMode}
                           value={finalManagerComments}
                           onChange={(e) => { setFinalManagerComments(e.target.value); clearFieldError("finalManagerComments"); }}
-                          placeholder="Provide a comprehensive final summary and closing remarks..."
-                          className={`eval-textarea-field ${fieldErrors.finalManagerComments ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
+                          placeholder="Final summary and closing remarks..."
+                          className={`eval-textarea-field placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${fieldErrors.finalManagerComments ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
                         />
                         {fieldErrors.finalManagerComments && (
                           <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
