@@ -1,6 +1,59 @@
 import React from "react";
 import { StepProps, ReviewFormData } from "../../../types/appraisal.types";
 import { AlertCircle } from "lucide-react";
+import "../AppraisalDashboard.css";
+
+interface LearningGoalFieldConfig {
+  key: keyof ReviewFormData;
+  containerId: string;
+  inputId: string;
+  label: string;
+  placeholder: string;
+  required?: boolean;
+  colSpan?: string;
+}
+
+const LEARNING_GOAL_CONFIGS: readonly LearningGoalFieldConfig[] = [
+  {
+    key: "skillsAcquired",
+    containerId: "field-skillsAcquired",
+    inputId: "input-skillsAcquired",
+    label: "Skills Learned During This Period",
+    placeholder: "Technical tools, frameworks, languages, or expertise acquired...",
+    required: true,
+  },
+  {
+    key: "certificationsOrCourses",
+    containerId: "field-certificationsOrCourses",
+    inputId: "input-certificationsOrCourses",
+    label: "Training / Certifications Completed",
+    placeholder: "Workshops, courses, or certifications completed...",
+  },
+  {
+    key: "skillsToImprove",
+    containerId: "field-skillsToImprove",
+    inputId: "input-skillsToImprove",
+    label: "Skills to Improve",
+    placeholder: "Technical skills, leadership capabilities, or focus areas...",
+    required: true,
+  },
+  {
+    key: "supportOrTrainingRequired",
+    containerId: "field-supportOrTrainingRequired",
+    inputId: "input-supportOrTrainingRequired",
+    label: "Support or Training Required",
+    placeholder: "Mentorship, courses, licenses, or resources needed...",
+  },
+  {
+    key: "nextQuarterLearningGoals",
+    containerId: "field-nextQuarterLearningGoals",
+    inputId: "input-nextQuarterLearningGoals",
+    label: "Learning Goals for Next Quarter",
+    placeholder: "2-3 specific, measurable learning goals for next quarter...",
+    required: true,
+    colSpan: "col-span-1 md:col-span-2",
+  },
+] as const;
 
 export const LearningGoalsStep: React.FC<StepProps> = ({
   formData,
@@ -30,147 +83,46 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
         </p>
       </div>
 
-      {/* 2-Column Responsive Grid Layout without outer card borders */}
+      {/* 2-Column Responsive Grid Layout driven by structured config */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Field 1: Skills Learned During This Period (Required) */}
-        <div
-          id="field-skillsAcquired"
-          className="flex flex-col space-y-1.5 scroll-mt-24"
-        >
-          <label
-            htmlFor="input-skillsAcquired"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-          >
-            <span>
-              Skills Learned During This Period <span className="text-red-500">*</span>
-            </span>
-          </label>
-          <textarea
-            id="input-skillsAcquired"
-            rows={4}
-            value={formData.skillsAcquired || ""}
-            readOnly={readOnly}
-            onChange={(e) => handleFieldChange("skillsAcquired", e.target.value)}
-            placeholder="Highlight new technical tools, frameworks, programming languages, or domain expertise acquired during this period..."
-            className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium ${
-              errors?.skillsAcquired ? "eval-input-error" : ""
-            }`}
-          />
-          {errors?.skillsAcquired && (
-            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-              <span>{errors.skillsAcquired}</span>
-            </p>
-          )}
-        </div>
+        {LEARNING_GOAL_CONFIGS.map((field) => {
+          const val = (formData[field.key] as string) || "";
+          const error = errors?.[field.key as string];
 
-        {/* Field 2: Training / Certifications Completed (Optional) */}
-        <div
-          id="field-certificationsOrCourses"
-          className="flex flex-col space-y-1.5 scroll-mt-24"
-        >
-          <label
-            htmlFor="input-certificationsOrCourses"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-          >
-            <span>Training / Certifications Completed</span>
-          </label>
-          <textarea
-            id="input-certificationsOrCourses"
-            rows={4}
-            value={formData.certificationsOrCourses || ""}
-            readOnly={readOnly}
-            onChange={(e) => handleFieldChange("certificationsOrCourses", e.target.value)}
-            placeholder="List any internal/external workshops, courses, or certifications completed during this quarter..."
-            className="eval-textarea-field leading-relaxed text-sm flex-1 font-medium"
-          />
-        </div>
-
-        {/* Field 3: Skills to Improve (Required) */}
-        <div
-          id="field-skillsToImprove"
-          className="flex flex-col space-y-1.5 scroll-mt-24"
-        >
-          <label
-            htmlFor="input-skillsToImprove"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-          >
-            <span>
-              Skills to Improve <span className="text-red-500">*</span>
-            </span>
-          </label>
-          <textarea
-            id="input-skillsToImprove"
-            rows={4}
-            value={formData.skillsToImprove || ""}
-            readOnly={readOnly}
-            onChange={(e) => handleFieldChange("skillsToImprove", e.target.value)}
-            placeholder="Identify technical capabilities, leadership skills, or domain areas you want to strengthen..."
-            className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium ${
-              errors?.skillsToImprove ? "eval-input-error" : ""
-            }`}
-          />
-          {errors?.skillsToImprove && (
-            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-              <span>{errors.skillsToImprove}</span>
-            </p>
-          )}
-        </div>
-
-        {/* Field 4: Support or Training Required (Optional - in Row 2 Right) */}
-        <div
-          id="field-supportOrTrainingRequired"
-          className="flex flex-col space-y-1.5 scroll-mt-24"
-        >
-          <label
-            htmlFor="input-supportOrTrainingRequired"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-          >
-            <span>Support or Training Required</span>
-          </label>
-          <textarea
-            id="input-supportOrTrainingRequired"
-            rows={4}
-            value={formData.supportOrTrainingRequired || ""}
-            readOnly={readOnly}
-            onChange={(e) => handleFieldChange("supportOrTrainingRequired", e.target.value)}
-            placeholder="Mention any mentorship, licenses, courses, or resources needed from your manager or the organization..."
-            className="eval-textarea-field leading-relaxed text-sm flex-1 font-medium"
-          />
-        </div>
-
-        {/* Field 5: Learning Goals for Next Quarter (Required - in Last / Full-width) */}
-        <div
-          id="field-nextQuarterLearningGoals"
-          className="flex flex-col space-y-1.5 scroll-mt-24 col-span-1 md:col-span-2"
-        >
-          <label
-            htmlFor="input-nextQuarterLearningGoals"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-          >
-            <span>
-              Learning Goals for Next Quarter <span className="text-red-500">*</span>
-            </span>
-          </label>
-          <textarea
-            id="input-nextQuarterLearningGoals"
-            rows={4}
-            value={formData.nextQuarterLearningGoals || ""}
-            readOnly={readOnly}
-            onChange={(e) => handleFieldChange("nextQuarterLearningGoals", e.target.value)}
-            placeholder="Define 2-3 specific, measurable learning objectives for the upcoming quarter..."
-            className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium ${
-              errors?.nextQuarterLearningGoals ? "eval-input-error" : ""
-            }`}
-          />
-          {errors?.nextQuarterLearningGoals && (
-            <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-              <span>{errors.nextQuarterLearningGoals}</span>
-            </p>
-          )}
-        </div>
+          return (
+            <div
+              key={field.key}
+              id={field.containerId}
+              className={`flex flex-col space-y-1.5 scroll-mt-24 ${field.colSpan || ""}`}
+            >
+              <label
+                htmlFor={field.inputId}
+                className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+              >
+                <span>
+                  {field.label} {field.required && <span className="text-red-500">*</span>}
+                </span>
+              </label>
+              <textarea
+                id={field.inputId}
+                rows={4}
+                value={val}
+                readOnly={readOnly}
+                onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                placeholder={field.placeholder}
+                className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${
+                  error ? "eval-input-error" : ""
+                }`}
+              />
+              {error && (
+                <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{error}</span>
+                </p>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

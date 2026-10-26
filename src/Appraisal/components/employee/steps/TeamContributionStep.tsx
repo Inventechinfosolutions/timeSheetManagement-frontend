@@ -7,6 +7,7 @@ import {
   animateStarHoverLeave,
   animateShatteringStar,
 } from "../../../animations/appraisalAnimations";
+import "../AppraisalDashboard.css";
 
 interface Criterion {
   key: string;
@@ -29,6 +30,45 @@ const RATING_LABELS: Record<number, string> = {
   4: "Exceeds Expectations",
   5: "Outstanding",
 };
+
+interface TeamworkFieldConfig {
+  key: "teamCollaborationSummary" | "crossTeamContributions" | "knowledgeSharingMentoring" | "teamworkExamples";
+  containerId: string;
+  inputId: string;
+  label: string;
+  placeholder: string;
+}
+
+const TEAMWORK_FIELD_CONFIGS: readonly TeamworkFieldConfig[] = [
+  {
+    key: "teamCollaborationSummary",
+    containerId: "field-teamCollaborationSummary",
+    inputId: "input-team-collab-summary",
+    label: "Team Collaboration Summary",
+    placeholder: "Collaboration within core and cross-functional teams...",
+  },
+  {
+    key: "crossTeamContributions",
+    containerId: "field-crossTeamContributions",
+    inputId: "input-cross-team-contributions",
+    label: "Cross-Team Contributions",
+    placeholder: "Cross-functional initiatives, dependencies, and contributions...",
+  },
+  {
+    key: "knowledgeSharingMentoring",
+    containerId: "field-knowledgeSharingMentoring",
+    inputId: "input-knowledge-sharing",
+    label: "Knowledge Sharing / Mentoring",
+    placeholder: "Mentoring given or received, documentation, and sharing sessions...",
+  },
+  {
+    key: "teamworkExamples",
+    containerId: "field-teamworkExamples",
+    inputId: "input-teamwork-examples",
+    label: "Teamwork Examples",
+    placeholder: "Examples of teamwork, peer assistance, or collective problem-solving...",
+  },
+] as const;
 
 interface ShatteringStarItem {
   key: string;
@@ -153,6 +193,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
   onChange,
   errors,
   clearError,
+  readOnly,
 }) => {
   const ratings = formData.teamRatings || {};
   const [hoveredStars, setHoveredStars] = useState<Record<string, number>>({});
@@ -302,91 +343,30 @@ export const TeamContributionStep: React.FC<StepProps> = ({
         </div>
       </div>
 
-      {/* 2. BOTTOM SECTION: 4 Plain Textareas (NOT nested cards) */}
+      {/* 2. BOTTOM SECTION: 4 Plain Textareas driven by structured config */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
-        {/* Team Collaboration Summary */}
-        <div id="field-teamCollaborationSummary" className="flex flex-col space-y-2 scroll-mt-24">
-          <label
-            htmlFor="input-team-collab-summary"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-          >
-            Team Collaboration Summary
-          </label>
-          <textarea
-            id="input-team-collab-summary"
-            rows={4}
-            value={formData.teamCollaborationSummary || ""}
-            onChange={(e) => {
-              onChange("teamCollaborationSummary", e.target.value);
-              if (clearError) clearError("teamCollaborationSummary");
-            }}
-            placeholder="Summarize your overall collaboration within your core team and cross-functional teams..."
-            className="eval-textarea-field leading-relaxed text-sm flex-1 font-medium"
-          />
-        </div>
-
-        {/* Cross-Team Contributions */}
-        <div id="field-crossTeamContributions" className="flex flex-col space-y-2 scroll-mt-24">
-          <label
-            htmlFor="input-cross-team-contributions"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-          >
-            Cross-Team Contributions
-          </label>
-          <textarea
-            id="input-cross-team-contributions"
-            rows={4}
-            value={formData.crossTeamContributions || ""}
-            onChange={(e) => {
-              onChange("crossTeamContributions", e.target.value);
-              if (clearError) clearError("crossTeamContributions");
-            }}
-            placeholder="Highlight cross-functional initiatives, dependencies resolved, or collaboration across departments..."
-            className="eval-textarea-field leading-relaxed text-sm flex-1 font-medium"
-          />
-        </div>
-
-        {/* Knowledge Sharing / Mentoring */}
-        <div id="field-knowledgeSharingMentoring" className="flex flex-col space-y-2 scroll-mt-24">
-          <label
-            htmlFor="input-knowledge-sharing"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-          >
-            Knowledge Sharing / Mentoring
-          </label>
-          <textarea
-            id="input-knowledge-sharing"
-            rows={4}
-            value={formData.knowledgeSharingMentoring || ""}
-            onChange={(e) => {
-              onChange("knowledgeSharingMentoring", e.target.value);
-              if (clearError) clearError("knowledgeSharingMentoring");
-            }}
-            placeholder="Describe any mentoring given or received, documentation authored, or knowledge sharing sessions held..."
-            className="eval-textarea-field leading-relaxed text-sm flex-1 font-medium"
-          />
-        </div>
-
-        {/* Teamwork Examples */}
-        <div id="field-teamworkExamples" className="flex flex-col space-y-2 scroll-mt-24">
-          <label
-            htmlFor="input-teamwork-examples"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
-          >
-            Teamwork Examples
-          </label>
-          <textarea
-            id="input-teamwork-examples"
-            rows={4}
-            value={formData.teamworkExamples || ""}
-            onChange={(e) => {
-              onChange("teamworkExamples", e.target.value);
-              if (clearError) clearError("teamworkExamples");
-            }}
-            placeholder="Provide specific examples demonstrating teamwork, assisting peers under deadlines, or collective problem-solving..."
-            className="eval-textarea-field leading-relaxed text-sm flex-1"
-          />
-        </div>
+        {TEAMWORK_FIELD_CONFIGS.map((field) => (
+          <div key={field.key} id={field.containerId} className="flex flex-col space-y-2 scroll-mt-24">
+            <label
+              htmlFor={field.inputId}
+              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+            >
+              {field.label}
+            </label>
+            <textarea
+              id={field.inputId}
+              rows={4}
+              value={formData[field.key] || ""}
+              disabled={readOnly}
+              onChange={(e) => {
+                onChange(field.key, e.target.value);
+                if (clearError) clearError(field.key);
+              }}
+              placeholder={field.placeholder}
+              className="eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
+            />
+          </div>
+        ))}
       </div>
     </div>
   );

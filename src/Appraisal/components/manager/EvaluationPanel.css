@@ -717,8 +717,12 @@
   background: #FFFFFF !important;
 }
 
-.eval-textarea-field::placeholder {
-  color: #A0AEC0;
+.eval-textarea-field::placeholder,
+.eval-textarea-field::-webkit-input-placeholder,
+.eval-textarea-field::-moz-placeholder {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #94A3B8 !important;
 }
 
 .eval-textarea-field.eval-input-error {
@@ -828,6 +832,14 @@
 }
 
 .eval-dropdown-btn.eval-dropdown-disabled.eval-dropdown-empty {
+  color: #94A3B8 !important;
+}
+
+.eval-dropdown-btn.eval-dropdown-placeholder span,
+.eval-dropdown-btn.\!text-\[\#94A3B8\] span,
+.eval-dropdown-btn.eval-dropdown-disabled.eval-dropdown-empty span {
+  font-size: 10px !important;
+  font-weight: 600 !important;
   color: #94A3B8 !important;
 }
 

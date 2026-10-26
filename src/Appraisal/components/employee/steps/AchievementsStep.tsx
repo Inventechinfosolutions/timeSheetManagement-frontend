@@ -140,13 +140,13 @@ const AppraisalSelectWithOther: React.FC<AppraisalSelectWithOtherProps> = ({
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={customPlaceholder}
-            className="flex-1 min-w-0 bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm font-semibold text-[#0F172A] placeholder:text-gray-400 placeholder:font-normal"
+            className="flex-1 min-w-0 bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm font-semibold text-[#0F172A] placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
             autoFocus
           />
         ) : (
           <span
-            className={`flex-1 min-w-0 text-left text-sm font-semibold truncate ${
-              !value ? "text-gray-400 font-normal" : "text-[#0F172A]"
+            className={`flex-1 min-w-0 text-left truncate ${
+              !value ? "text-slate-400 font-semibold text-[10px]" : "text-[#0F172A] text-sm font-semibold"
             }`}
           >
             {value || placeholder}
@@ -820,8 +820,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
               type="text"
               value={projectName}
               onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="e.g. Timesheet Workflow Modernization & Automation"
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed font-semibold"
+              placeholder="e.g. Timesheet Modernization & Automation"
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed font-semibold placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
             />
           </div>
           {nameError && (
@@ -853,8 +853,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
               rows={3}
               value={projectDescription}
               onChange={(e) => handleDescriptionChange(e.target.value)}
-              placeholder="Describe your project scope, core objectives, and deliverables..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+              placeholder="Project scope, core objectives, and deliverables..."
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
             />
           </div>
           {descriptionError && (
@@ -941,8 +941,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
               rows={3}
               value={keyResponsibilities}
               onChange={(e) => handleKeyResponsibilitiesChange(e.target.value)}
-              placeholder="Outline your primary duties, ownership areas, and core functions for this project..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+              placeholder="Primary duties, ownership areas, and core functions..."
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
             />
           </div>
           {keyResponsibilitiesError && (
@@ -976,8 +976,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 rows={3}
                 value={challengesFaced}
                 onChange={(e) => handleChallengesChange(e.target.value)}
-                placeholder="Describe the technical or organizational challenges faced..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+                placeholder="Technical or organizational challenges faced..."
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
               />
             </div>
             {challengesError && (
@@ -1005,8 +1005,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 rows={3}
                 value={solutionsImplemented}
                 onChange={(e) => handleSolutionsChange(e.target.value)}
-                placeholder="Detail the solutions, architectures, or workarounds you executed..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+                placeholder="Solutions, architectures, or workarounds executed..."
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
               />
             </div>
           </div>
@@ -1031,8 +1031,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 rows={3}
                 value={leadershipQualities}
                 onChange={(e) => handleLeadershipQualitiesChange(e.target.value)}
-                placeholder="Mention mentorship, initiative, decision-making, or team leadership examples..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+                placeholder="Mentorship, initiative, or leadership examples..."
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
               />
             </div>
           </div>
@@ -1054,8 +1054,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 rows={3}
                 value={clientReviewFeedback}
                 onChange={(e) => handleClientReviewFeedbackChange(e.target.value)}
-                placeholder="Enter client praise, appreciation, stakeholder ratings, or feedback received..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+                placeholder="Client feedback, appreciation, or stakeholder ratings..."
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
               />
             </div>
           </div>
@@ -1082,8 +1082,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
               rows={3}
               value={keyAchievementsOutcomes}
               onChange={(e) => handleOutcomesChange(e.target.value)}
-              placeholder="Highlight measurable impact, performance gains, business wins, or client satisfaction..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
+              placeholder="Measurable impact, performance gains, or business wins..."
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
             />
           </div>
           {outcomesError && (
@@ -1168,8 +1168,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
                     handleAddTechnology(techInput);
                   }
                 }}
-                placeholder="Or type custom technology and press Enter..."
-                className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-[#0F172A] outline-none focus:border-blue-500"
+                placeholder="Custom technology (press Enter)..."
+                className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-[#0F172A] outline-none focus:border-blue-500 placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
               />
               <button
                 type="button"

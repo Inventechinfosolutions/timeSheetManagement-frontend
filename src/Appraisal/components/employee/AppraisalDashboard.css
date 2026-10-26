@@ -249,6 +249,27 @@
 }
 
 /* ==========================================================================
+   Compact Semibold Placeholder Utility
+   ========================================================================== */
+.eval-placeholder-sm::placeholder {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #94A3B8;
+}
+
+.eval-placeholder-sm::-webkit-input-placeholder {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #94A3B8;
+}
+
+.eval-placeholder-sm::-moz-placeholder {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #94A3B8;
+}
+
+/* ==========================================================================
    Mandatory Field Validation Styles (Errors Animated via GSAP)
    ========================================================================== */
 .eval-field-has-error {
