@@ -224,6 +224,12 @@ export interface ReviewFormData {
     adaptability?: number;
     [key: string]: number | undefined;
   };
+  communicationDescription?: string;
+  ownershipDescription?: string;
+  collaborationDescription?: string;
+  problemSolvingDescription?: string;
+  leadershipDescription?: string;
+  adaptabilityDescription?: string;
   // Step 4: Learning Goals
   learningGoals?: string;
   learningGoalItems?: string[];

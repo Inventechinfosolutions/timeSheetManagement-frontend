@@ -772,7 +772,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 return (
                   <div
                     key={criterion.key}
-                    className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl flex flex-col justify-between gap-2.5 shadow-2xs"
+                    className="p-4 bg-white border border-[#CBD5E1] rounded-2xl flex flex-col justify-between gap-3 shadow-md hover:shadow-lg transition-all duration-200"
                   >
                     <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
                       <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug">

@@ -440,7 +440,6 @@ export const toReviewFormData = (
     careerGrowthInterests,
     confirmationAccepted,
     finalComments: overallEmployeeComments,
-    teamRatings,
   };
 };
 
@@ -541,18 +540,7 @@ export const toPerformancePayload = (
   const careerGrowthInterests = (formData.careerGrowthInterests || "").trim();
   const confirmationAccepted = Boolean(formData.confirmationAccepted);
 
-  const envMetaObj = {
-    workEnvironmentSatisfaction: envRating,
-    toolsAndResourcesRating: toolsRating,
-    managementSupportRating: mgrRating,
-    challengesAffectingProductivity: challenges,
-    suggestionsForImprovement: suggestions,
-    overallSelfRating,
-    overallEmployeeComments,
-    careerGrowthInterests,
-    confirmationAccepted,
-  };
-  const envMetaStr = JSON.stringify(envMetaObj);
+  const workCultureFeedback = (formData.workCultureFeedback || "").trim();
 
   const ratings = formData.teamRatings || {};
   const environmentScore = envRating || mgrRating || 0;
@@ -571,7 +559,7 @@ export const toPerformancePayload = (
     challengesFaced: challenge || null,
     skillsAcquired: skillsLearned || null,
     learningGoals: learningGoalsList.length ? learningGoalsList : [],
-    feedbackOnWorkCulture: envMetaStr,
+    feedbackOnWorkCulture: workCultureFeedback || null,
     workLifeBalance: challenges || null,
     suggestionsForImprovement: suggestions || null,
     plannedDeliverables: nextGoals || skillsLearned || null,
@@ -596,6 +584,12 @@ export const toPerformancePayload = (
     knowledgeSharingMentoring: (formData.knowledgeSharingMentoring || "").trim() || null,
     teamworkExamples: (formData.teamworkExamples || "").trim() || null,
     teamRatings: ratings,
+    communicationDescription: (formData.communicationDescription || "").trim() || null,
+    ownershipDescription: (formData.ownershipDescription || "").trim() || null,
+    collaborationDescription: (formData.collaborationDescription || "").trim() || null,
+    problemSolvingDescription: (formData.problemSolvingDescription || "").trim() || null,
+    leadershipDescription: (formData.leadershipDescription || "").trim() || null,
+    adaptabilityDescription: (formData.adaptabilityDescription || "").trim() || null,
 
     // --- Step 4: Continuous Learning & Goals ---
     certificationsOrCourses: certs || null,
