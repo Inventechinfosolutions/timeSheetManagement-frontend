@@ -394,9 +394,9 @@ export const toReviewFormData = (
 
   return {
     ...emptyReviewFormData,
-    overview: rawOverview,
-    roleSummary: rawOverview,
-    overallPerformanceSummary: overallPerformanceSummary || rawOverview,
+    overview: parsedOverview ? "" : rawOverview,
+    roleSummary: parsedOverview ? "" : rawOverview,
+    overallPerformanceSummary: overallPerformanceSummary || (parsedOverview ? "" : rawOverview),
     keyHighlights,
     majorContributions,
     areasForImprovement,
@@ -447,29 +447,32 @@ export const toPerformancePayload = (
   formData: ReviewFormData,
 ): PerformanceWritePayload => {
   const hasStructuredOverview = Boolean(
-    formData.overallPerformanceSummary ||
-    formData.keyHighlights ||
-    formData.majorContributions ||
-    formData.areasForImprovement ||
-    formData.teamCollaborationSummary ||
-    formData.crossTeamContributions ||
-    formData.knowledgeSharingMentoring ||
-    formData.teamworkExamples
+    (formData.overallPerformanceSummary || "").trim() ||
+    (formData.keyHighlights || "").trim() ||
+    (formData.majorContributions || "").trim() ||
+    (formData.areasForImprovement || "").trim() ||
+    (formData.teamCollaborationSummary || "").trim() ||
+    (formData.crossTeamContributions || "").trim() ||
+    (formData.knowledgeSharingMentoring || "").trim() ||
+    (formData.teamworkExamples || "").trim()
   );
+  const plainOverview = (formData.overview || "").trim().startsWith("{")
+    ? ""
+    : (formData.overview || "").trim();
   const overview = hasStructuredOverview
     ? JSON.stringify({
-        overallPerformanceSummary: formData.overallPerformanceSummary || "",
-        keyHighlights: formData.keyHighlights || "",
-        majorContributions: formData.majorContributions || "",
-        areasForImprovement: formData.areasForImprovement || "",
+        overallPerformanceSummary: (formData.overallPerformanceSummary || "").trim(),
+        keyHighlights: (formData.keyHighlights || "").trim(),
+        majorContributions: (formData.majorContributions || "").trim(),
+        areasForImprovement: (formData.areasForImprovement || "").trim(),
         reviewPeriodStart: formData.reviewPeriodStart || "",
         reviewPeriodEnd: formData.reviewPeriodEnd || "",
-        teamCollaborationSummary: formData.teamCollaborationSummary || "",
-        crossTeamContributions: formData.crossTeamContributions || "",
-        knowledgeSharingMentoring: formData.knowledgeSharingMentoring || "",
-        teamworkExamples: formData.teamworkExamples || "",
+        teamCollaborationSummary: (formData.teamCollaborationSummary || "").trim(),
+        crossTeamContributions: (formData.crossTeamContributions || "").trim(),
+        knowledgeSharingMentoring: (formData.knowledgeSharingMentoring || "").trim(),
+        teamworkExamples: (formData.teamworkExamples || "").trim(),
       })
-    : (formData.overview || formData.overallPerformanceSummary || "").trim();
+    : plainOverview;
   const projects = (formData.projects || [])
     .filter((project) => Boolean(project && (project.projectName?.trim() || project.description?.trim())))
     .map((project) => ({
@@ -546,60 +549,63 @@ export const toPerformancePayload = (
 
   const ratings = formData.teamRatings || {};
   const environmentScore = envRating || mgrRating || 0;
+  const responsibilitiesHandled = (formData.majorContributions || "").trim()
+    || (hasStructuredOverview ? overview : plainOverview);
+
   return {
     employeeId,
     quarter,
     financialYear,
-    overview: overview || undefined,
+    overview: overview || null,
     projects,
-    responsibilitiesHandled: (formData.majorContributions || overview || "").trim() || undefined,
-    deliverablesCompleted: projectDescription || undefined,
-    keyAccomplishments: projectNames || undefined,
-    challengesFaced: challenge || undefined,
-    skillsAcquired: skillsLearned || undefined,
-    learningGoals: learningGoalsList.length ? learningGoalsList : undefined,
+    responsibilitiesHandled: responsibilitiesHandled || null,
+    deliverablesCompleted: projectDescription || null,
+    keyAccomplishments: projectNames || null,
+    challengesFaced: challenge || null,
+    skillsAcquired: skillsLearned || null,
+    learningGoals: learningGoalsList.length ? learningGoalsList : [],
     feedbackOnWorkCulture: envMetaStr,
-    workLifeBalance: challenges || undefined,
-    suggestionsForImprovement: suggestions || undefined,
-    plannedDeliverables: nextGoals || skillsLearned || undefined,
-    careerDevelopmentGoals: careerGrowthInterests || nextGoals || undefined,
-    communicationTransparency: scored(ratings.communication),
-    crossDepartmentCollaboration: scored(ratings.collaboration || ratings.communication),
-    reliabilityAccountability: scored(ratings.ownership || ratings.communication),
-    peerSupportTeamSpirit: scored(ratings.leadership || ratings.communication),
-    mentorshipKnowledgeSharing: scored(ratings.collaboration || ratings.communication),
-    adaptabilityInitiative: scored(ratings.adaptability || ratings.problemSolving || ratings.communication),
-    rateCompanyEnvironment: ENVIRONMENT_RATINGS[environmentScore],
+    workLifeBalance: challenges || null,
+    suggestionsForImprovement: suggestions || null,
+    plannedDeliverables: nextGoals || skillsLearned || null,
+    careerDevelopmentGoals: careerGrowthInterests || nextGoals || null,
+    communicationTransparency: scored(ratings.communication) ?? null,
+    crossDepartmentCollaboration: scored(ratings.collaboration || ratings.communication) ?? null,
+    reliabilityAccountability: scored(ratings.ownership || ratings.communication) ?? null,
+    peerSupportTeamSpirit: scored(ratings.leadership || ratings.communication) ?? null,
+    mentorshipKnowledgeSharing: scored(ratings.collaboration || ratings.communication) ?? null,
+    adaptabilityInitiative: scored(ratings.adaptability || ratings.problemSolving || ratings.communication) ?? null,
+    rateCompanyEnvironment: ENVIRONMENT_RATINGS[environmentScore] || null,
 
     // --- Step 1: Role & Quarter Overview ---
-    overallPerformanceSummary: formData.overallPerformanceSummary || undefined,
-    keyHighlights: formData.keyHighlights || undefined,
-    majorContributions: formData.majorContributions || undefined,
-    areasForImprovement: formData.areasForImprovement || undefined,
+    overallPerformanceSummary: (formData.overallPerformanceSummary || "").trim() || null,
+    keyHighlights: (formData.keyHighlights || "").trim() || null,
+    majorContributions: (formData.majorContributions || "").trim() || null,
+    areasForImprovement: (formData.areasForImprovement || "").trim() || null,
 
     // --- Step 3: Teamwork & Collaboration ---
-    teamCollaborationSummary: formData.teamCollaborationSummary || undefined,
-    crossTeamContributions: formData.crossTeamContributions || undefined,
-    knowledgeSharingMentoring: formData.knowledgeSharingMentoring || undefined,
-    teamworkExamples: formData.teamworkExamples || undefined,
+    teamCollaborationSummary: (formData.teamCollaborationSummary || "").trim() || null,
+    crossTeamContributions: (formData.crossTeamContributions || "").trim() || null,
+    knowledgeSharingMentoring: (formData.knowledgeSharingMentoring || "").trim() || null,
+    teamworkExamples: (formData.teamworkExamples || "").trim() || null,
     teamRatings: ratings,
 
     // --- Step 4: Continuous Learning & Goals ---
-    certificationsOrCourses: certs || undefined,
-    skillsToImprove: toImprove || undefined,
-    supportOrTrainingRequired: support || undefined,
-    nextQuarterLearningGoals: nextGoals || undefined,
+    certificationsOrCourses: certs || null,
+    skillsToImprove: toImprove || null,
+    supportOrTrainingRequired: support || null,
+    nextQuarterLearningGoals: nextGoals || null,
 
     // --- Step 5: Environment ---
-    workEnvironmentRating: envRating || undefined,
-    toolsResourcesRating: toolsRating || undefined,
-    managerSupportRating: mgrRating || undefined,
-    challengesAffectingProductivity: challenges || undefined,
+    workEnvironmentRating: envRating || null,
+    toolsResourcesRating: toolsRating || null,
+    managerSupportRating: mgrRating || null,
+    challengesAffectingProductivity: challenges || null,
 
     // --- Step 6: Review & Final Submission ---
-    overallSelfRating: overallSelfRating || undefined,
-    overallEmployeeComments: overallEmployeeComments || undefined,
-    careerGrowthInterests: careerGrowthInterests || undefined,
+    overallSelfRating: overallSelfRating || null,
+    overallEmployeeComments: overallEmployeeComments || null,
+    careerGrowthInterests: careerGrowthInterests || null,
     confirmationAccepted: confirmationAccepted,
   };
 };
