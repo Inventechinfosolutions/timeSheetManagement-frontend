@@ -565,3 +565,137 @@ textarea.assign-input-textarea::-webkit-scrollbar-button {
   z-index: 100050 !important;
 }
 
+/* Compact DatePicker popup & remove Today footer */
+.assign-ant-datepicker-popup {
+  width: var(--date-picker-width, 100%) !important;
+  min-width: var(--date-picker-width, 100%) !important;
+  max-width: var(--date-picker-width, 100%) !important;
+  box-shadow: 0 12px 36px -4px rgba(15, 23, 42, 0.2), 0 4px 12px rgba(37, 99, 235, 0.12) !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-panel-container {
+  width: 100% !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  background: #FFFFFF !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-panel {
+  width: 100% !important;
+  padding: 4px 6px !important;
+  background: #FFFFFF !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-date-panel,
+.assign-ant-datepicker-popup .ant-picker-month-panel,
+.assign-ant-datepicker-popup .ant-picker-year-panel,
+.assign-ant-datepicker-popup .ant-picker-decade-panel {
+  width: 100% !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-content {
+  width: 100% !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-date-panel .ant-picker-content th,
+.assign-ant-datepicker-popup .ant-picker-date-panel .ant-picker-cell {
+  width: 14.28% !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-month-panel .ant-picker-cell,
+.assign-ant-datepicker-popup .ant-picker-year-panel .ant-picker-cell,
+.assign-ant-datepicker-popup .ant-picker-decade-panel .ant-picker-cell {
+  width: 33.33% !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-body {
+  padding: 2px 4px 6px 4px !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 4px 8px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  border-bottom: 1px solid #F1F5F9 !important;
+  background: #FFFFFF !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-header button {
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: #2563EB !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-header button:hover {
+  color: #1D4ED8 !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-header-view {
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-header-view button {
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  font-size: 13px !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-header-view button:hover {
+  color: #2563EB !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-footer,
+.assign-ant-datepicker-popup .ant-picker-today-btn {
+  display: none !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+/* Compact Month, Year & Decade Views: prevent stretched rows & massive gaps */
+.assign-ant-datepicker-popup .ant-picker-month-panel,
+.assign-ant-datepicker-popup .ant-picker-year-panel,
+.assign-ant-datepicker-popup .ant-picker-decade-panel {
+  width: 100% !important;
+  height: auto !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-month-panel .ant-picker-content,
+.assign-ant-datepicker-popup .ant-picker-year-panel .ant-picker-content,
+.assign-ant-datepicker-popup .ant-picker-decade-panel .ant-picker-content {
+  width: 100% !important;
+  height: auto !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-month-panel .ant-picker-cell,
+.assign-ant-datepicker-popup .ant-picker-year-panel .ant-picker-cell,
+.assign-ant-datepicker-popup .ant-picker-decade-panel .ant-picker-cell {
+  padding: 3px 2px !important;
+  height: 34px !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-month-panel .ant-picker-cell-inner,
+.assign-ant-datepicker-popup .ant-picker-year-panel .ant-picker-cell-inner,
+.assign-ant-datepicker-popup .ant-picker-decade-panel .ant-picker-cell-inner {
+  height: 28px !important;
+  line-height: 28px !important;
+  padding: 0 6px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+}
+
+
+

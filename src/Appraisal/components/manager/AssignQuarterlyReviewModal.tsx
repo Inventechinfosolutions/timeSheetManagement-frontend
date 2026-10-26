@@ -25,7 +25,7 @@ import "./AssignQuarterlyReviewModal.css";
 
 const datePickerTheme = {
   token: {
-    borderRadius: 12,
+    borderRadius: 14,
     controlHeight: 42,
     colorBgContainer: "#FFFFFF",
     colorBorder: "#BFDBFE",
@@ -33,8 +33,8 @@ const datePickerTheme = {
   },
   components: {
     DatePicker: {
-      cellHeight: 28,
-      cellWidth: 28,
+      cellHeight: 24,
+      cellWidth: 26,
     },
   },
 };
@@ -111,6 +111,34 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       setDescription("");
     }
   }
+
+  const datePickerWrapperRef = useRef<HTMLDivElement>(null);
+  const [datePickerWidth, setDatePickerWidth] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const updateWidth = () => {
+      if (datePickerWrapperRef.current) {
+        const rect = datePickerWrapperRef.current.getBoundingClientRect();
+        if (rect.width > 0) {
+          const w = Math.round(rect.width);
+          setDatePickerWidth(w);
+          document.documentElement.style.setProperty("--date-picker-width", `${w}px`);
+        }
+      }
+    };
+    updateWidth();
+    const raf = requestAnimationFrame(updateWidth);
+    const t1 = setTimeout(updateWidth, 60);
+    const t2 = setTimeout(updateWidth, 180);
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, [isOpen]);
 
   const employeeOptions = useMemo(() => {
     return mappedEmployees.map((emp) => ({
@@ -629,9 +657,27 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
                 TO (DEADLINE) <span className="text-red-500">*</span>
               </label>
-              <ConfigProvider theme={datePickerTheme}>
-                <AntDatePicker
-                  inputReadOnly={true}
+              <div ref={datePickerWrapperRef} className="w-full">
+                <ConfigProvider theme={datePickerTheme}>
+                  <AntDatePicker
+                    inputReadOnly={true}
+                    showToday={false}
+                    placement="bottomLeft"
+                    popupAlign={{ overflow: { adjustY: false } }}
+                    popupStyle={datePickerWidth ? { width: `${datePickerWidth}px` } : undefined}
+                    onOpenChange={(open) => {
+                      if (open && datePickerWrapperRef.current) {
+                        const rect = datePickerWrapperRef.current.getBoundingClientRect();
+                        if (rect.width > 0) {
+                          const w = Math.round(rect.width);
+                          setDatePickerWidth(w);
+                          document.documentElement.style.setProperty("--date-picker-width", `${w}px`);
+                        }
+                      }
+                    }}
+                    classNames={{
+                      popup: "hide-other-months show-weekdays assign-ant-datepicker-popup",
+                    }}
                   disabledDate={(currentDate) => {
                     if (!fromDate || !currentDate) return false;
                     const assignedMoment = dayjs(fromDate, "DD-MM-YYYY");
@@ -657,11 +703,12 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
                   getPopupContainer={() => document.body}
                 />
               </ConfigProvider>
-              {errorField === AssignFormField.DEADLINE ? (
-                <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
-              ) : null}
             </div>
+            {errorField === AssignFormField.DEADLINE ? (
+              <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+            ) : null}
           </div>
+        </div>
 
           {/* DESCRIPTION * */}
           <div className="assign-modal-form-section">

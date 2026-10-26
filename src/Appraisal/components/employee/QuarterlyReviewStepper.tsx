@@ -104,9 +104,14 @@ const isStepDone = (stepId: number, data: ReviewFormData): boolean => {
     );
   }
   if (stepId === 3) {
+    const r = data.teamRatings || {};
     return Boolean(
-      data.teamRatings &&
-      Object.values(data.teamRatings).some((v) => typeof v === "number" && v > 0)
+      (r.communication || 0) > 0 &&
+      (r.ownership || 0) > 0 &&
+      (r.collaboration || 0) > 0 &&
+      (r.problemSolving || 0) > 0 &&
+      (r.leadership || 0) > 0 &&
+      (r.adaptability || 0) > 0
     );
   }
   if (stepId === 4) {
@@ -123,6 +128,13 @@ const isStepDone = (stepId: number, data: ReviewFormData): boolean => {
     );
   }
   return false;
+};
+
+const getFirstIncompleteStep = (data: ReviewFormData): number => {
+  for (let s = 1; s <= 5; s++) {
+    if (!isStepDone(s, data)) return s;
+  }
+  return 6;
 };
 
 const STEP_DEFINITIONS = [
@@ -187,7 +199,12 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       "PERFORMANCE_RECEIVED",
       "EVALUATION_IN_PROGRESS",
     ].includes(normalizedStatus);
-  const [currentStep, setCurrentStep] = useState<number>(initialStep ?? (readOnly ? 6 : 1));
+  const [currentStep, setCurrentStep] = useState<number>(() => {
+    if (typeof initialStep === "number") return initialStep;
+    if (readOnly) return 6;
+    const initialData = initialFormData || emptyReviewFormData;
+    return getFirstIncompleteStep(initialData);
+  });
   const [exitingStep, setExitingStep] = useState<number | null>(null);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const [formData, setFormData] = useState<ReviewFormData>(initialFormData || emptyReviewFormData);
@@ -567,11 +584,21 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         if (!firstFieldId) firstFieldId = "field-projectName";
       }
     } else if (stepNum === 3) {
-      const ratings = data.teamRatings || {};
-      const commRating = ratings.communication;
-      if (!commRating || commRating <= 0) {
-        stepErrors.communication = "Please select a rating for Communication & Coordination.";
-        if (!firstFieldId) firstFieldId = "field-criterion-communication";
+      const ratings = (data.teamRatings as any) || {};
+      const criteriaList = [
+        { key: "communication", title: "Communication & Coordination" },
+        { key: "ownership", title: "Ownership" },
+        { key: "collaboration", title: "Collaboration" },
+        { key: "problemSolving", title: "Problem Solving" },
+        { key: "leadership", title: "Leadership" },
+        { key: "adaptability", title: "Adaptability" },
+      ];
+      for (const item of criteriaList) {
+        const score = ratings[item.key];
+        if (!score || score <= 0) {
+          stepErrors[item.key] = `Please select a rating for ${item.title}.`;
+          if (!firstFieldId) firstFieldId = `field-criterion-${item.key}`;
+        }
       }
     } else if (stepNum === 4) {
       const skillsLearned = (data.skillsAcquired || "").trim();

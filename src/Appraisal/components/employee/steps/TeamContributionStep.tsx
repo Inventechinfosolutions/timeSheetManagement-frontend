@@ -285,7 +285,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                 <div className="flex items-center gap-2 min-w-0">
                   {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB] shrink-0" />}
                   <span className="text-xs sm:text-[13px] font-bold text-[#0F172A] leading-snug">
-                    {criterion.title}
+                    {criterion.title} <span className="text-red-500">*</span>
                   </span>
                   {isSelected && (
                     <span className="hidden sm:inline-block text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60 ml-1">
@@ -337,6 +337,12 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                     </span>
                   )}
                 </div>
+                {criterionError && (
+                  <p className="w-full text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                    <span>{criterionError}</span>
+                  </p>
+                )}
               </div>
             );
           })}

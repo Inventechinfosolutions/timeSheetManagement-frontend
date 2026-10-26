@@ -398,13 +398,140 @@ export const ReviewStep: React.FC<StepProps> = ({
           </div>
 
           {(formData.projects || []).length === 0 ? (
-            <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#64748B]">
-              No project added.
-            </div>
+            readOnly ? (
+              <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-2xs overflow-hidden">
+                <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-slate-50/60 border-b border-slate-100">
+                  <span className="shrink-0 px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+                    Project 1
+                  </span>
+                  <h4 className="text-xs sm:text-sm font-bold text-[#0F172A]">
+                    —
+                  </h4>
+                </div>
+
+                <div className="p-4 space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Project Name
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#0F172A] shadow-2xs">
+                        —
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Project Role
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-semibold text-[#0F172A] shadow-2xs">
+                        —
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Responsibility Type
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-semibold text-[#0F172A] shadow-2xs">
+                        —
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Project Description
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-medium min-h-[75px] shadow-2xs">
+                        —
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Key Responsibilities
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-medium min-h-[75px] shadow-2xs">
+                        —
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Challenges Faced
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-medium min-h-[75px] shadow-2xs">
+                        —
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Solutions Implemented
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-medium min-h-[75px] shadow-2xs">
+                        —
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Key Achievements / Outcomes
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-medium min-h-[75px] shadow-2xs">
+                        —
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Technologies / Tools Used
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-medium min-h-[75px] shadow-2xs">
+                        —
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Leadership Qualities
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-medium min-h-[75px] shadow-2xs">
+                        —
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Client Review & Feedback
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-medium min-h-[75px] shadow-2xs">
+                        —
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Attachments
+                    </label>
+                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-medium shadow-2xs">
+                      —
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#64748B]">
+                No project added.
+              </div>
+            )
           ) : (
             <div className="space-y-3">
               {(formData.projects || []).map((project, index) => {
-                const isExpanded = Boolean(expandedProjects[index]);
+                const isExpanded = readOnly ? (expandedProjects[index] !== false) : Boolean(expandedProjects[index]);
                 return (
                   <div
                     key={`${project.projectName}-${index}`}
@@ -1032,7 +1159,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               </label>
               {readOnly ? (
                 <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[90px] shadow-2xs">
-                  {formData.overallEmployeeComments ?? formData.finalComments ?? "—"}
+                  {formData.overallEmployeeComments?.trim() || formData.finalComments?.trim() || "—"}
                 </div>
               ) : (
                 <textarea
@@ -1056,7 +1183,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               </label>
               {readOnly ? (
                 <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[90px] shadow-2xs">
-                  {formData.careerGrowthInterests ?? "—"}
+                  {formData.careerGrowthInterests?.trim() || "—"}
                 </div>
               ) : (
                 <textarea
