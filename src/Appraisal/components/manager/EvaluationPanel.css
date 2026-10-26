@@ -172,11 +172,11 @@
 /* Step Cards in Employee Submission */
 .eval-step-card {
   background: #FFFFFF;
-  border: 1px solid rgba(191, 219, 254, 0.85);
+  border: 1.5px solid #E2E8F0;
   border-radius: 1.15rem;
   padding: 1.35rem 1.45rem;
-  box-shadow: 0 2px 10px rgba(30, 64, 175, 0.03);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s ease;
   position: relative;
   overflow: hidden;
   animation: cardSlideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -189,40 +189,47 @@
 .eval-step-card:nth-of-type(5) { animation-delay: 0.30s; }
 
 .eval-step-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 0;
-  background: linear-gradient(180deg, #2563EB 0%, #60A5FA 100%);
-  transition: height 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  display: none !important;
 }
 
 .eval-step-card::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.6), rgba(96, 165, 250, 0.6), transparent);
-  transition: left 0.65s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
+  display: none !important;
 }
 
 .eval-step-card:hover {
-  border-color: rgba(37, 99, 235, 0.4);
-  box-shadow: 0 12px 28px -4px rgba(37, 99, 235, 0.12), 0 3px 8px rgba(0, 0, 0, 0.02);
-  transform: translateY(-3px);
+  border-color: #CBD5E1;
+  box-shadow: 0 6px 18px -4px rgba(15, 23, 42, 0.06);
+  transform: translateY(-1px);
 }
 
 .eval-step-card:hover::before {
-  height: 100%;
+  display: none !important;
 }
 
 .eval-step-card:hover::after {
-  left: 100%;
+  display: none !important;
+}
+
+/* Outer review cards: completely remove border blue lines & add premium shadow effect */
+.eval-step-card.eval-review-card-noborder,
+.eval-step-card.\!border-0,
+.eval-step-card.\!border-none {
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 8px -1px rgba(15, 23, 42, 0.04) !important;
+  transition: box-shadow 0.25s ease, transform 0.25s ease !important;
+}
+
+.eval-step-card.eval-review-card-noborder:hover,
+.eval-step-card.\!border-0:hover,
+.eval-step-card.\!border-none:hover,
+.eval-step-card.eval-review-card-noborder:focus-within,
+.eval-step-card.\!border-0:focus-within,
+.eval-step-card.\!border-none:focus-within {
+  border: none !important;
+  border-color: transparent !important;
+  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06) !important;
+  transform: translateY(-2px) !important;
 }
 
 /* Back Button */
@@ -348,7 +355,7 @@
 
 .eval-assignment-readonly-field,
 .eval-readonly-field {
-  border-left: 3.5px solid #2563EB !important;
+  border: 1px solid rgba(191, 219, 254, 0.7);
   cursor: not-allowed !important;
   user-select: text;
   transition: all 0.2s ease;
@@ -641,17 +648,16 @@
   transform: scale(0.95);
 }
 
-/* Textareas with Modern Focus Glow & Left Side Brand Accent */
+/* Textareas with Modern Focus Glow */
 .eval-textarea-field {
   width: 100%;
   border: 1.5px solid #E2E8F0;
-  border-left: 3.5px solid #2563EB;
   border-radius: 0.85rem;
   padding: 0.8rem 1rem;
-  font-size: 0.8125rem;
-  color: #2B3674;
+  font-size: 0.875rem;
+  color: #0F172A;
   background: #FFFFFF;
-  line-height: 1.55;
+  line-height: 1.625;
   transition: all 0.22s ease;
   resize: none;
   overflow-y: auto;
@@ -692,7 +698,6 @@
 .eval-textarea-field:focus-within {
   scrollbar-color: #CBD5E1 transparent;
   border-color: #CBD5E1;
-  border-left-color: #1D4ED8;
 }
 
 .eval-textarea-field:hover::-webkit-scrollbar-thumb,
@@ -707,10 +712,9 @@
 
 .eval-textarea-field:focus {
   outline: none;
-  border-color: #2563EB;
-  border-left-color: #2563EB;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  background: #F8FAFC;
+  border-color: #2563EB !important;
+  box-shadow: none !important;
+  background: #FFFFFF !important;
 }
 
 .eval-textarea-field::placeholder {
@@ -719,16 +723,14 @@
 
 .eval-textarea-field.eval-input-error {
   border-color: #EF4444 !important;
-  border-left-color: #EF4444 !important;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14) !important;
   background-color: #FEF2F2 !important;
 }
 
-/* Consistent Description / Response Review Display Boxes with Left Side Brand Accent */
+/* Consistent Description / Response Review Display Boxes with Clean Uniform Border */
 .eval-description-box {
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(191, 219, 254, 0.7);
-  border-left: 3.5px solid #2563EB;
   border-radius: 0.75rem;
   padding: 0.875rem;
   font-size: 0.875rem;
@@ -773,7 +775,6 @@
 .eval-description-box:focus {
   scrollbar-color: #CBD5E1 transparent;
   border-color: rgba(147, 197, 253, 0.9);
-  border-left-color: #1D4ED8;
 }
 
 .eval-description-box:hover::-webkit-scrollbar-thumb,
@@ -798,8 +799,13 @@
   min-height: 42px !important;
   font-size: 0.875rem !important;
   font-weight: 500 !important;
+  color: #1E293B !important;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04) !important;
   transition: all 0.2s ease !important;
+}
+
+.eval-dropdown-btn span {
+  font-weight: 500 !important;
 }
 
 .eval-dropdown-btn:hover:not(.eval-dropdown-disabled) {

@@ -213,10 +213,10 @@ export const toReviewFormData = (
   }
   const rawOverview = performance.overview || (performance as any).responsibilitiesHandled || "";
   const projectsList = readProjectList(performance.projects);
-  const fallbackProjects = projectsList.length > 0 ? projectsList : (
+  const fallbackProjects: PerformanceProject[] = projectsList.length > 0 ? projectsList : (
     (performance as any).keyAccomplishments || (performance as any).deliverablesCompleted
       ? [{
-          title: (performance as any).keyAccomplishments || "Project Deliverable",
+          projectName: (performance as any).keyAccomplishments || "Project Deliverable",
           description: (performance as any).deliverablesCompleted || "",
           challenge: (performance as any).challengesFaced || "",
           attachments: [],
@@ -250,13 +250,17 @@ export const toReviewFormData = (
     }
   }
 
-  const skillsAcquired = parsedMeta?.skillsAcquired || performance.skillsAcquired || "";
-  const certificationsOrCourses = parsedMeta?.certificationsOrCourses || "";
-  const skillsToImprove = parsedMeta?.skillsToImprove || performance.skillsToImprove || "";
+  const skillsAcquired = performance.skillsAcquired || parsedMeta?.skillsAcquired || "";
+  const certificationsOrCourses =
+    performance.certificationsOrCourses || parsedMeta?.certificationsOrCourses || "";
+  const skillsToImprove = performance.skillsToImprove || parsedMeta?.skillsToImprove || "";
   const nextQuarterLearningGoals =
-    parsedMeta?.nextQuarterLearningGoals || performance.careerDevelopmentGoals || "";
+    performance.nextQuarterLearningGoals ||
+    parsedMeta?.nextQuarterLearningGoals ||
+    performance.careerDevelopmentGoals ||
+    "";
   const supportOrTrainingRequired =
-    parsedMeta?.supportOrTrainingRequired || performance.supportOrTrainingRequired || "";
+    performance.supportOrTrainingRequired || parsedMeta?.supportOrTrainingRequired || "";
 
   let parsedEnvMeta: {
     workEnvironmentSatisfaction?: number;
@@ -280,73 +284,93 @@ export const toReviewFormData = (
   }
 
   const companyEnvironmentRating =
+    performance.workEnvironmentRating ??
     parsedEnvMeta?.workEnvironmentSatisfaction ??
     ENVIRONMENT_SCORES[performance.rateCompanyEnvironment || ""] ??
     0;
   const toolingAndResourcesRating =
+    performance.toolsResourcesRating ??
     parsedEnvMeta?.toolsAndResourcesRating ??
     0;
   const managementSupportRating =
+    performance.managerSupportRating ??
     parsedEnvMeta?.managementSupportRating ??
     performance.managementSupportRating ??
     0;
   const challengesAffectingProductivity =
-    parsedEnvMeta?.challengesAffectingProductivity ||
     performance.challengesAffectingProductivity ||
+    parsedEnvMeta?.challengesAffectingProductivity ||
     performance.workLifeBalance ||
     "";
   const suggestionsForImprovement =
-    parsedEnvMeta?.suggestionsForImprovement ||
     performance.suggestionsForImprovement ||
+    parsedEnvMeta?.suggestionsForImprovement ||
     "";
   const overallSelfRating =
-    parsedEnvMeta?.overallSelfRating ??
     performance.overallSelfRating ??
+    parsedEnvMeta?.overallSelfRating ??
     0;
   const overallEmployeeComments =
-    parsedEnvMeta?.overallEmployeeComments ??
-    performance.overallEmployeeComments ??
+    performance.overallEmployeeComments ||
+    parsedEnvMeta?.overallEmployeeComments ||
     "";
   const careerGrowthInterests =
-    parsedEnvMeta?.careerGrowthInterests ??
-    performance.careerGrowthInterests ??
-    performance.careerDevelopmentGoals ??
+    performance.careerGrowthInterests ||
+    parsedEnvMeta?.careerGrowthInterests ||
+    performance.careerDevelopmentGoals ||
     "";
   const confirmationAccepted =
+    performance.confirmationAccepted ??
     parsedEnvMeta?.confirmationAccepted ??
-    Boolean(performance.confirmationAccepted);
-
-  let overallPerformanceSummary = "";
-  let keyHighlights = "";
-  let majorContributions = "";
-  let areasForImprovement = "";
-  let reviewPeriodStart = "";
-  let reviewPeriodEnd = "";
-
-  let teamCollaborationSummary = "";
-  let crossTeamContributions = "";
-  let knowledgeSharingMentoring = "";
-  let teamworkExamples = "";
+    false;
+  let parsedOverview: any = null;
 
   if (rawOverview.trim().startsWith("{") && rawOverview.trim().endsWith("}")) {
     try {
-      const parsed = JSON.parse(rawOverview);
-      overallPerformanceSummary = parsed.overallPerformanceSummary || "";
-      keyHighlights = parsed.keyHighlights || "";
-      majorContributions = parsed.majorContributions || "";
-      areasForImprovement = parsed.areasForImprovement || "";
-      reviewPeriodStart = parsed.reviewPeriodStart || "";
-      reviewPeriodEnd = parsed.reviewPeriodEnd || "";
-      teamCollaborationSummary = parsed.teamCollaborationSummary || "";
-      crossTeamContributions = parsed.crossTeamContributions || "";
-      knowledgeSharingMentoring = parsed.knowledgeSharingMentoring || "";
-      teamworkExamples = parsed.teamworkExamples || "";
+      parsedOverview = JSON.parse(rawOverview);
     } catch {
-      overallPerformanceSummary = rawOverview;
+      parsedOverview = null;
     }
-  } else {
-    overallPerformanceSummary = rawOverview;
   }
+
+  const overallPerformanceSummary =
+    performance.overallPerformanceSummary ||
+    parsedOverview?.overallPerformanceSummary ||
+    rawOverview;
+  const keyHighlights =
+    performance.keyHighlights || parsedOverview?.keyHighlights || "";
+  const majorContributions =
+    performance.majorContributions || parsedOverview?.majorContributions || "";
+  const areasForImprovement =
+    performance.areasForImprovement || parsedOverview?.areasForImprovement || "";
+  const reviewPeriodStart = parsedOverview?.reviewPeriodStart || "";
+  const reviewPeriodEnd = parsedOverview?.reviewPeriodEnd || "";
+
+  const teamCollaborationSummary =
+    performance.teamCollaborationSummary ||
+    parsedOverview?.teamCollaborationSummary ||
+    "";
+  const crossTeamContributions =
+    performance.crossTeamContributions ||
+    parsedOverview?.crossTeamContributions ||
+    "";
+  const knowledgeSharingMentoring =
+    performance.knowledgeSharingMentoring ||
+    parsedOverview?.knowledgeSharingMentoring ||
+    "";
+  const teamworkExamples =
+    performance.teamworkExamples || parsedOverview?.teamworkExamples || "";
+
+  const teamRatings =
+    performance.teamRatings ||
+    parsedOverview?.teamRatings || {
+      communication: performance.communicationTransparency || 0,
+      ownership: performance.reliabilityAccountability || 0,
+      collaboration: performance.crossDepartmentCollaboration || 0,
+      problemSolving: performance.adaptabilityInitiative || 0,
+      leadership: performance.peerSupportTeamSpirit || 0,
+      adaptability: performance.adaptabilityInitiative || 0,
+    };
 
   return {
     ...emptyReviewFormData,
@@ -389,9 +413,7 @@ export const toReviewFormData = (
     careerGrowthInterests,
     confirmationAccepted,
     finalComments: overallEmployeeComments,
-    teamRatings: {
-      communication: performance.communicationTransparency || 0,
-    },
+    teamRatings,
   };
 };
 
@@ -522,12 +544,43 @@ export const toPerformancePayload = (
     plannedDeliverables: nextGoals || skillsLearned || undefined,
     careerDevelopmentGoals: careerGrowthInterests || nextGoals || undefined,
     communicationTransparency: scored(ratings.communication),
-    crossDepartmentCollaboration: scored(ratings.communication),
-    reliabilityAccountability: scored(ratings.communication),
-    peerSupportTeamSpirit: scored(ratings.communication),
-    mentorshipKnowledgeSharing: scored(ratings.communication),
-    adaptabilityInitiative: scored(ratings.communication),
+    crossDepartmentCollaboration: scored(ratings.collaboration || ratings.communication),
+    reliabilityAccountability: scored(ratings.ownership || ratings.communication),
+    peerSupportTeamSpirit: scored(ratings.leadership || ratings.communication),
+    mentorshipKnowledgeSharing: scored(ratings.collaboration || ratings.communication),
+    adaptabilityInitiative: scored(ratings.adaptability || ratings.problemSolving || ratings.communication),
     rateCompanyEnvironment: ENVIRONMENT_RATINGS[environmentScore],
+
+    // --- Step 1: Role & Quarter Overview ---
+    overallPerformanceSummary: formData.overallPerformanceSummary || undefined,
+    keyHighlights: formData.keyHighlights || undefined,
+    majorContributions: formData.majorContributions || undefined,
+    areasForImprovement: formData.areasForImprovement || undefined,
+
+    // --- Step 3: Teamwork & Collaboration ---
+    teamCollaborationSummary: formData.teamCollaborationSummary || undefined,
+    crossTeamContributions: formData.crossTeamContributions || undefined,
+    knowledgeSharingMentoring: formData.knowledgeSharingMentoring || undefined,
+    teamworkExamples: formData.teamworkExamples || undefined,
+    teamRatings: ratings,
+
+    // --- Step 4: Continuous Learning & Goals ---
+    certificationsOrCourses: certs || undefined,
+    skillsToImprove: toImprove || undefined,
+    supportOrTrainingRequired: support || undefined,
+    nextQuarterLearningGoals: nextGoals || undefined,
+
+    // --- Step 5: Environment ---
+    workEnvironmentRating: envRating || undefined,
+    toolsResourcesRating: toolsRating || undefined,
+    managerSupportRating: mgrRating || undefined,
+    challengesAffectingProductivity: challenges || undefined,
+
+    // --- Step 6: Review & Final Submission ---
+    overallSelfRating: overallSelfRating || undefined,
+    overallEmployeeComments: overallEmployeeComments || undefined,
+    careerGrowthInterests: careerGrowthInterests || undefined,
+    confirmationAccepted: confirmationAccepted,
   };
 };
 

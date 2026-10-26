@@ -565,8 +565,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
           ...nextProjects[editingIndex],
           projectName: projectName.trim() || nextProjects[editingIndex]?.projectName || "Untitled Project",
           description: projectDescription.trim(),
-          challenge: (challengesFaced || projectChallenge).trim(),
-          challengesFaced: (challengesFaced || projectChallenge).trim(),
+          challenge: challengesFaced.trim(),
+          challengesFaced: challengesFaced.trim(),
           projectRole,
           responsibilityType,
           leadershipQualities: leadershipQualities.trim(),
@@ -586,8 +586,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
       const currentDraft: PerformanceProject = {
         projectName: projectName.trim() || "Untitled Project",
         description: projectDescription.trim(),
-        challenge: (challengesFaced || projectChallenge).trim(),
-        challengesFaced: (challengesFaced || projectChallenge).trim(),
+        challenge: challengesFaced.trim(),
+        challengesFaced: challengesFaced.trim(),
         projectRole,
         responsibilityType,
         leadershipQualities: leadershipQualities.trim(),
@@ -628,8 +628,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
         const currentDraft: PerformanceProject = {
           projectName: projectName.trim() || "Untitled Project",
           description: projectDescription.trim(),
-          challenge: (challengesFaced || projectChallenge).trim(),
-          challengesFaced: (challengesFaced || projectChallenge).trim(),
+          challenge: challengesFaced.trim(),
+          challengesFaced: challengesFaced.trim(),
           projectRole,
           responsibilityType,
           leadershipQualities: leadershipQualities.trim(),
@@ -653,8 +653,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
           ...original,
           projectName: projectName.trim() || original.projectName || "Untitled Project",
           description: projectDescription.trim(),
-          challenge: (challengesFaced || projectChallenge).trim(),
-          challengesFaced: (challengesFaced || projectChallenge).trim(),
+          challenge: challengesFaced.trim(),
+          challengesFaced: challengesFaced.trim(),
           projectRole,
           responsibilityType,
           leadershipQualities: leadershipQualities.trim(),
@@ -803,7 +803,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
         <div id="field-projectName" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-projectName"
-            className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between"
+            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1 flex items-center justify-between"
           >
             <span>
               Project Name <span className="text-red-500">*</span>
@@ -836,7 +836,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
         <div id="field-projectDescription" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-projectDescription"
-            className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between"
+            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1 flex items-center justify-between"
           >
             <span>
               Project Description <span className="text-red-500">*</span>
@@ -854,7 +854,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
               value={projectDescription}
               onChange={(e) => handleDescriptionChange(e.target.value)}
               placeholder="Describe your project scope, core objectives, and deliverables..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
             />
           </div>
           {descriptionError && (
@@ -870,7 +870,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           {/* Project Role Dropdown */}
           <div id="field-projectRole" className="space-y-1.5 flex flex-col">
             <label
-              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
             >
               <span>
                 Project Role <span className="text-red-500">*</span>
@@ -896,7 +896,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           {/* Responsibility Type Dropdown */}
           <div id="field-responsibilityType" className="space-y-1.5 flex flex-col">
             <label
-              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
             >
               <span>
                 Responsibility Type <span className="text-red-500">*</span>
@@ -924,7 +924,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
         <div id="field-keyResponsibilities" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-keyResponsibilities"
-            className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
           >
             <span>
               Key Responsibilities <span className="text-red-500">*</span>
@@ -942,7 +942,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
               value={keyResponsibilities}
               onChange={(e) => handleKeyResponsibilitiesChange(e.target.value)}
               placeholder="Outline your primary duties, ownership areas, and core functions for this project..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
             />
           </div>
           {keyResponsibilitiesError && (
@@ -959,7 +959,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           <div id="field-challengesFaced" className="space-y-1.5 flex flex-col">
             <label
               htmlFor="input-challengesFaced"
-              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between"
+              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1 flex items-center justify-between"
             >
               <span>
                 Challenges Faced <span className="text-red-500">*</span>
@@ -977,7 +977,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 value={challengesFaced}
                 onChange={(e) => handleChallengesChange(e.target.value)}
                 placeholder="Describe the technical or organizational challenges faced..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
               />
             </div>
             {challengesError && (
@@ -992,7 +992,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           <div id="field-solutionsImplemented" className="space-y-1.5 flex flex-col">
             <label
               htmlFor="input-solutionsImplemented"
-              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
             >
               Solutions Implemented
             </label>
@@ -1006,7 +1006,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 value={solutionsImplemented}
                 onChange={(e) => handleSolutionsChange(e.target.value)}
                 placeholder="Detail the solutions, architectures, or workarounds you executed..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
               />
             </div>
           </div>
@@ -1018,7 +1018,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           <div id="field-leadershipQualities" className="space-y-1.5 flex flex-col">
             <label
               htmlFor="input-leadershipQualities"
-              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
             >
               Leadership Qualities
             </label>
@@ -1032,7 +1032,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 value={leadershipQualities}
                 onChange={(e) => handleLeadershipQualitiesChange(e.target.value)}
                 placeholder="Mention mentorship, initiative, decision-making, or team leadership examples..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
               />
             </div>
           </div>
@@ -1041,7 +1041,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           <div id="field-clientReviewFeedback" className="space-y-1.5 flex flex-col">
             <label
               htmlFor="input-clientReviewFeedback"
-              className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
             >
               Client Review & Feedback
             </label>
@@ -1055,7 +1055,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 value={clientReviewFeedback}
                 onChange={(e) => handleClientReviewFeedbackChange(e.target.value)}
                 placeholder="Enter client praise, appreciation, stakeholder ratings, or feedback received..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
               />
             </div>
           </div>
@@ -1065,7 +1065,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
         <div id="field-keyAchievementsOutcomes" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-keyAchievementsOutcomes"
-            className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
           >
             <span>
               Key Achievements / Outcomes <span className="text-red-500">*</span>
@@ -1083,7 +1083,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
               value={keyAchievementsOutcomes}
               onChange={(e) => handleOutcomesChange(e.target.value)}
               placeholder="Highlight measurable impact, performance gains, business wins, or client satisfaction..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
             />
           </div>
           {outcomesError && (
@@ -1096,7 +1096,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
         {/* 9. Technologies Used (Multi-select) */}
         <div id="field-technologiesUsed" className="space-y-1.5 flex flex-col">
-          <label className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]">
+          <label className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
             <span>
               Technologies Used <span className="text-red-500">*</span>
             </span>
@@ -1297,19 +1297,19 @@ export const AchievementsStep: React.FC<StepProps> = ({
                       ? "border-red-400 bg-red-50/10 ring-1 ring-red-400/30"
                       : isDraftOrIncomplete
                       ? "border-amber-300/90 hover:border-amber-400"
-                      : "border-blue-200/80 hover:border-blue-400/90"
+                      : "border-[#E2E8F0] hover:border-[#CBD5E1]"
                   }`}
                 >
                   {/* Accordion Header */}
                   <div
                     onClick={() => toggleAccordion(index)}
-                    className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-gradient-to-r from-white via-blue-50/20 to-white hover:bg-blue-50/30 cursor-pointer select-none group transition-colors"
+                    className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-white hover:bg-slate-50/60 cursor-pointer select-none group transition-colors"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       <span className="shrink-0 px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
                         Project {index + 1}
                       </span>
-                      <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] truncate group-hover:text-[#2563EB] transition-colors">
+                      <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] leading-snug group-hover:text-[#2563EB] transition-colors">
                         {displayProjectName}
                       </h4>
                     </div>
@@ -1448,11 +1448,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
                         {/* Project Description */}
                         <div className="space-y-1 flex flex-col">
-                          <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                          <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
                             Project Description
                           </span>
                           <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
-                            <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                            <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
                               {project.description || "—"}
                             </p>
                           </div>
@@ -1461,11 +1461,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
                         {/* Key Responsibilities (if any) */}
                         {Boolean(project.keyResponsibilities) && (
                           <div className="space-y-1 flex flex-col">
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
                               Key Responsibilities
                             </span>
                             <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
-                              <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                              <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
                                 {project.keyResponsibilities}
                               </p>
                             </div>
@@ -1477,11 +1477,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
                             {/* Challenges Faced */}
                             <div className="space-y-1 flex flex-col">
-                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
                                 Challenges Faced
                               </span>
                               <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
-                                <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
                                   {project.challengesFaced || project.challenge || "—"}
                                 </p>
                               </div>
@@ -1489,11 +1489,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
                             {/* Solutions Implemented */}
                             <div className="space-y-1 flex flex-col">
-                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                              <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
                                 Solutions Implemented
                               </span>
                               <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
-                                <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
                                   {project.solutionsImplemented}
                                 </p>
                               </div>
@@ -1501,11 +1501,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
                           </div>
                         ) : (
                           <div className="space-y-1 flex flex-col">
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
                               Challenges Faced
                             </span>
                             <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
-                              <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                              <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
                                 {project.challengesFaced || project.challenge || "—"}
                               </p>
                             </div>
@@ -1517,11 +1517,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-stretch">
                             {Boolean(project.leadershipQualities) && (
                               <div className="space-y-1 flex flex-col">
-                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
                                   Leadership Qualities
                                 </span>
                                 <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
-                                  <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                  <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
                                     {project.leadershipQualities}
                                   </p>
                                 </div>
@@ -1529,11 +1529,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
                             )}
                             {Boolean(project.clientReviewFeedback) && (
                               <div className="space-y-1 flex flex-col">
-                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                                <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
                                   Client Review & Feedback
                                 </span>
                                 <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5 flex-1">
-                                  <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                                  <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
                                     {project.clientReviewFeedback}
                                   </p>
                                 </div>
@@ -1545,11 +1545,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
                         {/* Key Achievements / Outcomes (if any) */}
                         {Boolean(project.keyAchievementsOutcomes) && (
                           <div className="space-y-1 flex flex-col">
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-black block">
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] block mb-1">
                               Key Achievements / Outcomes
                             </span>
                             <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-2.5">
-                              <p className="text-xs text-black leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
+                              <p className="text-xs sm:text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium max-h-32 overflow-y-auto eval-custom-scrollbar pr-1.5 break-words">
                                 {project.keyAchievementsOutcomes}
                               </p>
                             </div>
@@ -1559,7 +1559,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                         {/* Technologies Used Pills */}
                         {(project.technologiesUsed || []).length > 0 && (
                           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-black mr-1">
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mr-1">
                               Technologies:
                             </span>
                             {(project.technologiesUsed || []).map((tech) => (
@@ -1576,7 +1576,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                         {/* Attached Documents */}
                         {(project.attachments || []).length > 0 && (
                           <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-black mr-1">
+                            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mr-1">
                               Attachments ({(project.attachments || []).length}):
                             </span>
                             {(project.attachments || []).map((file) => (

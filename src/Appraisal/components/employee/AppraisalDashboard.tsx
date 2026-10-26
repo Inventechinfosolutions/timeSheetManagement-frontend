@@ -1186,6 +1186,7 @@ export const AppraisalDashboard: React.FC = () => {
             managerEvaluation={viewingEvaluation}
             mode="view"
             hideScoreParameters={true}
+            initialActiveView="matrix"
             onBack={() => {
               scrollToPageTop();
               setViewingAssignment(null);
@@ -1217,6 +1218,40 @@ export const AppraisalDashboard: React.FC = () => {
               setEditingForm(undefined);
               closeAssignment();
               reloadAssignments();
+              setTimeout(scrollToPageTop, 50);
+            }}
+            onGoToEvaluation={async () => {
+              scrollToPageTop();
+              try {
+                const targetAssignment = activeAssignment;
+                const performance = await loadRowPerformance(targetAssignment);
+                const formData = performance ? toReviewFormData(performance) : undefined;
+                setViewingForm(formData);
+                setViewingPerformanceStatus(performance?.status || targetAssignment.status || "");
+                setViewingReviewStatus(targetAssignment.reviewStatus || "");
+                setViewingEvaluation(undefined);
+                setViewingAssignment({
+                  ...targetAssignment,
+                  performanceId: performance?.id ?? targetAssignment.performanceId,
+                  assignedBy: performance?.assignedBy || targetAssignment.assignedBy,
+                  assignedDate: performance?.assignedDate
+                    ? formatAppraisalDisplayDate(performance.assignedDate)
+                    : targetAssignment.assignedDate,
+                  deadline: performance?.deadlineDate
+                    ? formatAppraisalDisplayDate(performance.deadlineDate)
+                    : targetAssignment.deadline,
+                  performanceDate: performance?.submittedAt
+                    ? formatAppraisalDisplayDate(performance.submittedAt)
+                    : targetAssignment.performanceDate,
+                  reviewId: performance?.reviewId ?? targetAssignment.reviewId,
+                  description: performance?.description ?? targetAssignment.description,
+                });
+                setStepperReadOnly(false);
+                setEditingForm(undefined);
+                closeAssignment();
+              } catch (error) {
+                message.error(readApiError(error));
+              }
               setTimeout(scrollToPageTop, 50);
             }}
             onSubmitSuccess={() => {

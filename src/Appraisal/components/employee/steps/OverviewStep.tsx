@@ -122,7 +122,7 @@ export const OverviewStep: React.FC<StepProps> = ({
       </div>
 
       {/* Review Period: Compact, clean single-line bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2 bg-blue-50/60 border border-blue-100 rounded-xl text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-xs shadow-2xs">
         <div className="flex items-center gap-2">
           <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
           <span className="font-bold text-[#0F172A]">
@@ -149,7 +149,7 @@ export const OverviewStep: React.FC<StepProps> = ({
         <div id="field-overallPerformanceSummary" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-overall-summary"
-            className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A] flex items-center justify-between"
+            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1 flex items-center justify-between"
           >
             <span>
               Overall Performance Summary <span className="text-red-500">*</span>
@@ -167,7 +167,7 @@ export const OverviewStep: React.FC<StepProps> = ({
               value={overallVal}
               onChange={(e) => handleOverallChange(e.target.value)}
               placeholder="Summarize your overall performance, main deliverables, and core responsibilities for this quarter..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
             />
           </div>
           {overallError && (
@@ -182,7 +182,7 @@ export const OverviewStep: React.FC<StepProps> = ({
         <div id="field-keyHighlights" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-key-highlights"
-            className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
           >
             Key Highlights
           </label>
@@ -196,7 +196,7 @@ export const OverviewStep: React.FC<StepProps> = ({
               value={formData.keyHighlights || ""}
               onChange={(e) => handleKeyHighlightsChange(e.target.value)}
               placeholder="Highlight major milestones achieved, process improvements, or notable wins..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
             />
           </div>
         </div>
@@ -205,7 +205,7 @@ export const OverviewStep: React.FC<StepProps> = ({
         <div id="field-majorContributions" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-major-contributions"
-            className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
           >
             Major Contributions
           </label>
@@ -219,7 +219,7 @@ export const OverviewStep: React.FC<StepProps> = ({
               value={formData.majorContributions || ""}
               onChange={(e) => handleMajorContributionsChange(e.target.value)}
               placeholder="Detail your impactful contributions to specific projects, team members, or company initiatives..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
             />
           </div>
         </div>
@@ -228,7 +228,7 @@ export const OverviewStep: React.FC<StepProps> = ({
         <div id="field-areasForImprovement" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-areas-for-improvement"
-            className="block text-xs font-extrabold uppercase tracking-wider text-[#0F172A]"
+            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
           >
             Areas for Improvement
           </label>
@@ -242,7 +242,7 @@ export const OverviewStep: React.FC<StepProps> = ({
               value={formData.areasForImprovement || ""}
               onChange={(e) => handleAreasForImprovementChange(e.target.value)}
               placeholder="Mention skills to develop, challenges encountered, or areas where you plan to improve next quarter..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1"
+              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium"
             />
           </div>
         </div>

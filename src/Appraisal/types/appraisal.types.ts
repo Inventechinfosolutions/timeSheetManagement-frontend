@@ -159,6 +159,7 @@ export enum ResponsibilityTypeEnum {
 
 export interface PerformanceProject {
   projectName: string;
+  title?: string;
   description: string;
   challenge: string;
   projectRole?: string;
@@ -177,6 +178,7 @@ export interface PerformanceProject {
 export interface ReviewFormData {
   // Step 1: Overview
   overview?: string;
+  roleSummary?: string;
   overallPerformanceSummary?: string;
   keyHighlights?: string;
   majorContributions?: string;
@@ -185,6 +187,7 @@ export interface ReviewFormData {
   reviewPeriodEnd?: string;
   // Step 2: Achievements & Projects
   projectName?: string;
+  projectTitle?: string;
   projectDescription?: string;
   projectRole?: string;
   responsibilityType?: string;
@@ -212,6 +215,12 @@ export interface ReviewFormData {
   teamworkExamples?: string;
   teamRatings?: {
     communication?: number;
+    collaboration?: number;
+    ownership?: number;
+    problemSolving?: number;
+    leadership?: number;
+    adaptability?: number;
+    [key: string]: number | undefined;
   };
   // Step 4: Learning Goals
   learningGoals?: string;
@@ -247,6 +256,7 @@ export interface StepProps {
   onRemoveAttachment?: (objectKey: string) => Promise<void>;
   readOnly?: boolean;
   onEditStep?: (step: number) => void;
+  assignment?: QuarterlyReviewAssignment;
 }
 
 // ==========================================
@@ -514,10 +524,24 @@ export interface EmployeePerformanceDetail {
   challengesAffectingProductivity?: string | null;
   toolingAndResourcesRating?: number | null;
   managementSupportRating?: number | null;
+  managerSupportRating?: number | null;
   overallSelfRating?: number | null;
   overallEmployeeComments?: string | null;
   careerGrowthInterests?: string | null;
   confirmationAccepted?: boolean | null;
+  overallPerformanceSummary?: string | null;
+  keyHighlights?: string | null;
+  majorContributions?: string | null;
+  areasForImprovement?: string | null;
+  teamCollaborationSummary?: string | null;
+  crossTeamContributions?: string | null;
+  knowledgeSharingMentoring?: string | null;
+  teamworkExamples?: string | null;
+  teamRatings?: Record<string, number | undefined> | null;
+  certificationsOrCourses?: string | null;
+  nextQuarterLearningGoals?: string | null;
+  workEnvironmentRating?: number | null;
+  toolsResourcesRating?: number | null;
   assignedBy?: string | null;
   assignedDate?: string | null;
   deadlineDate?: string | null;
@@ -619,6 +643,37 @@ export interface PerformanceWritePayload {
   peerSupportTeamSpirit?: number;
   adaptabilityInitiative?: number;
   rateCompanyEnvironment?: string;
+
+  // --- Step 1: Role & Quarter Overview ---
+  overallPerformanceSummary?: string;
+  keyHighlights?: string;
+  majorContributions?: string;
+  areasForImprovement?: string;
+
+  // --- Step 3: Teamwork & Collaboration ---
+  teamCollaborationSummary?: string;
+  crossTeamContributions?: string;
+  knowledgeSharingMentoring?: string;
+  teamworkExamples?: string;
+  teamRatings?: Record<string, number | undefined>;
+
+  // --- Step 4: Continuous Learning & Goals ---
+  certificationsOrCourses?: string;
+  skillsToImprove?: string;
+  supportOrTrainingRequired?: string;
+  nextQuarterLearningGoals?: string;
+
+  // --- Step 5: Environment ---
+  workEnvironmentRating?: number;
+  toolsResourcesRating?: number;
+  managerSupportRating?: number;
+  challengesAffectingProductivity?: string;
+
+  // --- Step 6: Review & Final Submission ---
+  overallSelfRating?: number;
+  overallEmployeeComments?: string;
+  careerGrowthInterests?: string;
+  confirmationAccepted?: boolean;
 }
 
 export interface EmployeePerformanceListItem extends EmployeePerformanceDetail {

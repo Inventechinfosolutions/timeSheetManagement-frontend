@@ -131,7 +131,7 @@ export function Dropdown<T extends string = string>({
             onOpen?.();
             setIsOpen(true);
           }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F7FE] hover:bg-gray-100 rounded-xl text-xs font-bold text-[#2B3674] transition-all border border-transparent cursor-pointer select-none ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F7FE] hover:bg-gray-100 rounded-xl text-xs font-medium text-[#1E293B] transition-all border border-transparent cursor-pointer select-none ${
             disabled && !buttonClassName.includes("opacity-") ? "opacity-50 cursor-not-allowed" : disabled ? "cursor-not-allowed" : ""
           } ${buttonClassName}`}
         >
@@ -185,10 +185,10 @@ export function Dropdown<T extends string = string>({
                   onChange(option.value);
                   setIsOpen(false);
                 }}
-                className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between cursor-pointer ${
+                className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center justify-between cursor-pointer ${
                   isSelected
                     ? "bg-[#4318FF] text-white shadow-xs"
-                    : "text-[#2B3674] hover:bg-gray-50"
+                    : "text-[#1E293B] hover:bg-slate-50 hover:text-slate-900"
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0 pr-2">

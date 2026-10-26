@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Send,
   AlertCircle,
+  Sliders,
 } from "lucide-react";
 import {
   StepOverviewIcon,
@@ -20,7 +21,12 @@ import {
   initActiveStepperCircle,
   animateFieldError,
 } from "../../animations/appraisalAnimations";
-import { ReviewFormData, QuarterlyReviewAssignment, StoredPerformanceFile } from "../../types/appraisal.types";
+import {
+  ReviewFormData,
+  QuarterlyReviewAssignment,
+  StoredPerformanceFile,
+  PerformanceProject,
+} from "../../types/appraisal.types";
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
 import { AppraisalApi, readApiError, toPerformancePayload, toReviewFormData } from "../../reducers/appraisal.reducer";
 import { EmployeePerformanceStatus, QuaterlyEnum, QuarterlyReviewStatus } from "../../enums/appraisal.enums";
@@ -37,8 +43,10 @@ interface QuarterlyReviewStepperProps {
   assignment: QuarterlyReviewAssignment;
   initialFormData?: ReviewFormData;
   readOnly?: boolean;
+  initialStep?: number;
   onBack: () => void;
   onSubmitSuccess?: () => void;
+  onGoToEvaluation?: () => void;
 }
 
 
@@ -142,8 +150,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   assignment,
   initialFormData,
   readOnly = false,
+  initialStep,
   onBack,
   onSubmitSuccess,
+  onGoToEvaluation,
 }) => {
   const isLocked = readOnly || assignment.canEdit === false;
   const isReassignedReview = Boolean(
@@ -160,7 +170,20 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     ) ||
     Boolean(assignment.submittedAt)
   );
-  const [currentStep, setCurrentStep] = useState<number>(1);
+  const normalizedStatus = String(assignment.status || assignment.reviewStatus || "").toUpperCase();
+  const isAlreadySubmitted =
+    Boolean(assignment.submittedAt) ||
+    Boolean(assignment.performanceDate) ||
+    [
+      "SUBMITTED",
+      "RE_SUBMITTED",
+      "UNDER_REVIEW",
+      "REVIEWED",
+      "COMPLETED",
+      "PERFORMANCE_RECEIVED",
+      "EVALUATION_IN_PROGRESS",
+    ].includes(normalizedStatus);
+  const [currentStep, setCurrentStep] = useState<number>(initialStep ?? (readOnly ? 6 : 1));
   const [exitingStep, setExitingStep] = useState<number | null>(null);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const [formData, setFormData] = useState<ReviewFormData>(initialFormData || emptyReviewFormData);
@@ -282,6 +305,11 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       delete next[field];
       return next;
     });
+    const el = document.getElementById(`field-${field}`);
+    if (el) {
+      el.style.borderColor = "";
+      el.style.boxShadow = "";
+    }
   };
 
   const handleFieldChange = (field: keyof ReviewFormData, value: any) => {
@@ -792,9 +820,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
   const handleStepClick = async (targetStep: number) => {
     if (readOnly) {
-      if (targetStep !== currentStep) {
-        setErrors({});
-        goToStep(targetStep, true);
+      const el = document.getElementById(`review-step-${targetStep}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
       }
       return;
     }
@@ -1012,7 +1040,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             errors={errors}
             clearError={handleClearError}
             readOnly={readOnly}
-            onEditStep={(step) => goToStep(step, true)}
+            onEditStep={readOnly ? undefined : (step) => goToStep(step, true)}
           />
         );
       default:
@@ -1022,7 +1050,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
   return (
     <div ref={topRef} className="w-full space-y-6 font-sans">
-      {assignment.canEdit === false && (
+      {!readOnly && !isAlreadySubmitted && assignment.canEdit === false && (
         <div className="p-4 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-center gap-3 text-amber-900 text-sm font-semibold shadow-xs">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
           <span>
@@ -1173,6 +1201,92 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                 {renderStepContent(currentStep)}
               </div>
             </fieldset>
+
+            {/* Evaluation CTA Card: shown on Step 6 when viewing review */}
+            {currentStep === 6 && onGoToEvaluation && (
+              <div className="eval-matrix-cta-card relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-blue-200/70 bg-gradient-to-br from-white via-blue-50/40 to-blue-100/20 shadow-lg shadow-blue-500/10 mt-6 !opacity-100">
+                {/* Ambient Decorative SVG in Background */}
+                <svg
+                  className="absolute -right-8 -bottom-10 w-72 h-72 text-blue-500/10 pointer-events-none eval-cta-bg-svg"
+                  viewBox="0 0 200 200"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <circle cx="100" cy="100" r="80" stroke="currentColor" strokeWidth="2" strokeDasharray="6 6" />
+                  <circle cx="100" cy="100" r="50" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M40 100 Q70 60 100 100 T160 100" stroke="currentColor" strokeWidth="2" />
+                </svg>
+
+                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                  <div className="flex items-start sm:items-center gap-4">
+                    {/* Glowing Matrix Icon SVG Box with Animated Orbital Pulse */}
+                    <div className="relative shrink-0">
+                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-md shadow-blue-500/25 eval-matrix-btn-icon-glow">
+                        <svg
+                          className="w-7 h-7 eval-matrix-icon-svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M4 6H20M4 12H20M4 18H20"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeDasharray="16"
+                            strokeDashoffset="0"
+                            className="eval-matrix-svg-lines"
+                          />
+                          <circle cx="8" cy="6" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
+                          <circle cx="16" cy="12" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
+                          <circle cx="11" cy="18" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
+                        </svg>
+                      </div>
+                      <span className="absolute -inset-1 rounded-2xl border border-blue-400/40 animate-ping opacity-25 pointer-events-none" />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-blue-600 font-bold">
+                          {assignment.quarter} Evaluation Ready
+                        </span>
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-bold text-[#2B3674] mt-1">
+                        View Evaluation & Ratings
+                      </h3>
+                      <p className="text-xs text-[#64748B] mt-0.5 max-w-xl leading-relaxed">
+                        Navigate to the scored evaluation matrix to inspect finalized competencies, ratings, and feedback.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action Button that navigates to the Evaluation Matrix */}
+                  <button
+                    type="button"
+                    onClick={onGoToEvaluation}
+                    className="eval-open-matrix-btn shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#3B82F6] via-[#2563EB] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer group"
+                  >
+                    <Sliders className="w-4 h-4 transition-transform group-hover:rotate-45" />
+                    <span>Go to Evaluation Matrix</span>
+                    <svg
+                      className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M5 12H19M19 12L13 6M19 12L13 18"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Stepper Navigation Footer */}
             <div className="flex items-center justify-between pt-6 mt-8 border-t border-blue-100">

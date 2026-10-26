@@ -22,6 +22,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Send,
+  ChevronDown,
 } from "lucide-react";
 import {
   ManagerQuarterlyReviewRecord,
@@ -50,6 +51,7 @@ export interface EvaluationPanelProps {
   mode?: "edit" | "view";
   grantAccess?: boolean;
   hideScoreParameters?: boolean;
+  initialActiveView?: "review" | "matrix";
   onBack: () => void;
   onSubmitEvaluation?: (recordId: string, evaluation: EvaluationData) => void;
   onAssignmentSaved?: (patch: {
@@ -138,6 +140,11 @@ const getRatingLabel = (score: number): string => {
 
 const TEAM_CRITERIA = [
   { key: "communication", title: "Communication & Coordination" },
+  { key: "ownership", title: "Ownership" },
+  { key: "collaboration", title: "Collaboration" },
+  { key: "problemSolving", title: "Problem Solving" },
+  { key: "leadership", title: "Leadership" },
+  { key: "adaptability", title: "Adaptability" },
 ];
 
 const ENVIRONMENT_RATINGS: Record<number, { label: string; emoji: string }> = {
@@ -148,50 +155,13 @@ const ENVIRONMENT_RATINGS: Record<number, { label: string; emoji: string }> = {
   5: { label: "Excellent", emoji: "🤩" },
 };
 
-const EVAL_STEPS = [
-  { id: 1, label: "Role & Overview" },
-  { id: 2, label: "Achievements & Projects" },
-  { id: 3, label: "Teamwork & Skills" },
-  { id: 4, label: "Learning & Goals" },
-  { id: 5, label: "Environment & Feedback" },
-];
-
-const isStepCompleted = (stepId: number, data: ReviewFormData): boolean => {
-  if (stepId === 1) return Boolean((data.overview || data.roleSummary || "").trim());
-  if (stepId === 2) {
-    return Boolean(
-      (data.projects && data.projects.length > 0) ||
-      (data.projectTitle || "").trim() ||
-      (data.majorAchievements || "").trim()
-    );
-  }
-  if (stepId === 3) {
-    return Boolean(
-      data.teamRatings &&
-      Object.values(data.teamRatings).some((v) => typeof v === "number" && v > 0)
-    );
-  }
-  if (stepId === 4) {
-    return Boolean(
-      (data.learningGoalItems && data.learningGoalItems.length > 0) ||
-      (data.learningGoals || "").trim()
-    );
-  }
-  if (stepId === 5) {
-    return Boolean(
-      (data.workCultureFeedback || "").trim() ||
-      (data.workLifeBalance || "").trim() ||
-      (data.companyEnvironmentRating && data.companyEnvironmentRating > 0)
-    );
-  }
-  return false;
-};
 
 export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   record,
   mode = "edit",
   grantAccess = false,
   hideScoreParameters = false,
+  initialActiveView,
   onBack,
   onSubmitEvaluation,
   onAssignmentSaved,
@@ -220,7 +190,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       managerEvaluation.areasOfImprovement?.trim() ||
       managerEvaluation.additionalRemarks?.trim()),
   );
-  const [activeView, setActiveView] = useState<"review" | "matrix">("review");
+  const [activeView, setActiveView] = useState<"review" | "matrix">(initialActiveView || "review");
   const panelTopRef = useRef<HTMLDivElement>(null);
 
   const scrollToTop = () => {
@@ -268,27 +238,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     };
   }, [record.id, mode]);
 
-  const [stepperViewMode, setStepperViewMode] = useState<"entered_only" | "all" | number>("entered_only");
+  // Form data for employee submission
+  const formData: ReviewFormData = useMemo(() => {
+    return submissionData || emptyReviewFormData;
+  }, [submissionData]);
 
-  const enteredStepsCount = useMemo(() => {
-    return EVAL_STEPS.filter((s) => isStepCompleted(s.id, formData)).length;
-  }, [formData]);
-
-  const shouldShowStep = (stepId: number): boolean => {
-    if (stepperViewMode === stepId) return true;
-    if (stepperViewMode === "all") return true;
-    if (stepperViewMode === "entered_only") {
-      return isStepCompleted(stepId, formData);
-    }
-    return false;
-  };
-
-  const scrollToEvalStep = (stepId: number) => {
-    const el = document.getElementById(`eval-step-${stepId}`);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
+  const shouldShowStep = (_stepId: number): boolean => true;
 
   const handleNavigateToMatrix = () => {
     if (isEditAccessPendingOrGranted) {
@@ -587,6 +542,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     value: number;
   } | null>(null);
 
+  // Project Accordion state for Step 2 in Evaluation Panel (closed by default, exactly as in employee view)
+  const [expandedProjects, setExpandedProjects] = useState<Record<number, boolean>>({});
+  const toggleProjectExpand = (index: number) => {
+    setExpandedProjects((prev) => ({
+      ...prev,
+      [index]: !prev[index],
+    }));
+  };
+
   // Form comments
   const [reviewId, setReviewId] = useState<number | undefined>(record.reviewId);
   const [assignedDate, setAssignedDate] = useState<string>(record.assignedOn || record.fromDate || "");
@@ -743,11 +707,6 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       return next;
     });
   };
-
-  // Form data for employee submission
-  const formData: ReviewFormData = useMemo(() => {
-    return submissionData || emptyReviewFormData;
-  }, [submissionData]);
 
   // Click on a star
   const handleStarClick = (paramKey: string, ratingValue: number) => {
@@ -1195,8 +1154,6 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       ).toFixed(1)
       : null;
 
-  const envRating = formData.companyEnvironmentRating || 0;
-  const envInfo = ENVIRONMENT_RATINGS[envRating];
   const managerEvaluationReady =
     record.reviewStatus === QuarterlyReviewStatus.COMPLETED &&
     record.performanceStatus === EmployeePerformanceStatus.COMPLETED;
@@ -1230,13 +1187,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     hideScoreParameters
       ? managerEvaluationReady
       : (
-          !isViewMode ||
-          managerEvaluationReady ||
-          hasManagerEvaluation ||
-          record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS ||
-          record.status === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS ||
-          employeeSubmitted
-        )
+        !isViewMode ||
+        managerEvaluationReady ||
+        hasManagerEvaluation ||
+        record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS ||
+        record.status === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS ||
+        employeeSubmitted
+      )
   );
 
   const toIsoDate = (value: string): string | undefined => {
@@ -1451,10 +1408,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               </div>
             </div>
             <div className="min-w-0">
-              <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-0.5">
+              <span className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
                 EMPLOYEE NAME
               </span>
-              <span className="text-sm font-bold text-[#2B3674] truncate block">
+              <span className="text-sm font-bold text-[#0F172A] truncate block">
                 {record.name}
               </span>
             </div>
@@ -1463,10 +1420,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           {/* 2. Employee ID */}
           <div className="eval-meta-segment eval-meta-segment-2 sm:pl-4 eval-stagger-item eval-stagger-2">
             <div>
-              <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-0.5">
+              <span className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
                 EMPLOYEE ID
               </span>
-              <span className="text-sm font-bold text-[#2B3674] block">
+              <span className="text-sm font-bold text-[#0F172A] block">
                 {record.id}
               </span>
             </div>
@@ -1475,10 +1432,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           {/* 3. Designation & Department */}
           <div className="eval-meta-segment eval-meta-segment-3 sm:pl-4 eval-stagger-item eval-stagger-3">
             <div className="min-w-0">
-              <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-0.5">
+              <span className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
                 DESIGNATION &amp; DEPT
               </span>
-              <span className="text-sm font-bold text-[#2B3674] block truncate">
+              <span className="text-sm font-bold text-[#0F172A] block truncate">
                 {record.role || "—"}
               </span>
             </div>
@@ -1487,10 +1444,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           {/* 4. Submitted Date */}
           <div className="eval-meta-segment eval-meta-segment-4 sm:pl-4 eval-stagger-item eval-stagger-4">
             <div>
-              <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-0.5">
+              <span className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
                 EMPLOYEE PERFORMANCE SUBMITTED DATE
               </span>
-              <span className="text-sm font-bold text-[#2B3674] block">
+              <span className="text-sm font-bold text-[#0F172A] block">
                 {employeeSubmitted ? record.submittedOn || "—" : "Not submitted"}
               </span>
             </div>
@@ -1506,30 +1463,30 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         {activeView === "review" && (
           <div className="w-full space-y-4 eval-submission-col">
             <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 space-y-3">
-              <h3 className="text-sm font-bold text-[#2B3674]">Assignment</h3>
+              <h3 className="text-sm font-bold text-[#0F172A]">Assignment</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-1">
-                    Assigned quarter
+                  <span className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                    Assigned Quarter
                   </span>
-                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#2B3674] eval-assignment-readonly-field cursor-not-allowed select-none">
+                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                     {record.quarter} · {record.financialYear}
                   </div>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-1">
-                    Assigned date
+                  <span className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                    Assigned Date
                   </span>
-                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#2B3674] eval-assignment-readonly-field cursor-not-allowed select-none">
+                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                     {assignedDate || "—"}
                   </div>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-1">
+                  <span className="block text-xs font-bold text-[#0F172A] mb-1.5">
                     Deadline{grantAccess ? " *" : ""}
                   </span>
                   {(isViewMode || employeeSubmitted) && !grantAccess ? (
-                    <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#2B3674] eval-assignment-readonly-field cursor-not-allowed select-none">
+                    <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                       {deadlineDate || "—"}
                     </div>
                   ) : (
@@ -1538,7 +1495,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </div>
               </div>
               <div>
-                <span className="block text-[10px] font-bold text-[#A3AED0] uppercase tracking-wider mb-1">
+                <span className="block text-xs font-bold text-[#0F172A] mb-1.5">
                   Description
                 </span>
                 <textarea
@@ -1576,7 +1533,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <div>
                     <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
                       {normalizedPerfStatus === EmployeePerformanceStatus.DRAFT ||
-                      record.reviewStatus === QuarterlyReviewStatus.DRAFT
+                        record.reviewStatus === QuarterlyReviewStatus.DRAFT
                         ? "Quarterly Review in Progress (Draft)"
                         : "Quarterly Review Not Submitted Yet"}
                     </p>
@@ -1590,271 +1547,221 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               </div>
             )}
 
-            {/* Visual Stepper Header */}
-            <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 border border-blue-100 bg-white/90 rounded-2xl shadow-xs">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3.5 border-b border-blue-50 pb-2.5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB]" />
-                  <span className="text-xs font-bold uppercase tracking-wider text-[#2B3674]">
-                    Review Steppers
-                  </span>
-                  <span className="text-[11px] font-semibold text-[#2563EB] bg-blue-50 border border-blue-200/80 px-2 py-0.5 rounded-full">
-                    {enteredStepsCount} of 5 entered
-                  </span>
-                </div>
-
-                {/* Filter Toggles: Entered Only (Default) vs All */}
-                <div className="flex items-center gap-1.5 p-1 bg-gray-100/80 rounded-xl border border-gray-200/60 self-start sm:self-auto">
-                  <button
-                    type="button"
-                    onClick={() => setStepperViewMode("entered_only")}
-                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                      stepperViewMode === "entered_only"
-                        ? "bg-white text-[#2563EB] shadow-xs"
-                        : "text-[#64748B] hover:text-[#2B3674]"
-                    }`}
-                  >
-                    Entered only ({enteredStepsCount})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStepperViewMode("all")}
-                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                      stepperViewMode === "all"
-                        ? "bg-white text-[#2563EB] shadow-xs"
-                        : "text-[#64748B] hover:text-[#2B3674]"
-                    }`}
-                  >
-                    Show all (5)
-                  </button>
-                </div>
-              </div>
-
-              {/* Step Pills */}
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-                {EVAL_STEPS.map((s) => {
-                  const done = isStepCompleted(s.id, formData);
-                  const isSelected = stepperViewMode === s.id;
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => {
-                        if (stepperViewMode === s.id) {
-                          setStepperViewMode("entered_only");
-                        } else {
-                          setStepperViewMode(s.id);
-                          scrollToEvalStep(s.id);
-                        }
-                      }}
-                      title={
-                        done
-                          ? `Step ${s.id}: ${s.label} (Entered)`
-                          : `Step ${s.id}: ${s.label} (Not entered yet)`
-                      }
-                      className={`flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
-                        isSelected
-                          ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20"
-                          : done
-                          ? "bg-blue-50/70 border-blue-200 text-[#2563EB] hover:bg-blue-100/70 shadow-xs"
-                          : "bg-gray-50/50 border-gray-200/80 text-[#94A3B8] hover:bg-gray-100/60"
-                      }`}
-                    >
-                      <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-transform duration-200 ${
-                          isSelected
-                            ? "bg-white text-[#2563EB]"
-                            : done
-                            ? "bg-[#2563EB] text-white shadow-xs"
-                            : "bg-gray-200 text-[#94A3B8]"
-                        }`}
-                      >
-                        {done ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : s.id}
-                      </span>
-                      <div className="min-w-0">
-                        <p
-                          className={`text-xs font-bold truncate ${
-                            isSelected ? "text-white" : done ? "text-[#2B3674]" : "text-[#64748B]"
-                          }`}
-                        >
-                          {s.label}
-                        </p>
-                        <p
-                          className={`text-[10px] ${
-                            isSelected
-                              ? "text-blue-100"
-                              : done
-                              ? "text-[#2563EB] font-semibold"
-                              : "text-[#94A3B8]"
-                          }`}
-                        >
-                          {done ? "Entered" : "Not entered"}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Empty state when user is filtering entered_only and 0 steps are entered */}
-            {enteredStepsCount === 0 && stepperViewMode === "entered_only" && (
-              <div className="eval-glass-card eval-reveal-card p-6 sm:p-8 text-center border border-dashed border-blue-200 rounded-3xl bg-white/70">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#2563EB] mx-auto flex items-center justify-center mb-3">
-                  <Clock className="w-6 h-6" />
-                </div>
-                <h4 className="text-base font-bold text-[#2B3674]">No Review Steps Entered Yet</h4>
-                <p className="text-xs sm:text-sm text-[#64748B] mt-1 max-w-md mx-auto">
-                  {hideScoreParameters
-                    ? "You haven't entered any steps yet. Go to your quarterly review stepper to start filling in your details."
-                    : "This employee has not filled in any review steps yet. Steps with saved data will automatically appear here."}
-                </p>
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    onClick={() => setStepperViewMode("all")}
-                    className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-xs font-bold text-[#2563EB] hover:bg-blue-100 cursor-pointer"
-                  >
-                    View Empty Form Template
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* STEP 1: ROLE & QUARTER OVERVIEW */}
             {shouldShowStep(1) && (
-                <div id="eval-step-1" className="eval-step-card eval-reveal-card space-y-3">
-                  <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
-                        1
-                      </span>
-                      <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                        Role &amp; Quarter Overview
-                      </h3>
-                    </div>
-                  </div>
-
-                  <div className="eval-stagger-item eval-stagger-3 space-y-3">
-                    {(() => {
-                      const raw = formData.overview || "";
-                      let parsed: any = null;
-                      if (raw.trim().startsWith("{") && raw.trim().endsWith("}")) {
-                        try {
-                          parsed = JSON.parse(raw);
-                        } catch {
-                          parsed = null;
-                        }
-                      }
-                      if (parsed) {
-                        return (
-                          <div className="space-y-3">
-                            {(parsed.reviewPeriodStart || parsed.reviewPeriodEnd) && (
-                              <div className="text-xs text-[#64748B] font-medium bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/70">
-                                Review Period: <strong className="text-[#0F172A]">{parsed.reviewPeriodStart || "—"}</strong> to <strong className="text-[#0F172A]">{parsed.reviewPeriodEnd || "—"}</strong>
-                              </div>
-                            )}
-                            <div>
-                              <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                                Overall Performance Summary
-                              </label>
-                              <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
-                                {parsed.overallPerformanceSummary || "—"}
-                              </div>
-                            </div>
-                            {Boolean(parsed.keyHighlights) && (
-                              <div>
-                                <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                                  Key Highlights
-                                </label>
-                                <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
-                                  {parsed.keyHighlights}
-                                </div>
-                              </div>
-                            )}
-                            {Boolean(parsed.majorContributions) && (
-                              <div>
-                                <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                                  Major Contributions
-                                </label>
-                                <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
-                                  {parsed.majorContributions}
-                                </div>
-                              </div>
-                            )}
-                            {Boolean(parsed.areasForImprovement) && (
-                              <div>
-                                <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                                  Areas for Improvement
-                                </label>
-                                <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium">
-                                  {parsed.areasForImprovement}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                      return (
-                        <div>
-                          <label className="text-[11px] font-extrabold text-[#64748B] block mb-1.5 uppercase tracking-wider">
-                            Overview
-                          </label>
-                          <div
-                            className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium"
-                            title="Employee submitted response (Read-only)"
-                          >
-                            {formData.overview || "—"}
-                          </div>
-                        </div>
-                      );
-                    })()}
+              <div id="eval-step-1" className="eval-step-card eval-reveal-card space-y-3">
+                <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                      1
+                    </span>
+                    <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                      Role &amp; Quarter Overview
+                    </h3>
                   </div>
                 </div>
+
+                <div className="eval-stagger-item eval-stagger-3 space-y-3">
+                  <div className="text-xs text-[#64748B] font-medium bg-white p-2.5 rounded-lg border border-[#E2E8F0] shadow-2xs">
+                    Review Period: <strong className="text-[#0F172A]">{formData.reviewPeriodStart || "—"}</strong> to <strong className="text-[#0F172A]">{formData.reviewPeriodEnd || "—"}</strong>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Overall Performance Summary
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs">
+                        {formData.overallPerformanceSummary || formData.overview || "—"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Key Highlights
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs">
+                        {formData.keyHighlights || "—"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Major Contributions
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs">
+                        {formData.majorContributions || "—"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Areas for Improvement
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs">
+                        {formData.areasForImprovement || "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* STEP 2: KEY ACHIEVEMENTS & PROJECTS */}
             {shouldShowStep(2) && (
-                <div id="eval-step-2" className="eval-step-card eval-reveal-card space-y-3.5">
-                  <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
-                        2
-                      </span>
-                      <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                        Key Achievements &amp; Projects
-                      </h3>
-                    </div>
+              <div id="eval-step-2" className="eval-step-card eval-reveal-card space-y-3.5">
+                <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                      2
+                    </span>
+                    <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                      Key Achievements &amp; Projects
+                    </h3>
                   </div>
+                </div>
 
-                  {(formData.projects || []).length === 0 ? (
-                    <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#64748B]">
-                      —
-                    </div>
-                  ) : (
-                    <div className="space-y-3.5">
-                      {(formData.projects || []).map((project, index) => (
-                        <div key={`${project.projectName}-${index}`} className="space-y-2 p-3 bg-blue-50/20 border border-blue-100 rounded-2xl">
-                          <div className="flex items-center gap-2">
-                            <span className="px-2 py-0.5 text-[10px] font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
-                              Project {index + 1}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <div>
-                              <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                                Project Name
-                              </label>
-                              <div className="eval-readonly-field p-3 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm font-bold text-[#2B3674]">
+                {(formData.projects || []).length === 0 ? (
+                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#64748B]">
+                    No project added.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {(formData.projects || []).map((project, index) => {
+                      const isExpanded = Boolean(expandedProjects[index]);
+                      return (
+                        <div
+                          key={`${project.projectName}-${index}`}
+                          className="bg-white border border-[#E2E8F0] hover:border-[#CBD5E1] rounded-2xl shadow-2xs overflow-hidden transition-all duration-200"
+                        >
+                          {/* Collapsed/Expanded Accordion Header */}
+                          <div
+                            onClick={() => toggleProjectExpand(index)}
+                            className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-white hover:bg-slate-50/60 cursor-pointer select-none group transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <span className="shrink-0 px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+                                Project {index + 1}
+                              </span>
+                              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] leading-snug group-hover:text-[#2563EB] transition-colors">
                                 {project.projectName || "—"}
+                              </h4>
+                            </div>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {project.isDraft && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-300 rounded-md shadow-2xs mr-0.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                  Draft
+                                </span>
+                              )}
+
+                              {/* Accordion Chevron */}
+                              <div className="p-0.5 rounded-md text-[#64748B] group-hover:text-[#2563EB] transition-colors">
+                                <ChevronDown
+                                  className={`w-4 h-4 transition-transform duration-300 ease-in-out ${
+                                    isExpanded ? "rotate-180 text-[#2563EB]" : ""
+                                  }`}
+                                />
                               </div>
-                              {(project.attachments || []).length > 0 && (
-                                <div className="mt-2.5">
-                                  <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                                    Attachments
+                            </div>
+                          </div>
+
+                          {/* Accordion Content (Inner Details) */}
+                          {isExpanded && (
+                            <div className="p-4 pt-2 space-y-3 border-t border-slate-100 animate-in fade-in duration-200">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div>
+                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                    Project Name
                                   </label>
-                                  <div className="flex flex-wrap gap-2">
-                                    {(project.attachments || []).map((file) => (
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#0F172A] shadow-2xs">
+                                    {project.projectName || "—"}
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                    Project Role
+                                  </label>
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-semibold text-[#0F172A] shadow-2xs">
+                                    {project.projectRole || "—"}
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                    Responsibility Type
+                                  </label>
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-semibold text-[#0F172A] shadow-2xs">
+                                    {project.responsibilityType || "—"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                    Project Description
+                                  </label>
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                                    {project.description || "—"}
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                    Key Responsibilities
+                                  </label>
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                                    {project.keyResponsibilities || "—"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                    Challenges Faced
+                                  </label>
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                                    {project.challengesFaced || project.challenge || "—"}
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                    Solutions Implemented
+                                  </label>
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                                    {project.solutionsImplemented || "—"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                    Leadership Qualities
+                                  </label>
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                                    {project.leadershipQualities || "—"}
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                    Client Review &amp; Feedback
+                                  </label>
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                                    {project.clientReviewFeedback || "—"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  Attachments
+                                </label>
+                                {(project.attachments || []).length > 0 ? (
+                                  <div className="p-3 bg-white border border-[#E2E8F0] rounded-xl flex flex-wrap gap-2 shadow-2xs">
+                                    {project.attachments!.map((file) => (
                                       <AttachmentItem
                                         key={file.objectKey || file.fileName}
                                         file={file}
@@ -1862,235 +1769,218 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                                       />
                                     ))}
                                   </div>
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                                Project Description
-                              </label>
-                              <div className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] whitespace-pre-line font-medium">
-                                {project.description || "—"}
+                                ) : (
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-medium shadow-2xs">
+                                    —
+                                  </div>
+                                )}
                               </div>
                             </div>
-                            <div>
-                              <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                                Challenge Overcome
-                              </label>
-                              <div className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] whitespace-pre-line font-medium">
-                                {project.challenge || "—"}
-                              </div>
-                            </div>
-                          </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* STEP 3: TEAMWORK & COLLABORATION with Interactive Score Bars */}
             {shouldShowStep(3) && (
-                <div id="eval-step-3" className="eval-step-card eval-reveal-card space-y-3.5">
-                  <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
-                        3
-                      </span>
-                      <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                        Teamwork &amp; Collaboration
-                      </h3>
-                    </div>
-                    {avgTeamScore ? (
-                      <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
-                        <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
-                        <span className="text-[11px] font-semibold text-[#64748B]">Average:</span>
-                        <span className="text-xs sm:text-sm font-bold text-[#2B3674]">{avgTeamScore}</span>
-                        <span className="text-[10px] font-bold text-[#94A3B8]">/ 5.0</span>
-                      </div>
-                    ) : null}
+              <div id="eval-step-3" className="eval-step-card eval-reveal-card space-y-3.5">
+                <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                      3
+                    </span>
+                    <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                      Teamwork &amp; Collaboration
+                    </h3>
                   </div>
+                  {avgTeamScore ? (
+                    <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
+                      <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
+                      <span className="text-[11px] font-semibold text-[#64748B]">Average:</span>
+                      <span className="text-xs sm:text-sm font-bold text-[#0F172A]">{avgTeamScore}</span>
+                      <span className="text-[10px] font-bold text-[#94A3B8]">/ 5.0</span>
+                    </div>
+                  ) : null}
+                </div>
 
-                  <div>
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-2 uppercase tracking-wider eval-stagger-item eval-stagger-3">
-                      Communication & Coordination Rating
+                  <div className="eval-stagger-item eval-stagger-3 space-y-2">
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Teamwork &amp; Collaboration Dimensions
                     </label>
 
-                    {/* 2-Column Responsive Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 eval-stagger-item eval-stagger-4">
+                    {/* 2-Column Responsive Grid (Image 2 style) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       {TEAM_CRITERIA.map((criterion) => {
                         const score =
                           teamRatings[criterion.key as keyof typeof teamRatings] || 0;
                         return (
                           <div
                             key={criterion.key}
-                            className="eval-teamwork-item eval-readonly-field flex items-center justify-between"
+                            className="p-3 bg-white border border-[#E2E8F0] rounded-xl flex items-center justify-between gap-2 shadow-2xs"
                             title="Employee submitted rating (Read-only)"
                           >
-                            <span className="text-xs font-bold text-[#2B3674] leading-snug">
+                            <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug">
                               {criterion.title}
                             </span>
-                            <div className="flex items-center gap-1 shrink-0">
-                              {[1, 2, 3, 4, 5].map((s) => (
-                                <Star
-                                  key={s}
-                                  className={`w-3.5 h-3.5 ${s <= score
-                                    ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.35)]"
-                                    : "fill-transparent text-gray-300"
-                                    }`}
-                                />
-                              ))}
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <Star
+                                    key={s}
+                                    className={`w-4 h-4 transition-colors duration-150 ${s <= score
+                                      ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
+                                      : "fill-transparent text-gray-300"
+                                      }`}
+                                  />
+                                ))}
+                              </div>
+                              {score > 0 && (
+                                <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200">
+                                  {score}.0
+                                </span>
+                              )}
                             </div>
                           </div>
                         );
                       })}
                     </div>
-
-                    {/* 4 Teamwork Details in 2 columns */}
-                    {(formData.teamCollaborationSummary ||
-                      formData.crossTeamContributions ||
-                      formData.knowledgeSharingMentoring ||
-                      formData.teamworkExamples) && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-blue-100/60 mt-3">
-                        {formData.teamCollaborationSummary && (
-                          <div>
-                            <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                              Team Collaboration Summary
-                            </label>
-                            <div className="p-3.5 bg-white border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed eval-readonly-field">
-                              {formData.teamCollaborationSummary}
-                            </div>
-                          </div>
-                        )}
-                        {formData.crossTeamContributions && (
-                          <div>
-                            <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                              Cross-Team Contributions
-                            </label>
-                            <div className="p-3.5 bg-white border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed eval-readonly-field">
-                              {formData.crossTeamContributions}
-                            </div>
-                          </div>
-                        )}
-                        {formData.knowledgeSharingMentoring && (
-                          <div>
-                            <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                              Knowledge Sharing / Mentoring
-                            </label>
-                            <div className="p-3.5 bg-white border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed eval-readonly-field">
-                              {formData.knowledgeSharingMentoring}
-                            </div>
-                          </div>
-                        )}
-                        {formData.teamworkExamples && (
-                          <div>
-                            <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                              Teamwork Examples
-                            </label>
-                            <div className="p-3.5 bg-white border border-blue-200/60 rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed eval-readonly-field">
-                              {formData.teamworkExamples}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
-                </div>
+
+                  {/* 4 Teamwork Details in 2 columns */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 mt-1">
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Team Collaboration Summary
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                        {formData.teamCollaborationSummary || "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Cross-Team Contributions
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                        {formData.crossTeamContributions || "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Knowledge Sharing / Mentoring
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                        {formData.knowledgeSharingMentoring || "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Teamwork Examples
+                      </label>
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                        {formData.teamworkExamples || "—"}
+                      </div>
+                    </div>
+                  </div>
+              </div>
             )}
 
             {/* STEP 4: CONTINUOUS LEARNING & GOALS */}
             {shouldShowStep(4) && (
-                <div id="eval-step-4" className="eval-step-card eval-reveal-card space-y-3">
-                  <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
-                        4
-                      </span>
-                      <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                        Continuous Learning &amp; Goals
-                      </h3>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 eval-stagger-item eval-stagger-3">
-                    <div>
-                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                        Skills Learned During This Period
-                      </label>
-                      <div
-                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[80px]"
-                        title="Employee submitted response (Read-only)"
-                      >
-                        {formData.skillsAcquired || "—"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                        Training / Certifications Completed
-                      </label>
-                      <div
-                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[80px]"
-                        title="Employee submitted response (Read-only)"
-                      >
-                        {formData.certificationsOrCourses || "—"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                        Skills to Improve
-                      </label>
-                      <div
-                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[80px]"
-                        title="Employee submitted response (Read-only)"
-                      >
-                        {formData.skillsToImprove || "—"}
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                        Support or Training Required
-                      </label>
-                      <div
-                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[80px]"
-                        title="Employee submitted response (Read-only)"
-                      >
-                        {formData.supportOrTrainingRequired || "—"}
-                      </div>
-                    </div>
-
-                    <div className="col-span-1 md:col-span-2">
-                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                        Learning Goals for Next Quarter
-                      </label>
-                      <div
-                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[70px]"
-                        title="Employee submitted response (Read-only)"
-                      >
-                        {formData.nextQuarterLearningGoals || "—"}
-                      </div>
-                    </div>
-
-                    {!formData.skillsAcquired && !formData.skillsToImprove && (formData.learningGoalItems || []).length > 0 && (
-                      <div className="col-span-1 md:col-span-2 space-y-2 pt-2 border-t border-blue-100">
-                        <label className="text-[11px] font-bold text-[#A3AED0] block uppercase tracking-wider">
-                          Previous Learning Goals
-                        </label>
-                        {(formData.learningGoalItems || []).map((goal, index) => (
-                          <div
-                            key={`${goal}-${index}`}
-                            className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
-                            title="Employee submitted response (Read-only)"
-                          >
-                            {goal}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+              <div id="eval-step-4" className="eval-step-card eval-reveal-card space-y-3">
+                <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                      4
+                    </span>
+                    <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                      Continuous Learning &amp; Goals
+                    </h3>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 eval-stagger-item eval-stagger-3">
+                  <div>
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Skills Learned During This Period
+                    </label>
+                    <div
+                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[80px] shadow-2xs"
+                      title="Employee submitted response (Read-only)"
+                    >
+                      {formData.skillsAcquired || "—"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Training / Certifications Completed
+                    </label>
+                    <div
+                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[80px] shadow-2xs"
+                      title="Employee submitted response (Read-only)"
+                    >
+                      {formData.certificationsOrCourses || "—"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Skills to Improve
+                    </label>
+                    <div
+                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[80px] shadow-2xs"
+                      title="Employee submitted response (Read-only)"
+                    >
+                      {formData.skillsToImprove || "—"}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Support or Training Required
+                    </label>
+                    <div
+                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[80px] shadow-2xs"
+                      title="Employee submitted response (Read-only)"
+                    >
+                      {formData.supportOrTrainingRequired || "—"}
+                    </div>
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Learning Goals for Next Quarter
+                    </label>
+                    <div
+                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[70px] shadow-2xs"
+                      title="Employee submitted response (Read-only)"
+                    >
+                      {formData.nextQuarterLearningGoals || "—"}
+                    </div>
+                  </div>
+
+                  {!formData.skillsAcquired && !formData.skillsToImprove && (formData.learningGoalItems || []).length > 0 && (
+                    <div className="col-span-1 md:col-span-2 space-y-2 pt-2 border-t border-blue-100">
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                        Previous Learning Goals
+                      </label>
+                      {(formData.learningGoalItems || []).map((goal, index) => (
+                        <div
+                          key={`${goal}-${index}`}
+                          className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium shadow-2xs"
+                          title="Employee submitted response (Read-only)"
+                        >
+                          {goal}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
 
             {/* STEP 5: ENVIRONMENT */}
@@ -2098,96 +1988,86 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               <>
                 <div id="eval-step-5" className="eval-step-card eval-reveal-card space-y-3.5">
                   <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
                         5
                       </span>
-                      <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                      <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
                         Environment
                       </h3>
                     </div>
-                    {formData.companyEnvironmentRating && envInfo ? (
-                      <span className="text-xs font-bold text-blue-600 px-3 py-1 rounded-full bg-blue-50 flex items-center gap-1.5 border border-blue-200 shadow-xs eval-stagger-item eval-stagger-2">
-                        <span className="text-sm">{envInfo.emoji}</span>
-                        <span>
-                          {envInfo.label} ({formData.companyEnvironmentRating}/5)
-                        </span>
-                      </span>
-                    ) : null}
+                    {(() => {
+                      const scores = [
+                        formData.companyEnvironmentRating,
+                        formData.toolingAndResourcesRating,
+                        formData.managementSupportRating,
+                      ].filter((s): s is number => Boolean(s && s > 0));
+
+                      const avgScore =
+                        scores.length > 0
+                          ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
+                          : null;
+
+                      return avgScore ? (
+                        <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
+                          <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
+                          <span className="text-[11px] font-semibold text-[#64748B]">Average:</span>
+                          <span className="text-xs sm:text-sm font-extrabold text-[#0F172A]">
+                            {avgScore}
+                          </span>
+                          <span className="text-[10px] font-bold text-[#94A3B8]">/ 5.0</span>
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
 
-                  {/* 3 Rating Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 eval-stagger-item eval-stagger-3">
-                    {/* Work Environment Satisfaction */}
-                    <div className="p-3 bg-white/80 border border-blue-200/60 rounded-xl space-y-1.5">
-                      <span className="text-[11px] font-bold text-[#A3AED0] uppercase tracking-wider block">
-                        Work Environment Satisfaction
-                      </span>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              className={`w-3.5 h-3.5 ${
-                                s <= (formData.companyEnvironmentRating || 0)
-                                  ? "fill-[#F59E0B] text-[#D97706]"
-                                  : "fill-transparent text-slate-200"
-                              }`}
-                            />
-                          ))}
+                  {/* Environment Dimensions Rating Preview (Exact Image 2 Style) */}
+                  <div className="eval-stagger-item eval-stagger-3 space-y-2">
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Environment &amp; Support Dimensions
+                    </label>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                      {[
+                        {
+                          title: "Work Environment Satisfaction",
+                          score: formData.companyEnvironmentRating || 0,
+                        },
+                        {
+                          title: "Availability of Tools & Resources",
+                          score: formData.toolingAndResourcesRating || 0,
+                        },
+                        {
+                          title: "Manager Support",
+                          score: formData.managementSupportRating || 0,
+                        },
+                      ].map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="p-3 bg-white border border-[#E2E8F0] rounded-xl flex items-center justify-between gap-2 shadow-2xs"
+                        >
+                          <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug">
+                            {item.title}
+                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-1">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className={`w-4 h-4 transition-colors duration-150 ${s <= item.score
+                                    ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
+                                    : "fill-transparent text-gray-300"
+                                    }`}
+                                />
+                              ))}
+                            </div>
+                            {item.score > 0 && (
+                              <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200">
+                                {item.score}.0
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span className="text-xs font-bold text-[#2B3674]">
-                          {formData.companyEnvironmentRating ? `${formData.companyEnvironmentRating}/5` : "—"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Availability of Tools & Resources */}
-                    <div className="p-3 bg-white/80 border border-blue-200/60 rounded-xl space-y-1.5">
-                      <span className="text-[11px] font-bold text-[#A3AED0] uppercase tracking-wider block">
-                        Availability of Tools &amp; Resources
-                      </span>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              className={`w-3.5 h-3.5 ${
-                                s <= (formData.toolingAndResourcesRating || 0)
-                                  ? "fill-[#F59E0B] text-[#D97706]"
-                                  : "fill-transparent text-slate-200"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-xs font-bold text-[#2B3674]">
-                          {formData.toolingAndResourcesRating ? `${formData.toolingAndResourcesRating}/5` : "—"}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Manager Support */}
-                    <div className="p-3 bg-white/80 border border-blue-200/60 rounded-xl space-y-1.5">
-                      <span className="text-[11px] font-bold text-[#A3AED0] uppercase tracking-wider block">
-                        Manager Support
-                      </span>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              className={`w-3.5 h-3.5 ${
-                                s <= (formData.managementSupportRating || 0)
-                                  ? "fill-[#F59E0B] text-[#D97706]"
-                                  : "fill-transparent text-slate-200"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-xs font-bold text-[#2B3674]">
-                          {formData.managementSupportRating ? `${formData.managementSupportRating}/5` : "—"}
-                        </span>
-                      </div>
+                      ))}
                     </div>
                   </div>
 
@@ -2195,90 +2075,103 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
                     {/* Challenges Affecting Productivity */}
                     <div className="eval-stagger-item eval-stagger-3">
-                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
                         Challenges Affecting Productivity
                       </label>
                       <div
-                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[75px]"
+                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
-                        {formData.challengesAffectingProductivity || formData.workLifeBalance || "None reported"}
+                        {formData.challengesAffectingProductivity || formData.workLifeBalance || "—"}
                       </div>
                     </div>
 
                     {/* Suggestions for Improvement */}
                     <div className="eval-stagger-item eval-stagger-4">
-                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
                         Suggestions for Improvement
                       </label>
                       <div
-                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[75px]"
+                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
-                        {formData.suggestionsForImprovement || "No suggestions provided"}
+                        {formData.suggestionsForImprovement || formData.toolingAndResources || "—"}
                       </div>
                     </div>
                   </div>
 
-                  {/* Legacy Feedback on Work Culture fallback if present */}
-                  {Boolean(formData.workCultureFeedback) && (
-                    <div className="eval-stagger-item eval-stagger-4 pt-2 border-t border-blue-100">
-                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
-                        Additional Culture Feedback
-                      </label>
-                      <div
-                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium"
-                        title="Employee submitted response (Read-only)"
-                      >
-                        {formData.workCultureFeedback}
-                      </div>
+                  {/* Feedback on Work Culture */}
+                  <div className="eval-stagger-item eval-stagger-4 pt-2 border-t border-blue-100">
+                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      Additional Culture Feedback
+                    </label>
+                    <div
+                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium shadow-2xs"
+                      title="Employee submitted response (Read-only)"
+                    >
+                      {formData.workCultureFeedback || "—"}
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* STEP 6: FINAL REVIEW */}
                 <div id="eval-step-6" className="eval-step-card eval-reveal-card space-y-3.5">
                   <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-6 h-6 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-xs font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
                         6
                       </span>
-                      <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                        Final Review &amp; Self-Evaluation
+                      <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                        Final Review &amp; Confirmation
                       </h3>
                     </div>
                     {formData.overallSelfRating > 0 ? (
-                      <span className="text-xs font-bold text-blue-600 px-3 py-1 rounded-full bg-blue-50 flex items-center gap-1.5 border border-blue-200 shadow-xs eval-stagger-item eval-stagger-2">
-                        <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#D97706]" />
+                      <span className="text-xs font-bold text-[#2563EB] px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB]" />
                         <span>Self-Rating: {formData.overallSelfRating}/5</span>
                       </span>
                     ) : null}
                   </div>
 
-                  {/* Overall Self-Rating Card */}
+                  {/* Overall Self-Rating Card (Image 2 Single-Row Pill Style) */}
                   <div className="eval-stagger-item eval-stagger-3">
-                    <div className="p-3.5 bg-white/80 border border-blue-200/60 rounded-xl flex items-center justify-between gap-3">
-                      <div>
-                        <span className="text-[11px] font-bold text-[#A3AED0] uppercase tracking-wider block">
+                    <div className="p-3 sm:py-2.5 sm:px-3.5 rounded-2xl border-[1.5px] border-[#E2E8F0] bg-white flex flex-wrap items-center justify-between gap-2.5 shadow-2xs">
+                      {/* Left: Checkmark, Title, and Qualitative Badge */}
+                      <div className="flex items-center gap-2 min-w-0">
+                        {formData.overallSelfRating > 0 && (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB] shrink-0" />
+                        )}
+                        <span className="text-xs sm:text-[13px] font-bold text-[#0F172A] truncate">
                           Overall Self-Rating
                         </span>
-                        <span className="text-sm font-bold text-[#2B3674] mt-0.5 block">
-                          {formData.overallSelfRating > 0
-                            ? `${formData.overallSelfRating} / 5 (${RATING_LABEL_MAP[formData.overallSelfRating] || "Rated"})`
-                            : "Not provided"}
-                        </span>
+                        {formData.overallSelfRating > 0 && (
+                          <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60 ml-1 shrink-0">
+                            {RATING_LABEL_MAP[formData.overallSelfRating] || "Rated"}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star
-                            key={s}
-                            className={`w-4 h-4 ${
-                              s <= (formData.overallSelfRating || 0)
-                                ? "fill-[#F59E0B] text-[#D97706]"
-                                : "fill-transparent text-slate-200"
-                            }`}
-                          />
-                        ))}
+
+                      {/* Right: 5 Stars & 5.0 / 5.0 Score Pill */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star
+                              key={s}
+                              className={`w-4 h-4 transition-colors duration-150 ${
+                                s <= (formData.overallSelfRating || 0)
+                                  ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
+                                  : "fill-transparent text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        {formData.overallSelfRating > 0 ? (
+                          <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-200 whitespace-nowrap">
+                            {formData.overallSelfRating}.0 / 5.0
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-medium text-slate-400">Not rated</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -2287,173 +2180,177 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
                     {/* Overall Employee Comments */}
                     <div className="eval-stagger-item eval-stagger-3">
-                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
                         Overall Employee Comments
                       </label>
                       <div
-                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[75px]"
+                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
-                        {formData.overallEmployeeComments || formData.finalComments || "None provided"}
+                        {formData.overallEmployeeComments || formData.finalComments || "—"}
                       </div>
                     </div>
 
                     {/* Career Growth Interests */}
                     <div className="eval-stagger-item eval-stagger-4">
-                      <label className="text-[11px] font-bold text-[#A3AED0] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
                         Career Growth Interests
                       </label>
                       <div
-                        className="eval-readonly-field p-3.5 bg-gray-50/80 border border-blue-200/60 rounded-xl text-sm text-[#2B3674] leading-relaxed whitespace-pre-line font-medium min-h-[75px]"
+                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
-                        {formData.careerGrowthInterests || "None provided"}
+                        {formData.careerGrowthInterests || "—"}
                       </div>
                     </div>
                   </div>
 
                   {/* Confirmation Status */}
-                  {formData.confirmationAccepted && (
-                    <div className="eval-stagger-item eval-stagger-4 pt-1">
-                      <div className="p-3 bg-emerald-50/50 border border-emerald-200/80 rounded-xl flex items-center gap-2 text-emerald-800 text-xs font-semibold">
+                  <div className="eval-stagger-item eval-stagger-4 pt-1">
+                    {formData.confirmationAccepted ? (
+                      <div className="p-3 bg-emerald-50/50 border border-emerald-200/80 rounded-xl flex items-center gap-2 text-emerald-800 text-xs font-semibold shadow-2xs">
                         <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                         <span>Confirmed and verified by employee upon submission</span>
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="p-3 bg-slate-50 border border-[#E2E8F0] rounded-xl flex items-center gap-2 text-[#64748B] text-xs font-medium shadow-2xs">
+                        <span>Draft review — pending final employee submission and confirmation.</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             )}
 
-                {/* Evaluation CTA Card: shown to manager if submitted/drafted/completed, but strictly hidden for employee until completed */}
-                {canShowEvaluationCta ? (
-                  <div className="eval-matrix-cta-card eval-reveal-card relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-blue-200/70 bg-gradient-to-br from-white via-blue-50/40 to-blue-100/20 shadow-lg shadow-blue-500/10 mt-6">
-                    {/* Ambient Decorative SVG in Background */}
-                    <svg
-                      className="absolute -right-8 -bottom-10 w-72 h-72 text-blue-500/10 pointer-events-none eval-cta-bg-svg"
-                      viewBox="0 0 200 200"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      aria-hidden="true"
-                    >
-                      <circle cx="100" cy="100" r="80" stroke="currentColor" strokeWidth="2" strokeDasharray="6 6" />
-                      <circle cx="100" cy="100" r="50" stroke="currentColor" strokeWidth="1.5" />
-                      <path d="M40 100 Q70 60 100 100 T160 100" stroke="currentColor" strokeWidth="2" />
-                    </svg>
+            {/* Evaluation CTA Card: shown to manager if submitted/drafted/completed, but strictly hidden for employee until completed */}
+            {canShowEvaluationCta ? (
+              <div className="eval-matrix-cta-card eval-reveal-card relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-blue-200/70 bg-gradient-to-br from-white via-blue-50/40 to-blue-100/20 shadow-lg shadow-blue-500/10 mt-6">
+                {/* Ambient Decorative SVG in Background */}
+                <svg
+                  className="absolute -right-8 -bottom-10 w-72 h-72 text-blue-500/10 pointer-events-none eval-cta-bg-svg"
+                  viewBox="0 0 200 200"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <circle cx="100" cy="100" r="80" stroke="currentColor" strokeWidth="2" strokeDasharray="6 6" />
+                  <circle cx="100" cy="100" r="50" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M40 100 Q70 60 100 100 T160 100" stroke="currentColor" strokeWidth="2" />
+                </svg>
 
-                    <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
-                      <div className="flex items-start sm:items-center gap-4">
-                        {/* Glowing Matrix Icon SVG Box with Animated Orbital Pulse */}
-                        <div className="relative shrink-0">
-                          <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-md shadow-blue-500/25 eval-matrix-btn-icon-glow">
-                            <svg
-                              className="w-7 h-7 eval-matrix-icon-svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                d="M4 6H20M4 12H20M4 18H20"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeDasharray="16"
-                                strokeDashoffset="0"
-                                className="eval-matrix-svg-lines"
-                              />
-                              <circle cx="8" cy="6" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
-                              <circle cx="16" cy="12" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
-                              <circle cx="11" cy="18" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
-                            </svg>
-                          </div>
-                          <span className="absolute -inset-1 rounded-2xl border border-blue-400/40 animate-ping opacity-25 pointer-events-none" />
-                        </div>
-
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-blue-600 font-bold">
-                              {record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS
-                                ? `${record.quarter} Evaluation Draft Saved`
-                                : `${record.quarter} Evaluation Ready`}
-                            </span>
-                          </div>
-                          <h3 className="text-lg sm:text-xl font-bold text-[#2B3674] mt-1">
-                            {isViewMode
-                              ? record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS
-                                ? "View Draft Evaluation"
-                                : "View Evaluation & Ratings"
-                              : "Evaluate Employee Performance"}
-                          </h3>
-                          <p className="text-xs text-[#64748B] mt-0.5 max-w-xl leading-relaxed">
-                            {isViewMode
-                              ? record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS
-                                ? "Navigate to the scored evaluation matrix to inspect draft competencies, ratings, and feedback."
-                                : "Navigate to the scored evaluation matrix to inspect finalized competencies, ratings, and feedback."
-                              : "Completed review of all quarterly submissions. Proceed to the Evaluation Matrix to score parameters (1-5 scale) and finalize the appraisal."}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Action Button that navigates to the Evaluation Matrix */}
-                      <button
-                        type="button"
-                        onClick={handleNavigateToMatrix}
-                        className="eval-open-matrix-btn shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#3B82F6] via-[#2563EB] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer group"
-                      >
-                        <Sliders className="w-4 h-4 transition-transform group-hover:rotate-45" />
-                        <span>{isViewMode ? "Go to Evaluation Matrix" : "Open Evaluation Matrix"}</span>
+                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                  <div className="flex items-start sm:items-center gap-4">
+                    {/* Glowing Matrix Icon SVG Box with Animated Orbital Pulse */}
+                    <div className="relative shrink-0">
+                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-md shadow-blue-500/25 eval-matrix-btn-icon-glow">
                         <svg
-                          className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1.5"
+                          className="w-7 h-7 eval-matrix-icon-svg"
                           viewBox="0 0 24 24"
                           fill="none"
                           xmlns="http://www.w3.org/2000/svg"
                         >
                           <path
-                            d="M5 12H19M19 12L13 6M19 12L13 18"
+                            d="M4 6H20M4 12H20M4 18H20"
                             stroke="currentColor"
-                            strokeWidth="2.5"
+                            strokeWidth="2"
                             strokeLinecap="round"
-                            strokeLinejoin="round"
+                            strokeDasharray="16"
+                            strokeDashoffset="0"
+                            className="eval-matrix-svg-lines"
                           />
+                          <circle cx="8" cy="6" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
+                          <circle cx="16" cy="12" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
+                          <circle cx="11" cy="18" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
                         </svg>
-                      </button>
+                      </div>
+                      <span className="absolute -inset-1 rounded-2xl border border-blue-400/40 animate-ping opacity-25 pointer-events-none" />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-blue-600 font-bold">
+                          {record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS
+                            ? `${record.quarter} Evaluation Draft Saved`
+                            : `${record.quarter} Evaluation Ready`}
+                        </span>
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-bold text-[#2B3674] mt-1">
+                        {isViewMode
+                          ? record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS
+                            ? "View Draft Evaluation"
+                            : "View Evaluation & Ratings"
+                          : "Evaluate Employee Performance"}
+                      </h3>
+                      <p className="text-xs text-[#64748B] mt-0.5 max-w-xl leading-relaxed">
+                        {isViewMode
+                          ? record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS
+                            ? "Navigate to the scored evaluation matrix to inspect draft competencies, ratings, and feedback."
+                            : "Navigate to the scored evaluation matrix to inspect finalized competencies, ratings, and feedback."
+                          : "Completed review of all quarterly submissions. Proceed to the Evaluation Matrix to score parameters (1-5 scale) and finalize the appraisal."}
+                      </p>
                     </div>
                   </div>
-                ) : isEditAccessPendingOrGranted ? (
-                  <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-6 border border-amber-200/70 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-amber-50/70 rounded-2xl shadow-xs">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 text-amber-700">
-                        <Clock className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
-                          {grantAccess || [QuarterlyReviewStatus.EDIT_GRANTED, QuarterlyReviewStatus.APPROVED_FOR_EDITING, QuarterlyReviewStatus.ALLOWED_TO_EDIT].some((s) => s && (s.toUpperCase() === normalizedPerfStatus || s.toUpperCase() === String(record.reviewStatus || "").toUpperCase()))
-                            ? "Edit Window Active"
-                            : "Edit Access Requested"}
-                        </p>
-                        <p className="text-xs text-amber-700/90 mt-0.5 font-medium">
-                          {grantAccess || [QuarterlyReviewStatus.EDIT_GRANTED, QuarterlyReviewStatus.APPROVED_FOR_EDITING, QuarterlyReviewStatus.ALLOWED_TO_EDIT].some((s) => s && (s.toUpperCase() === normalizedPerfStatus || s.toUpperCase() === String(record.reviewStatus || "").toUpperCase()))
-                            ? "Employee has been granted edit access. The Evaluation Matrix will become accessible once they resubmit their review."
-                            : "Employee has submitted an access request to update this review. The Evaluation Matrix will become accessible once the review is resubmitted."}
-                        </p>
-                      </div>
-                    </div>
+
+                  {/* Action Button that navigates to the Evaluation Matrix */}
+                  <button
+                    type="button"
+                    onClick={handleNavigateToMatrix}
+                    className="eval-open-matrix-btn shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#3B82F6] via-[#2563EB] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer group"
+                  >
+                    <Sliders className="w-4 h-4 transition-transform group-hover:rotate-45" />
+                    <span>{isViewMode ? "Go to Evaluation Matrix" : "Open Evaluation Matrix"}</span>
+                    <svg
+                      className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M5 12H19M19 12L13 6M19 12L13 18"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ) : isEditAccessPendingOrGranted ? (
+              <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-6 border border-amber-200/70 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-amber-50/70 rounded-2xl shadow-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 flex items-center justify-center shrink-0 text-amber-700">
+                    <Clock className="w-4 h-4" />
                   </div>
-                ) : hideScoreParameters ? (
-                  <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4">
-                    <p className="text-sm font-medium text-[#64748B]">
-                      {employeeSubmitted
-                        ? "Quarterly review submitted. Waiting for manager review."
-                        : "Quarterly review in progress. Review and complete all steps before final submission."}
+                  <div>
+                    <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                      {grantAccess || [QuarterlyReviewStatus.EDIT_GRANTED, QuarterlyReviewStatus.APPROVED_FOR_EDITING, QuarterlyReviewStatus.ALLOWED_TO_EDIT].some((s) => s && (s.toUpperCase() === normalizedPerfStatus || s.toUpperCase() === String(record.reviewStatus || "").toUpperCase()))
+                        ? "Edit Window Active"
+                        : "Edit Access Requested"}
+                    </p>
+                    <p className="text-xs text-amber-700/90 mt-0.5 font-medium">
+                      {grantAccess || [QuarterlyReviewStatus.EDIT_GRANTED, QuarterlyReviewStatus.APPROVED_FOR_EDITING, QuarterlyReviewStatus.ALLOWED_TO_EDIT].some((s) => s && (s.toUpperCase() === normalizedPerfStatus || s.toUpperCase() === String(record.reviewStatus || "").toUpperCase()))
+                        ? "Employee has been granted edit access. The Evaluation Matrix will become accessible once they resubmit their review."
+                        : "Employee has submitted an access request to update this review. The Evaluation Matrix will become accessible once the review is resubmitted."}
                     </p>
                   </div>
-                ) : !employeeSubmitted ? (
-                  <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4 border border-blue-100 bg-white/60">
-                    <p className="text-xs sm:text-sm font-medium text-[#64748B]">
-                      This review is currently in progress. Manager evaluation matrix will unlock once the employee formally submits their quarterly review.
-                    </p>
-                  </div>
-                ) : null}
+                </div>
+              </div>
+            ) : hideScoreParameters ? (
+              <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4">
+                <p className="text-sm font-medium text-[#64748B]">
+                  {employeeSubmitted
+                    ? "Quarterly review submitted. Waiting for manager review."
+                    : "Quarterly review in progress. Review and complete all steps before final submission."}
+                </p>
+              </div>
+            ) : !employeeSubmitted ? (
+              <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4 border border-blue-100 bg-white/60">
+                <p className="text-xs sm:text-sm font-medium text-[#64748B]">
+                  This review is currently in progress. Manager evaluation matrix will unlock once the employee formally submits their quarterly review.
+                </p>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -2490,7 +2387,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <div className="space-y-4">
                     <div>
                       <div className="mb-2.5 eval-stagger-item eval-stagger-2">
-                        <label className="block text-xs font-bold text-[#A3AED0] uppercase tracking-wider">
+                        <label className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
                           Score Evaluation Parameters (1-5 Scale)
                         </label>
                       </div>
@@ -2508,7 +2405,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               <Lock className="w-4 h-4" />
                             </div>
                             <div>
-                              <span className="text-xs font-bold text-[#2B3674] block">
+                              <span className="text-xs font-bold text-[#0F172A] block">
                                 Score Evaluation Parameters (1-5 Scale)
                               </span>
                               <span className="text-[11px] text-[#64748B]">
@@ -2528,7 +2425,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               <Mail className="w-4 h-4" />
                             </div>
                             <div>
-                              <h4 className="text-xs font-bold text-[#2B3674]">
+                              <h4 className="text-xs font-bold text-[#0F172A]">
                                 Request Rating Access
                               </h4>
                               <p className="text-[11px] text-[#64748B] mt-0.5">
@@ -2557,7 +2454,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     {/* Score Evaluation Parameters Box */}
                     <div>
                       <div className="mb-2.5 eval-stagger-item eval-stagger-2">
-                        <label className="block text-xs font-bold text-[#A3AED0] uppercase tracking-wider">
+                        <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
                           Score Evaluation Parameters (1-5 Scale)
                         </label>
                       </div>
@@ -2582,8 +2479,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                                   : "border-[#E2E8F0]/70"
                                   } rounded-xl px-3.5 py-2.5 flex items-center justify-between shadow-2xs transition-all`}
                               >
-                                <span className="text-xs sm:text-[13px] font-bold text-[#2B3674] pr-2">
-                                  {param.label}
+                                <span className="text-xs sm:text-[13px] font-bold text-[#0F172A] pr-2">
+                                  {param.label} <span className="text-red-500">*</span>
                                 </span>
 
                                 <div className="eval-star-group shrink-0">
@@ -2688,9 +2585,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       style={
                         currentTier
                           ? {
-                              borderColor: currentTier.badgeBorderHex,
-                              boxShadow: `0 4px 18px -2px ${currentTier.accentHex}26`,
-                            }
+                            borderColor: currentTier.badgeBorderHex,
+                            boxShadow: `0 4px 18px -2px ${currentTier.accentHex}26`,
+                          }
                           : undefined
                       }
                     >
@@ -2700,36 +2597,19 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           style={
                             currentTier
                               ? {
-                                  backgroundColor: currentTier.badgeBgHex,
-                                  color: currentTier.badgeTextHex,
-                                  border: `1px solid ${currentTier.badgeBorderHex}60`,
-                                }
+                                backgroundColor: currentTier.badgeBgHex,
+                                color: currentTier.badgeTextHex,
+                                border: `1px solid ${currentTier.badgeBorderHex}60`,
+                              }
                               : { backgroundColor: "rgba(219, 234, 254, 0.8)", color: "#2563EB" }
                           }
                         >
                           <Award className="w-4 h-4" />
                         </div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-        
-                            {currentTier && (
-                              <span
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold tracking-wide uppercase transition-all duration-300"
-                                style={{
-                                  backgroundColor: currentTier.badgeBgHex,
-                                  color: currentTier.badgeTextHex,
-                                  border: `1.5px solid ${currentTier.badgeBorderHex}`,
-                                }}
-                              >
-                                {currentTier.badge}
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs sm:text-[13px] font-bold text-[#2B3674]">
-                            Overall Performance Rating
-                            <span className="ml-1.5 text-[11px] font-medium text-[#A3AED0] normal-case">(auto-calculated)</span>
-                          </span>
-                        </div>
+                        <span className="text-xs sm:text-[13px] font-bold text-[#0F172A]">
+                          Overall Performance Rating
+                          <span className="ml-1.5 text-[11px] font-medium text-[#64748B] normal-case">(auto-calculated)</span>
+                        </span>
                       </div>
 
                       <div className="flex flex-1 items-center justify-center min-w-0">
@@ -2741,10 +2621,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             style={
                               currentTier && averageScore !== null
                                 ? {
-                                    borderColor: currentTier.badgeBorderHex,
-                                    color: currentTier.badgeTextHex,
-                                    backgroundColor: currentTier.badgeBgHex + "33",
-                                  }
+                                  borderColor: currentTier.badgeBorderHex,
+                                  color: currentTier.badgeTextHex,
+                                  backgroundColor: currentTier.badgeBgHex + "33",
+                                }
                                 : { color: "#94A3B8", backgroundColor: "#F8FAFC" }
                             }
                             title="Auto-calculated from evaluation parameters"
@@ -2762,38 +2642,52 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         </div>
                       </div>
 
-
-                      <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
-                        <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 80 80">
-                          <circle
-                            cx="40"
-                            cy="40"
-                            r="32"
-                            stroke="#E2E8F0"
-                            strokeWidth="6"
-                            fill="transparent"
-                          />
-                          <circle
-                            cx="40"
-                            cy="40"
-                            r="32"
-                            stroke={gaugeColor}
-                            strokeWidth="6"
-                            strokeDasharray="201.06"
-                            strokeDashoffset={gaugeOffset}
-                            strokeLinecap="round"
-                            fill="transparent"
-                            className="transition-all duration-700 ease-out"
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                      <div className="flex items-center gap-3 shrink-0">
+                        {currentTier && (
                           <span
-                            className="text-base font-bold leading-none transition-colors duration-300"
-                            style={currentTier ? { color: currentTier.badgeTextHex } : { color: "#2B3674" }}
+                            className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-wide uppercase transition-all duration-300 shadow-2xs shrink-0"
+                            style={{
+                              backgroundColor: currentTier.badgeBgHex,
+                              color: currentTier.badgeTextHex,
+                              border: `1.5px solid ${currentTier.badgeBorderHex}`,
+                            }}
                           >
-                            {averageScore !== null ? averageScore.toFixed(1) : "—"}
+                            {currentTier.badge}
                           </span>
-                          <span className="text-[9px] font-bold text-[#64748B] mt-0.5">/ 5.0</span>
+                        )}
+
+                        <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
+                          <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 80 80">
+                            <circle
+                              cx="40"
+                              cy="40"
+                              r="32"
+                              stroke="#E2E8F0"
+                              strokeWidth="6"
+                              fill="transparent"
+                            />
+                            <circle
+                              cx="40"
+                              cy="40"
+                              r="32"
+                              stroke={gaugeColor}
+                              strokeWidth="6"
+                              strokeDasharray="201.06"
+                              strokeDashoffset={gaugeOffset}
+                              strokeLinecap="round"
+                              fill="transparent"
+                              className="transition-all duration-700 ease-out"
+                            />
+                          </svg>
+                          <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                            <span
+                              className="text-base font-bold leading-none transition-colors duration-300"
+                              style={currentTier ? { color: currentTier.badgeTextHex } : { color: "#0F172A" }}
+                            >
+                              {averageScore !== null ? averageScore.toFixed(1) : "—"}
+                            </span>
+                            <span className="text-[9px] font-bold text-[#64748B] mt-0.5">/ 5.0</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2803,7 +2697,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 {(!hideScoreParameters || isRatingUnlocked) && (
                   <div className="space-y-4">
                     <div className="eval-reveal-card" id="eval-field-container-strengths">
-                      <label className="block text-xs font-bold text-[#2B3674] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                      <label className="block text-xs font-bold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
                         <span>
                           Key Strengths <span className="text-red-500">*</span>
                         </span>
@@ -2840,7 +2734,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
 
                     <div className="eval-reveal-card" id="eval-field-container-improvements">
-                      <label className="block text-xs font-bold text-[#2B3674] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                      <label className="block text-xs font-bold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
                         <span>
                           Areas of Improvement <span className="text-red-500">*</span>
                         </span>
@@ -2877,11 +2771,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
 
                     <div className="eval-reveal-card" id="eval-field-container-remarks">
-                      <label className="block text-xs font-bold text-[#2B3674] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                      <label className="block text-xs font-bold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
                         <span>
                           Manager Comments <span className="text-red-500">*</span>
                         </span>
-                        <span className="text-[10px] font-bold text-[#A3AED0]">
+                        <span className="text-[10px] font-bold text-[#A3AED0] normal-case tracking-normal">
                           Guidance &amp; Notes
                         </span>
                       </label>
@@ -2915,244 +2809,238 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                     {/* ========== FINAL REVIEW & SUBMISSION SECTION ========== */}
                     <div className="eval-step-card eval-reveal-card space-y-4 mt-2 border-2 border-blue-200/60 rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-blue-50/30 to-white">
-                        {/* Section Header */}
-                        <div className="flex items-center gap-2.5 border-b border-blue-100 pb-3">
-                          <h3 className="text-xs sm:text-sm font-bold text-[#2B3674] uppercase tracking-wider">Final Review &amp; Submission</h3>
-                          {calculatedAverage !== null && (
-                            <span className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-bold text-blue-700">
-                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                              Avg: {calculatedAverage.toFixed(1)} / 5.0
-                            </span>
-                          )}
-                        </div>
+                      {/* Section Header */}
+                      <div className="flex items-center gap-2.5 border-b border-blue-100 pb-3">
+                        <h3 className="text-xs sm:text-sm font-bold text-[#0F172A]">Final Review &amp; Submission</h3>
+                        {calculatedAverage !== null && (
+                          <span className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-bold text-blue-700">
+                            <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                            Avg: {calculatedAverage.toFixed(1)} / 5.0
+                          </span>
+                        )}
+                      </div>
 
-                        {/* Goals for Next Review Period */}
-                        <div id="eval-field-container-goals">
-                          <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
-                            Goals for Next Review Period <span className="text-red-500">*</span>
-                          </label>
-                          <textarea
-                            id="eval-field-goals"
-                            rows={3}
-                            readOnly={isViewMode}
-                            disabled={isViewMode}
-                            value={goalsForNextReview}
-                            onChange={(e) => { setGoalsForNextReview(e.target.value); clearFieldError("goalsForNextReview"); }}
-                            placeholder="Define measurable goals and objectives for next review period..."
-                            className={`eval-textarea-field ${fieldErrors.goalsForNextReview ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
-                          />
-                          {fieldErrors.goalsForNextReview && (
-                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
-                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                              <span>{fieldErrors.goalsForNextReview}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Training / Development Recommendations */}
-                        <div>
-                          <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
-                            Training / Development Recommendations
-                            <span className="ml-1.5 text-[10px] font-bold text-[#A3AED0]">(optional)</span>
-                          </label>
-                          <textarea
-                            rows={2}
-                            readOnly={isViewMode}
-                            disabled={isViewMode}
-                            value={trainingRecommendations}
-                            onChange={(e) => setTrainingRecommendations(e.target.value)}
-                            placeholder="Suggest relevant training, courses, or learning programs..."
-                            className={`eval-textarea-field ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
-                          />
-                        </div>
-
-                        {/* 2-col: Career Growth + Review Outcome */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          {/* Career Growth Recommendation */}
-                          <div>
-                            <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
-                              Career Growth Recommendation
-                              <span className="ml-1.5 text-[10px] font-bold text-[#A3AED0]">(optional)</span>
-                            </label>
-                            <Dropdown
-                              options={CAREER_GROWTH_OPTIONS}
-                              value={careerGrowthRecommendation}
-                              onChange={(val) => setCareerGrowthRecommendation(val)}
-                              placeholder="Select..."
-                              disabled={isViewMode}
-                              allowClear={!isViewMode}
-                              className="w-full"
-                              maxLabelWidth="max-w-none"
-                              buttonClassName={`eval-dropdown-btn !opacity-100 ${
-                                isViewMode
-                                  ? `eval-dropdown-disabled ${careerGrowthRecommendation ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
-                                  : careerGrowthRecommendation
-                                  ? "!text-[#2B3674]"
-                                  : "!text-[#A3AED0]"
-                              }`}
-                            />
+                      {/* Goals for Next Review Period */}
+                      <div id="eval-field-container-goals">
+                        <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                          Goals for Next Review Period <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          id="eval-field-goals"
+                          rows={3}
+                          readOnly={isViewMode}
+                          disabled={isViewMode}
+                          value={goalsForNextReview}
+                          onChange={(e) => { setGoalsForNextReview(e.target.value); clearFieldError("goalsForNextReview"); }}
+                          placeholder="Define measurable goals and objectives for next review period..."
+                          className={`eval-textarea-field ${fieldErrors.goalsForNextReview ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
+                        />
+                        {fieldErrors.goalsForNextReview && (
+                          <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                            <span>{fieldErrors.goalsForNextReview}</span>
                           </div>
+                        )}
+                      </div>
 
-                          {/* Review Outcome */}
-                          <div id="eval-field-container-review-outcome">
-                            <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
-                              Review Outcome <span className="text-red-500">*</span>
-                            </label>
-                            <Dropdown
-                              options={REVIEW_OUTCOME_OPTIONS}
-                              value={reviewOutcome}
-                              onChange={(val) => {
-                                setReviewOutcome(val);
-                                clearFieldError("reviewOutcome");
-                              }}
-                              placeholder="Select outcome..."
-                              disabled={isViewMode}
-                              allowClear={false}
-                              className="w-full"
-                              maxLabelWidth="max-w-none"
-                              buttonClassName={`eval-dropdown-btn !opacity-100 ${
-                                fieldErrors.reviewOutcome
-                                  ? "eval-dropdown-error"
-                                  : isViewMode
-                                  ? `eval-dropdown-disabled ${reviewOutcome ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
-                                  : reviewOutcome
-                                  ? "!text-[#2B3674]"
-                                  : "!text-[#A3AED0]"
-                              }`}
-                            />
-                            {fieldErrors.reviewOutcome && (
-                              <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
-                                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                                <span>{fieldErrors.reviewOutcome}</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
+                      {/* Training / Development Recommendations */}
+                      <div>
+                        <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                          Training / Development Recommendations
+                          <span className="ml-1.5 text-[10px] font-bold text-[#A3AED0] normal-case tracking-normal">(optional)</span>
+                        </label>
+                        <textarea
+                          rows={2}
+                          readOnly={isViewMode}
+                          disabled={isViewMode}
+                          value={trainingRecommendations}
+                          onChange={(e) => setTrainingRecommendations(e.target.value)}
+                          placeholder="Suggest relevant training, courses, or learning programs..."
+                          className={`eval-textarea-field ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
+                        />
+                      </div>
 
-                        {/* Performance Action */}
+                      {/* 2-col: Career Growth + Review Outcome */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {/* Career Growth Recommendation */}
                         <div>
-                          <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
-                            Performance Action
-                            <span className="ml-1.5 text-[10px] font-bold text-[#A3AED0]">(optional)</span>
+                          <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                            Career Growth Recommendation
+                            <span className="ml-1.5 text-[10px] font-bold text-[#A3AED0] normal-case tracking-normal">(optional)</span>
                           </label>
                           <Dropdown
-                            options={PERFORMANCE_ACTION_OPTIONS}
-                            value={performanceAction}
-                            onChange={(val) => setPerformanceAction(val)}
-                            placeholder="Select action..."
+                            options={CAREER_GROWTH_OPTIONS}
+                            value={careerGrowthRecommendation}
+                            onChange={(val) => setCareerGrowthRecommendation(val)}
+                            placeholder="Select..."
                             disabled={isViewMode}
                             allowClear={!isViewMode}
                             className="w-full"
                             maxLabelWidth="max-w-none"
-                            buttonClassName={`eval-dropdown-btn !opacity-100 ${
-                              isViewMode
-                                ? `eval-dropdown-disabled ${performanceAction ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
-                                : performanceAction
-                                ? "!text-[#2B3674]"
-                                : "!text-[#A3AED0]"
-                            }`}
+                            buttonClassName={`eval-dropdown-btn !opacity-100 ${isViewMode
+                                ? `eval-dropdown-disabled ${careerGrowthRecommendation ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
+                                : careerGrowthRecommendation
+                                  ? "!text-[#1E293B] !font-medium"
+                                  : "!text-[#94A3B8]"
+                              }`}
                           />
                         </div>
 
-                        {/* Final Performance Rating — Image 1 KPI Card Design (no stars) */}
-                        <div id="eval-field-container-final-perf-rating" className="w-full">
-                          <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
-                            Final Performance Rating <span className="text-red-500">*</span>
+                        {/* Review Outcome */}
+                        <div id="eval-field-container-review-outcome">
+                          <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                            Review Outcome <span className="text-red-500">*</span>
                           </label>
-                          <div
-                            id="eval-field-final-perf-rating"
-                            className="eval-kpi-card eval-reveal-card flex items-center justify-between gap-4 transition-all duration-300"
-                            style={
-                              finalRatingTier
-                                ? {
-                                    borderColor: finalRatingTier.badgeBorderHex,
-                                    boxShadow: `0 4px 18px -2px ${finalRatingTier.accentHex}26`,
-                                  }
-                                : fieldErrors.finalPerformanceRating
+                          <Dropdown
+                            options={REVIEW_OUTCOME_OPTIONS}
+                            value={reviewOutcome}
+                            onChange={(val) => {
+                              setReviewOutcome(val);
+                              clearFieldError("reviewOutcome");
+                            }}
+                            placeholder="Select outcome..."
+                            disabled={isViewMode}
+                            allowClear={false}
+                            className="w-full"
+                            maxLabelWidth="max-w-none"
+                            buttonClassName={`eval-dropdown-btn !opacity-100 ${fieldErrors.reviewOutcome
+                                ? "eval-dropdown-error"
+                                : isViewMode
+                                  ? `eval-dropdown-disabled ${reviewOutcome ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
+                                  : reviewOutcome
+                                    ? "!text-[#1E293B] !font-medium"
+                                    : "!text-[#94A3B8]"
+                              }`}
+                          />
+                          {fieldErrors.reviewOutcome && (
+                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                              <span>{fieldErrors.reviewOutcome}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Performance Action */}
+                      <div>
+                        <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                          Performance Action
+                          <span className="ml-1.5 text-[10px] font-bold text-[#A3AED0] normal-case tracking-normal">(optional)</span>
+                        </label>
+                        <Dropdown
+                          options={PERFORMANCE_ACTION_OPTIONS}
+                          value={performanceAction}
+                          onChange={(val) => setPerformanceAction(val)}
+                          placeholder="Select action..."
+                          disabled={isViewMode}
+                          allowClear={!isViewMode}
+                          className="w-full"
+                          maxLabelWidth="max-w-none"
+                          buttonClassName={`eval-dropdown-btn !opacity-100 ${isViewMode
+                              ? `eval-dropdown-disabled ${performanceAction ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
+                              : performanceAction
+                                ? "!text-[#1E293B] !font-medium"
+                                : "!text-[#94A3B8]"
+                            }`}
+                        />
+                      </div>
+
+                      {/* Final Performance Rating — Image 1 KPI Card Design (no stars) */}
+                      <div id="eval-field-container-final-perf-rating" className="w-full">
+                        <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                          Final Performance Rating <span className="text-red-500">*</span>
+                        </label>
+                        <div
+                          id="eval-field-final-perf-rating"
+                          className="eval-kpi-card eval-reveal-card flex items-center justify-between gap-4 transition-all duration-300"
+                          style={
+                            finalRatingTier
+                              ? {
+                                borderColor: finalRatingTier.badgeBorderHex,
+                                boxShadow: `0 4px 18px -2px ${finalRatingTier.accentHex}26`,
+                              }
+                              : fieldErrors.finalPerformanceRating
                                 ? { borderColor: "#EF4444" }
                                 : undefined
-                            }
-                          >
-                            {/* Left: Icon + Labels */}
-                            <div className="flex items-center gap-2 min-w-0 shrink-0">
-                              <div
-                                className="w-7 h-7 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors duration-300"
-                                style={
-                                  finalRatingTier
-                                    ? {
-                                        backgroundColor: finalRatingTier.badgeBgHex,
-                                        color: finalRatingTier.badgeTextHex,
-                                        border: `1px solid ${finalRatingTier.badgeBorderHex}60`,
-                                      }
-                                    : { backgroundColor: "rgba(219, 234, 254, 0.8)", color: "#2563EB" }
-                                }
-                              >
-                                <Award className="w-4 h-4" />
-                              </div>
-                              <div className="flex flex-col">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  {finalRatingTier && (
-                                    <span
-                                      className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-extrabold tracking-wide uppercase transition-all duration-300"
-                                      style={{
-                                        backgroundColor: finalRatingTier.badgeBgHex,
-                                        color: finalRatingTier.badgeTextHex,
-                                        border: `1.5px solid ${finalRatingTier.badgeBorderHex}`,
-                                      }}
-                                    >
-                                      {finalRatingTier.badge}
-                                    </span>
-                                  )}
-                                </div>
-                                <span className="text-xs sm:text-[13px] font-bold text-[#2B3674]">
-                                  Final Rating <span className="text-red-500">*</span>
-                                </span>
-                              </div>
+                          }
+                        >
+                          {/* Left: Icon + Labels */}
+                          <div className="flex items-center gap-2 min-w-0 shrink-0">
+                            <div
+                              className="w-7 h-7 rounded-lg flex items-center justify-center font-bold shrink-0 transition-colors duration-300"
+                              style={
+                                finalRatingTier
+                                  ? {
+                                    backgroundColor: finalRatingTier.badgeBgHex,
+                                    color: finalRatingTier.badgeTextHex,
+                                    border: `1px solid ${finalRatingTier.badgeBorderHex}60`,
+                                  }
+                                  : { backgroundColor: "rgba(219, 234, 254, 0.8)", color: "#2563EB" }
+                              }
+                            >
+                              <Award className="w-4 h-4" />
                             </div>
+                            <span className="text-xs sm:text-[13px] font-bold text-[#0F172A]">
+                              Final Rating <span className="text-red-500">*</span>
+                            </span>
+                          </div>
 
-                            {/* Center: Input Box */}
-                            <div className="flex flex-1 items-center justify-center min-w-0">
-                              <div className="flex flex-col items-center gap-1">
-                                <input
-                                  type="text"
-                                  inputMode="decimal"
-                                  placeholder="—"
-                                  disabled={isViewMode}
-                                  readOnly={isViewMode}
-                                  value={rawFinalPerformanceRating}
-                                  onChange={(e) => handleFinalRatingChange(e.target.value)}
-                                  onBlur={handleFinalRatingBlur}
-                                  onFocus={isViewMode ? undefined : (e) => e.target.select()}
-                                  className={`eval-star-score-input eval-final-score-input text-center font-bold ${
-                                    isViewMode ? "eval-score-input-disabled" : ""
+                          {/* Center: Input Box */}
+                          <div className="flex flex-1 items-center justify-center min-w-0">
+                            <div className="flex flex-col items-center gap-1">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                placeholder="—"
+                                disabled={isViewMode}
+                                readOnly={isViewMode}
+                                value={rawFinalPerformanceRating}
+                                onChange={(e) => handleFinalRatingChange(e.target.value)}
+                                onBlur={handleFinalRatingBlur}
+                                onFocus={isViewMode ? undefined : (e) => e.target.select()}
+                                className={`eval-star-score-input eval-final-score-input text-center font-bold ${isViewMode ? "eval-score-input-disabled" : ""
                                   } ${fieldErrors.finalPerformanceRating ? "!border-red-500" : ""}`}
-                                  style={
-                                    finalRatingTier && finalPerformanceRating > 0
-                                      ? {
-                                          borderColor: finalRatingTier.badgeBorderHex,
-                                          color: finalRatingTier.badgeTextHex,
-                                          backgroundColor: finalRatingTier.badgeBgHex + "33",
-                                        }
-                                      : { color: "#94A3B8", backgroundColor: "#F8FAFC" }
-                                  }
-                                  title={
-                                    isViewMode
-                                      ? "Evaluation is in view-only mode"
-                                      : "Type final rating score (1.0 to 5.0)"
-                                  }
-                                  aria-label="Enter Final Performance Rating"
-                                />
-                                {fieldErrors.finalPerformanceRating ? (
-                                  <span className="text-[11px] font-semibold text-red-600">{fieldErrors.finalPerformanceRating}</span>
-                                ) : finalPerformanceRating > 0 ? (
-                                  <span className="text-[9px] font-bold text-[#64748B]">{getRatingLabel(finalPerformanceRating)}</span>
-                                ) : (
-                                  <span className="text-[9px] font-semibold text-[#94A3B8]">Enter 1.0 – 5.0</span>
-                                )}
-                              </div>
+                                style={
+                                  finalRatingTier && finalPerformanceRating > 0
+                                    ? {
+                                      borderColor: finalRatingTier.badgeBorderHex,
+                                      color: finalRatingTier.badgeTextHex,
+                                      backgroundColor: finalRatingTier.badgeBgHex + "33",
+                                    }
+                                    : { color: "#94A3B8", backgroundColor: "#F8FAFC" }
+                                }
+                                title={
+                                  isViewMode
+                                    ? "Evaluation is in view-only mode"
+                                    : "Type final rating score (1.0 to 5.0)"
+                                }
+                                aria-label="Enter Final Performance Rating"
+                              />
+                              {fieldErrors.finalPerformanceRating ? (
+                                <span className="text-[11px] font-semibold text-red-600">{fieldErrors.finalPerformanceRating}</span>
+                              ) : finalPerformanceRating > 0 ? (
+                                <span className="text-[9px] font-bold text-[#64748B]">{getRatingLabel(finalPerformanceRating)}</span>
+                              ) : (
+                                <span className="text-[9px] font-semibold text-[#94A3B8]">Enter 1.0 – 5.0</span>
+                              )}
                             </div>
+                          </div>
 
-                            {/* Right: Circular Gauge */}
+                          {/* Right: Tier Badge + Circular Gauge */}
+                          <div className="flex items-center gap-3 shrink-0">
+                            {finalRatingTier && (
+                              <span
+                                className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-wide uppercase transition-all duration-300 shadow-2xs shrink-0"
+                                style={{
+                                  backgroundColor: finalRatingTier.badgeBgHex,
+                                  color: finalRatingTier.badgeTextHex,
+                                  border: `1.5px solid ${finalRatingTier.badgeBorderHex}`,
+                                }}
+                              >
+                                {finalRatingTier.badge}
+                              </span>
+                            )}
+
                             <div className="relative w-20 h-20 flex items-center justify-center shrink-0">
                               <svg className="w-20 h-20 -rotate-90 transform" viewBox="0 0 80 80">
                                 <circle
@@ -3179,7 +3067,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
                                 <span
                                   className="text-base font-bold leading-none transition-colors duration-300"
-                                  style={finalRatingTier ? { color: finalRatingTier.badgeTextHex } : { color: "#2B3674" }}
+                                  style={finalRatingTier ? { color: finalRatingTier.badgeTextHex } : { color: "#0F172A" }}
                                 >
                                   {finalPerformanceRating > 0 ? finalPerformanceRating.toFixed(1) : "—"}
                                 </span>
@@ -3187,62 +3075,63 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               </div>
                             </div>
                           </div>
-
-                          {/* Error message */}
-                          {fieldErrors.finalPerformanceRating && (
-                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
-                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                              <span>{fieldErrors.finalPerformanceRating}</span>
-                            </div>
-                          )}
                         </div>
 
-                        {/* Final Manager Comments */}
-                        <div id="eval-field-container-final-comments">
-                          <label className="block text-xs font-bold text-[#2B3674] mb-1.5">
-                            Final Manager Comments <span className="text-red-500">*</span>
-                          </label>
-                          <textarea
-                            id="eval-field-final-comments"
-                            rows={3}
-                            readOnly={isViewMode}
-                            disabled={isViewMode}
-                            value={finalManagerComments}
-                            onChange={(e) => { setFinalManagerComments(e.target.value); clearFieldError("finalManagerComments"); }}
-                            placeholder="Provide a comprehensive final summary and closing remarks..."
-                            className={`eval-textarea-field ${fieldErrors.finalManagerComments ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
-                          />
-                          {fieldErrors.finalManagerComments && (
-                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
-                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                              <span>{fieldErrors.finalManagerComments}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Manager Confirmation Checkbox */}
-                        {!isViewMode && (
-                          <div className={`p-3.5 rounded-xl border transition-all ${managerConfirmation ? "border-green-300 bg-green-50/60" : fieldErrors.managerConfirmation ? "border-red-400 bg-red-50/40" : "border-blue-200 bg-blue-50/30"}`}>
-                            <label className="flex items-start gap-3 cursor-pointer select-none">
-                              <input
-                                type="checkbox"
-                                checked={managerConfirmation}
-                                onChange={(e) => { setManagerConfirmation(e.target.checked); clearFieldError("managerConfirmation"); }}
-                                className="mt-0.5 w-4 h-4 rounded accent-blue-600 cursor-pointer shrink-0"
-                              />
-                              <span className="text-xs font-semibold text-[#2B3674] leading-relaxed">
-                                I confirm that the information provided in this appraisal review is accurate and complete to the best of my knowledge. I understand that this evaluation will be finalized and shared with the employee.
-                              </span>
-                            </label>
-                            {fieldErrors.managerConfirmation && (
-                              <div className="eval-field-error-msg flex items-center gap-1.5 mt-2 text-xs font-semibold text-red-600">
-                                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                                <span>{fieldErrors.managerConfirmation}</span>
-                              </div>
-                            )}
+                        {/* Error message */}
+                        {fieldErrors.finalPerformanceRating && (
+                          <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                            <span>{fieldErrors.finalPerformanceRating}</span>
                           </div>
                         )}
                       </div>
+
+                      {/* Final Manager Comments */}
+                      <div id="eval-field-container-final-comments">
+                        <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                          Final Manager Comments <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          id="eval-field-final-comments"
+                          rows={3}
+                          readOnly={isViewMode}
+                          disabled={isViewMode}
+                          value={finalManagerComments}
+                          onChange={(e) => { setFinalManagerComments(e.target.value); clearFieldError("finalManagerComments"); }}
+                          placeholder="Provide a comprehensive final summary and closing remarks..."
+                          className={`eval-textarea-field ${fieldErrors.finalManagerComments ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
+                        />
+                        {fieldErrors.finalManagerComments && (
+                          <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
+                            <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                            <span>{fieldErrors.finalManagerComments}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Manager Confirmation Checkbox */}
+                      {!isViewMode && (
+                        <div className={`p-3.5 rounded-xl border transition-all ${managerConfirmation ? "border-green-300 bg-green-50/60" : fieldErrors.managerConfirmation ? "border-red-400 bg-red-50/40" : "border-blue-200 bg-blue-50/30"}`}>
+                          <label className="flex items-start gap-3 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={managerConfirmation}
+                              onChange={(e) => { setManagerConfirmation(e.target.checked); clearFieldError("managerConfirmation"); }}
+                              className="mt-0.5 w-4 h-4 rounded accent-blue-600 cursor-pointer shrink-0"
+                            />
+                            <span className="text-xs font-semibold text-[#2B3674] leading-relaxed">
+                              I confirm that the information provided in this appraisal review is accurate and complete to the best of my knowledge. I understand that this evaluation will be finalized and shared with the employee.
+                            </span>
+                          </label>
+                          {fieldErrors.managerConfirmation && (
+                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-2 text-xs font-semibold text-red-600">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                              <span>{fieldErrors.managerConfirmation}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 

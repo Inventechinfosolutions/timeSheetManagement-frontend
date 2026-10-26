@@ -223,26 +223,29 @@
   transition: all 0.22s ease;
 }
 
-.eval-input-field:hover {
+.eval-input-field:hover,
+.eval-step-card:hover {
   border-color: #CBD5E1;
 }
 
 .eval-input-field:focus {
   outline: none;
-  border-color: #2563EB;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-  background: #F8FAFC;
+  border-color: #2563EB !important;
+  box-shadow: none !important;
+  background: #FFFFFF !important;
 }
 
-/* Input Card Focus-within & Interactive Elevations */
-.eval-step-card:focus-within {
-  border-color: rgba(37, 99, 235, 0.42) !important;
-  box-shadow: 0 12px 28px -4px rgba(37, 99, 235, 0.15), 0 4px 10px rgba(0, 0, 0, 0.03) !important;
-  transform: translateY(-2px);
+/* Input Card Focus-within: Crisp Blue border, pure white background, NO shadow effect */
+.eval-step-card:focus-within:not(.eval-review-card-noborder):not(.\!border-none):not(.\!border-0) {
+  border-color: #2563EB !important;
+  box-shadow: none !important;
+  background: #FFFFFF !important;
+  transform: none !important;
 }
 
-.eval-step-card:focus-within::before {
-  height: 100% !important;
+.eval-step-card:focus-within::before,
+.eval-step-card:focus-within::after {
+  display: none !important;
 }
 
 /* ==========================================================================

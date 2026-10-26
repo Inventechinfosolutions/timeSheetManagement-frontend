@@ -694,8 +694,13 @@ export const animateFieldError = (element: HTMLElement | null) => {
 
   gsap.fromTo(
     element,
-    { boxShadow: "0 0 0 6px rgba(239, 68, 68, 0.25)", borderColor: "#EF4444" },
-    { boxShadow: "0 0 0 0px rgba(239, 68, 68, 0)", duration: 1.2, ease: "power2.out" }
+    { boxShadow: "0 0 0 6px rgba(239, 68, 68, 0.25)" },
+    {
+      boxShadow: "0 0 0 0px rgba(239, 68, 68, 0)",
+      duration: 1.2,
+      ease: "power2.out",
+      clearProps: "boxShadow,borderColor",
+    }
   );
 };
 
