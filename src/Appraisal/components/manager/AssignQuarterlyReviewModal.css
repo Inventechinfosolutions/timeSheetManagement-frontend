@@ -248,14 +248,26 @@ textarea.assign-input-textarea::-webkit-scrollbar-button {
   }
 }
 
-/* 6. Cancel Button */
+/* 6. Cancel / Back Button */
 .assign-modal-cancel-btn {
-  padding: 0.65rem 1.6rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.55rem !important;
+  width: 132px !important;
+  min-width: 132px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  box-sizing: border-box !important;
   border-radius: 9999px !important;
   border: 1.5px solid #BFDBFE !important;
   color: #1D4ED8 !important;
   background: #FFFFFF !important;
   font-weight: 700 !important;
+  font-size: 0.875rem !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   box-shadow: 0 2px 6px rgba(37, 99, 235, 0.06) !important;
 }
@@ -263,7 +275,7 @@ textarea.assign-input-textarea::-webkit-scrollbar-button {
 .assign-modal-cancel-btn:hover {
   background: #EFF6FF !important;
   border-color: #93C5FD !important;
-  transform: translateY(-1.5px);
+  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12) !important;
 }
 
@@ -277,17 +289,21 @@ textarea.assign-input-textarea::-webkit-scrollbar-button {
   align-items: center !important;
   justify-content: center !important;
   gap: 0.55rem !important;
-  padding: 0.65rem 1.85rem !important;
+  width: 132px !important;
+  min-width: 132px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  box-sizing: border-box !important;
   border-radius: 9999px !important;
   font-weight: 700 !important;
   font-size: 0.875rem !important;
+  line-height: 1 !important;
   background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%) !important;
   color: #FFFFFF !important;
   border: 1px solid rgba(255, 255, 255, 0.35) !important;
   position: relative !important;
   overflow: hidden !important;
   cursor: pointer !important;
-  min-width: 130px !important;
   transition:
     background 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
     transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),

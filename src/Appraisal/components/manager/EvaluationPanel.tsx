@@ -748,6 +748,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     });
   };
 
+
+
   // Click on a star
   const handleStarClick = (paramKey: string, ratingValue: number) => {
     if (isViewMode) return;

@@ -250,6 +250,41 @@ body.modal-open-active .sidebar-footer {
   transform: scale(0.82);
 }
 
+/* 5.2 Department Selector (Admin Mode) */
+.create-modal-dept-dropdown-btn {
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  background: #FFFFFF !important;
+  border: 1.5px solid #CBD5E1 !important;
+  border-radius: 0.875rem !important;
+  padding: 0.65rem 0.95rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  color: #1E293B !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.create-modal-dept-dropdown-btn:hover {
+  background: #FFFFFF !important;
+  border-color: #93C5FD !important;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1) !important;
+}
+
+.create-modal-dept-dropdown-btn:focus,
+.create-modal-dept-dropdown-btn:focus-within,
+.create-modal-dept-dropdown-btn:active {
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18) !important;
+}
+
+.create-assignment-modal-dialog .w-full,
+.create-assignment-modal-dialog .w-full > div {
+  width: 100% !important;
+}
+
 /* 6. Option Cards (Individual & All Members) */
 .create-modal-option {
   background: #FFFFFF !important;

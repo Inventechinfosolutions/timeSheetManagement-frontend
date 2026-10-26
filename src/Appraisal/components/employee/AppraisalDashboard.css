@@ -214,13 +214,13 @@
 .eval-input-field {
   width: 100%;
   border: 1.5px solid #E2E8F0;
-  border-radius: 0.85rem;
+  border-radius: 0.5rem;
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
   color: #0F172A;
   background: #FFFFFF;
   line-height: 1.5;
-  transition: all 0.22s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .eval-input-field:hover,
@@ -249,36 +249,21 @@
 }
 
 /* ==========================================================================
-   Compact Semibold Placeholder Utility
-   ========================================================================== */
-.eval-placeholder-sm::placeholder {
-  font-size: 10px !important;
-  font-weight: 600 !important;
-  color: #94A3B8;
-}
-
-.eval-placeholder-sm::-webkit-input-placeholder {
-  font-size: 10px !important;
-  font-weight: 600 !important;
-  color: #94A3B8;
-}
-
-.eval-placeholder-sm::-moz-placeholder {
-  font-size: 10px !important;
-  font-weight: 600 !important;
-  color: #94A3B8;
-}
-
-/* ==========================================================================
    Mandatory Field Validation Styles (Errors Animated via GSAP)
    ========================================================================== */
-.eval-field-has-error {
+.eval-field-has-error,
+.eval-field-has-error:hover,
+.eval-field-has-error:focus-within {
   border-color: #EF4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18) !important;
   background-color: rgba(254, 242, 242, 0.4) !important;
 }
 
-.eval-input-error {
+.eval-input-error,
+.eval-input-error:hover,
+.eval-input-error:focus {
   border-color: #EF4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18) !important;
   background-color: #FFFDFD !important;
 }
 
@@ -363,7 +348,9 @@
 
 /* Maintain hover interactions after reveal */
 .eval-step-card.eval-reveal-card.is-revealed:hover {
-  transform: translateY(-3px) !important;
+  transform: none !important;
+  border-color: #60A5FA !important;
+  box-shadow: none !important;
 }
 
 /* Internal Content Stagger System */
@@ -845,4 +832,4 @@
 
 
 
-
+

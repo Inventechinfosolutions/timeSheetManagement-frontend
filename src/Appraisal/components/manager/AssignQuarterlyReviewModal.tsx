@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { Send, Check } from "lucide-react";
+import { Send, Check, ArrowLeft } from "lucide-react";
 import { AssignQuarterlyReviewModalProps } from "../../types/appraisal.types";
 import { useAppSelector } from "../../../hooks";
 import {
@@ -57,6 +57,7 @@ const toIsoDate = (value: string): string | undefined => {
 export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProps> = ({
   isOpen,
   onClose,
+  onBack,
   assignmentType = AssignmentKind.INDIVIDUAL,
   onAssign,
   selectedDepartment,
@@ -393,6 +394,11 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       });
   };
 
+  const handleBack = () => {
+    resetForm();
+    onBack?.();
+  };
+
   const modalTitle = (
     <div className="flex items-center gap-3.5">
       <div className="assign-modal-header-icon">
@@ -412,11 +418,10 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   );
 
   const modalFooter = (
-    <div className="flex justify-end gap-2 w-full">
+    <div className="flex items-center justify-end gap-3 w-full">
       {buttonState === AssignButtonState.CONFIRM ? (
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
+          type="button"
           onClick={() => {
             setButtonState(AssignButtonState.IDLE);
             setSubmitSummary(null);
@@ -425,8 +430,18 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
           }}
           className="assign-modal-cancel-btn"
         >
-          Back
-        </Button>
+          <ArrowLeft className="w-4 h-4 shrink-0" />
+          <span>Back</span>
+        </button>
+      ) : onBack && buttonState === AssignButtonState.IDLE ? (
+        <button
+          type="button"
+          onClick={handleBack}
+          className="assign-modal-cancel-btn"
+        >
+          <ArrowLeft className="w-4 h-4 shrink-0" />
+          <span>Back</span>
+        </button>
       ) : null}
       <button
         type="button"
