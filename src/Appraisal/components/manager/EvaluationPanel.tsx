@@ -139,12 +139,12 @@ const getRatingLabel = (score: number): string => {
 };
 
 const TEAM_CRITERIA = [
-  { key: "communication", title: "Communication & Coordination" },
-  { key: "ownership", title: "Ownership" },
-  { key: "collaboration", title: "Collaboration" },
-  { key: "problemSolving", title: "Problem Solving" },
-  { key: "leadership", title: "Leadership" },
-  { key: "adaptability", title: "Adaptability" },
+  { key: "communication", title: "Communication & Coordination", descKey: "communicationDescription" },
+  { key: "ownership", title: "Ownership", descKey: "ownershipDescription" },
+  { key: "collaboration", title: "Collaboration", descKey: "collaborationDescription" },
+  { key: "problemSolving", title: "Problem Solving", descKey: "problemSolvingDescription" },
+  { key: "leadership", title: "Leadership", descKey: "leadershipDescription" },
+  { key: "adaptability", title: "Adaptability", descKey: "adaptabilityDescription" },
 ];
 
 const ENVIRONMENT_RATINGS: Record<number, { label: string; emoji: string }> = {
@@ -1820,37 +1820,47 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     Teamwork &amp; Collaboration Dimensions
                   </label>
 
-                  {/* 2-Column Responsive Grid (Image 2 style) */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {TEAM_CRITERIA.map((criterion) => {
                       const score =
                         teamRatings[criterion.key as keyof typeof teamRatings] || 0;
+                      const desc = ((formData as any)?.[criterion.descKey] as string) || "";
                       return (
                         <div
                           key={criterion.key}
-                          className="p-3 bg-white border border-[#E2E8F0] rounded-xl flex items-center justify-between gap-2 shadow-2xs"
-                          title="Employee submitted rating (Read-only)"
+                          className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl flex flex-col justify-between gap-2.5 shadow-2xs"
+                          title="Employee submitted rating & description (Read-only)"
                         >
-                          <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug">
-                            {criterion.title}
-                          </span>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <div className="flex items-center gap-1">
-                              {[1, 2, 3, 4, 5].map((s) => (
-                                <Star
-                                  key={s}
-                                  className={`w-4 h-4 transition-colors duration-150 ${s <= score
-                                    ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
-                                    : "fill-transparent text-gray-300"
-                                    }`}
-                                />
-                              ))}
+                          <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                            <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug">
+                              {criterion.title}
+                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <div className="flex items-center gap-1">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <Star
+                                    key={s}
+                                    className={`w-4 h-4 transition-colors duration-150 ${s <= score
+                                      ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
+                                      : "fill-transparent text-gray-300"
+                                      }`}
+                                  />
+                                ))}
+                              </div>
+                              {score > 0 && (
+                                <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200">
+                                  {score}.0
+                                </span>
+                              )}
                             </div>
-                            {score > 0 && (
-                              <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200">
-                                {score}.0
-                              </span>
-                            )}
+                          </div>
+                          <div>
+                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block mb-1">
+                              Description
+                            </span>
+                            <p className="text-xs text-[#334155] whitespace-pre-line leading-relaxed font-medium bg-slate-50/70 p-2.5 rounded-lg border border-slate-100 min-h-[48px]">
+                              {desc || "—"}
+                            </p>
                           </div>
                         </div>
                       );

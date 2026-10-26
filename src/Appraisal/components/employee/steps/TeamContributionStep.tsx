@@ -11,16 +11,17 @@ import "../AppraisalDashboard.css";
 
 interface Criterion {
   key: string;
+  descKey: keyof ReviewFormData;
   title: string;
 }
 
 const CRITERIA: Criterion[] = [
-  { key: "communication", title: "Communication & Coordination" },
-  { key: "ownership", title: "Ownership" },
-  { key: "collaboration", title: "Collaboration" },
-  { key: "problemSolving", title: "Problem Solving" },
-  { key: "leadership", title: "Leadership" },
-  { key: "adaptability", title: "Adaptability" },
+  { key: "communication", descKey: "communicationDescription", title: "Communication & Coordination" },
+  { key: "ownership", descKey: "ownershipDescription", title: "Ownership" },
+  { key: "collaboration", descKey: "collaborationDescription", title: "Collaboration" },
+  { key: "problemSolving", descKey: "problemSolvingDescription", title: "Problem Solving" },
+  { key: "leadership", descKey: "leadershipDescription", title: "Leadership" },
+  { key: "adaptability", descKey: "adaptabilityDescription", title: "Adaptability" },
 ];
 
 const RATING_LABELS: Record<number, string> = {
@@ -272,77 +273,107 @@ export const TeamContributionStep: React.FC<StepProps> = ({
             const isSelected = currentRating > 0;
             const criterionError = errors?.[criterion.key];
 
+            const descError = errors?.[criterion.descKey];
+
             return (
               <div
                 key={criterion.key}
                 id={`field-criterion-${criterion.key}`}
-                className={`p-3 sm:py-3 sm:px-3.5 rounded-2xl border-[1.5px] transition-all duration-300 bg-white flex flex-wrap items-center justify-between gap-2.5 shadow-2xs ${
-                  criterionError
+                className={`p-3.5 rounded-2xl border-[1.5px] transition-all duration-300 bg-white flex flex-col gap-3 shadow-2xs ${
+                  criterionError || descError
                     ? "border-red-400 bg-red-50/20 ring-2 ring-red-100"
                     : "border-[#E2E8F0] hover:border-[#CBD5E1]"
                 }`}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB] shrink-0" />}
-                  <span className="text-xs sm:text-[13px] font-bold text-[#0F172A] leading-snug">
-                    {criterion.title} <span className="text-red-500">*</span>
-                  </span>
-                  {isSelected && (
-                    <span className="hidden sm:inline-block text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60 ml-1">
-                      {RATING_LABELS[currentRating]}
+                {/* Top Row: Title & Star Ratings (Label Badge Removed) */}
+                <div className="flex flex-wrap items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB] shrink-0" />}
+                    <span className="text-xs sm:text-[13px] font-bold text-[#0F172A] leading-snug">
+                      {criterion.title} <span className="text-red-500">*</span>
                     </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <div
-                    className="flex items-center gap-0.5"
-                    onMouseLeave={() =>
-                      setHoveredStars((prev) => ({ ...prev, [criterion.key]: 0 }))
-                    }
-                  >
-                    {[1, 2, 3, 4, 5].map((starIndex) => {
-                      const isDirectlyClicked =
-                        animatingStar?.key === criterion.key &&
-                        animatingStar?.star === starIndex;
-                      const isShattering = shatteringStars.some(
-                        (s) => s.key === criterion.key && s.star === starIndex
-                      );
-
-                      return (
-                        <CriterionStarButton
-                          key={starIndex}
-                          criterionKey={criterion.key}
-                          criterionTitle={criterion.title}
-                          starIndex={starIndex}
-                          currentRating={currentRating}
-                          hovered={hovered}
-                          isDirectlyClicked={isDirectlyClicked}
-                          isShattering={isShattering}
-                          onRate={handleRate}
-                          onHover={(key, score) =>
-                            setHoveredStars((prev) => ({
-                              ...prev,
-                              [key]: score,
-                            }))
-                          }
-                        />
-                      );
-                    })}
                   </div>
 
-                  {currentRating > 0 && (
-                    <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-200 whitespace-nowrap">
-                      {currentRating}.0 / 5.0
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div
+                      className="flex items-center gap-0.5"
+                      onMouseLeave={() =>
+                        setHoveredStars((prev) => ({ ...prev, [criterion.key]: 0 }))
+                      }
+                    >
+                      {[1, 2, 3, 4, 5].map((starIndex) => {
+                        const isDirectlyClicked =
+                          animatingStar?.key === criterion.key &&
+                          animatingStar?.star === starIndex;
+                        const isShattering = shatteringStars.some(
+                          (s) => s.key === criterion.key && s.star === starIndex
+                        );
+
+                        return (
+                          <CriterionStarButton
+                            key={starIndex}
+                            criterionKey={criterion.key}
+                            criterionTitle={criterion.title}
+                            starIndex={starIndex}
+                            currentRating={currentRating}
+                            hovered={hovered}
+                            isDirectlyClicked={isDirectlyClicked}
+                            isShattering={isShattering}
+                            onRate={handleRate}
+                            onHover={(key, score) =>
+                              setHoveredStars((prev) => ({
+                                ...prev,
+                                [key]: score,
+                              }))
+                            }
+                          />
+                        );
+                      })}
+                    </div>
+
+                    {currentRating > 0 && (
+                      <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-200 whitespace-nowrap">
+                        {currentRating}.0 / 5.0
+                      </span>
+                    )}
+                  </div>
                 </div>
+
                 {criterionError && (
-                  <p className="w-full text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
+                  <p className="w-full text-xs text-red-600 font-semibold flex items-center gap-1.5 animate-in fade-in duration-200">
                     <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
                     <span>{criterionError}</span>
                   </p>
                 )}
+
+                {/* Description Textarea Field */}
+                <div id={`field-desc-${criterion.key}`} className="space-y-1.5 pt-1 border-t border-slate-100">
+                  <label
+                    htmlFor={`input-desc-${criterion.key}`}
+                    className="block text-[11px] font-bold uppercase tracking-wider text-[#64748B]"
+                  >
+                    {criterion.title} Description <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    id={`input-desc-${criterion.key}`}
+                    rows={2}
+                    value={(formData[criterion.descKey] as string) || ""}
+                    disabled={readOnly}
+                    onChange={(e) => onChange(criterion.descKey, e.target.value)}
+                    placeholder={`Provide details, examples, or impact for ${criterion.title.toLowerCase()}...`}
+                    className={`w-full rounded-xl border p-2.5 text-xs text-[#0F172A] placeholder:text-slate-400 focus:outline-none resize-none transition-colors ${
+                      descError
+                        ? "border-red-400 bg-red-50/10 focus:border-red-500"
+                        : "border-slate-200 hover:border-slate-300 focus:border-[#2563EB]"
+                    } ${readOnly ? "bg-slate-50 cursor-not-allowed opacity-80" : "bg-white"}`}
+                  />
+                  {descError && (
+                    <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 animate-in fade-in duration-200">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                      <span>{descError}</span>
+                    </p>
+                  )}
+                </div>
               </div>
             );
           })}

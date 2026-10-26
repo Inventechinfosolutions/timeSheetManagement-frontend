@@ -140,36 +140,54 @@ const hasAnyDataEntered = (data: ReviewFormData): boolean => {
 
 
 const isStepDone = (stepId: number, data: ReviewFormData): boolean => {
-  if (stepId === 1) return Boolean((data.overview || data.roleSummary || "").trim());
+  if (stepId === 1) {
+    const summary = (
+      data.overallPerformanceSummary ||
+      data.overview ||
+      data.roleSummary ||
+      ""
+    ).trim();
+    return Boolean(summary && !summary.startsWith("{"));
+  }
   if (stepId === 2) {
     return Boolean(
       (data.projects && data.projects.length > 0) ||
       (data.projectTitle || "").trim() ||
+      (data.projectName || "").trim() ||
       (data.majorAchievements || "").trim()
     );
   }
   if (stepId === 3) {
     const r = data.teamRatings || {};
+    const d = data as any;
     return Boolean(
-      (r.communication || 0) > 0 &&
-      (r.ownership || 0) > 0 &&
-      (r.collaboration || 0) > 0 &&
-      (r.problemSolving || 0) > 0 &&
-      (r.leadership || 0) > 0 &&
-      (r.adaptability || 0) > 0
+      (r.communication || 0) > 0 && Boolean((d.communicationDescription || "").trim()) &&
+      (r.ownership || 0) > 0 && Boolean((d.ownershipDescription || "").trim()) &&
+      (r.collaboration || 0) > 0 && Boolean((d.collaborationDescription || "").trim()) &&
+      (r.problemSolving || 0) > 0 && Boolean((d.problemSolvingDescription || "").trim()) &&
+      (r.leadership || 0) > 0 && Boolean((d.leadershipDescription || "").trim()) &&
+      (r.adaptability || 0) > 0 && Boolean((d.adaptabilityDescription || "").trim())
     );
   }
   if (stepId === 4) {
     return Boolean(
       (data.learningGoalItems && data.learningGoalItems.length > 0) ||
-      (data.learningGoals || "").trim()
+      (data.learningGoals || "").trim() ||
+      (data.skillsAcquired || "").trim() ||
+      (data.certificationsOrCourses || "").trim() ||
+      (data.skillsToImprove || "").trim() ||
+      (data.nextQuarterLearningGoals || "").trim()
     );
   }
   if (stepId === 5) {
     return Boolean(
       (data.workCultureFeedback || "").trim() ||
       (data.workLifeBalance || "").trim() ||
-      (data.companyEnvironmentRating && data.companyEnvironmentRating > 0)
+      (data.suggestionsForImprovement || "").trim() ||
+      (data.challengesAffectingProductivity || "").trim() ||
+      (data.companyEnvironmentRating && data.companyEnvironmentRating > 0) ||
+      (data.toolingAndResourcesRating && data.toolingAndResourcesRating > 0) ||
+      (data.managementSupportRating && data.managementSupportRating > 0)
     );
   }
   return false;
@@ -685,18 +703,23 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     } else if (stepNum === 3) {
       const ratings = (data.teamRatings as any) || {};
       const criteriaList = [
-        { key: "communication", title: "Communication & Coordination" },
-        { key: "ownership", title: "Ownership" },
-        { key: "collaboration", title: "Collaboration" },
-        { key: "problemSolving", title: "Problem Solving" },
-        { key: "leadership", title: "Leadership" },
-        { key: "adaptability", title: "Adaptability" },
+        { key: "communication", descKey: "communicationDescription", title: "Communication & Coordination" },
+        { key: "ownership", descKey: "ownershipDescription", title: "Ownership" },
+        { key: "collaboration", descKey: "collaborationDescription", title: "Collaboration" },
+        { key: "problemSolving", descKey: "problemSolvingDescription", title: "Problem Solving" },
+        { key: "leadership", descKey: "leadershipDescription", title: "Leadership" },
+        { key: "adaptability", descKey: "adaptabilityDescription", title: "Adaptability" },
       ];
       for (const item of criteriaList) {
         const score = ratings[item.key];
         if (!score || score <= 0) {
           stepErrors[item.key] = `Please select a rating for ${item.title}.`;
           if (!firstFieldId) firstFieldId = `field-criterion-${item.key}`;
+        }
+        const desc = ((data as any)[item.descKey] || "").trim();
+        if (!desc) {
+          stepErrors[item.descKey] = `${item.title} description is required.`;
+          if (!firstFieldId) firstFieldId = `field-desc-${item.key}`;
         }
       }
     } else if (stepNum === 4) {
@@ -816,7 +839,23 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     setSaving(true);
     setSaveError("");
     try {
-      const existingId = performanceIdRef.current || assignment.performanceId;
+      let existingId = performanceIdRef.current || assignment.performanceId;
+      if (!existingId && assignment.employeeId && quarter && assignment.financialYear) {
+        try {
+          const found = await AppraisalApi.getEmployeePerformance(
+            assignment.employeeId,
+            quarter,
+            assignment.financialYear,
+          );
+          if (found?.id) {
+            existingId = found.id;
+            performanceIdRef.current = found.id;
+            setPerformanceId(found.id);
+          }
+        } catch (_) {
+          // ignore lookup error
+        }
+      }
       if (existingId) {
         await AppraisalApi.updatePerformance(existingId, payload);
         performanceIdRef.current = existingId;
@@ -862,7 +901,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   };
 
   const loadFreshForm = async (): Promise<boolean> => {
-    const id = performanceIdRef.current;
+    const id = performanceIdRef.current || assignment.performanceId;
     if (!id) {
       return true;
     }
@@ -880,7 +919,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (readOnly) {
       if (currentStep < 6) {
         setErrors({});
@@ -908,10 +947,21 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       return;
     }
     setErrors({});
+
+    // 1. Save changes via PUT by id
+    const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT);
+    if (!saved) {
+      return;
+    }
+
+    // 2. Fetch fresh data via GET by id to keep state synchronized
+    await loadFreshForm();
+
+    // 3. Navigate to next step
     goToStep(currentStep + 1, true);
   };
 
-  const handlePrev = () => {
+  const handlePrev = async () => {
     if (readOnly) {
       if (currentStep > 1) {
         setErrors({});
@@ -922,19 +972,16 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (currentStep <= 1 || saving) {
       return;
     }
-    let currentData = formData;
-    if (currentStep === 2 || currentStep === 4) {
-      currentData = commitDraftsIfNeeded(formData);
-      if (currentData !== formData) {
-        setFormData(currentData);
-        formDataRef.current = currentData;
-      }
-    }
+
     setErrors({});
+
+    // Do NOT call PUT. Call GET by id to fetch fresh saved data from database
+    await loadFreshForm();
+
     goToStep(currentStep - 1, true);
   };
 
-  const handleStepClick = (targetStep: number) => {
+  const handleStepClick = async (targetStep: number) => {
     if (readOnly) {
       const el = document.getElementById(`review-step-${targetStep}`);
       if (el) {
@@ -944,6 +991,14 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
     if (targetStep === currentStep || saving) return;
 
+    // Moving backward: do not PUT, call GET to re-sync
+    if (targetStep < currentStep) {
+      setErrors({});
+      await loadFreshForm();
+      goToStep(targetStep, true);
+      return;
+    }
+
     let currentData = formData;
     if (currentStep === 2 || currentStep === 4) {
       currentData = commitDraftsIfNeeded(formData);
@@ -953,21 +1008,22 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       }
     }
 
-    if (targetStep > currentStep) {
-      for (let s = currentStep; s < targetStep; s++) {
-        const validation = validateStep(s, currentData);
-        if (!validation.isValid) {
-          if (s !== currentStep) {
-            goToStep(s, false);
-          }
-          setErrors(validation.errors);
-          scrollToField(validation.firstFieldId);
-          return;
+    for (let s = currentStep; s < targetStep; s++) {
+      const validation = validateStep(s, currentData);
+      if (!validation.isValid) {
+        if (s !== currentStep) {
+          goToStep(s, false);
         }
+        setErrors(validation.errors);
+        scrollToField(validation.firstFieldId);
+        return;
       }
     }
 
     setErrors({});
+    const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT);
+    if (!saved) return;
+    await loadFreshForm();
     goToStep(targetStep, true);
   };
 

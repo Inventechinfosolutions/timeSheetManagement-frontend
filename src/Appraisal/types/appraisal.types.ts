@@ -240,6 +240,9 @@ export interface ReviewFormData {
   companyEnvironmentRating?: number;
   toolingAndResourcesRating?: number;
   managementSupportRating: number;
+  workEnvironmentRating?: number;
+  toolsResourcesRating?: number;
+  managerSupportRating?: number;
   challengesAffectingProductivity?: string;
   // Step 6: Final Review
   overallSelfRating: number;
@@ -544,6 +547,12 @@ export interface EmployeePerformanceDetail {
   knowledgeSharingMentoring?: string | null;
   teamworkExamples?: string | null;
   teamRatings?: Record<string, number | undefined> | null;
+  communicationDescription?: string | null;
+  ownershipDescription?: string | null;
+  collaborationDescription?: string | null;
+  problemSolvingDescription?: string | null;
+  leadershipDescription?: string | null;
+  adaptabilityDescription?: string | null;
   certificationsOrCourses?: string | null;
   nextQuarterLearningGoals?: string | null;
   workEnvironmentRating?: number | null;
@@ -662,6 +671,12 @@ export interface PerformanceWritePayload {
   knowledgeSharingMentoring?: string | null;
   teamworkExamples?: string | null;
   teamRatings?: Record<string, number | undefined> | null;
+  communicationDescription?: string | null;
+  ownershipDescription?: string | null;
+  collaborationDescription?: string | null;
+  problemSolvingDescription?: string | null;
+  leadershipDescription?: string | null;
+  adaptabilityDescription?: string | null;
 
   // --- Step 4: Continuous Learning & Goals ---
   certificationsOrCourses?: string | null;
