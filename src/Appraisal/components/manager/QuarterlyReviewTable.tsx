@@ -473,6 +473,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
         <table className={`quarterly-review-table qr-header-${headerTheme}`}>
           <thead>
             <tr>
+              <th className="text-center min-w-[70px]">Sl No</th>
               <th className="text-left min-w-[190px]">Employee Name</th>
               <th className="text-left min-w-[120px]">Employee ID</th>
               <th className="text-left min-w-[160px]">Designation</th>
@@ -491,6 +492,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
             {paginatedData.map((record, index) => {
               const isHighlighted = highlightedId === record.id;
               const avatarStyle = getAvatarStyle(record.name, record.id);
+              const serialNumber = (activePage - 1) * pageSize + index + 1;
 
               return (
                 <tr
@@ -498,6 +500,11 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   id={`qr-row-${record.id}`}
                   className={isHighlighted ? "quarterly-review-row-highlighted" : ""}
                 >
+                  {/* Sl No */}
+                  <td className="text-center font-semibold text-xs text-[#475569]">
+                    {serialNumber}
+                  </td>
+
                   {/* 1. Name with Colored Avatar Initials */}
                   <td>
                     <div className="qr-employee-cell">
