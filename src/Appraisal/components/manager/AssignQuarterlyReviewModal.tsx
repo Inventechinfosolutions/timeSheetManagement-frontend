@@ -326,7 +326,10 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     const quarter = (Object.values(QuaterlyEnum) as string[]).includes(selectedQuarter)
       ? (selectedQuarter as QuaterlyEnum)
       : undefined;
-    const assignerId = managerId || currentUser?.loginId || "ADMIN";
+    const assignerId = isAdmin
+      ? "Admin"
+      : (managerId || currentUser?.loginId || "MANAGER");
+    const assignedBy = isAdmin ? "ADMIN" : "MANAGER";
     if (!quarter || !assignerId) return;
 
     setAssignError("");
@@ -341,6 +344,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
           deadlineDate: toIsoDate(toDate),
           description: description || undefined,
           assignerId,
+          assignedBy,
         }),
       ),
     )

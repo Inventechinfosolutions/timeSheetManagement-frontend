@@ -370,6 +370,9 @@ export interface AppraisalAuditEntry {
 
 export interface ManagerReviewApiRecord {
   id: number;
+  assignedBy?: string | null;
+  managerName?: string | null;
+  managerId?: string | null;
   auditHistory?: AppraisalAuditEntry[];
   employeeId: string;
   employeeName: string | null;
@@ -424,6 +427,7 @@ export interface CreateQuarterlyReviewPayload {
   deadlineDate?: string;
   description?: string;
   assignerId: string;
+  assignedBy?: string;
 }
 
 export interface MappedEmployee {

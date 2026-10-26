@@ -601,13 +601,14 @@ export const toManagerReviewRecord = (
   deadline: formatAppraisalDisplayDate(review.deadlineDate),
   assignedOn: formatAppraisalDisplayDate(review.assignedDate),
   assignedBy:
-    ("managerName" in review && review.managerName && review.managerName !== ("assignerId" in review ? review.assignerId : ""))
-      ? review.managerName
+    String(("assignedBy" in review && review.assignedBy) || "").toUpperCase() === "ADMIN" ||
+    String(("assignerId" in review && review.assignerId) || "").toLowerCase() === "admin"
+      ? "Admin"
       : ("managerName" in review && review.managerName)
         ? review.managerName
         : ("assignerId" in review && review.assignerId)
           ? review.assignerId
-          : "",
+          : ("assignedBy" in review && review.assignedBy) || "",
   finalRating:
     review.finalRating == null
       ? ""
@@ -695,7 +696,11 @@ export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyRev
     designation: review.designation || "",
     quarter: review.performanceDetails?.quarter || review.quarter,
     financialYear: review.performanceDetails?.financialYear || review.financialYear,
-    assignedBy: review.managerName || review.assignerId || "",
+    assignedBy:
+      String(review.assignedBy || "").toUpperCase() === "ADMIN" ||
+      String(review.assignerId || "").toLowerCase() === "admin"
+        ? "Admin"
+        : review.managerName || review.assignerId || "",
     assignedDate: formatAppraisalDisplayDate(review.assignedDate),
     deadline: formatAppraisalDisplayDate(review.deadlineDate),
     performanceDate: formatAppraisalDisplayDate(
