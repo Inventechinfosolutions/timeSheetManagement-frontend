@@ -51,45 +51,90 @@ interface QuarterlyReviewStepperProps {
 
 
 const hasCompletedFirstStep = (data: ReviewFormData): boolean => {
-  const overview = (data.overview || data.roleSummary || "").trim();
-  return overview.length > 0;
+  // Step 1 is "done" when the primary required field (Overall Performance Summary) is filled
+  const ov = (data.overview || data.roleSummary || "").trim();
+  const summary = (
+    data.overallPerformanceSummary ||
+    (ov.startsWith("{") ? "" : ov)
+  ).trim();
+  return summary.length > 0;
 };
 
+/**
+ * Returns true if the user has entered ANY meaningful data across all steps.
+ * Used to determine whether "Save & Exit" should persist DRAFT or reset to NOT_STARTED.
+ */
 const hasAnyDataEntered = (data: ReviewFormData): boolean => {
-  if ((data.overview || data.roleSummary || "").trim().length > 0) return true;
+  // Step 1 – Overview fields
+  const ov = (data.overview || data.roleSummary || "").trim();
+  if (ov.length > 0 && !ov.startsWith("{")) return true;
+  if ((data.overallPerformanceSummary || "").trim().length > 0) return true;
+  if ((data.keyHighlights || "").trim().length > 0) return true;
+  if ((data.majorContributions || "").trim().length > 0) return true;
+  if ((data.areasForImprovement || "").trim().length > 0) return true;
+
+  // Step 2 – Achievements / Projects
   if (
     (data.projects || []).some(
       (p) =>
-        (p.title || "").trim() ||
+        (p.projectName || p.title || "").trim() ||
         (p.description || "").trim() ||
         (p.challenge || "").trim()
     )
   )
     return true;
   if (
-    (data.projectTitle || "").trim() ||
+    (data.projectName || data.projectTitle || "").trim() ||
     (data.projectDescription || "").trim() ||
-    (data.projectChallenge || "").trim()
+    (data.projectChallenge || "").trim() ||
+    (data.keyResponsibilities || "").trim() ||
+    (data.keyAchievementsOutcomes || "").trim() ||
+    (data.majorAchievements || "").trim()
   )
     return true;
+
+  // Step 3 – Team Contribution
   if (
-    (data.learningGoalItems || []).some((g) => g.trim().length > 0) ||
-    (data.learningGoals || "").trim().length > 0
+    (data.teamCollaborationSummary || "").trim() ||
+    (data.crossTeamContributions || "").trim() ||
+    (data.knowledgeSharingMentoring || "").trim() ||
+    (data.teamworkExamples || "").trim()
   )
     return true;
-  if (
-    (data.workCultureFeedback || "").trim() ||
-    (data.workLifeBalance || "").trim() ||
-    (data.suggestionsForImprovement || "").trim()
-  )
-    return true;
-  if (data.companyEnvironmentRating && data.companyEnvironmentRating > 0) return true;
-  if (data.managementSupportRating && data.managementSupportRating > 0) return true;
   if (
     data.teamRatings &&
     Object.values(data.teamRatings).some((v) => typeof v === "number" && v > 0)
   )
     return true;
+
+  // Step 4 – Learning Goals
+  if (
+    (data.learningGoalItems || []).some((g) => g.trim().length > 0) ||
+    (data.learningGoals || "").trim().length > 0 ||
+    (data.skillsAcquired || "").trim().length > 0 ||
+    (data.certificationsOrCourses || "").trim().length > 0 ||
+    (data.skillsToImprove || "").trim().length > 0 ||
+    (data.nextQuarterLearningGoals || "").trim().length > 0
+  )
+    return true;
+
+  // Step 5 – Company Environment
+  if (
+    (data.workCultureFeedback || "").trim() ||
+    (data.workLifeBalance || "").trim() ||
+    (data.suggestionsForImprovement || "").trim() ||
+    (data.challengesAffectingProductivity || "").trim()
+  )
+    return true;
+  if (data.companyEnvironmentRating && data.companyEnvironmentRating > 0) return true;
+  if (data.toolingAndResourcesRating && data.toolingAndResourcesRating > 0) return true;
+  if (data.managementSupportRating && data.managementSupportRating > 0) return true;
+
+  // Step 6 – Final Review
+  if (data.overallSelfRating && data.overallSelfRating > 0) return true;
+  if ((data.overallEmployeeComments || "").trim()) return true;
+  if ((data.careerGrowthInterests || "").trim()) return true;
+
   return false;
 };
 
@@ -200,6 +245,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   const [saveError, setSaveError] = useState<string>("");
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // formDirty: tracks whether user has modified the form from its initial loaded state
+  const [formDirty, setFormDirty] = useState<boolean>(false);
+  const initialFormDataRef = useRef<ReviewFormData>(initialFormData || emptyReviewFormData);
 
   const topRef = useRef<HTMLDivElement>(null);
   const transitionTimerRef = useRef<any>(null);
@@ -235,6 +283,14 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     };
   }, []);
 
+  // Sync initialFormDataRef when a fresh form is loaded from the server
+  useEffect(() => {
+    if (initialFormData) {
+      initialFormDataRef.current = initialFormData;
+      setFormDirty(false);
+    }
+  }, [initialFormData]);
+
   const goToStep = (targetStep: number, shouldScroll: boolean = true) => {
     if (targetStep === currentStep || targetStep < 1 || targetStep > 6) return;
     const dir = targetStep > currentStep ? "forward" : "backward";
@@ -263,6 +319,49 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   useEffect(() => {
     return initActiveStepperCircle(activeCircleRef.current);
   }, [currentStep]);
+
+  // ── formWatch: mark form as dirty whenever formData changes from the initial snapshot ──
+  useEffect(() => {
+    if (readOnly || isLocked) return;
+    const initial = initialFormDataRef.current;
+    const current = formData;
+    // Compare serialized snapshots of meaningful fields only
+    const pickMeaningful = (d: ReviewFormData) => ({
+      overallPerformanceSummary: (
+        d.overallPerformanceSummary ||
+        (d.overview && !d.overview.startsWith("{") ? d.overview : "")
+      ).trim(),
+      keyHighlights: (d.keyHighlights || "").trim(),
+      majorContributions: (d.majorContributions || "").trim(),
+      areasForImprovement: (d.areasForImprovement || "").trim(),
+      projects: (d.projects || []).map((p) => ({
+        name: (p.projectName || p.title || "").trim(),
+        desc: (p.description || "").trim(),
+        challenge: (p.challenge || p.challengesFaced || "").trim(),
+        role: (p.projectRole || "").trim(),
+      })),
+      skillsAcquired: (d.skillsAcquired || "").trim(),
+      skillsToImprove: (d.skillsToImprove || "").trim(),
+      nextQuarterLearningGoals: (d.nextQuarterLearningGoals || "").trim(),
+      workCultureFeedback: (d.workCultureFeedback || "").trim(),
+      workLifeBalance: (d.workLifeBalance || "").trim(),
+      suggestionsForImprovement: (d.suggestionsForImprovement || "").trim(),
+      teamRatingsCount: Object.values(d.teamRatings || {}).filter((v) => typeof v === "number" && (v as number) > 0).length,
+      companyEnvironmentRating: d.companyEnvironmentRating || 0,
+      toolingAndResourcesRating: d.toolingAndResourcesRating || 0,
+      managementSupportRating: d.managementSupportRating || 0,
+      overallSelfRating: d.overallSelfRating || 0,
+      overallEmployeeComments: (d.overallEmployeeComments || "").trim(),
+      careerGrowthInterests: (d.careerGrowthInterests || "").trim(),
+      teamCollaborationSummary: (d.teamCollaborationSummary || "").trim(),
+      crossTeamContributions: (d.crossTeamContributions || "").trim(),
+      majorAchievements: (d.majorAchievements || "").trim(),
+      certificationsOrCourses: (d.certificationsOrCourses || "").trim(),
+      challengesAffectingProductivity: (d.challengesAffectingProductivity || "").trim(),
+    });
+    const isDirty = JSON.stringify(pickMeaningful(initial)) !== JSON.stringify(pickMeaningful(current));
+    setFormDirty(isDirty);
+  }, [formData, readOnly, isLocked]);
 
   useEffect(() => {
     if (exitingStep !== null) {
@@ -754,7 +853,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
   };
 
-  const handleNext = async () => {
+  const handleNext = () => {
     if (readOnly) {
       if (currentStep < 6) {
         setErrors({});
@@ -782,20 +881,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       return;
     }
     setErrors({});
-    // Advancing past Step 1 (or any step) completes the step -> save as DRAFT
-    const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT);
-    if (!saved) {
-      return;
-    }
-    const loaded = await loadFreshForm();
-    if (!loaded) {
-      return;
-    }
-    setErrors({});
     goToStep(currentStep + 1, true);
   };
 
-  const handlePrev = async () => {
+  const handlePrev = () => {
     if (readOnly) {
       if (currentStep > 1) {
         setErrors({});
@@ -806,23 +895,19 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (currentStep <= 1 || saving) {
       return;
     }
-    const finishedFirstStep = currentStep > 1 || hasCompletedFirstStep(formData);
-    const targetStatus = finishedFirstStep && !isReassignedReview
-      ? EmployeePerformanceStatus.DRAFT
-      : undefined;
-    const saved = await persistStep(Boolean(targetStatus), formData, targetStatus);
-    if (!saved) {
-      return;
-    }
-    const loaded = await loadFreshForm();
-    if (!loaded) {
-      return;
+    let currentData = formData;
+    if (currentStep === 2 || currentStep === 4) {
+      currentData = commitDraftsIfNeeded(formData);
+      if (currentData !== formData) {
+        setFormData(currentData);
+        formDataRef.current = currentData;
+      }
     }
     setErrors({});
     goToStep(currentStep - 1, true);
   };
 
-  const handleStepClick = async (targetStep: number) => {
+  const handleStepClick = (targetStep: number) => {
     if (readOnly) {
       const el = document.getElementById(`review-step-${targetStep}`);
       if (el) {
@@ -856,19 +941,6 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
 
     setErrors({});
-    const finishedFirstStep = currentStep > 1 || targetStep > 1 || hasCompletedFirstStep(currentData);
-    const targetStatus = finishedFirstStep && !isReassignedReview
-      ? EmployeePerformanceStatus.DRAFT
-      : undefined;
-    const saved = await persistStep(Boolean(targetStatus), currentData, targetStatus);
-    if (!saved) {
-      return;
-    }
-    const loaded = await loadFreshForm();
-    if (!loaded) {
-      return;
-    }
-    setErrors({});
     goToStep(targetStep, true);
   };
 
@@ -880,6 +952,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (saving) {
       return;
     }
+
     let currentData = formData;
     if (currentStep === 2 || currentStep === 4) {
       currentData = commitDraftsIfNeeded(formData);
@@ -891,30 +964,34 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
     const hasData = hasAnyDataEntered(currentData);
     const finishedFirstStep = currentStep > 1 || hasCompletedFirstStep(currentData);
-    const isAlreadyDraft =
-      String(assignment.status || "").toUpperCase() === EmployeePerformanceStatus.DRAFT ||
-      String(assignment.reviewStatus || "").toUpperCase() === QuarterlyReviewStatus.DRAFT;
+    const existingId = performanceIdRef.current || assignment.performanceId;
 
-    // 1. If user did not enter any data and review is not yet draft:
-    if (!hasData && !isAlreadyDraft && !isReassignedReview) {
-      const existingId = performanceIdRef.current || assignment.performanceId;
+    // ── Case 1: No meaningful data in form (empty or all cleared) ──
+    // Reset to NOT_STARTED regardless of previous status (even if was DRAFT)
+    if (!hasData && !isReassignedReview) {
       if (existingId) {
-        // Explicitly maintain/reset status as NOT_STARTED
-        await persistStep(false, currentData, EmployeePerformanceStatus.NOT_STARTED);
+        await persistStep(false, emptyReviewFormData, EmployeePerformanceStatus.NOT_STARTED);
       }
       scrollToTop();
       onBack();
       return;
     }
 
-    // 2. Only save as DRAFT if user entered data AND finished the one stepper (Step 1)
+    // ── Case 2: Form has not been modified since it was loaded (not dirty) ──
+    // No need to save again; just exit
+    if (!formDirty && existingId) {
+      scrollToTop();
+      onBack();
+      return;
+    }
+
+    // ── Case 3: User has data and form is dirty — persist it ──
     let targetStatus: EmployeePerformanceStatus | undefined = undefined;
     if (!isReassignedReview) {
-      if (finishedFirstStep || isAlreadyDraft) {
-        targetStatus = EmployeePerformanceStatus.DRAFT;
-      } else {
-        targetStatus = EmployeePerformanceStatus.NOT_STARTED;
-      }
+      // Only mark DRAFT if Step 1 required field (Overall Performance Summary) is filled
+      targetStatus = finishedFirstStep
+        ? EmployeePerformanceStatus.DRAFT
+        : EmployeePerformanceStatus.NOT_STARTED;
     }
 
     const saved = await persistStep(
@@ -1074,7 +1151,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleSaveAndExit}
+              onClick={onBack}
               leftIcon={<ArrowLeft className="w-4 h-4" />}
               className="text-[#2563EB] hover:text-[#1D4ED8] hover:bg-blue-50/80 !p-2 rounded-xl cursor-pointer"
               title="Back to history"
@@ -1330,7 +1407,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   <Button
                     variant="primary"
                     size="md"
-                    onClick={() => void handleNext()}
+                    onClick={handleNext}
                     disabled={saving}
                     rightIcon={<ChevronRight className="w-4 h-4" />}
                     className="px-6 py-2.5 rounded-xl font-bold !bg-gradient-to-b !from-[#3B82F6] !to-[#1D4ED8] hover:!from-[#2563EB] hover:!to-[#1E40AF] !text-white shadow-md shadow-blue-500/30 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all !shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.45),0_8px_20px_rgba(37,99,235,0.35)]"

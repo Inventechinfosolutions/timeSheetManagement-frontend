@@ -627,56 +627,56 @@ export interface PerformanceWritePayload {
   quarter: QuaterlyEnum;
   financialYear: string;
   status?: EmployeePerformanceStatus | string;
-  overview?: string;
+  overview?: string | null;
   projects?: PerformanceProject[];
-  responsibilitiesHandled?: string;
-  deliverablesCompleted?: string;
-  keyAccomplishments?: string;
-  challengesFaced?: string;
-  skillsAcquired?: string;
-  learningGoals?: string[];
-  feedbackOnWorkCulture?: string;
-  workLifeBalance?: string;
-  suggestionsForImprovement?: string;
-  plannedDeliverables?: string;
-  careerDevelopmentGoals?: string;
-  communicationTransparency?: number;
-  crossDepartmentCollaboration?: number;
-  mentorshipKnowledgeSharing?: number;
-  reliabilityAccountability?: number;
-  peerSupportTeamSpirit?: number;
-  adaptabilityInitiative?: number;
-  rateCompanyEnvironment?: string;
+  responsibilitiesHandled?: string | null;
+  deliverablesCompleted?: string | null;
+  keyAccomplishments?: string | null;
+  challengesFaced?: string | null;
+  skillsAcquired?: string | null;
+  learningGoals?: string[] | null;
+  feedbackOnWorkCulture?: string | null;
+  workLifeBalance?: string | null;
+  suggestionsForImprovement?: string | null;
+  plannedDeliverables?: string | null;
+  careerDevelopmentGoals?: string | null;
+  communicationTransparency?: number | null;
+  crossDepartmentCollaboration?: number | null;
+  mentorshipKnowledgeSharing?: number | null;
+  reliabilityAccountability?: number | null;
+  peerSupportTeamSpirit?: number | null;
+  adaptabilityInitiative?: number | null;
+  rateCompanyEnvironment?: string | null;
 
   // --- Step 1: Role & Quarter Overview ---
-  overallPerformanceSummary?: string;
-  keyHighlights?: string;
-  majorContributions?: string;
-  areasForImprovement?: string;
+  overallPerformanceSummary?: string | null;
+  keyHighlights?: string | null;
+  majorContributions?: string | null;
+  areasForImprovement?: string | null;
 
   // --- Step 3: Teamwork & Collaboration ---
-  teamCollaborationSummary?: string;
-  crossTeamContributions?: string;
-  knowledgeSharingMentoring?: string;
-  teamworkExamples?: string;
-  teamRatings?: Record<string, number | undefined>;
+  teamCollaborationSummary?: string | null;
+  crossTeamContributions?: string | null;
+  knowledgeSharingMentoring?: string | null;
+  teamworkExamples?: string | null;
+  teamRatings?: Record<string, number | undefined> | null;
 
   // --- Step 4: Continuous Learning & Goals ---
-  certificationsOrCourses?: string;
-  skillsToImprove?: string;
-  supportOrTrainingRequired?: string;
-  nextQuarterLearningGoals?: string;
+  certificationsOrCourses?: string | null;
+  skillsToImprove?: string | null;
+  supportOrTrainingRequired?: string | null;
+  nextQuarterLearningGoals?: string | null;
 
   // --- Step 5: Environment ---
-  workEnvironmentRating?: number;
-  toolsResourcesRating?: number;
-  managerSupportRating?: number;
-  challengesAffectingProductivity?: string;
+  workEnvironmentRating?: number | null;
+  toolsResourcesRating?: number | null;
+  managerSupportRating?: number | null;
+  challengesAffectingProductivity?: string | null;
 
   // --- Step 6: Review & Final Submission ---
-  overallSelfRating?: number;
-  overallEmployeeComments?: string;
-  careerGrowthInterests?: string;
+  overallSelfRating?: number | null;
+  overallEmployeeComments?: string | null;
+  careerGrowthInterests?: string | null;
   confirmationAccepted?: boolean;
 }
 
