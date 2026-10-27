@@ -2,8 +2,10 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { StepProps, PerformanceProject, ProjectRoleEnum, ResponsibilityTypeEnum } from "../../../types/appraisal.types";
 import { AlertCircle, X, Paperclip, ChevronDown, Pencil, Trash2, Check, Plus, UserCheck, ShieldCheck } from "lucide-react";
+import { message, Modal } from "antd";
 import { readApiError } from "../../../reducers/appraisal.reducer";
 import AttachmentItem from "../../common/AttachmentItem";
+import "../AppraisalDashboard.css";
 
 const PROJECT_ROLE_OPTIONS = [
   ProjectRoleEnum.FRONTEND_DEVELOPER,
@@ -139,14 +141,13 @@ const AppraisalSelectWithOther: React.FC<AppraisalSelectWithOtherProps> = ({
             type="text"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder={customPlaceholder}
-            className="flex-1 min-w-0 bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm font-semibold text-[#0F172A] placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
+            className="flex-1 min-w-0 bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm font-normal text-[#0F172A]"
             autoFocus
           />
         ) : (
           <span
             className={`flex-1 min-w-0 text-left truncate ${
-              !value ? "text-slate-400 font-semibold text-[10px]" : "text-[#0F172A] text-sm font-semibold"
+              !value ? "text-slate-400 font-normal text-sm" : "text-[#0F172A] text-sm font-normal"
             }`}
           >
             {value || placeholder}
@@ -250,6 +251,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
   onUploadAttachment,
   onRemoveAttachment,
   readOnly = false,
+  onSaveProject,
+  onDeleteProject,
 }) => {
   const projectName = formData.projectName || "";
   const projectDescription = formData.projectDescription ?? "";
@@ -270,6 +273,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
   const accordionContainerRef = useRef<HTMLDivElement | null>(null);
   const [techInput, setTechInput] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [savingProject, setSavingProject] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [addErrors, setAddErrors] = useState<Record<string, string>>({});
   const [expandedIndex, setExpandedIndex] = useState<number | null>(readOnly && projects.length > 0 ? 0 : null);
@@ -438,7 +442,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
     }
   };
 
-  const handleSaveProject = () => {
+  const handleSaveProject = async () => {
     const name = projectName.trim();
     const description = projectDescription.trim();
     const challenge = challengesFaced.trim() || projectChallenge.trim();
@@ -498,14 +502,36 @@ export const AchievementsStep: React.FC<StepProps> = ({
     };
 
     let nextProjects: PerformanceProject[];
-    if (editingIndex !== null && editingIndex >= 0 && editingIndex < projects.length) {
+    const isEditing = editingIndex !== null && editingIndex >= 0 && editingIndex < projects.length;
+    let targetIndex = projects.length;
+    if (isEditing && editingIndex !== null) {
       nextProjects = [...projects];
       nextProjects[editingIndex] = savedProject;
+      targetIndex = editingIndex;
     } else {
       nextProjects = [...projects, savedProject];
+      targetIndex = projects.length;
     }
 
-    onChange("projects", nextProjects);
+    if (onSaveProject) {
+      setSavingProject(true);
+      try {
+        const success = await onSaveProject(nextProjects);
+        if (!success) {
+          message.error("Failed to save project. Please check the fields and try again.");
+          return;
+        }
+        message.success(isEditing ? "Project updated successfully!" : "Project saved successfully!");
+      } catch (err: any) {
+        message.error(readApiError(err) || "Failed to save project.");
+        return;
+      } finally {
+        setSavingProject(false);
+      }
+    } else {
+      onChange("projects", nextProjects);
+    }
+
     onChange("projectName", "");
     onChange("projectDescription", "");
     onChange("projectRole", "");
@@ -521,6 +547,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
     onChange("projectAttachments", []);
     setEditingIndex(null);
     setAddErrors({});
+    setExpandedIndex(targetIndex);
     if (clearError) {
       clearError("projects");
       clearError("projectName");
@@ -710,13 +737,37 @@ export const AchievementsStep: React.FC<StepProps> = ({
     }, 100);
   };
 
-  const handleRemoveProject = (index: number) => {
-    const removed = projects[index];
-    (removed?.attachments || []).forEach((file) => {
-      if (file.objectKey && onRemoveAttachment) {
-        void onRemoveAttachment(file.objectKey);
-      }
+  const handleConfirmRemoveProject = (index: number) => {
+    const proj = projects[index];
+    const name = proj?.projectName?.trim() || `Project ${index + 1}`;
+    Modal.confirm({
+      title: "Delete Project",
+      content: `Are you sure you want to delete "${name}"? This action cannot be undone.`,
+      okText: "Delete",
+      okType: "danger",
+      cancelText: "Cancel",
+      centered: true,
+      onOk: async () => {
+        await handleRemoveProject(index);
+      },
     });
+  };
+
+  const handleRemoveProject = async (index: number) => {
+    const removed = projects[index];
+    // Call DELETE API for any attachments in this project
+    if (removed?.attachments && removed.attachments.length > 0 && onRemoveAttachment) {
+      for (const file of removed.attachments) {
+        if (file.objectKey) {
+          try {
+            await onRemoveAttachment(file.objectKey);
+          } catch (err) {
+            console.error("[Appraisal] Failed to delete attachment via DELETE API:", err);
+          }
+        }
+      }
+    }
+
     if (expandedIndex === index) {
       setExpandedIndex(null);
     } else if (expandedIndex !== null && expandedIndex > index) {
@@ -729,10 +780,37 @@ export const AchievementsStep: React.FC<StepProps> = ({
       setEditingIndex(editingIndex - 1);
     }
 
-    onChange(
-      "projects",
-      projects.filter((_, itemIndex) => itemIndex !== index),
-    );
+    const nextProjects = projects.filter((_, itemIndex) => itemIndex !== index);
+    if (onDeleteProject) {
+      try {
+        const success = await onDeleteProject(index, nextProjects);
+        if (success) {
+          message.success("Project deleted successfully");
+          console.info("[Appraisal] Project deleted via DELETE API successfully:", removed?.projectName);
+        } else {
+          message.error("Failed to delete project");
+        }
+      } catch (err: any) {
+        message.error(readApiError(err) || "Failed to delete project");
+        console.error("[Appraisal] Failed to delete project:", err);
+      }
+    } else if (onSaveProject) {
+      try {
+        const success = await onSaveProject(nextProjects);
+        if (success) {
+          message.success("Project deleted successfully");
+          console.info("[Appraisal] Project deleted successfully:", removed?.projectName);
+        } else {
+          message.error("Failed to delete project");
+        }
+      } catch (err: any) {
+        message.error(readApiError(err) || "Failed to delete project");
+        console.error("[Appraisal] Failed to delete project:", err);
+      }
+    } else {
+      onChange("projects", nextProjects);
+      message.success("Project deleted successfully");
+    }
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -744,7 +822,9 @@ export const AchievementsStep: React.FC<StepProps> = ({
       return;
     }
     if (attachments.length >= 5) {
-      setUploadError("You can attach up to 5 files.");
+      const err = "You can attach up to 5 files.";
+      setUploadError(err);
+      message.warning(err);
       return;
     }
     setUploading(true);
@@ -752,8 +832,13 @@ export const AchievementsStep: React.FC<StepProps> = ({
     try {
       const stored = await onUploadAttachment(file);
       onChange("projectAttachments", [...attachments, stored]);
+      message.success(`Document "${file.name}" uploaded successfully`);
+      console.info("[Appraisal] Document attached to project:", file.name);
     } catch (error) {
-      setUploadError(error instanceof Error ? error.message : readApiError(error));
+      const errMsg = error instanceof Error ? error.message : readApiError(error);
+      setUploadError(errMsg);
+      message.error(errMsg);
+      console.error("[Appraisal] Failed to upload document:", error);
     } finally {
       setUploading(false);
     }
@@ -777,7 +862,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div id="field-projects" className="flex items-start justify-between gap-3 border-b border-blue-100 pb-4 scroll-mt-24">
+      <div id="field-projects" className="flex items-start justify-between gap-3 border-b border-[#E2E8F0] pb-4 scroll-mt-24">
         <div>
           <h3 className="text-lg font-bold text-[#0F172A]">
             <span className="eval-title-anim">Step 2: Key Achievements & Projects</span>
@@ -799,31 +884,25 @@ export const AchievementsStep: React.FC<StepProps> = ({
       </div>
 
       <div className="space-y-4">
-        {/* 1. Project Name (Dropdown or text input) */}
+        {/* 1. Project Name (Text area) */}
         <div id="field-projectName" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-projectName"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1 flex items-center justify-between"
+            className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
           >
             <span>
               Project Name <span className="text-red-500">*</span>
             </span>
           </label>
-          <div
-            className={`eval-step-card !py-2.5 !px-3.5 flex items-center transition-all duration-200 cursor-text ${
-              nameError ? "eval-field-has-error" : ""
+          <textarea
+            id="input-projectName"
+            rows={2}
+            value={projectName}
+            onChange={(e) => handleNameChange(e.target.value)}
+            className={`eval-textarea-field leading-relaxed text-sm font-normal ${
+              nameError ? "eval-input-error" : ""
             }`}
-            onClick={() => document.getElementById("input-projectName")?.focus()}
-          >
-            <input
-              id="input-projectName"
-              type="text"
-              value={projectName}
-              onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="e.g. Timesheet Modernization & Automation"
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed font-semibold placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
-            />
-          </div>
+          />
           {nameError && (
             <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
@@ -836,27 +915,21 @@ export const AchievementsStep: React.FC<StepProps> = ({
         <div id="field-projectDescription" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-projectDescription"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1 flex items-center justify-between"
+            className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
           >
             <span>
               Project Description <span className="text-red-500">*</span>
             </span>
           </label>
-          <div
-            className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
-              descriptionError ? "eval-field-has-error" : ""
+          <textarea
+            id="input-projectDescription"
+            rows={3}
+            value={projectDescription}
+            onChange={(e) => handleDescriptionChange(e.target.value)}
+            className={`eval-textarea-field leading-relaxed text-sm font-normal ${
+              descriptionError ? "eval-input-error" : ""
             }`}
-            onClick={() => document.getElementById("input-projectDescription")?.focus()}
-          >
-            <textarea
-              id="input-projectDescription"
-              rows={3}
-              value={projectDescription}
-              onChange={(e) => handleDescriptionChange(e.target.value)}
-              placeholder="Project scope, core objectives, and deliverables..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
-            />
-          </div>
+          />
           {descriptionError && (
             <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
@@ -866,11 +939,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
         </div>
 
         {/* 3 & 4. Project Role & Responsibility Type (Side-by-Side Dropdowns) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
           {/* Project Role Dropdown */}
           <div id="field-projectRole" className="space-y-1.5 flex flex-col">
             <label
-              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
             >
               <span>
                 Project Role <span className="text-red-500">*</span>
@@ -896,7 +969,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           {/* Responsibility Type Dropdown */}
           <div id="field-responsibilityType" className="space-y-1.5 flex flex-col">
             <label
-              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
             >
               <span>
                 Responsibility Type <span className="text-red-500">*</span>
@@ -924,27 +997,21 @@ export const AchievementsStep: React.FC<StepProps> = ({
         <div id="field-keyResponsibilities" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-keyResponsibilities"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+            className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
           >
             <span>
               Key Responsibilities <span className="text-red-500">*</span>
             </span>
           </label>
-          <div
-            className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
-              keyResponsibilitiesError ? "eval-field-has-error" : ""
+          <textarea
+            id="input-keyResponsibilities"
+            rows={3}
+            value={keyResponsibilities}
+            onChange={(e) => handleKeyResponsibilitiesChange(e.target.value)}
+            className={`eval-textarea-field leading-relaxed text-sm font-normal ${
+              keyResponsibilitiesError ? "eval-input-error" : ""
             }`}
-            onClick={() => document.getElementById("input-keyResponsibilities")?.focus()}
-          >
-            <textarea
-              id="input-keyResponsibilities"
-              rows={3}
-              value={keyResponsibilities}
-              onChange={(e) => handleKeyResponsibilitiesChange(e.target.value)}
-              placeholder="Primary duties, ownership areas, and core functions..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
-            />
-          </div>
+          />
           {keyResponsibilitiesError && (
             <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
@@ -954,32 +1021,26 @@ export const AchievementsStep: React.FC<StepProps> = ({
         </div>
 
         {/* 6 & 7. Challenges Faced & Solutions Implemented (Side-by-Side Text areas) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
           {/* Challenges Faced Card */}
           <div id="field-challengesFaced" className="space-y-1.5 flex flex-col">
             <label
               htmlFor="input-challengesFaced"
-              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1 flex items-center justify-between"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
             >
               <span>
                 Challenges Faced <span className="text-red-500">*</span>
               </span>
             </label>
-            <div
-              className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
-                challengesError ? "eval-field-has-error" : ""
+            <textarea
+              id="input-challengesFaced"
+              rows={3}
+              value={challengesFaced}
+              onChange={(e) => handleChallengesChange(e.target.value)}
+              className={`eval-textarea-field leading-relaxed text-sm font-normal ${
+                challengesError ? "eval-input-error" : ""
               }`}
-              onClick={() => document.getElementById("input-challengesFaced")?.focus()}
-            >
-              <textarea
-                id="input-challengesFaced"
-                rows={3}
-                value={challengesFaced}
-                onChange={(e) => handleChallengesChange(e.target.value)}
-                placeholder="Technical or organizational challenges faced..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
-              />
-            </div>
+            />
             {challengesError && (
               <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
                 <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
@@ -992,72 +1053,54 @@ export const AchievementsStep: React.FC<StepProps> = ({
           <div id="field-solutionsImplemented" className="space-y-1.5 flex flex-col">
             <label
               htmlFor="input-solutionsImplemented"
-              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
             >
               Solutions Implemented
             </label>
-            <div
-              className="eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1"
-              onClick={() => document.getElementById("input-solutionsImplemented")?.focus()}
-            >
-              <textarea
-                id="input-solutionsImplemented"
-                rows={3}
-                value={solutionsImplemented}
-                onChange={(e) => handleSolutionsChange(e.target.value)}
-                placeholder="Solutions, architectures, or workarounds executed..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
-              />
-            </div>
+            <textarea
+              id="input-solutionsImplemented"
+              rows={3}
+              value={solutionsImplemented}
+              onChange={(e) => handleSolutionsChange(e.target.value)}
+              className="eval-textarea-field leading-relaxed text-sm font-normal"
+            />
           </div>
         </div>
 
         {/* Leadership Qualities & Client Review & Feedback (Side-by-Side Text areas) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
           {/* Leadership Qualities Card */}
           <div id="field-leadershipQualities" className="space-y-1.5 flex flex-col">
             <label
               htmlFor="input-leadershipQualities"
-              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
             >
               Leadership Qualities
             </label>
-            <div
-              className="eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1"
-              onClick={() => document.getElementById("input-leadershipQualities")?.focus()}
-            >
-              <textarea
-                id="input-leadershipQualities"
-                rows={3}
-                value={leadershipQualities}
-                onChange={(e) => handleLeadershipQualitiesChange(e.target.value)}
-                placeholder="Mentorship, initiative, or leadership examples..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
-              />
-            </div>
+            <textarea
+              id="input-leadershipQualities"
+              rows={3}
+              value={leadershipQualities}
+              onChange={(e) => handleLeadershipQualitiesChange(e.target.value)}
+              className="eval-textarea-field leading-relaxed text-sm font-normal"
+            />
           </div>
 
           {/* Client Review & Feedback Card */}
           <div id="field-clientReviewFeedback" className="space-y-1.5 flex flex-col">
             <label
               htmlFor="input-clientReviewFeedback"
-              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
             >
               Client Review & Feedback
             </label>
-            <div
-              className="eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1"
-              onClick={() => document.getElementById("input-clientReviewFeedback")?.focus()}
-            >
-              <textarea
-                id="input-clientReviewFeedback"
-                rows={3}
-                value={clientReviewFeedback}
-                onChange={(e) => handleClientReviewFeedbackChange(e.target.value)}
-                placeholder="Client feedback, appreciation, or stakeholder ratings..."
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
-              />
-            </div>
+            <textarea
+              id="input-clientReviewFeedback"
+              rows={3}
+              value={clientReviewFeedback}
+              onChange={(e) => handleClientReviewFeedbackChange(e.target.value)}
+              className="eval-textarea-field leading-relaxed text-sm font-normal"
+            />
           </div>
         </div>
 
@@ -1065,27 +1108,21 @@ export const AchievementsStep: React.FC<StepProps> = ({
         <div id="field-keyAchievementsOutcomes" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-keyAchievementsOutcomes"
-            className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+            className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
           >
             <span>
               Key Achievements / Outcomes <span className="text-red-500">*</span>
             </span>
           </label>
-          <div
-            className={`eval-step-card !p-3.5 flex flex-col justify-between transition-all duration-200 cursor-text flex-1 ${
-              outcomesError ? "eval-field-has-error" : ""
+          <textarea
+            id="input-keyAchievementsOutcomes"
+            rows={3}
+            value={keyAchievementsOutcomes}
+            onChange={(e) => handleOutcomesChange(e.target.value)}
+            className={`eval-textarea-field leading-relaxed text-sm font-normal ${
+              outcomesError ? "eval-input-error" : ""
             }`}
-            onClick={() => document.getElementById("input-keyAchievementsOutcomes")?.focus()}
-          >
-            <textarea
-              id="input-keyAchievementsOutcomes"
-              rows={3}
-              value={keyAchievementsOutcomes}
-              onChange={(e) => handleOutcomesChange(e.target.value)}
-              placeholder="Measurable impact, performance gains, or business wins..."
-              className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
-            />
-          </div>
+          />
           {outcomesError && (
             <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in duration-200">
               <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
@@ -1096,7 +1133,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
         {/* 9. Technologies Used (Multi-select) */}
         <div id="field-technologiesUsed" className="space-y-1.5 flex flex-col">
-          <label className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1">
             <span>
               Technologies Used <span className="text-red-500">*</span>
             </span>
@@ -1128,7 +1165,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
             {/* Quick Pick Pills */}
             <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100">
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#64748B] mr-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] mr-1">
                 Suggested:
               </span>
               {COMMON_TECH_STACK.map((tech) => {
@@ -1168,8 +1205,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                     handleAddTechnology(techInput);
                   }
                 }}
-                placeholder="Custom technology (press Enter)..."
-                className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-[#0F172A] outline-none focus:border-blue-500 placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
+                className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-[#0F172A] outline-none focus:border-blue-500 font-normal"
               />
               <button
                 type="button"
@@ -1234,7 +1270,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
               <button
                 type="button"
                 onClick={handleCancelEdit}
-                className="px-3.5 py-2 text-xs font-bold text-[#64748B] hover:text-[#0F172A] bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98]"
+                disabled={savingProject}
+                className="px-3.5 py-2 text-xs font-bold text-[#64748B] hover:text-[#0F172A] bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -1242,11 +1279,25 @@ export const AchievementsStep: React.FC<StepProps> = ({
             {!readOnly && (
               <button
                 type="button"
+                id="btn-save-project"
+                disabled={savingProject}
                 onClick={handleSaveProject}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-blue-700 border border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.98]"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed border border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.98]"
               >
-                <Check className="w-3.5 h-3.5" />
-                <span>{editingIndex !== null ? "Update Project" : "Save Project"}</span>
+                {savingProject ? (
+                  <>
+                    <svg className="animate-spin -ml-0.5 mr-1.5 h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>{editingIndex !== null ? "Updating..." : "Saving..."}</span>
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{editingIndex !== null ? "Update Project" : "Save Project"}</span>
+                  </>
+                )}
               </button>
             )}
           </div>
@@ -1343,7 +1394,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleRemoveProject(index);
+                              handleConfirmRemoveProject(index);
                             }}
                             className="inline-flex items-center justify-center w-7 h-7 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 hover:border-red-300 rounded-lg transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
                             title="Delete project"
@@ -1425,11 +1476,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
                         <div className="px-4 pb-4 pt-2.5 space-y-3 text-xs border-t border-slate-100">
                           {/* Project Description with proper title */}
                           <div>
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
                               Project Description
                             </span>
                             <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                              <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line break-words">
+                              <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line break-words font-normal">
                                 {project.description || "No description provided."}
                               </p>
                             </div>
@@ -1440,10 +1491,10 @@ export const AchievementsStep: React.FC<StepProps> = ({
                             <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-600">
                               {project.projectRole && (
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A]">
                                     Project Role:
                                   </span>
-                                  <span className="font-semibold text-slate-800">{project.projectRole}</span>
+                                  <span className="font-normal text-slate-800">{project.projectRole}</span>
                                 </div>
                               )}
                               {project.projectRole && project.responsibilityType && (
@@ -1451,10 +1502,10 @@ export const AchievementsStep: React.FC<StepProps> = ({
                               )}
                               {project.responsibilityType && (
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A]">
                                     Responsibility Type:
                                   </span>
-                                  <span className="font-semibold text-slate-800">{project.responsibilityType}</span>
+                                  <span className="font-normal text-slate-800">{project.responsibilityType}</span>
                                 </div>
                               )}
                             </div>
@@ -1465,20 +1516,20 @@ export const AchievementsStep: React.FC<StepProps> = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                               {Boolean(project.keyResponsibilities) && (
                                 <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
                                     Key Responsibilities
                                   </span>
-                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-normal">
                                     {project.keyResponsibilities}
                                   </p>
                                 </div>
                               )}
                               {Boolean(project.keyAchievementsOutcomes) && (
                                 <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
                                     Key Achievements / Outcomes
                                   </span>
-                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-normal">
                                     {project.keyAchievementsOutcomes}
                                   </p>
                                 </div>
@@ -1491,20 +1542,20 @@ export const AchievementsStep: React.FC<StepProps> = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                               {(project.challengesFaced || project.challenge) && (
                                 <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
                                     Challenges Faced
                                   </span>
-                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-normal">
                                     {project.challengesFaced || project.challenge}
                                   </p>
                                 </div>
                               )}
                               {Boolean(project.solutionsImplemented?.trim()) && (
                                 <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
                                     Solutions Implemented
                                   </span>
-                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-normal">
                                     {project.solutionsImplemented}
                                   </p>
                                 </div>
@@ -1517,20 +1568,20 @@ export const AchievementsStep: React.FC<StepProps> = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                               {Boolean(project.leadershipQualities) && (
                                 <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
                                     Leadership Qualities
                                   </span>
-                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-normal">
                                     {project.leadershipQualities}
                                   </p>
                                 </div>
                               )}
                               {Boolean(project.clientReviewFeedback) && (
                                 <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 block mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
                                     Client Review & Feedback
                                   </span>
-                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed">
+                                  <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-normal">
                                     {project.clientReviewFeedback}
                                   </p>
                                 </div>
@@ -1541,7 +1592,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                           {/* Technologies Used */}
                           {(project.technologiesUsed || []).length > 0 && (
                             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mr-1">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] mr-1">
                                 Technologies Used:
                               </span>
                               {(project.technologiesUsed || []).map((tech) => (
@@ -1558,7 +1609,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                           {/* Attachments */}
                           {(project.attachments || []).length > 0 && (
                             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mr-1">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] mr-1">
                                 Attachments:
                               </span>
                               {(project.attachments || []).map((file) => (

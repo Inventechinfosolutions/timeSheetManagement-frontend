@@ -1286,11 +1286,6 @@ export const AppraisalDashboard: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
               <span className="manager-review-title-anim">Quarterly Review</span>
             </h1>
-            <p className="text-sm mt-1 font-normal w-fit">
-              <span className="manager-review-subtitle-anim">
-                Complete authorized quarterly review assignments and track your performance appraisals.
-              </span>
-            </p>
           </div>
 
           {/* 2 Summary Cards beside title */}

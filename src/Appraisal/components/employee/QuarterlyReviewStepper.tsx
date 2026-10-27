@@ -30,6 +30,7 @@ import {
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
 import { AppraisalApi, readApiError, toPerformancePayload, toReviewFormData } from "../../reducers/appraisal.reducer";
 import { EmployeePerformanceStatus, QuaterlyEnum, QuarterlyReviewStatus } from "../../enums/appraisal.enums";
+import { message, Modal } from "antd";
 import OverviewStep from "./steps/OverviewStep";
 import AchievementsStep from "./steps/AchievementsStep";
 import TeamContributionStep from "./steps/TeamContributionStep";
@@ -909,6 +910,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       const performance = await AppraisalApi.getPerformanceById(id);
       const fresh = toReviewFormData(performance);
       formDataRef.current = fresh;
+      initialFormDataRef.current = fresh;
       performanceIdRef.current = performance.id;
       setPerformanceId(performance.id);
       setFormData(fresh);
@@ -917,6 +919,103 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       setSaveError(readApiError(error));
       return false;
     }
+  };
+
+  const handleSaveProject = async (
+    updatedProjects: PerformanceProject[],
+  ): Promise<boolean> => {
+    const updatedData: ReviewFormData = {
+      ...formDataRef.current,
+      projects: updatedProjects,
+      editingProjectIndex: null,
+      projectName: "",
+      projectDescription: "",
+      projectRole: "",
+      responsibilityType: "",
+      leadershipQualities: "",
+      clientReviewFeedback: "",
+      keyResponsibilities: "",
+      challengesFaced: "",
+      projectChallenge: "",
+      solutionsImplemented: "",
+      keyAchievementsOutcomes: "",
+      technologiesUsed: [],
+      projectAttachments: [],
+    };
+    setFormData(updatedData);
+    formDataRef.current = updatedData;
+
+    const targetStatus = !isReassignedReview
+      ? EmployeePerformanceStatus.DRAFT
+      : undefined;
+
+    const saved = await persistStep(true, updatedData, targetStatus);
+    if (saved) {
+      await loadFreshForm();
+    }
+    return saved;
+  };
+
+  const handleDeleteProject = async (
+    index: number,
+    updatedProjects: PerformanceProject[],
+  ): Promise<boolean> => {
+    let existingId = performanceIdRef.current || assignment.performanceId;
+    if (!existingId && assignment.employeeId && quarterValue(assignment.quarter) && assignment.financialYear) {
+      try {
+        const found = await AppraisalApi.getEmployeePerformance(
+          assignment.employeeId,
+          quarterValue(assignment.quarter)!,
+          assignment.financialYear,
+        );
+        if (found?.id) {
+          existingId = found.id;
+          performanceIdRef.current = found.id;
+          setPerformanceId(found.id);
+        }
+      } catch (_) {
+        // ignore
+      }
+    }
+    if (existingId) {
+      try {
+        await AppraisalApi.deletePerformanceProject(existingId, index);
+        await loadFreshForm();
+        return true;
+      } catch (error) {
+        console.warn("[Appraisal] deletePerformanceProject endpoint failed, falling back to updatePerformance:", error);
+      }
+    }
+    const updatedData: ReviewFormData = {
+      ...formDataRef.current,
+      projects: updatedProjects,
+      editingProjectIndex: null,
+      projectName: "",
+      projectDescription: "",
+      projectRole: "",
+      responsibilityType: "",
+      leadershipQualities: "",
+      clientReviewFeedback: "",
+      keyResponsibilities: "",
+      challengesFaced: "",
+      projectChallenge: "",
+      solutionsImplemented: "",
+      keyAchievementsOutcomes: "",
+      technologiesUsed: [],
+      projectAttachments: [],
+    };
+    setFormData(updatedData);
+    formDataRef.current = updatedData;
+
+    const targetStatus = !isReassignedReview
+      ? EmployeePerformanceStatus.DRAFT
+      : undefined;
+
+    const saved = await persistStep(true, updatedData, targetStatus);
+    if (saved) {
+      await loadFreshForm();
+    }
+    return saved;
   };
 
   const handleNext = async () => {
@@ -957,7 +1056,11 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     // 2. Fetch fresh data via GET by id to keep state synchronized
     await loadFreshForm();
 
-    // 3. Navigate to next step
+    // 3. Show success toast message & log
+    message.success(`Step ${currentStep} saved successfully`);
+    console.info(`[Appraisal] Step ${currentStep} saved successfully. Moving to Step ${currentStep + 1}`);
+
+    // 4. Navigate to next step
     goToStep(currentStep + 1, true);
   };
 
@@ -1024,6 +1127,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT);
     if (!saved) return;
     await loadFreshForm();
+    message.success(`Step ${currentStep} saved successfully`);
+    console.info(`[Appraisal] Step ${currentStep} saved successfully. Moving to Step ${targetStep}`);
     goToStep(targetStep, true);
   };
 
@@ -1055,6 +1160,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       if (existingId) {
         await persistStep(false, emptyReviewFormData, EmployeePerformanceStatus.NOT_STARTED);
       }
+      message.info("Form reset and saved");
+      console.info("[Appraisal] Form cleared, status reset to NOT_STARTED");
       scrollToTop();
       onBack();
       return;
@@ -1063,6 +1170,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     // ── Case 2: Form has not been modified since it was loaded (not dirty) ──
     // No need to save again; just exit
     if (!formDirty && existingId) {
+      console.info("[Appraisal] Form not dirty, exiting without extra save");
       scrollToTop();
       onBack();
       return;
@@ -1085,8 +1193,44 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (!saved) {
       return;
     }
+    message.success("Draft saved successfully");
+    console.info("[Appraisal] Draft saved successfully and exiting");
     scrollToTop();
     onBack();
+  };
+
+  const executeSubmit = async (currentData: ReviewFormData) => {
+    const saved = await persistStep(false, currentData);
+    if (!saved) {
+      return;
+    }
+    const quarter = quarterValue(assignment.quarter);
+    const performanceId = performanceIdRef.current;
+    if (!quarter || !performanceId) {
+      return;
+    }
+    setSaving(true);
+    try {
+      await AppraisalApi.submitPerformance(performanceId, {
+        employeeId: assignment.employeeId,
+        quarter,
+        financialYear: assignment.financialYear,
+      });
+      message.success("Appraisal submitted successfully!");
+      console.info("[Appraisal] Appraisal submitted successfully for performanceId:", performanceId);
+    } catch (error) {
+      const errMsg = readApiError(error);
+      setSaveError(errMsg);
+      message.error(errMsg || "Failed to submit appraisal.");
+      console.error("[Appraisal] Submission error:", error);
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
+    setSubmitted(true);
+    setTimeout(() => {
+      onSubmitSuccess?.();
+    }, 1200);
   };
 
   const handleSubmit = async () => {
@@ -1109,35 +1253,23 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         }
         setErrors(validation.errors);
         scrollToField(validation.firstFieldId);
+        message.warning(`Please complete required fields in Step ${s}`);
         return;
       }
     }
-    const saved = await persistStep(false, currentData);
-    if (!saved) {
-      return;
-    }
-    const quarter = quarterValue(assignment.quarter);
-    const performanceId = performanceIdRef.current;
-    if (!quarter || !performanceId) {
-      return;
-    }
-    setSaving(true);
-    try {
-      await AppraisalApi.submitPerformance(performanceId, {
-        employeeId: assignment.employeeId,
-        quarter,
-        financialYear: assignment.financialYear,
-      });
-    } catch (error) {
-      setSaveError(readApiError(error));
-      setSaving(false);
-      return;
-    }
-    setSaving(false);
-    setSubmitted(true);
-    setTimeout(() => {
-      onSubmitSuccess?.();
-    }, 1200);
+
+    Modal.confirm({
+      title: "Submit Quarterly Appraisal",
+      content:
+        "Are you sure you want to submit your appraisal? Once submitted, your self-assessment will be locked and sent to your manager for evaluation.",
+      okText: "Submit Appraisal",
+      okType: "primary",
+      cancelText: "Review Again",
+      centered: true,
+      onOk: async () => {
+        await executeSubmit(currentData);
+      },
+    });
   };
 
   const renderStepContent = (stepNum: number) => {
@@ -1163,6 +1295,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onUploadAttachment={uploadAttachment}
             onRemoveAttachment={removeAttachment}
             readOnly={readOnly}
+            onSaveProject={handleSaveProject}
+            onDeleteProject={handleDeleteProject}
           />
         );
       case 3:
@@ -1345,8 +1479,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
           </div>
         ) : (
           <>
-            <fieldset
-              disabled={readOnly}
+            <div
               className={`relative min-h-[380px] border-0 p-0 m-0 min-w-0 ${exitingStep !== null ? "overflow-hidden" : "overflow-visible"
                 }`}
             >
@@ -1366,7 +1499,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               >
                 {renderStepContent(currentStep)}
               </div>
-            </fieldset>
+            </div>
 
             {/* Evaluation CTA Card: strictly shown on Step 6 only when evaluation is completed */}
             {currentStep === 6 && onGoToEvaluation && isCompleted && (

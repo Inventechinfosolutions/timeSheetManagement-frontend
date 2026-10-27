@@ -109,6 +109,35 @@ textarea.assign-input-textarea::-webkit-scrollbar-button {
   height: 0 !important;
 }
 
+.custom-scrollbar::-webkit-resizer,
+.assign-input-textarea::-webkit-resizer,
+textarea.assign-input-textarea::-webkit-resizer {
+  background-color: transparent !important;
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 2px,
+    #94A3B8 2px,
+    #94A3B8 3.5px
+  ) !important;
+  background-size: 10px 10px !important;
+  background-position: bottom 2px right 2px !important;
+  background-repeat: no-repeat !important;
+  cursor: se-resize !important;
+}
+
+.custom-scrollbar:hover::-webkit-resizer,
+.assign-input-textarea:hover::-webkit-resizer,
+textarea.assign-input-textarea:hover::-webkit-resizer {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 2px,
+    #475569 2px,
+    #475569 3.5px
+  ) !important;
+}
+
 .assign-quarterly-modal-dialog::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;

@@ -1420,10 +1420,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               </div>
             </div>
             <div className="min-w-0">
-              <span className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
+              <span className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1">
                 EMPLOYEE NAME
               </span>
-              <span className="text-sm font-bold text-[#0F172A] truncate block">
+              <span className="text-sm font-normal text-[#0F172A] truncate block">
                 {record.name}
               </span>
             </div>
@@ -1432,10 +1432,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           {/* 2. Employee ID */}
           <div className="eval-meta-segment eval-meta-segment-2 sm:pl-4 eval-stagger-item eval-stagger-2">
             <div>
-              <span className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
+              <span className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1">
                 EMPLOYEE ID
               </span>
-              <span className="text-sm font-bold text-[#0F172A] block">
+              <span className="text-sm font-normal text-[#0F172A] block">
                 {record.id}
               </span>
             </div>
@@ -1444,10 +1444,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           {/* 3. Designation & Department */}
           <div className="eval-meta-segment eval-meta-segment-3 sm:pl-4 eval-stagger-item eval-stagger-3">
             <div className="min-w-0">
-              <span className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
+              <span className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1">
                 DESIGNATION &amp; DEPT
               </span>
-              <span className="text-sm font-bold text-[#0F172A] block truncate">
+              <span className="text-sm font-normal text-[#0F172A] block truncate">
                 {record.role || "—"}
               </span>
             </div>
@@ -1456,10 +1456,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           {/* 4. Submitted Date */}
           <div className="eval-meta-segment eval-meta-segment-4 sm:pl-4 eval-stagger-item eval-stagger-4">
             <div>
-              <span className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
+              <span className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1">
                 EMPLOYEE PERFORMANCE SUBMITTED DATE
               </span>
-              <span className="text-sm font-bold text-[#0F172A] block">
+              <span className="text-sm font-normal text-[#0F172A] block">
                 {employeeSubmitted ? record.submittedOn || "—" : "Not submitted"}
               </span>
             </div>
@@ -1478,27 +1478,27 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               <h3 className="text-sm font-bold text-[#0F172A]">Assignment</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <span className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                  <span className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                     Assigned Quarter
                   </span>
-                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
+                  <div className="rounded-xl border border-[#E2E8F0] bg-gray-50/80 px-3 py-2.5 text-sm font-normal text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                     {record.quarter} · {record.financialYear}
                   </div>
                 </div>
                 <div>
-                  <span className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                  <span className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                     Assigned Date
                   </span>
-                  <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
+                  <div className="rounded-xl border border-[#E2E8F0] bg-gray-50/80 px-3 py-2.5 text-sm font-normal text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                     {assignedDate || "—"}
                   </div>
                 </div>
                 <div>
-                  <span className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                  <span className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                     Deadline{grantAccess ? " *" : ""}
                   </span>
                   {(isViewMode || employeeSubmitted) && !grantAccess ? (
-                    <div className="rounded-xl border border-blue-200/60 bg-gray-50/80 px-3 py-2.5 text-sm font-bold text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
+                    <div className="rounded-xl border border-[#E2E8F0] bg-gray-50/80 px-3 py-2.5 text-sm font-normal text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                       {deadlineDate || "—"}
                     </div>
                   ) : (
@@ -1507,7 +1507,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </div>
               </div>
               <div>
-                <span className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                <span className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                   Description
                 </span>
                 <textarea
@@ -1515,8 +1515,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   readOnly={isViewMode || employeeSubmitted || grantAccess}
                   value={assignmentDescription}
                   onChange={(event) => setAssignmentDescription(event.target.value)}
-                  placeholder="Assignment description..."
-                  className={`eval-textarea-field w-full placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${isViewMode || employeeSubmitted || grantAccess ? "eval-textarea-readonly !cursor-not-allowed" : "!cursor-text cursor-text"}`}
+                  className={`eval-textarea-field w-full font-normal ${isViewMode || employeeSubmitted || grantAccess ? "eval-textarea-readonly !cursor-not-allowed" : "!cursor-text cursor-text"}`}
                 />
               </div>
               {((!isViewMode && !employeeSubmitted) || grantAccess) && (
@@ -1578,37 +1577,37 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                     <div>
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                         Overall Performance Summary
                       </label>
-                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs">
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[75px] shadow-2xs">
                         {formData.overallPerformanceSummary || formData.overview || "—"}
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                         Key Highlights
                       </label>
-                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs">
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[75px] shadow-2xs">
                         {formData.keyHighlights || "—"}
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                         Major Contributions
                       </label>
-                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs">
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[75px] shadow-2xs">
                         {formData.majorContributions || "—"}
                       </div>
                     </div>
 
                     <div>
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                         Areas for Improvement
                       </label>
-                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs">
+                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[75px] shadow-2xs">
                         {formData.areasForImprovement || "—"}
                       </div>
                     </div>
@@ -1681,26 +1680,26 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             <div className="p-4 pt-2 space-y-3 border-t border-slate-100 animate-in fade-in duration-200">
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 <div>
-                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                                     Project Name
                                   </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-bold text-[#0F172A] shadow-2xs">
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-normal text-[#0F172A] shadow-2xs">
                                     {project.projectName || "—"}
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                                     Project Role
                                   </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-semibold text-[#0F172A] shadow-2xs">
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-normal text-[#0F172A] shadow-2xs">
                                     {project.projectRole || "—"}
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                                     Responsibility Type
                                   </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-semibold text-[#0F172A] shadow-2xs">
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-normal text-[#0F172A] shadow-2xs">
                                     {project.responsibilityType || "—"}
                                   </div>
                                 </div>
@@ -1708,18 +1707,18 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                                     Project Description
                                   </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
                                     {project.description || "—"}
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                                     Key Responsibilities
                                   </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
                                     {project.keyResponsibilities || "—"}
                                   </div>
                                 </div>
@@ -1727,18 +1726,18 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                                     Challenges Faced
                                   </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
                                     {project.challengesFaced || project.challenge || "—"}
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                                     Solutions Implemented
                                   </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
                                     {project.solutionsImplemented || "—"}
                                   </div>
                                 </div>
@@ -1746,25 +1745,25 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
-                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                                     Leadership Qualities
                                   </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
                                     {project.leadershipQualities || "—"}
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                                     Client Review &amp; Feedback
                                   </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
                                     {project.clientReviewFeedback || "—"}
                                   </div>
                                 </div>
                               </div>
 
                               <div>
-                                <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                                <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                                   Attachments
                                 </label>
                                 {(project.attachments || []).length > 0 ? (
@@ -1778,7 +1777,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                                     ))}
                                   </div>
                                 ) : (
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-medium shadow-2xs">
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-normal shadow-2xs">
                                     —
                                   </div>
                                 )}
@@ -1816,7 +1815,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </div>
 
                 <div className="eval-stagger-item eval-stagger-3 space-y-2">
-                  <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                     Teamwork &amp; Collaboration Dimensions
                   </label>
 
@@ -1828,7 +1827,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       return (
                         <div
                           key={criterion.key}
-                          className="p-4 bg-white border border-[#CBD5E1] rounded-2xl flex flex-col justify-between gap-3 shadow-md hover:shadow-lg transition-all duration-200"
+                          className="p-4 bg-white border border-[#E2E8F0] rounded-2xl flex flex-col justify-between gap-3 shadow-md hover:shadow-lg transition-all duration-200"
                           title="Employee submitted rating & description (Read-only)"
                         >
                           <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
@@ -1855,10 +1854,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             </div>
                           </div>
                           <div>
-                            <span className="text-[10px] font-bold text-[#64748B] uppercase tracking-wider block mb-1">
+                            <span className="text-[10px] font-semibold text-[#0F172A] uppercase tracking-wider block mb-1">
                               Description
                             </span>
-                            <p className="text-xs text-[#334155] whitespace-pre-line leading-relaxed font-medium bg-slate-50/70 p-2.5 rounded-lg border border-slate-100 min-h-[48px]">
+                            <p className="text-xs text-[#334155] whitespace-pre-line leading-relaxed font-normal bg-slate-50/70 p-2.5 rounded-lg border border-slate-100 min-h-[48px]">
                               {desc || "—"}
                             </p>
                           </div>
@@ -1871,34 +1870,34 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 {/* 4 Teamwork Details in 2 columns */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 mt-1">
                   <div>
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                       Team Collaboration Summary
                     </label>
-                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
                       {formData.teamCollaborationSummary || "—"}
                     </div>
                   </div>
                   <div>
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                       Cross-Team Contributions
                     </label>
-                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
                       {formData.crossTeamContributions || "—"}
                     </div>
                   </div>
                   <div>
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                       Knowledge Sharing / Mentoring
                     </label>
-                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
                       {formData.knowledgeSharingMentoring || "—"}
                     </div>
                   </div>
                   <div>
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                       Teamwork Examples
                     </label>
-                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-medium min-h-[75px] shadow-2xs">
+                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
                       {formData.teamworkExamples || "—"}
                     </div>
                   </div>
@@ -1922,11 +1921,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 eval-stagger-item eval-stagger-3">
                   <div>
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                       Skills Learned During This Period
                     </label>
                     <div
-                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[80px] shadow-2xs"
+                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[80px] shadow-2xs"
                       title="Employee submitted response (Read-only)"
                     >
                       {formData.skillsAcquired || "—"}
@@ -1934,11 +1933,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                       Training / Certifications Completed
                     </label>
                     <div
-                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[80px] shadow-2xs"
+                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[80px] shadow-2xs"
                       title="Employee submitted response (Read-only)"
                     >
                       {formData.certificationsOrCourses || "—"}
@@ -1946,11 +1945,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                       Skills to Improve
                     </label>
                     <div
-                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[80px] shadow-2xs"
+                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[80px] shadow-2xs"
                       title="Employee submitted response (Read-only)"
                     >
                       {formData.skillsToImprove || "—"}
@@ -1958,11 +1957,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                       Support or Training Required
                     </label>
                     <div
-                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[80px] shadow-2xs"
+                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[80px] shadow-2xs"
                       title="Employee submitted response (Read-only)"
                     >
                       {formData.supportOrTrainingRequired || "—"}
@@ -1970,11 +1969,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
 
                   <div className="col-span-1 md:col-span-2">
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                       Learning Goals for Next Quarter
                     </label>
                     <div
-                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[70px] shadow-2xs"
+                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[70px] shadow-2xs"
                       title="Employee submitted response (Read-only)"
                     >
                       {formData.nextQuarterLearningGoals || "—"}
@@ -1983,13 +1982,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                   {!formData.skillsAcquired && !formData.skillsToImprove && (formData.learningGoalItems || []).length > 0 && (
                     <div className="col-span-1 md:col-span-2 space-y-2 pt-2 border-t border-blue-100">
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                         Previous Learning Goals
                       </label>
                       {(formData.learningGoalItems || []).map((goal, index) => (
                         <div
                           key={`${goal}-${index}`}
-                          className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium shadow-2xs"
+                          className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal shadow-2xs"
                           title="Employee submitted response (Read-only)"
                         >
                           {goal}
@@ -2041,7 +2040,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                   {/* Environment Dimensions Rating Preview (Exact Image 2 Style) */}
                   <div className="eval-stagger-item eval-stagger-3 space-y-2">
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                       Environment &amp; Support Dimensions
                     </label>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
@@ -2093,11 +2092,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
                     {/* Challenges Affecting Productivity */}
                     <div className="eval-stagger-item eval-stagger-3">
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                         Challenges Affecting Productivity
                       </label>
                       <div
-                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs"
+                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[75px] shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
                         {formData.challengesAffectingProductivity || "—"}
@@ -2106,28 +2105,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                     {/* Suggestions for Improvement */}
                     <div className="eval-stagger-item eval-stagger-4">
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                         Suggestions for Improvement
                       </label>
                       <div
-                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs"
+                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[75px] shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
                         {formData.suggestionsForImprovement || "—"}
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Feedback on Work Culture */}
-                  <div className="eval-stagger-item eval-stagger-4 pt-2 border-t border-blue-100">
-                    <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
-                      Additional Culture Feedback
-                    </label>
-                    <div
-                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium shadow-2xs"
-                      title="Employee submitted response (Read-only)"
-                    >
-                      {formData.workCultureFeedback || "—"}
                     </div>
                   </div>
                 </div>
@@ -2197,11 +2183,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
                     {/* Overall Employee Comments */}
                     <div className="eval-stagger-item eval-stagger-3">
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                         Overall Employee Comments
                       </label>
                       <div
-                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs"
+                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[75px] shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
                         {formData.overallEmployeeComments || "—"}
@@ -2210,11 +2196,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                     {/* Career Growth Interests */}
                     <div className="eval-stagger-item eval-stagger-4">
-                      <label className="text-[11px] font-extrabold text-[#64748B] block mb-1 uppercase tracking-wider">
+                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                         Career Growth Interests
                       </label>
                       <div
-                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-medium min-h-[75px] shadow-2xs"
+                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[75px] shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
                         {formData.careerGrowthInterests || "—"}
@@ -2467,12 +2453,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     {/* Score Evaluation Parameters Box */}
                     <div>
                       <div className="mb-2.5 eval-stagger-item eval-stagger-2">
-                        <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                        <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                           Score Evaluation Parameters (1-5 Scale)
                         </label>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 border border-blue-100 rounded-2xl p-3 sm:p-4 bg-blue-50/30 shadow-inner">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 border border-[#E2E8F0] rounded-2xl p-3 sm:p-4 bg-slate-50/40">
                         {EVALUATION_PARAMETERS.map((param, pIdx) => {
                           const currentRating = getParamNumericValue(param.key);
                           const isParamHovered = hoveredStar?.key === param.key;
@@ -2492,7 +2478,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                                   : "border-[#E2E8F0]/70"
                                   } rounded-xl px-3.5 py-2.5 flex items-center justify-between shadow-2xs transition-all`}
                               >
-                                <span className="text-xs sm:text-[13px] font-bold text-[#0F172A] pr-2">
+                                <span className="text-xs sm:text-[13px] font-semibold text-[#0F172A] pr-2">
                                   {param.label} <span className="text-red-500">*</span>
                                 </span>
 
@@ -2545,7 +2531,6 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                                   <input
                                     type="text"
                                     inputMode="decimal"
-                                    placeholder="—"
                                     disabled={isViewMode}
                                     readOnly={isViewMode}
                                     value={
@@ -2619,7 +2604,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         >
                           <Award className="w-4 h-4" />
                         </div>
-                        <span className="text-xs sm:text-[13px] font-bold text-[#0F172A]">
+                        <span className="text-xs sm:text-[13px] font-semibold text-[#0F172A]">
                           Overall Performance Rating
                           <span className="ml-1.5 text-[11px] font-medium text-[#64748B] normal-case">(auto-calculated)</span>
                         </span>
@@ -2710,11 +2695,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 {(!hideScoreParameters || isRatingUnlocked) && (
                   <div className="space-y-4">
                     <div className="eval-reveal-card" id="eval-field-container-strengths">
-                      <label className="block text-xs font-bold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                      <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
                         <span>
                           Key Strengths <span className="text-red-500">*</span>
                         </span>
-                        <span className="text-[10px] font-bold text-[#A3AED0]">
+                        <span className="text-[10px] font-semibold text-[#64748B]">
                           Key Highlights
                         </span>
                       </label>
@@ -2722,15 +2707,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         id="eval-field-strengths"
                         rows={3}
                         readOnly={isViewMode}
-                        disabled={isViewMode}
                         value={strengths}
                         onChange={(e) => {
                           setStrengths(e.target.value);
                           clearFieldError("strengths");
                         }}
-                        placeholder="Major strengths and positive attributes..."
-                        className={`eval-textarea-field eval-stagger-item eval-stagger-2 placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${fieldErrors.strengths ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
-                          } ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed cursor-not-allowed" : ""
+                        className={`eval-textarea-field eval-stagger-item eval-stagger-2 font-normal text-sm text-[#0F172A] ${fieldErrors.strengths ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
+                          } ${isViewMode ? "eval-textarea-readonly" : ""
                           }`}
                         title={
                           isViewMode
@@ -2747,11 +2730,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
 
                     <div className="eval-reveal-card" id="eval-field-container-improvements">
-                      <label className="block text-xs font-bold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                      <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
                         <span>
                           Areas of Improvement <span className="text-red-500">*</span>
                         </span>
-                        <span className="text-[10px] font-bold text-[#A3AED0]">
+                        <span className="text-[10px] font-semibold text-[#64748B]">
                           Growth Objectives
                         </span>
                       </label>
@@ -2759,15 +2742,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         id="eval-field-improvements"
                         rows={3}
                         readOnly={isViewMode}
-                        disabled={isViewMode}
                         value={improvements}
                         onChange={(e) => {
                           setImprovements(e.target.value);
                           clearFieldError("improvements");
                         }}
-                        placeholder="Growth areas and learning objectives..."
-                        className={`eval-textarea-field eval-stagger-item eval-stagger-2 placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${fieldErrors.improvements ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
-                          } ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed cursor-not-allowed" : ""
+                        className={`eval-textarea-field eval-stagger-item eval-stagger-2 font-normal text-sm text-[#0F172A] ${fieldErrors.improvements ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
+                          } ${isViewMode ? "eval-textarea-readonly" : ""
                           }`}
                         title={
                           isViewMode
@@ -2784,11 +2765,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
 
                     <div className="eval-reveal-card" id="eval-field-container-remarks">
-                      <label className="block text-xs font-bold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                      <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
                         <span>
                           Manager Comments <span className="text-red-500">*</span>
                         </span>
-                        <span className="text-[10px] font-bold text-[#A3AED0] normal-case tracking-normal">
+                        <span className="text-[10px] font-semibold text-[#64748B] normal-case tracking-normal">
                           Guidance &amp; Notes
                         </span>
                       </label>
@@ -2796,15 +2777,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         id="eval-field-remarks"
                         rows={2}
                         readOnly={isViewMode}
-                        disabled={isViewMode}
                         value={remarks}
                         onChange={(e) => {
                           setRemarks(e.target.value);
                           clearFieldError("remarks");
                         }}
-                        placeholder="Comments or guidance..."
-                        className={`eval-textarea-field eval-stagger-item eval-stagger-2 placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${fieldErrors.remarks ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
-                          } ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed cursor-not-allowed" : ""
+                        className={`eval-textarea-field eval-stagger-item eval-stagger-2 font-normal text-sm text-[#0F172A] ${fieldErrors.remarks ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""
+                          } ${isViewMode ? "eval-textarea-readonly" : ""
                           }`}
                         title={
                           isViewMode
@@ -2821,12 +2800,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
 
                     {/* ========== FINAL REVIEW & SUBMISSION SECTION ========== */}
-                    <div className="eval-step-card eval-reveal-card space-y-4 mt-2 border-2 border-blue-200/60 rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-blue-50/30 to-white">
+                    <div className="eval-step-card eval-reveal-card space-y-4 mt-2 border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 bg-white">
                       {/* Section Header */}
-                      <div className="flex items-center gap-2.5 border-b border-blue-100 pb-3">
+                      <div className="flex items-center gap-2.5 border-b border-[#E2E8F0] pb-3">
                         <h3 className="text-xs sm:text-sm font-bold text-[#0F172A]">Final Review &amp; Submission</h3>
                         {calculatedAverage !== null && (
-                          <span className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-bold text-blue-700">
+                          <span className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-[#E2E8F0] text-[11px] font-semibold text-[#0F172A]">
                             <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                             Avg: {calculatedAverage.toFixed(1)} / 5.0
                           </span>
@@ -2835,18 +2814,16 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                       {/* Goals for Next Review Period */}
                       <div id="eval-field-container-goals">
-                        <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                        <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                           Goals for Next Review Period <span className="text-red-500">*</span>
                         </label>
                         <textarea
                           id="eval-field-goals"
                           rows={3}
                           readOnly={isViewMode}
-                          disabled={isViewMode}
                           value={goalsForNextReview}
                           onChange={(e) => { setGoalsForNextReview(e.target.value); clearFieldError("goalsForNextReview"); }}
-                          placeholder="Measurable goals and objectives for next review..."
-                          className={`eval-textarea-field placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${fieldErrors.goalsForNextReview ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
+                          className={`eval-textarea-field font-normal text-sm text-[#0F172A] ${fieldErrors.goalsForNextReview ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly" : ""}`}
                         />
                         {fieldErrors.goalsForNextReview && (
                           <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
@@ -2858,18 +2835,16 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                       {/* Training / Development Recommendations */}
                       <div>
-                        <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                        <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                           Training / Development Recommendations
-                          <span className="ml-1.5 text-[10px] font-bold text-[#A3AED0] normal-case tracking-normal">(optional)</span>
+                          <span className="ml-1.5 text-[10px] font-semibold text-[#64748B] normal-case tracking-normal">(optional)</span>
                         </label>
                         <textarea
                           rows={2}
                           readOnly={isViewMode}
-                          disabled={isViewMode}
                           value={trainingRecommendations}
                           onChange={(e) => setTrainingRecommendations(e.target.value)}
-                          placeholder="Relevant training, courses, or learning programs..."
-                          className={`eval-textarea-field placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
+                          className={`eval-textarea-field font-normal text-sm text-[#0F172A] ${isViewMode ? "eval-textarea-readonly" : ""}`}
                         />
                       </div>
 
@@ -2877,9 +2852,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {/* Career Growth Recommendation */}
                         <div>
-                          <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                          <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                             Career Growth Recommendation
-                            <span className="ml-1.5 text-[10px] font-bold text-[#A3AED0] normal-case tracking-normal">(optional)</span>
+                            <span className="ml-1.5 text-[10px] font-semibold text-[#64748B] normal-case tracking-normal">(optional)</span>
                           </label>
                           <Dropdown
                             options={CAREER_GROWTH_OPTIONS}
@@ -2901,7 +2876,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                         {/* Review Outcome */}
                         <div id="eval-field-container-review-outcome">
-                          <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                          <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                             Review Outcome <span className="text-red-500">*</span>
                           </label>
                           <Dropdown
@@ -2936,9 +2911,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                       {/* Performance Action */}
                       <div>
-                        <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                        <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                           Performance Action
-                          <span className="ml-1.5 text-[10px] font-bold text-[#A3AED0] normal-case tracking-normal">(optional)</span>
+                          <span className="ml-1.5 text-[10px] font-semibold text-[#64748B] normal-case tracking-normal">(optional)</span>
                         </label>
                         <Dropdown
                           options={PERFORMANCE_ACTION_OPTIONS}
@@ -2960,7 +2935,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                       {/* Final Performance Rating — Image 1 KPI Card Design (no stars) */}
                       <div id="eval-field-container-final-perf-rating" className="w-full">
-                        <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                        <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                           Final Performance Rating <span className="text-red-500">*</span>
                         </label>
                         <div
@@ -2993,7 +2968,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             >
                               <Award className="w-4 h-4" />
                             </div>
-                            <span className="text-xs sm:text-[13px] font-bold text-[#0F172A]">
+                            <span className="text-xs sm:text-[13px] font-semibold text-[#0F172A]">
                               Final Rating <span className="text-red-500">*</span>
                             </span>
                           </div>
@@ -3004,7 +2979,6 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               <input
                                 type="text"
                                 inputMode="decimal"
-                                placeholder="—"
                                 disabled={isViewMode}
                                 readOnly={isViewMode}
                                 value={rawFinalPerformanceRating}
@@ -3101,18 +3075,16 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                       {/* Final Manager Comments */}
                       <div id="eval-field-container-final-comments">
-                        <label className="block text-xs font-bold text-[#0F172A] mb-1.5">
+                        <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                           Final Manager Comments <span className="text-red-500">*</span>
                         </label>
                         <textarea
                           id="eval-field-final-comments"
                           rows={3}
                           readOnly={isViewMode}
-                          disabled={isViewMode}
                           value={finalManagerComments}
                           onChange={(e) => { setFinalManagerComments(e.target.value); clearFieldError("finalManagerComments"); }}
-                          placeholder="Final summary and closing remarks..."
-                          className={`eval-textarea-field placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${fieldErrors.finalManagerComments ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly !cursor-not-allowed" : ""}`}
+                          className={`eval-textarea-field font-normal text-sm text-[#0F172A] ${fieldErrors.finalManagerComments ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""} ${isViewMode ? "eval-textarea-readonly" : ""}`}
                         />
                         {fieldErrors.finalManagerComments && (
                           <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
@@ -3124,7 +3096,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                       {/* Manager Confirmation Checkbox */}
                       {!isViewMode && (
-                        <div className={`p-3.5 rounded-xl border transition-all ${managerConfirmation ? "border-green-300 bg-green-50/60" : fieldErrors.managerConfirmation ? "border-red-400 bg-red-50/40" : "border-blue-200 bg-blue-50/30"}`}>
+                        <div className={`p-3.5 rounded-xl border transition-all ${managerConfirmation ? "border-green-300 bg-green-50/60" : fieldErrors.managerConfirmation ? "border-red-400 bg-red-50/40" : "border-[#E2E8F0] bg-slate-50/60"}`}>
                           <label className="flex items-start gap-3 cursor-pointer select-none">
                             <input
                               type="checkbox"

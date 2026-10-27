@@ -467,9 +467,9 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   const endItem = Math.min(activePage * pageSize, totalItems);
 
   return (
-    <div className={`quarterly-review-table-card ${className}`}>
+    <div className={`quarterly-review-table-card flex-1 flex flex-col min-h-0 ${className}`}>
       {/* Table Scrollable Container */}
-      <div className="quarterly-review-table-scroll">
+      <div className="quarterly-review-table-scroll flex-1">
         <table className={`quarterly-review-table qr-header-${headerTheme}`}>
           <thead>
             <tr>

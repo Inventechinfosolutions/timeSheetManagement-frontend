@@ -145,6 +145,16 @@ export const AppraisalApi = {
     });
   },
 
+  deletePerformanceProject: async (
+    performanceId: number,
+    projectIndex: number,
+  ): Promise<EmployeePerformanceDetail> => {
+    const response = await axios.delete<EmployeePerformanceDetail>(
+      `${EMPLOYEE_PERFORMANCE_URL}/${performanceId}/projects/${projectIndex}`,
+    );
+    return response.data;
+  },
+
   downloadPerformanceAttachment: async (objectKey: string, fileName?: string): Promise<void> => {
     const response = await axios.get(
       `${EMPLOYEE_PERFORMANCE_URL}/attachments/download`,

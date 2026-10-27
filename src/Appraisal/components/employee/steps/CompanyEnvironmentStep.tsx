@@ -342,7 +342,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-6">
       {/* Step Header */}
-      <div className="border-b border-blue-100 pb-3">
+      <div className="border-b border-[#E2E8F0] pb-3">
         <h3 className="text-base sm:text-lg font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 5: Environment</span>
           <span className="eval-title-accent-line" />
@@ -354,7 +354,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
 
       {/* 1. Rating Fields: 3 Cards Side-by-Side in Responsive Grid */}
       <div>
-        <h4 className="text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-3">
+        <h4 className="text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-3">
           Environment &amp; Support Ratings (Rating 1–5) <span className="text-red-500">*</span>
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -404,7 +404,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
 
       {/* 2. Qualitative Feedback Textareas: Side-by-Side plain textareas driven by structured config */}
       <div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
           {ENVIRONMENT_FIELD_CONFIGS.map((field) => (
             <div
               key={field.key}
@@ -413,7 +413,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
             >
               <label
                 htmlFor={field.inputId}
-                className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+                className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
               >
                 <span>{field.label}</span>
               </label>
@@ -421,10 +421,9 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
                 id={field.inputId}
                 rows={4}
                 value={formData[field.key] ?? ""}
-                disabled={readOnly}
+                readOnly={readOnly}
                 onChange={(e) => handleTextChange(field.key, e.target.value)}
-                placeholder={field.placeholder}
-                className="eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
+                className={`eval-textarea-field leading-relaxed text-sm font-normal ${readOnly ? "eval-textarea-readonly" : ""}`}
               />
             </div>
           ))}

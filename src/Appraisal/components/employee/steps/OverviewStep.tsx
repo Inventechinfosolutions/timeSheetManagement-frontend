@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { AppraisalApi } from "../../../reducers/appraisal.reducer";
 import { formatAppraisalDisplayDate } from "../../../utils/appraisalHelpers";
+import "../AppraisalDashboard.css";
 
 interface OverviewFieldConfig {
   key: "overallPerformanceSummary" | "keyHighlights" | "majorContributions" | "areasForImprovement";
@@ -135,7 +136,7 @@ export const OverviewStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-6">
       {/* Step Header */}
-      <div className="border-b border-blue-100 pb-4">
+      <div className="border-b border-[#E2E8F0] pb-4">
         <h3 className="text-lg font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 1: Role & Quarter Overview</span>
           <span className="eval-title-accent-line" />
@@ -167,20 +168,8 @@ export const OverviewStep: React.FC<StepProps> = ({
         )}
       </div>
 
-      {/* Manager Instructions Banner if provided */}
-      {assignment?.description?.trim() && (
-        <div className="p-4 bg-blue-50/70 border border-blue-200/80 rounded-2xl text-xs space-y-1.5 shadow-sm hover:shadow-md transition-all">
-          <span className="font-bold text-[#0F172A] uppercase tracking-wider block text-[11px]">
-            Manager Instructions:
-          </span>
-          <p className="text-[#334155] whitespace-pre-line font-medium leading-relaxed">
-            {assignment.description.trim()}
-          </p>
-        </div>
-      )}
-
-      {/* Form Fields: Side by side 2-column grid with eval-step-card wrapper cards and integrated labels */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Form Fields: Side by side 2-column grid with external labels */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-1 items-start">
         {OVERVIEW_FIELD_CONFIGS.map((field) => {
           const value = formData[field.key] || "";
           const error = errors?.[field.key];
@@ -189,14 +178,11 @@ export const OverviewStep: React.FC<StepProps> = ({
             <div
               key={field.key}
               id={field.containerId}
-              className={`eval-step-card p-4 rounded-2xl border border-[#E2E8F0] hover:border-blue-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 shadow-sm hover:shadow-md transition-all duration-200 bg-white flex flex-col justify-between cursor-text ${
-                error ? "eval-field-has-error border-red-400 bg-red-50/10 ring-2 ring-red-100" : ""
-              }`}
-              onClick={() => document.getElementById(field.inputId)?.focus()}
+              className="flex flex-col space-y-1.5 scroll-mt-24"
             >
               <label
                 htmlFor={field.inputId}
-                className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-2 flex items-center justify-between cursor-pointer"
+                className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-0.5"
               >
                 <span>
                   {field.label} {field.required && <span className="text-red-500">*</span>}
@@ -206,13 +192,14 @@ export const OverviewStep: React.FC<StepProps> = ({
                 id={field.inputId}
                 rows={4}
                 value={value}
-                disabled={readOnly}
+                readOnly={readOnly}
                 onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                placeholder={field.placeholder}
-                className="w-full bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm text-[#0F172A] leading-relaxed resize-none eval-custom-scrollbar flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
+                className={`eval-textarea-field leading-relaxed text-sm font-normal ${
+                  error ? "eval-input-error" : ""
+                } ${readOnly ? "eval-textarea-readonly" : ""}`}
               />
               {error && (
-                <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-2 animate-in fade-in duration-200">
+                <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">
                   <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
                   <span>{error}</span>
                 </p>

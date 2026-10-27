@@ -71,17 +71,31 @@ export const AttachmentItem: React.FC<AttachmentItemProps> = ({
     }
   };
 
-  const handleDelete = async (e?: React.MouseEvent) => {
+  const handleDelete = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!onDelete || !file.objectKey) return;
-    setDeleting(true);
-    try {
-      await onDelete(file.objectKey);
-    } catch (error: any) {
-      message.error(error?.response?.data?.message || "Failed to delete document.");
-    } finally {
-      setDeleting(false);
-    }
+    Modal.confirm({
+      title: "Remove Document",
+      content: `Are you sure you want to remove "${file.fileName}"?`,
+      okText: "Remove",
+      okType: "danger",
+      cancelText: "Cancel",
+      centered: true,
+      onOk: async () => {
+        setDeleting(true);
+        try {
+          await onDelete(file.objectKey);
+          message.success(`Document "${file.fileName}" removed successfully`);
+          console.info("[Appraisal] Document removed successfully:", file.objectKey);
+        } catch (error: any) {
+          const errMsg = error?.response?.data?.message || "Failed to delete document.";
+          message.error(errMsg);
+          console.error("[Appraisal] Failed to delete document:", error);
+        } finally {
+          setDeleting(false);
+        }
+      },
+    });
   };
 
   const handleCloseModal = () => {

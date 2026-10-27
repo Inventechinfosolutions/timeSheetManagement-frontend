@@ -73,7 +73,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-6">
       {/* Step Header */}
-      <div className="border-b border-blue-100 pb-4">
+      <div className="border-b border-[#E2E8F0] pb-4">
         <h3 className="text-lg font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 4: Continuous Learning & Goals</span>
           <span className="eval-title-accent-line" />
@@ -84,7 +84,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
       </div>
 
       {/* 2-Column Responsive Grid Layout driven by structured config */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
         {LEARNING_GOAL_CONFIGS.map((field) => {
           const val = (formData[field.key] as string) || "";
           const error = errors?.[field.key as string];
@@ -97,7 +97,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
             >
               <label
                 htmlFor={field.inputId}
-                className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+                className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
               >
                 <span>
                   {field.label} {field.required && <span className="text-red-500">*</span>}
@@ -109,10 +109,9 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
                 value={val}
                 readOnly={readOnly}
                 onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                placeholder={field.placeholder}
-                className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${
+                className={`eval-textarea-field leading-relaxed text-sm font-normal ${
                   error ? "eval-input-error" : ""
-                }`}
+                } ${readOnly ? "eval-textarea-readonly" : ""}`}
               />
               {error && (
                 <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 mt-1 animate-in fade-in slide-in-from-top-1 duration-200">

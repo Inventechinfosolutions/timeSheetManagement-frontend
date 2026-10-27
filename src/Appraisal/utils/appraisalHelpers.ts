@@ -495,13 +495,15 @@ export const toPerformancePayload = (
       keyAchievementsOutcomes: (project.keyAchievementsOutcomes || "").trim(),
       technologiesUsed: Array.isArray(project.technologiesUsed) ? project.technologiesUsed : [],
       isDraft: Boolean(project.isDraft),
-      attachments: (project.attachments || []).map((file) => ({
-        fileName: file.fileName,
-        fileUrl: file.objectKey,
-        fileSize: file.fileSize,
-        fileType: file.fileType,
-        objectKey: file.objectKey,
-      })),
+      attachments: (project.attachments || [])
+        .filter((file) => Boolean(file && file.fileName && file.objectKey))
+        .map((file) => ({
+          fileName: file.fileName,
+          fileUrl: file.objectKey,
+          fileSize: file.fileSize || 0,
+          fileType: file.fileType || "",
+          objectKey: file.objectKey,
+        })),
     }));
   const projectNames = projects.map((project) => project.projectName.trim()).join("\n");
   const projectDescription = projects.map((project) => project.description.trim()).join("\n");

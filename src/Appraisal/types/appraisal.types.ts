@@ -268,6 +268,8 @@ export interface StepProps {
   readOnly?: boolean;
   onEditStep?: (step: number) => void;
   assignment?: QuarterlyReviewAssignment;
+  onSaveProject?: (updatedProjects: PerformanceProject[]) => Promise<boolean>;
+  onDeleteProject?: (index: number, updatedProjects: PerformanceProject[]) => Promise<boolean>;
 }
 
 // ==========================================

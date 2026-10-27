@@ -180,7 +180,7 @@
 /* Step Cards in Employee Submission */
 .eval-step-card {
   background: #FFFFFF;
-  border: 1px solid rgba(191, 219, 254, 0.85);
+  border: 1px solid #E2E8F0;
   border-radius: 0.5rem;
   padding: 1.35rem 1.45rem;
   box-shadow: 0 2px 10px rgba(30, 64, 175, 0.03);
@@ -205,9 +205,14 @@
 }
 
 .eval-step-card:hover {
-  border-color: #60A5FA;
+  border-color: #CBD5E1;
   box-shadow: none;
   transform: none;
+}
+
+.eval-step-card:focus-within {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
 }
 
 /* Back Button */
@@ -333,7 +338,8 @@
 
 .eval-assignment-readonly-field,
 .eval-readonly-field {
-  border: 1px solid rgba(191, 219, 254, 0.7);
+  border: 1px solid #CBD5E1;
+  border-radius: 0.5rem;
   cursor: not-allowed !important;
   user-select: text;
   transition: all 0.2s ease;
@@ -629,7 +635,7 @@
 /* Textareas with Modern Focus Glow & Clean Hover Highlight */
 .eval-textarea-field {
   width: 100%;
-  border: 1.5px solid #E2E8F0;
+  border: 1px solid #CBD5E1;
   border-radius: 0.5rem;
   padding: 0.8rem 1rem;
   font-size: 0.875rem;
@@ -637,21 +643,33 @@
   background: #FFFFFF;
   line-height: 1.55;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
-  resize: none;
+  resize: vertical !important;
+  min-height: 95px !important;
+  height: auto;
+  flex: none !important;
+  box-sizing: border-box;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+  scrollbar-color: #CBD5E1 transparent;
 }
 
 /* Custom internal scrollbar: thumb hidden by default, visible when moved/hovered/focused */
 .eval-textarea-field::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 14px;
+}
+
+.eval-textarea-field::-webkit-scrollbar:vertical {
+  width: 7px;
+}
+
+.eval-textarea-field::-webkit-scrollbar:horizontal {
+  height: 14px;
 }
 
 .eval-textarea-field::-webkit-scrollbar-track {
   background: transparent;
-  margin: 8px 0;
+  margin: 6px 0;
 }
 
 .eval-textarea-field::-webkit-scrollbar-thumb {
@@ -670,29 +688,61 @@
   background: transparent;
 }
 
+/* Expand & Read corner resizer handle styling */
+.eval-textarea-field::-webkit-resizer {
+  background-color: transparent;
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 2px,
+    #94A3B8 2px,
+    #94A3B8 4px
+  );
+  background-size: 14px 14px;
+  background-position: bottom 2px right 2px;
+  background-repeat: no-repeat;
+  cursor: se-resize !important;
+}
+
+.eval-textarea-field:hover::-webkit-resizer {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 2px,
+    #475569 2px,
+    #475569 4px
+  );
+}
+
+.eval-textarea-field:read-only::-webkit-resizer,
+.eval-textarea-readonly::-webkit-resizer,
+.eval-view-mode .eval-textarea-field::-webkit-resizer {
+  display: none !important;
+}
+
 /* Only when user moves to/hovers or focuses inside the description field */
 .eval-textarea-field:hover {
-  scrollbar-color: #CBD5E1 transparent;
-  border-color: #60A5FA;
+  scrollbar-color: #64748B transparent;
+  border-color: #94A3B8;
   box-shadow: none;
 }
 
 .eval-textarea-field:hover::-webkit-scrollbar-thumb,
 .eval-textarea-field:focus::-webkit-scrollbar-thumb,
 .eval-textarea-field:focus-within::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
+  background: #94A3B8;
 }
 
 .eval-textarea-field::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+  background: #64748B;
 }
 
 .eval-textarea-field:focus,
 .eval-textarea-field:focus-within {
   outline: none;
-  scrollbar-color: #CBD5E1 transparent;
-  border-color: #60A5FA;
-  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+  scrollbar-color: #64748B transparent;
+  border-color: #2563EB;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
   background: #FFFFFF;
 }
 
@@ -714,9 +764,9 @@
 
 /* Consistent Description / Response Review Display Boxes with Clean Uniform Border */
 .eval-description-box {
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(191, 219, 254, 0.7);
-  border-radius: 0.75rem;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 0.5rem;
   padding: 0.875rem;
   font-size: 0.875rem;
   color: #0F172A;
@@ -759,7 +809,7 @@
 .eval-description-box:hover,
 .eval-description-box:focus {
   scrollbar-color: #CBD5E1 transparent;
-  border-color: rgba(147, 197, 253, 0.9);
+  border-color: #94A3B8;
 }
 
 .eval-description-box:hover::-webkit-scrollbar-thumb,
@@ -1299,12 +1349,12 @@
 .eval-textarea-readonly,
 .eval-textarea-readonly:hover,
 .eval-textarea-readonly:focus {
-  cursor: not-allowed !important;
+  cursor: default !important;
   caret-color: transparent;
   pointer-events: auto !important;
   background: #F8FAFC !important;
-  border-color: #CBD5E1 !important;
-  color: #334155 !important;
+  border: 1px solid #CBD5E1 !important;
+  color: #0F172A !important;
   resize: none !important;
   user-select: text;
 }

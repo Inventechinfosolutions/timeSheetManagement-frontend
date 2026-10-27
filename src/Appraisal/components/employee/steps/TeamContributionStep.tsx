@@ -250,7 +250,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-6">
       {/* Step Header */}
-      <div className="border-b border-blue-100 pb-4">
+      <div className="border-b border-[#E2E8F0] pb-4">
         <h3 className="text-lg font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 3: Teamwork & Collaboration</span>{" "}
           <span className="text-red-500">*</span>
@@ -263,10 +263,10 @@ export const TeamContributionStep: React.FC<StepProps> = ({
 
       {/* 1. TOP SECTION: Evaluated Teamwork Dimensions (6 Dimensions, Rating 1-5) */}
       <div className="space-y-3">
-        <label className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1">
           Teamwork & Collaboration Dimensions (Rating 1–5) <span className="text-red-500">*</span>
         </label>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
           {CRITERIA.map((criterion) => {
             const currentRating = ratings[criterion.key as keyof typeof ratings] || 0;
             const hovered = hoveredStars[criterion.key] || 0;
@@ -350,7 +350,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                 <div id={`field-desc-${criterion.key}`} className="space-y-1.5 pt-1 border-t border-slate-100">
                   <label
                     htmlFor={`input-desc-${criterion.key}`}
-                    className="block text-[11px] font-bold uppercase tracking-wider text-[#64748B]"
+                    className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A]"
                   >
                     {criterion.title} Description <span className="text-red-500">*</span>
                   </label>
@@ -358,14 +358,11 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                     id={`input-desc-${criterion.key}`}
                     rows={2}
                     value={(formData[criterion.descKey] as string) || ""}
-                    disabled={readOnly}
+                    readOnly={readOnly}
                     onChange={(e) => onChange(criterion.descKey, e.target.value)}
-                    placeholder={`Provide details, examples, or impact for ${criterion.title.toLowerCase()}...`}
-                    className={`w-full rounded-xl border p-2.5 text-xs text-[#0F172A] placeholder:text-slate-400 focus:outline-none resize-none transition-colors ${
-                      descError
-                        ? "border-red-400 bg-red-50/10 focus:border-red-500"
-                        : "border-slate-200 hover:border-slate-300 focus:border-[#2563EB]"
-                    } ${readOnly ? "bg-slate-50 cursor-not-allowed opacity-80" : "bg-white"}`}
+                    className={`eval-textarea-field leading-relaxed text-sm font-normal ${
+                      descError ? "eval-input-error" : ""
+                    } ${readOnly ? "eval-textarea-readonly" : ""}`}
                   />
                   {descError && (
                     <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 animate-in fade-in duration-200">
@@ -381,12 +378,12 @@ export const TeamContributionStep: React.FC<StepProps> = ({
       </div>
 
       {/* 2. BOTTOM SECTION: 4 Plain Textareas driven by structured config */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2 items-start">
         {TEAMWORK_FIELD_CONFIGS.map((field) => (
           <div key={field.key} id={field.containerId} className="flex flex-col space-y-2 scroll-mt-24">
             <label
               htmlFor={field.inputId}
-              className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
             >
               {field.label}
             </label>
@@ -394,13 +391,12 @@ export const TeamContributionStep: React.FC<StepProps> = ({
               id={field.inputId}
               rows={4}
               value={formData[field.key] || ""}
-              disabled={readOnly}
+              readOnly={readOnly}
               onChange={(e) => {
                 onChange(field.key, e.target.value);
                 if (clearError) clearError(field.key);
               }}
-              placeholder={field.placeholder}
-              className="eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm"
+              className={`eval-textarea-field leading-relaxed text-sm font-normal ${readOnly ? "eval-textarea-readonly" : ""}`}
             />
           </div>
         ))}

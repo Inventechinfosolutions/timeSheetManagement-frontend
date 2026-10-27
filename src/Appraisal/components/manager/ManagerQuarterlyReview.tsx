@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import gsap from "gsap";
 import {
   Calendar,
@@ -10,6 +10,7 @@ import {
 import { AssignmentType, ManagerQuarterlyReviewRecord } from "../../types/appraisal.types";
 import { useAppDispatch, useAppSelector } from "../../../hooks";
 import { fetchDepartments } from "../../../reducers/masterDepartment.reducer";
+import { getEntity } from "../../../reducers/employeeDetails.reducer";
 import { isAdminAccess } from "../../../utils/roleAccess";
 import {
   AppraisalApi,
@@ -45,6 +46,7 @@ import "./ManagerQuarterlyReview.css";
 export const ManagerQuarterlyReview: React.FC = () => {
   const dispatch = useAppDispatch();
   const currentUser = useAppSelector((state) => state.user.currentUser);
+  const { entity } = useAppSelector((state) => state.employeeDetails);
   const { departments } = useAppSelector((state) => state.masterDepartments);
   const isAdmin = isAdminAccess(currentUser);
   const isGlobalLoading = useAppSelector((state) => (state.apiLoading?.activeCount ?? 0) > 0);
@@ -114,10 +116,34 @@ export const ManagerQuarterlyReview: React.FC = () => {
   }, [evaluatingRecord]);
 
   useEffect(() => {
-    if (isAdmin && (!departments || departments.length === 0)) {
+    if (!departments || departments.length === 0) {
       dispatch(fetchDepartments({ skipGlobalLoader: true }));
     }
-  }, [isAdmin, dispatch, departments]);
+  }, [dispatch, departments]);
+
+  useEffect(() => {
+    if (managerId && !entity?.department) {
+      dispatch(getEntity(managerId));
+    }
+  }, [managerId, entity?.department, dispatch]);
+
+  const fullDepartmentName = useMemo(() => {
+    const rawDept =
+      entity?.department ??
+      entity?.department_name ??
+      (currentUser as any)?.department ??
+      assignments.find((a) => Boolean(a.department))?.department ??
+      "";
+
+    if (!rawDept) return "";
+
+    const matched = (departments || []).find(
+      (d) =>
+        d.departmentCode?.trim().toLowerCase() === String(rawDept).trim().toLowerCase() ||
+        d.departmentName?.trim().toLowerCase() === String(rawDept).trim().toLowerCase()
+    );
+    return matched ? matched.departmentName : String(rawDept);
+  }, [entity?.department, entity?.department_name, currentUser, assignments, departments]);
 
   const handleBackToDashboard = () => {
     triggerScrollToTop();
@@ -510,31 +536,34 @@ export const ManagerQuarterlyReview: React.FC = () => {
   }
 
   return (
-    <div className="w-full relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 py-3 sm:py-4 lg:py-6 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
+    <div className="w-full relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 pt-1 sm:pt-2 pb-3 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
       {/* LUXURY BACKGROUND CANVAS (All SVGs & animations managed and loaded via ManagerQuarterlyReview.css) */}
 
 
       {/* FOREGROUND CONTENT (z-10 layer for crisp interactivity and clarity) */}
       <div className="relative z-10 flex-1 flex flex-col min-h-0">
         {/* Page Header */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="mb-2 sm:mb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
               <span className="manager-review-title-anim">
                 {isAdmin ? "Appraisal Reviews" : "Manager Quarterly Review"}
               </span>
             </h1>
-            <p className="text-sm mt-1 font-normal w-fit">
-              <span className="manager-review-subtitle-anim">
-                {isAdmin
-                  ? "View quarterly appraisal submissions across departments and roles."
-                  : "Review, evaluate, and provide ratings for quarterly appraisal submissions from your team members."}
-              </span>
-            </p>
           </div>
 
-          {/* Create Button at top of card */}
-          <div className="flex w-full sm:w-auto gap-2">
+          {/* Action Area & Manager Department at top right */}
+          <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-2.5 flex-wrap">
+            {fullDepartmentName && (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white border border-[#E2E8F0] shadow-2xs shrink-0">
+                <Building2 className="w-4 h-4 text-[#2563EB] shrink-0" />
+                <span className="text-xs font-semibold text-[#64748B]">Department:</span>
+                <span className="text-xs sm:text-sm font-semibold text-[#0F172A] whitespace-nowrap">
+                  {fullDepartmentName}
+                </span>
+              </div>
+            )}
+
             <Button
               variant="primary"
               size="lg"
@@ -578,8 +607,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
         </div>
 
         {/* Main Section Card */}
-        <Card className="w-full p-4 sm:px-6 sm:py-6 manager-review-glass-card min-h-[calc(100vh-230px)]">
-          <CardHeader className="flex flex-row items-center justify-between gap-2.5 mb-5 flex-nowrap w-full">
+        <Card className="w-full p-3 sm:px-5 sm:py-4 manager-review-glass-card flex-1 flex flex-col min-h-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-2.5 mb-2.5 flex-nowrap w-full">
             <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title whitespace-nowrap shrink-0">
               Quarterly Reviews
             </CardTitle>
@@ -697,8 +726,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
             </div>
           </CardHeader>
 
-          <CardContent className="p-0">
-            <div className="relative min-h-[16rem]">
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+            <div className="relative flex-1 flex flex-col min-h-0">
               {assignments.length > 0 ? (
                 <QuarterlyReviewTable
                   data={assignments}

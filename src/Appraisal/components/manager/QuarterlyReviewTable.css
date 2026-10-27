@@ -41,6 +41,8 @@ body.modal-open-active .sidebar-footer {
   overflow: hidden;
   position: relative;
   transition: box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .quarterly-review-table-card:hover {
