@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Users, CheckCircle2, Building2 } from "lucide-react";
+import { Plus, Users, CheckCircle2, Building2, ChevronRight, ArrowRight } from "lucide-react";
 import { AssignmentType, CreateReviewAssignmentModalProps } from "../../types/appraisal.types";
 import { Modal, Button, Card, Dropdown } from "../../../components/ui";
 import { useAppDispatch, useAppSelector } from "../../../hooks";
@@ -72,11 +72,17 @@ export const CreateReviewAssignmentModal: React.FC<CreateReviewAssignmentModalPr
         size="md"
         disabled={!canContinue}
         onClick={handleContinue}
-        className={`create-modal-continue-btn ${
+        rightIcon={
+          <span className="relative inline-flex items-center justify-center w-3.5 h-3.5 shrink-0">
+            <ChevronRight className="w-3.5 h-3.5 stroke-[2.5] shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:translate-x-1" />
+            <ArrowRight className="w-3.5 h-3.5 stroke-[2.5] shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1" />
+          </span>
+        }
+        className={`group create-modal-continue-btn ${
           canContinue ? "is-active" : "is-disabled"
         }`}
       >
-        Continue
+        <span>Continue</span>
       </Button>
     </div>
   );
@@ -119,9 +125,8 @@ export const CreateReviewAssignmentModal: React.FC<CreateReviewAssignmentModalPr
         {/* Option 1: Individual Member(s) */}
         <Card
           onClick={() => setSelectedType("individual")}
-          className={`group flex items-center gap-3.5 create-modal-option create-modal-option-individual ${
-            selectedType === "individual" ? "is-selected" : ""
-          }`}
+          className={`group flex items-center gap-3.5 create-modal-option create-modal-option-individual ${selectedType === "individual" ? "is-selected" : ""
+            }`}
         >
           {/* Custom Radio */}
           <div className="create-option-radio">
@@ -149,9 +154,8 @@ export const CreateReviewAssignmentModal: React.FC<CreateReviewAssignmentModalPr
         {/* Option 2: All Members */}
         <Card
           onClick={() => setSelectedType("all")}
-          className={`group flex items-center gap-3.5 create-modal-option create-modal-option-all ${
-            selectedType === "all" ? "is-selected" : ""
-          }`}
+          className={`group flex items-center gap-3.5 create-modal-option create-modal-option-all ${selectedType === "all" ? "is-selected" : ""
+            }`}
         >
           {/* Custom Radio */}
           <div className="create-option-radio">

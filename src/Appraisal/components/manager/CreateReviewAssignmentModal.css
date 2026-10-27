@@ -513,14 +513,26 @@ body.modal-open-active .sidebar-footer {
 
 /* 7. Continue Button - Activation Spring, Shimmer Gleam & Glossy Pill Style */
 .create-modal-continue-btn {
-  padding: 0.75rem 2.25rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.45rem !important;
+  padding: 0.65rem 1.35rem 0.65rem 1.55rem !important;
   border-radius: 9999px !important;
   font-weight: 700 !important;
-  font-size: 0.95rem !important;
+  font-size: 0.875rem !important;
+  line-height: 1 !important;
   letter-spacing: -0.01em !important;
   position: relative !important;
   overflow: hidden !important;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.create-modal-continue-btn > span {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
 }
 
 /* Active State: Spring Pop + Vibrant Royal Blue Gradient + Breathing Pulse */

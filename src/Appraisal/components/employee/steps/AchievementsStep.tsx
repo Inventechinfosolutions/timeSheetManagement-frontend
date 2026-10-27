@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { StepProps, PerformanceProject, ProjectRoleEnum, ResponsibilityTypeEnum } from "../../../types/appraisal.types";
-import { AlertCircle, X, Paperclip, ChevronDown, Pencil, Trash2, Check, Plus, UserCheck, ShieldCheck } from "lucide-react";
+import { AlertCircle, X, Paperclip, ChevronDown, Pencil, Trash2, Check, Plus, UserCheck, ShieldCheck, Loader2 } from "lucide-react";
 import { message, Modal } from "antd";
 import { readApiError } from "../../../reducers/appraisal.reducer";
 import AttachmentItem from "../../common/AttachmentItem";
@@ -277,6 +277,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
   const [uploadError, setUploadError] = useState("");
   const [addErrors, setAddErrors] = useState<Record<string, string>>({});
   const [expandedIndex, setExpandedIndex] = useState<number | null>(readOnly && projects.length > 0 ? 0 : null);
+  const [projectToDelete, setProjectToDelete] = useState<{ index: number; name: string } | null>(null);
+  const [isDeletingProject, setIsDeletingProject] = useState(false);
   const editingIndex =
     formData.editingProjectIndex !== undefined && formData.editingProjectIndex !== null
       ? formData.editingProjectIndex
@@ -284,6 +286,10 @@ export const AchievementsStep: React.FC<StepProps> = ({
   const setEditingIndex = (idx: number | null) => {
     onChange("editingProjectIndex", idx);
   };
+  const currentProjectNumber =
+    editingIndex !== null && editingIndex >= 0
+      ? editingIndex + 1
+      : projects.length + 1;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -740,17 +746,23 @@ export const AchievementsStep: React.FC<StepProps> = ({
   const handleConfirmRemoveProject = (index: number) => {
     const proj = projects[index];
     const name = proj?.projectName?.trim() || `Project ${index + 1}`;
-    Modal.confirm({
-      title: "Delete Project",
-      content: `Are you sure you want to delete "${name}"? This action cannot be undone.`,
-      okText: "Delete",
-      okType: "danger",
-      cancelText: "Cancel",
-      centered: true,
-      onOk: async () => {
-        await handleRemoveProject(index);
-      },
-    });
+    setProjectToDelete({ index, name });
+  };
+
+  const handleCancelDelete = () => {
+    if (isDeletingProject) return;
+    setProjectToDelete(null);
+  };
+
+  const handleExecuteDelete = async () => {
+    if (!projectToDelete || isDeletingProject) return;
+    setIsDeletingProject(true);
+    try {
+      await handleRemoveProject(projectToDelete.index);
+    } finally {
+      setIsDeletingProject(false);
+      setProjectToDelete(null);
+    }
   };
 
   const handleRemoveProject = async (index: number) => {
@@ -775,7 +787,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
     }
 
     if (editingIndex === index) {
-      handleCancelEdit();
+      setEditingIndex(null);
     } else if (editingIndex !== null && editingIndex > index) {
       setEditingIndex(editingIndex - 1);
     }
@@ -884,6 +896,19 @@ export const AchievementsStep: React.FC<StepProps> = ({
       </div>
 
       <div className="space-y-4">
+        {/* Project Number Indicator */}
+        <div className="flex items-center gap-2 pt-0.5">
+          <span className="shrink-0 px-2.5 py-0.5 text-[11px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md shadow-2xs">
+            Project {currentProjectNumber}
+          </span>
+          {editingIndex !== null && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+              <Pencil className="w-2.5 h-2.5" />
+              Editing
+            </span>
+          )}
+        </div>
+
         {/* 1. Project Name (Text area) */}
         <div id="field-projectName" className="space-y-1.5 flex flex-col">
           <label
@@ -1631,6 +1656,95 @@ export const AchievementsStep: React.FC<StepProps> = ({
           </div>
         )}
       </div>
+
+      {/* Modern Custom Project Delete Confirmation Modal */}
+      {projectToDelete && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-[#0F172A]/25 backdrop-blur-[3.5px] animate-in fade-in duration-200"
+          style={{ backdropFilter: "blur(3.5px)", WebkitBackdropFilter: "blur(3.5px)" }}
+          onClick={handleCancelDelete}
+        >
+          <div
+            className="relative w-full max-w-[420px] bg-white rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-100 text-[#0F172A] animate-in zoom-in-95 duration-200 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Accent Gradient Line */}
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-red-500 via-rose-500 to-amber-500" />
+
+            {/* Close Button */}
+            <button
+              type="button"
+              disabled={isDeletingProject}
+              onClick={handleCancelDelete}
+              className="absolute top-3.5 right-3.5 text-slate-400 hover:text-slate-700 w-7 h-7 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-40"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Header: Icon + Title & Description in clean structured layout */}
+            <div className="flex items-start gap-3.5 pt-1">
+              <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200/80 flex items-center justify-center text-red-600 shrink-0 shadow-xs">
+                <Trash2 className="w-5 h-5 stroke-[2.2]" />
+              </div>
+              <div className="min-w-0 flex-1 pr-6">
+                <h3 className="text-base sm:text-lg font-bold text-[#0F172A] tracking-tight leading-snug">
+                  Delete Project?
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed mt-1">
+                  Are you sure you want to remove this project? This will permanently delete its details, challenges, solutions, and attached files.
+                </p>
+              </div>
+            </div>
+
+            {/* Project Preview Badge - clean, full width, no Irreversible tag */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 my-4 flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-red-500 shrink-0">
+                <Trash2 className="w-3.5 h-3.5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-none mb-1">
+                  Project to be deleted
+                </span>
+                <p className="text-xs sm:text-sm font-bold text-slate-800 truncate" title={projectToDelete.name}>
+                  {projectToDelete.name}
+                </p>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                disabled={isDeletingProject}
+                onClick={handleCancelDelete}
+                className="flex-1 sm:flex-initial py-2 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs hover:border-slate-300 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingProject}
+                onClick={handleExecuteDelete}
+                className="flex-1 sm:flex-initial py-2 px-5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white text-xs font-bold shadow-md shadow-rose-500/25 hover:shadow-lg hover:shadow-rose-500/35 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isDeletingProject ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5 stroke-[2.2] shrink-0" />
+                    <span>Delete Project</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

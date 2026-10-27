@@ -732,8 +732,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
             </div>
           </CardHeader>
 
-          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
-            <div className="relative flex-1 flex flex-col min-h-0">
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0 justify-center">
+            <div className="relative flex-1 flex flex-col min-h-0 justify-center">
               {assignments.length > 0 ? (
                 <QuarterlyReviewTable
                   data={assignments}
@@ -752,8 +752,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
                   onPageChange={setTablePage}
                 />
               ) : !tableLoading && !isGlobalLoading ? (
-                <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
-                  <div className="relative mb-5">
+                <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-8 my-auto w-full">
+                  <div className="relative mb-5 flex items-center justify-center">
                     <div className="manager-review-empty-glow" />
                     <div className="manager-review-empty-illustration" />
                   </div>

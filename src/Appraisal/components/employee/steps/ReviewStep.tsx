@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { StepProps, ReviewFormData } from "../../../types/appraisal.types";
-import { Star, Edit3, AlertCircle, CheckCircle2, ChevronDown, Calendar, FileText } from "lucide-react";
+import { Star, Edit3, AlertCircle, CheckCircle2, ChevronDown, Calendar, FileText, Clock } from "lucide-react";
 import { getQuarterPeriod } from "../../../utils/appraisalHelpers";
 import { ENVIRONMENT_SCORES } from "../../../constants/appraisal.constants";
 import {
@@ -1392,8 +1392,16 @@ export const ReviewStep: React.FC<StepProps> = ({
         )}
 
         {readOnly && !hasAnyStepEntered && (
-          <div className="p-8 text-center bg-white border border-[#CBD5E1] rounded-2xl shadow-xs">
-            <p className="text-sm font-semibold text-[#64748B]">No evaluation responses entered yet.</p>
+          <div className="py-12 px-6 text-center bg-white border border-slate-200/90 rounded-2xl shadow-xs">
+            <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-200/70 text-amber-600 mx-auto flex items-center justify-center mb-3 shadow-xs">
+              <Clock className="w-6 h-6 stroke-[2]" />
+            </div>
+            <h4 className="text-base font-bold text-[#0F172A] tracking-tight">
+              Review Not Started Yet
+            </h4>
+            <p className="text-xs text-[#64748B] mt-1.5 max-w-sm mx-auto leading-relaxed">
+              The self-assessment for this quarter has not been started yet. Once the review is filled, your responses will appear here.
+            </p>
           </div>
         )}
       </div>

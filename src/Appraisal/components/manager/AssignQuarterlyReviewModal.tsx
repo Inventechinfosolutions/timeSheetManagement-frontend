@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { Send, Check, ArrowLeft } from "lucide-react";
+import { Send, Check, ArrowLeft, ChevronLeft } from "lucide-react";
 import { AssignQuarterlyReviewModalProps } from "../../types/appraisal.types";
 import { useAppSelector } from "../../../hooks";
 import {
@@ -380,7 +380,9 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
 
     setAssignError("");
     setButtonState(AssignButtonState.ANIMATING);
-    void Promise.all(
+
+    const minAnimTime = new Promise((resolve) => setTimeout(resolve, 1100));
+    const apiCall = Promise.all(
       submitSummary.people.map((person) =>
         AppraisalApi.createReview({
           employeeId: person.employeeId,
@@ -393,14 +395,14 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
           assignedBy,
         }),
       ),
-    )
+    );
+
+    void Promise.all([apiCall, minAnimTime])
       .then(() => {
-        setTimeout(() => {
-          setButtonState(AssignButtonState.ASSIGNED);
-        }, 280);
+        setButtonState(AssignButtonState.ASSIGNED);
         setTimeout(() => {
           setIsModalClosing(true);
-        }, 850);
+        }, 1200);
         setTimeout(() => {
           onAssign?.({
             quarter: selectedQuarter,
@@ -413,7 +415,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
           onClose();
           setIsModalClosing(false);
           setButtonState(AssignButtonState.IDLE);
-        }, 1150);
+        }, 1550);
       })
       .catch((error: unknown) => {
         setButtonState(AssignButtonState.CONFIRM);
@@ -450,7 +452,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     (Boolean(onBack) && buttonState === AssignButtonState.IDLE);
 
   const modalFooter = (
-    <div className="flex items-center justify-between w-full flex-1">
+    <div className="flex items-center justify-between w-full flex-1 pt-1">
       {buttonState === AssignButtonState.CONFIRM ? (
         <button
           type="button"
@@ -460,54 +462,86 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             setAssignError("");
             setErrorField(null);
           }}
-          className="assign-modal-cancel-btn"
+          className="group assign-modal-cancel-btn h-[42px] max-h-[42px]"
         >
-          <ArrowLeft className="w-4 h-4 shrink-0" />
+          <span className="relative inline-flex items-center justify-center w-3.5 h-3.5 shrink-0">
+            <ChevronLeft className="w-3.5 h-3.5 stroke-[2.5] shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:-translate-x-1" />
+            <ArrowLeft className="w-3.5 h-3.5 stroke-[2.5] shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
+          </span>
           <span>Back</span>
         </button>
       ) : onBack && buttonState === AssignButtonState.IDLE ? (
         <button
           type="button"
           onClick={handleBack}
-          className="assign-modal-cancel-btn"
+          className="group assign-modal-cancel-btn h-[42px] max-h-[42px]"
         >
-          <ArrowLeft className="w-4 h-4 shrink-0" />
+          <span className="relative inline-flex items-center justify-center w-3.5 h-3.5 shrink-0">
+            <ChevronLeft className="w-3.5 h-3.5 stroke-[2.5] shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:-translate-x-1" />
+            <ArrowLeft className="w-3.5 h-3.5 stroke-[2.5] shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
+          </span>
           <span>Back</span>
         </button>
       ) : (
         <div />
       )}
-      <button
-        type="button"
-        disabled={buttonState === AssignButtonState.ANIMATING || buttonState === AssignButtonState.ASSIGNED}
-        onClick={buttonState === AssignButtonState.CONFIRM ? handleConfirmClick : handleAssignClick}
-        className={`assign-modal-submit-btn ${buttonState === AssignButtonState.ANIMATING
-            ? "assign-btn-animating"
-            : buttonState === AssignButtonState.ASSIGNED
-              ? "assign-btn-assigned"
-              : ""
+      {buttonState === AssignButtonState.IDLE ? (
+        <button
+          type="button"
+          onClick={handleAssignClick}
+          className="assign-modal-submit-btn"
+        >
+          <Send className="w-4 h-4 fill-white -rotate-12 mr-1" />
+          <span>Assign</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={buttonState === AssignButtonState.ANIMATING || buttonState === AssignButtonState.ASSIGNED}
+          onClick={handleConfirmClick}
+          className={`assign-modal-submit-btn ${
+            buttonState === AssignButtonState.ANIMATING
+              ? "assign-btn-animating"
+              : buttonState === AssignButtonState.ASSIGNED
+                ? "assign-btn-assigned"
+                : ""
           }`}
-      >
-        <span className="assign-btn-icon-wrapper">
-          {buttonState === AssignButtonState.ASSIGNED ? (
-            <Check className="w-4 h-4 text-white stroke-[3] assign-icon-check" />
-          ) : (
-            <Send
-              className={`w-4 h-4 fill-white -rotate-12 ${buttonState === AssignButtonState.ANIMATING ? "assign-icon-launching" : ""
-                }`}
-            />
+        >
+          {/* Animated Flight Arc Trail (visible during ANIMATING) */}
+          {buttonState === AssignButtonState.ANIMATING && (
+            <span className="assign-btn-flight-track" aria-hidden="true">
+              <svg className="assign-flight-svg" viewBox="0 0 100 100" fill="none">
+                <path
+                  d="M 15 50 Q 75 10 85 45 Q 90 90 40 85 Q 20 80 20 50"
+                  className="assign-flight-arc"
+                />
+              </svg>
+            </span>
           )}
-        </span>
-        <span className="assign-btn-text">
-          {buttonState === AssignButtonState.ASSIGNED
-            ? "Assigned"
-            : buttonState === AssignButtonState.ANIMATING
-              ? "Assigning"
-              : buttonState === AssignButtonState.CONFIRM
-                ? "Confirm"
-                : "Assign"}
-        </span>
-      </button>
+
+          {/* Circular Badge: at rest / animating / assigned */}
+          <span className="assign-btn-circle-badge">
+            {/* Paper Airplane (flies off and enters circle) */}
+            <span className="assign-btn-plane-wrap">
+              <Send className="assign-plane-icon w-4 h-4" />
+            </span>
+
+            {/* Checkmark (pops in circle during animation, turns green when assigned) */}
+            <span className="assign-btn-check-wrap">
+              <Check className="assign-check-icon w-4 h-4 stroke-[3]" />
+            </span>
+          </span>
+
+          {/* Text */}
+          <span className="assign-btn-label">
+            {buttonState === AssignButtonState.ASSIGNED
+              ? "Assigned"
+              : buttonState === AssignButtonState.ANIMATING
+                ? ""
+                : "Confirm"}
+          </span>
+        </button>
+      )}
     </div>
   );
 
@@ -522,12 +556,12 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       closeBtnClassName="assign-modal-close-btn"
       closeOnBackdrop={false}
       closeOnEsc={false}
-      className={`assign-quarterly-modal-dialog ${isModalClosing ? "modal-is-closing" : ""} p-5 sm:p-6 overflow-hidden flex flex-col justify-between [&>div:first-child]:border-none [&>div:first-child]:pb-1.5 [&>div:first-child]:mb-1.5 [&>div:last-child]:border-none [&>div:last-child]:pt-2.5 [&>div:last-child]:mt-2.5 [&>div:last-child]:w-full`}
+      className={`assign-quarterly-modal-dialog ${isModalClosing ? "modal-is-closing" : ""} p-5 sm:p-6 overflow-hidden flex flex-col [&>div:first-child]:border-none [&>div:first-child]:pb-1.5 [&>div:first-child]:mb-1.5 [&>div:last-child]:border-none [&>div:last-child]:pt-2 [&>div:last-child]:mt-1.5 [&>div:last-child]:w-full`}
     >
       {buttonState !== AssignButtonState.IDLE && submitSummary ? (
         <AssignSubmitPanel summary={submitSummary} status={buttonState} error={assignError} />
       ) : (
-        <div key={formSession} className="space-y-3.5 h-[340px] flex flex-col justify-between min-h-0">
+        <div key={formSession} className="space-y-3 flex flex-col min-h-0">
           {/* SELECT EMPLOYEES */}
           <div className="assign-modal-form-section">
             <div className="flex items-center justify-between mb-1">

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,6 +10,9 @@ import {
   Send,
   AlertCircle,
   Sliders,
+  X,
+  Lock,
+  Loader2,
 } from "lucide-react";
 import {
   StepOverviewIcon,
@@ -31,6 +35,7 @@ import {
 } from "../../types/appraisal.types";
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
 import { AppraisalApi, readApiError, toPerformancePayload, toReviewFormData } from "../../reducers/appraisal.reducer";
+import { readProjectList } from "../../utils/appraisalHelpers";
 import { EmployeePerformanceStatus, QuaterlyEnum, QuarterlyReviewStatus } from "../../enums/appraisal.enums";
 import { message, Modal } from "antd";
 import OverviewStep from "./steps/OverviewStep";
@@ -249,6 +254,11 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     Boolean(assignment.submittedAt)
   );
   const normalizedStatus = String(assignment.status || assignment.reviewStatus || "").toUpperCase();
+  const isNotStarted =
+    normalizedStatus === "NOT_STARTED" ||
+    normalizedStatus === "NOT STARTED" ||
+    String(assignment.status || "").toUpperCase() === "NOT_STARTED" ||
+    String(assignment.status || "").toUpperCase() === "NOT STARTED";
   const isCompleted =
     normalizedStatus === "COMPLETED" ||
     String(assignment.status || "").toUpperCase() === "COMPLETED" ||
@@ -285,6 +295,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   // formDirty: tracks whether user has modified the form from its initial loaded state
   const [formDirty, setFormDirty] = useState<boolean>(false);
+  const [showSubmitConfirmModal, setShowSubmitConfirmModal] = useState<boolean>(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<ReviewFormData | null>(null);
+  const [isSubmittingModal, setIsSubmittingModal] = useState<boolean>(false);
   const initialFormDataRef = useRef<ReviewFormData>(initialFormData || emptyReviewFormData);
 
   const topRef = useRef<HTMLDivElement>(null);
@@ -454,7 +467,15 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   };
 
   const handleFieldChange = (field: keyof ReviewFormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    formDataRef.current = {
+      ...formDataRef.current,
+      [field]: value,
+    };
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      formDataRef.current = next;
+      return next;
+    });
     handleClearError(field as string);
   };
 
@@ -918,7 +939,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
   };
 
-  const loadFreshForm = async (): Promise<boolean> => {
+  const loadFreshForm = async (preserveDraftInputs = true): Promise<boolean> => {
     const id = performanceIdRef.current || assignment.performanceId;
     if (!id) {
       return true;
@@ -926,6 +947,23 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     try {
       const performance = await AppraisalApi.getPerformanceById(id);
       const fresh = toReviewFormData(performance);
+      if (preserveDraftInputs && formDataRef.current) {
+        const current = formDataRef.current;
+        fresh.projectName = current.projectName;
+        fresh.projectDescription = current.projectDescription;
+        fresh.projectRole = current.projectRole;
+        fresh.responsibilityType = current.responsibilityType;
+        fresh.leadershipQualities = current.leadershipQualities;
+        fresh.clientReviewFeedback = current.clientReviewFeedback;
+        fresh.keyResponsibilities = current.keyResponsibilities;
+        fresh.challengesFaced = current.challengesFaced;
+        fresh.projectChallenge = current.projectChallenge;
+        fresh.solutionsImplemented = current.solutionsImplemented;
+        fresh.keyAchievementsOutcomes = current.keyAchievementsOutcomes;
+        fresh.technologiesUsed = current.technologiesUsed;
+        fresh.projectAttachments = current.projectAttachments;
+        fresh.editingProjectIndex = current.editingProjectIndex;
+      }
       formDataRef.current = fresh;
       initialFormDataRef.current = fresh;
       performanceIdRef.current = performance.id;
@@ -968,7 +1006,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
     const saved = await persistStep(true, updatedData, targetStatus);
     if (saved) {
-      await loadFreshForm();
+      await loadFreshForm(false);
     }
     return saved;
   };
@@ -994,44 +1032,54 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         // ignore
       }
     }
+
+    const current = {
+      ...formDataRef.current,
+      ...formData,
+    };
+    const isEditingThis = current.editingProjectIndex === index;
+    const nextEditingIndex =
+      current.editingProjectIndex !== null && current.editingProjectIndex !== undefined
+        ? isEditingThis
+          ? null
+          : current.editingProjectIndex > index
+          ? current.editingProjectIndex - 1
+          : current.editingProjectIndex
+        : null;
+
     if (existingId) {
       try {
-        await AppraisalApi.deletePerformanceProject(existingId, index);
-        await loadFreshForm();
+        const updatedPerf = await AppraisalApi.deletePerformanceProject(existingId, index);
+        const freshProjects = updatedPerf?.projects
+          ? readProjectList(updatedPerf.projects)
+          : updatedProjects;
+
+        const nextData: ReviewFormData = {
+          ...current,
+          projects: freshProjects,
+          editingProjectIndex: nextEditingIndex,
+        };
+        formDataRef.current = nextData;
+        setFormData(nextData);
         return true;
       } catch (error) {
         console.warn("[Appraisal] deletePerformanceProject endpoint failed, falling back to updatePerformance:", error);
       }
     }
-    const updatedData: ReviewFormData = {
-      ...formDataRef.current,
+
+    const nextData: ReviewFormData = {
+      ...current,
       projects: updatedProjects,
-      editingProjectIndex: null,
-      projectName: "",
-      projectDescription: "",
-      projectRole: "",
-      responsibilityType: "",
-      leadershipQualities: "",
-      clientReviewFeedback: "",
-      keyResponsibilities: "",
-      challengesFaced: "",
-      projectChallenge: "",
-      solutionsImplemented: "",
-      keyAchievementsOutcomes: "",
-      technologiesUsed: [],
-      projectAttachments: [],
+      editingProjectIndex: nextEditingIndex,
     };
-    setFormData(updatedData);
-    formDataRef.current = updatedData;
+    setFormData(nextData);
+    formDataRef.current = nextData;
 
     const targetStatus = !isReassignedReview
       ? EmployeePerformanceStatus.DRAFT
       : undefined;
 
-    const saved = await persistStep(true, updatedData, targetStatus);
-    if (saved) {
-      await loadFreshForm();
-    }
+    const saved = await persistStep(true, nextData, targetStatus);
     return saved;
   };
 
@@ -1274,18 +1322,26 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         return;
       }
     }
-    Modal.confirm({
-      title: "Submit Quarterly Appraisal",
-      content:
-        "Are you sure you want to submit your appraisal? Once submitted, your self-assessment will be locked and sent to your manager for evaluation.",
-      okText: "Submit Appraisal",
-      okType: "primary",
-      cancelText: "Review Again",
-      centered: true,
-      onOk: async () => {
-        await executeSubmit(currentData);
-      },
-    });
+    setPendingSubmitData(currentData);
+    setShowSubmitConfirmModal(true);
+  };
+
+  const handleCloseSubmitModal = () => {
+    if (isSubmittingModal) return;
+    setShowSubmitConfirmModal(false);
+    setPendingSubmitData(null);
+  };
+
+  const handleConfirmSubmit = async () => {
+    if (!pendingSubmitData || isSubmittingModal) return;
+    setIsSubmittingModal(true);
+    try {
+      await executeSubmit(pendingSubmitData);
+    } finally {
+      setIsSubmittingModal(false);
+      setShowSubmitConfirmModal(false);
+      setPendingSubmitData(null);
+    }
   };
 
   const renderStepContent = (stepNum: number) => {
@@ -1604,37 +1660,39 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             )}
 
             {/* Stepper Navigation Footer */}
-            <div className="flex items-center justify-between pt-6 mt-8 border-t border-blue-100">
-              {currentStep === 1 ? (
-                <Button
-                  variant="outline"
-                  size="md"
-                  onClick={onBack}
-                  leftIcon={
-                    <span className="relative inline-flex items-center justify-center w-4 h-4 shrink-0 self-center leading-none">
-                      <ChevronLeft className="w-4 h-4 shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:-translate-x-1" />
-                      <ArrowLeft className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
-                    </span>
-                  }
-                  className="group px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400 [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
-                >
-                  Back
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="md"
-                  onClick={handlePrev}
-                  leftIcon={
-                    <span className="relative inline-flex items-center justify-center w-4 h-4 shrink-0 self-center leading-none">
-                      <ChevronLeft className="w-4 h-4 shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:-translate-x-1" />
-                      <ArrowLeft className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
-                    </span>
-                  }
-                  className="group px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400 [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
-                >
-                  Previous
-                </Button>
+            <div className={`flex items-center ${readOnly && isNotStarted ? "justify-end" : "justify-between"} pt-6 mt-8 border-t border-blue-100`}>
+              {!(readOnly && isNotStarted) && (
+                currentStep === 1 ? (
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={onBack}
+                    leftIcon={
+                      <span className="relative inline-flex items-center justify-center w-4 h-4 shrink-0 self-center leading-none">
+                        <ChevronLeft className="w-4 h-4 shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:-translate-x-1" />
+                        <ArrowLeft className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
+                      </span>
+                    }
+                    className="group px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400 [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
+                  >
+                    Back
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={handlePrev}
+                    leftIcon={
+                      <span className="relative inline-flex items-center justify-center w-4 h-4 shrink-0 self-center leading-none">
+                        <ChevronLeft className="w-4 h-4 shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:-translate-x-1" />
+                        <ArrowLeft className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
+                      </span>
+                    }
+                    className="group px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400 [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
+                  >
+                    Previous
+                  </Button>
+                )
               )}
 
               <div className="flex items-center gap-3">
@@ -1693,6 +1751,104 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
           </>
         )}
       </Card>
+
+      {/* Modern Custom Submit Appraisal Confirmation Modal */}
+      {showSubmitConfirmModal && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-[#0F172A]/25 backdrop-blur-[3.5px] animate-in fade-in duration-200"
+          style={{ backdropFilter: "blur(3.5px)", WebkitBackdropFilter: "blur(3.5px)" }}
+          onClick={handleCloseSubmitModal}
+        >
+          <div
+            className="relative w-full max-w-[440px] bg-white rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-100 text-[#0F172A] animate-in zoom-in-95 duration-200 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Accent Gradient Line */}
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500" />
+
+            {/* Close Button */}
+            <button
+              type="button"
+              disabled={isSubmittingModal}
+              onClick={handleCloseSubmitModal}
+              className="absolute top-3.5 right-3.5 text-slate-400 hover:text-slate-700 w-7 h-7 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-40"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Header: Icon + Title & Description in clean structured layout */}
+            <div className="flex items-start gap-3.5 pt-1">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-600 shrink-0 shadow-xs">
+                <Send className="w-5 h-5 stroke-[2.2] -rotate-12 translate-x-0.5" />
+              </div>
+              <div className="min-w-0 flex-1 pr-6">
+                <h3 className="text-base sm:text-lg font-bold text-[#0F172A] tracking-tight leading-snug">
+                  Submit Quarterly Appraisal
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed mt-1">
+                  Are you sure you want to submit your appraisal? Once submitted, your self-assessment will be locked and sent to your manager for evaluation.
+                </p>
+              </div>
+            </div>
+
+            {/* Assessment Details Box */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 my-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Target Review
+                </span>
+                <span className="px-2 py-0.5 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-md">
+                  {assignment.quarter || "Quarterly"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800">
+                  {assignment.quarter || "Q"} Performance Review
+                </span>
+                <span className="text-xs text-slate-500 font-medium">
+                  FY {assignment.financialYear || "Current"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-800 bg-amber-50/90 border border-amber-200/80 rounded-lg px-2.5 py-1.5 pt-1 mt-1">
+                <Lock className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                <span>Self-assessment will be locked for editing upon submission.</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                disabled={isSubmittingModal}
+                onClick={handleCloseSubmitModal}
+                className="flex-1 sm:flex-initial py-2 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs hover:border-slate-300 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Review Again
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingModal}
+                onClick={handleConfirmSubmit}
+                className="flex-1 sm:flex-initial py-2 px-5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSubmittingModal ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5 stroke-[2.2] shrink-0" />
+                    <span>Submit Appraisal</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
