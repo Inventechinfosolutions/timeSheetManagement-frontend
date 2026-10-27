@@ -2,6 +2,7 @@ import React from "react";
 import { FileText, Eye, Download, Trash2 } from "lucide-react";
 import { NoteDocumentItem } from "../types/notes.types";
 import { formatFileSize } from "../utils/notesHelpers";
+import { Popconfirm } from "antd";
 
 interface NoteAttachmentChipProps {
   item: NoteDocumentItem;
@@ -53,14 +54,22 @@ export const NoteAttachmentChip: React.FC<NoteAttachmentChipProps> = ({
           <Download className="w-4 h-4" />
         </button>
         {onDelete && (
-          <button
-            type="button"
-            onClick={() => onDelete(item)}
-            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition cursor-pointer"
-            title="Remove File"
+          <Popconfirm
+            title="Delete Attachment"
+            description="Are you sure you want to delete this file?"
+            onConfirm={() => onDelete(item)}
+            okText="Delete"
+            cancelText="Cancel"
+            okButtonProps={{ danger: true }}
           >
-            <Trash2 className="w-4 h-4" />
-          </button>
+            <button
+              type="button"
+              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition cursor-pointer"
+              title="Remove File"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </Popconfirm>
         )}
       </div>
     </div>

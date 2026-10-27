@@ -71,6 +71,7 @@ export interface UpdateNotePayload {
   autoSave?: boolean;
   isVertical?: boolean;
   orderIndex?: number;
+  attachmentKeys?: string[];
   parentId?: number | null;
 }
 

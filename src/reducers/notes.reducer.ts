@@ -194,6 +194,7 @@ export const updateNote = createAsyncThunk(
       }
       if (data.isVertical !== undefined) sanitized.isVertical = data.isVertical;
       if (data.orderIndex !== undefined) sanitized.orderIndex = data.orderIndex;
+      if (data.attachmentKeys !== undefined) sanitized.attachmentKeys = data.attachmentKeys;
       // Never send `rotation` — backend DTO rejects it (use isVertical only).
 
       const response = await axios.patch(`${API_BASE}/${id}`, sanitized, {

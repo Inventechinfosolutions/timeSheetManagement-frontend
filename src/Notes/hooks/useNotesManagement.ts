@@ -1516,6 +1516,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
             isPinned: formData.isPinned,
             autoSave: formData.isAutoSave,
             isVertical: formData.isVertical !== false,
+            attachmentKeys: formData.attachmentKeys,
           })
         ).unwrap();
 
@@ -1672,7 +1673,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       }
 
       const blobUrl = window.URL.createObjectURL(blob);
-      setPreviewImageModal({ open: true, url: blobUrl, title: displayName });
+      setPreviewImageModal({ open: true, url: blobUrl, title: displayName, mimeType: contentType });
     } catch (err: any) {
       hide();
       message.error(err || "Failed to preview file from server");
