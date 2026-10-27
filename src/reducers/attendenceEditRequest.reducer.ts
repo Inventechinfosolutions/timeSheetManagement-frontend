@@ -14,6 +14,7 @@ export interface AttendenceEditRequest {
   reviewedAt?: string | null;
   submittedDate?: string | null;
   createdAt?: string;
+  created_at?: string;
   updatedAt?: string;
   fullName?: string;
   department?: string;
