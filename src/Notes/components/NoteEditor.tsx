@@ -28,7 +28,7 @@ import {
   PaintBucket,
   ChevronDown,
 } from "lucide-react";
-import { message, Popover } from "antd";
+import { message, Popover, Popconfirm } from "antd";
 import { Toggle } from "../../components/ui";
 import { Note, NotesFormData, NoteDocumentItem, AutoSaveStatus } from "../types/notes.types";
 import { NoteAttachmentChip } from "./NoteAttachmentChip";
@@ -1942,20 +1942,29 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     >
                   <Undo2 className="w-4 h-4" />
                     </button>
+                <Popconfirm
+                  title="Clear Note Content"
+                  description="Are you sure you want to delete all content from this sheet?"
+                  onConfirm={handleClearPage}
+                  okText="Clear"
+                  cancelText="Cancel"
+                  okButtonProps={{ danger: true }}
+                  disabled={!hasContent}
+                >
                   <button
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
-                  onClick={handleClearPage}
-                  disabled={!hasContent}
-                  className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border transition ${
-                    !hasContent
-                      ? "bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-60"
-                      : "bg-rose-50/70 text-rose-700 border-rose-200 hover:bg-rose-100 cursor-pointer"
-                  }`}
-                  title={!hasContent ? "Sheet is already empty" : "Clear entire sheet"}
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                    disabled={!hasContent}
+                    className={`w-8 h-8 shrink-0 flex items-center justify-center rounded-lg border transition ${
+                      !hasContent
+                        ? "bg-slate-100/70 text-slate-400 border-slate-200/80 cursor-not-allowed opacity-60"
+                        : "bg-rose-50/70 text-rose-700 border-rose-200 hover:bg-rose-100 cursor-pointer"
+                    }`}
+                    title={!hasContent ? "Sheet is already empty" : "Clear entire sheet"}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </Popconfirm>
                 <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
@@ -2000,6 +2009,20 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               <div className="w-full flex flex-col gap-4">
                 {showA4Editor && (
                   <div
+                    onDragOver={(e) => {
+                      if (e.dataTransfer.types.includes("Files")) {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "copy";
+                      }
+                    }}
+                    onDrop={(e) => {
+                      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const droppedFiles = Array.from(e.dataTransfer.files);
+                        onProcessDropFiles(droppedFiles);
+                      }
+                    }}
                     className={`a4-page-workspace w-full flex items-start bg-slate-100/80 p-4 sm:p-8 min-h-[720px] overflow-x-auto${
                       isLandscape ? " is-landscape justify-start" : " justify-center"
                     }`}
