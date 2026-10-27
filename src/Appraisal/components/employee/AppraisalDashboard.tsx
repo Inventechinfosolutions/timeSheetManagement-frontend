@@ -33,6 +33,7 @@ import {
   ReviewFormData,
 } from "../../types/appraisal.types";
 import { useEmployeeAppraisal } from "../../hooks/useEmployeeAppraisal";
+import { AppraisalFilterAll } from "../../enums/appraisal.enums";
 import { AppraisalApi, formatAppraisalDisplayDate, isResubmittedStatus, readApiError, toReviewFormData } from "../../reducers/appraisal.reducer";
 import QuarterlyReviewStepper from "./QuarterlyReviewStepper";
 import EvaluationPanel from "../manager/EvaluationPanel";
@@ -47,6 +48,7 @@ import {
   Button,
   Dropdown,
   Pagination,
+  SearchBox,
 } from "../../../components/ui";
 import "./AppraisalDashboard.css";
 
@@ -563,6 +565,7 @@ export const AppraisalDashboard: React.FC = () => {
     assignments,
     activeAssignment,
     financialYear,
+    defaultYear,
     quarter,
     statusFilter,
     yearOptions,
@@ -599,6 +602,8 @@ export const AppraisalDashboard: React.FC = () => {
   const [revealedModalData, setRevealedModalData] = useState<RevealedRatingData | null>(null);
   const [ratingTarget, setRatingTarget] = useState<QuarterlyReviewAssignment | null>(null);
   const [ratingPassword, setRatingPassword] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const employeeFiltersDockRef = useRef<HTMLDivElement>(null);
 
   // GSAP: Modern entrance animation for employee filter dock
@@ -1038,10 +1043,23 @@ export const AppraisalDashboard: React.FC = () => {
     }
   }, [activeAssignment, viewingAssignment]);
 
-  const totalItems = total;
+  const filteredAssignments = useMemo(() => {
+    if (!debouncedSearch.trim()) return assignments;
+    const q = debouncedSearch.toLowerCase().trim();
+    return assignments.filter((a) => {
+      const quarterMatch = (a.quarter || "").toLowerCase().includes(q);
+      const fyMatch = (a.financialYear || "").toLowerCase().includes(q);
+      const assignedByMatch = (a.assignedBy || "").toLowerCase().includes(q);
+      const statusMatch = (a.status || "").toLowerCase().includes(q);
+      const descMatch = (a.description || "").toLowerCase().includes(q);
+      return quarterMatch || fyMatch || assignedByMatch || statusMatch || descMatch;
+    });
+  }, [assignments, debouncedSearch]);
+
+  const totalItems = debouncedSearch.trim() ? filteredAssignments.length : total;
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalItems);
-  const paginatedAssignments = assignments;
+  const paginatedAssignments = filteredAssignments;
 
   // Nearest deadline among assignments that are loaded and not finally submitted.
   const deadlineInfo = useMemo(() => {
@@ -1316,14 +1334,32 @@ export const AppraisalDashboard: React.FC = () => {
               </CardTitle>
             </div>
 
-            {/* Filters Bar */}
+            {/* Filters beside title on one line - calibrated to never overflow outside card */}
             <div
               ref={employeeFiltersDockRef}
-              className="manager-review-filters-dock flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar flex-nowrap py-1 flex-1 justify-start xl:justify-end"
+              className="manager-review-filters-dock flex items-center gap-1.5 flex-nowrap shrink-0 justify-end"
             >
+              <div className="w-28 sm:w-32 lg:w-36 shrink-0 filter-item-stagger-1">
+                <SearchBox
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onClear={() => {
+                    setSearchTerm("");
+                    setDebouncedSearch("");
+                  }}
+                  onDebounce={setDebouncedSearch}
+                  placeholder="Search..."
+                  variant="outlined"
+                  inputSize="md"
+                  containerClassName="w-full rounded-xl manager-review-search-box"
+                  className="text-xs manager-review-search-input"
+                  allowClear
+                />
+              </div>
+
               {/* Financial Year Dropdown */}
               <Dropdown
-                className="shrink-0 filter-item-stagger-1"
+                className="shrink-0 filter-item-stagger-2"
                 placeholder="Financial Year"
                 allowClear={true}
                 defaultValue=""
@@ -1337,14 +1373,15 @@ export const AppraisalDashboard: React.FC = () => {
                 onChange={setFinancialYear}
                 onOpen={loadFinancialYears}
                 loading={yearsLoading}
-                maxLabelWidth="max-w-[124px]"
+                maxLabelWidth="max-w-[95px]"
                 buttonClassName={`manager-review-filter-btn filter-btn-fy ${
-                  financialYear ? "filter-active" : ""
-                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[172px]`}
+                  financialYear && financialYear !== defaultYear ? "filter-active" : ""
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[145px]`}
               />
 
+              {/* Quarters Dropdown */}
               <Dropdown
-                className="shrink-0 filter-item-stagger-2"
+                className="shrink-0 filter-item-stagger-3"
                 placeholder="Quarter"
                 allowClear={false}
                 defaultValue=""
@@ -1355,18 +1392,18 @@ export const AppraisalDashboard: React.FC = () => {
                 }
                 options={quarterOptions}
                 value={quarter}
-                onChange={setQuarter}
+                onChange={(val) => setQuarter(val || AppraisalFilterAll.ALL)}
                 onOpen={loadQuarters}
                 loading={quartersLoading && quarterOptions.length === 0}
-                maxLabelWidth="max-w-[100px]"
+                maxLabelWidth="max-w-[85px]"
                 buttonClassName={`manager-review-filter-btn filter-btn-quarters ${
-                  quarter ? "filter-active" : ""
-                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[150px]`}
+                  quarter && quarter !== AppraisalFilterAll.ALL ? "filter-active" : ""
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[122px]`}
               />
 
               {/* Status Dropdown */}
               <Dropdown
-                className="shrink-0 filter-item-stagger-3"
+                className="shrink-0 filter-item-stagger-4"
                 placeholder="Status"
                 allowClear={true}
                 defaultValue=""
@@ -1384,19 +1421,24 @@ export const AppraisalDashboard: React.FC = () => {
                 ]}
                 value={statusFilter}
                 onChange={setStatusFilter}
-                maxLabelWidth="max-w-[80px]"
+                maxLabelWidth="max-w-[75px]"
                 contentWidth
+                align="right"
                 buttonClassName={`manager-review-filter-btn filter-btn-status ${
                   statusFilter ? "filter-active" : ""
-                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[124px]`}
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[110px]`}
               />
 
               {/* Clear Button */}
-              {hasActiveFilters && (
+              {(hasActiveFilters || Boolean(searchTerm) || Boolean(debouncedSearch)) && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleClearFilters}
+                  onClick={() => {
+                    setSearchTerm("");
+                    setDebouncedSearch("");
+                    handleClearFilters();
+                  }}
                   className="manager-review-clear-btn shrink-0"
                   title="Clear all filters"
                 >
@@ -1407,7 +1449,7 @@ export const AppraisalDashboard: React.FC = () => {
           </div>
 
           <CardContent className="p-0">
-            {assignments.length > 0 ? (
+            {filteredAssignments.length > 0 ? (
               /* STATE 2: Populated Table with Styled Brand Layout */
               <div className="space-y-4">
                 <div className="hidden sm:block">

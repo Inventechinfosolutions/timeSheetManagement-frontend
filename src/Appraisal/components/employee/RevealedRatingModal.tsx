@@ -201,173 +201,193 @@ const StepsIllustration: React.FC = () => (
 );
 
 /**
- * 3.0–3.9: Classic 3D Trophy on Stepped Podium (Meets Expectations - Mint/Green)
+ * 3.0–3.9: Prestigious 3D Bronze Shield of Achievement (Meets Expectations - Bronze 3rd Place)
  */
-const TrophyIllustration: React.FC = () => (
+const BronzeShieldIllustration: React.FC = () => (
   <svg viewBox="0 0 220 200" className="w-40 h-36 sm:w-48 sm:h-44 drop-shadow-md overflow-visible">
     <defs>
-      <radialGradient id="cupGoldRef" cx="36%" cy="36%" r="68%">
-        <stop offset="0%" stopColor="#FFFDF0" />
-        <stop offset="25%" stopColor="#FEF08A" />
-        <stop offset="60%" stopColor="#F59E0B" />
-        <stop offset="100%" stopColor="#B45309" />
+      <radialGradient id="shieldBronzeGrad" cx="38%" cy="32%" r="68%">
+        <stop offset="0%" stopColor="#FFF7ED" />
+        <stop offset="20%" stopColor="#FDBA74" />
+        <stop offset="55%" stopColor="#CD7F32" />
+        <stop offset="85%" stopColor="#9A3412" />
+        <stop offset="100%" stopColor="#7C2D12" />
       </radialGradient>
-      <linearGradient id="rimGoldRef" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#FEF08A" />
-        <stop offset="50%" stopColor="#F59E0B" />
-        <stop offset="100%" stopColor="#92400E" />
+      <linearGradient id="shieldRimBronze" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#FED7AA" />
+        <stop offset="40%" stopColor="#CD7F32" />
+        <stop offset="100%" stopColor="#7C2D12" />
       </linearGradient>
-      <linearGradient id="podiumWallRef" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#BFDBFE" />
-        <stop offset="100%" stopColor="#93C5FD" />
+      <linearGradient id="podiumWallBronze" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#FED7AA" />
+        <stop offset="100%" stopColor="#FDBA74" />
       </linearGradient>
-      <linearGradient id="leafGradRef" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#34D399" />
-        <stop offset="100%" stopColor="#059669" />
+      <linearGradient id="leafGradBronze" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#EA580C" />
+        <stop offset="100%" stopColor="#9A3412" />
       </linearGradient>
     </defs>
 
     {/* Ground Shadow & Stepped Circular Podium */}
-    <ellipse cx="110" cy="180" rx="72" ry="11" fill="#94A3B8" opacity="0.3" />
-    <path d="M 38 158 C 38 170 182 170 182 158 L 182 166 C 182 178 38 178 38 166 Z" fill="url(#podiumWallRef)" />
-    <ellipse cx="110" cy="158" rx="72" ry="13" fill="#DBEAFE" stroke="#BFDBFE" strokeWidth="0.8" />
+    <ellipse cx="110" cy="180" rx="72" ry="11" fill="#94A3B8" opacity="0.25" />
+    <path d="M 38 158 C 38 170 182 170 182 158 L 182 166 C 182 178 38 178 38 166 Z" fill="url(#podiumWallBronze)" />
+    <ellipse cx="110" cy="158" rx="72" ry="13" fill="#FFF7ED" stroke="#FED7AA" strokeWidth="0.8" />
     <path d="M 52 144 C 52 155 168 155 168 144 L 168 150 C 168 161 52 161 52 150 Z" fill="#E2E8F0" />
     <ellipse cx="110" cy="144" rx="58" ry="11" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="0.8" />
-    <ellipse cx="110" cy="143" rx="24" ry="5.5" fill="#1E293B" opacity="0.35" className="gsap-trophy-contact-shadow" />
+    <ellipse cx="110" cy="143" rx="24" ry="5.5" fill="#7C2D12" opacity="0.3" className="gsap-trophy-contact-shadow" />
 
-    {/* Smooth 3D Leaves */}
+    {/* Smooth 3D Bronze Leaves */}
     <g className="gsap-leaf-left">
-      <path d="M 40 152 C 18 140 14 114 28 100 C 34 116 42 134 40 152 Z" fill="url(#leafGradRef)" />
-      <path d="M 48 154 C 36 138 38 118 52 108 C 54 122 56 140 48 154 Z" fill="#34D399" />
+      <path d="M 40 152 C 18 140 14 114 28 100 C 34 116 42 134 40 152 Z" fill="url(#leafGradBronze)" />
+      <path d="M 48 154 C 36 138 38 118 52 108 C 54 122 56 140 48 154 Z" fill="#F97316" />
     </g>
     <g className="gsap-leaf-right">
-      <path d="M 180 152 C 202 140 206 114 192 100 C 186 116 178 134 180 152 Z" fill="url(#leafGradRef)" />
-      <path d="M 172 154 C 184 138 182 118 168 108 C 166 122 164 140 172 154 Z" fill="#34D399" />
+      <path d="M 180 152 C 202 140 206 114 192 100 C 186 116 178 134 180 152 Z" fill="url(#leafGradBronze)" />
+      <path d="M 172 154 C 184 138 182 118 168 108 C 166 122 164 140 172 154 Z" fill="#F97316" />
     </g>
 
-    {/* Floating 3D Trophy Chalice Assembly */}
+    {/* 3D Bronze Achievement Shield Assembly (No Trophy Cup!) */}
     <g className="gsap-trophy-body">
-      <path d="M 90 120 L 130 120 L 134 140 L 86 140 Z" fill="#1E293B" rx="2" />
-      <rect x="94" y="126" width="32" height="8" rx="2" fill="#FDE047" stroke="#B45309" strokeWidth="0.6" />
-      <ellipse cx="110" cy="119" rx="14" ry="3" fill="url(#rimGoldRef)" />
-      <path d="M 103 103 C 103 114 100 118 101 119 L 119 119 C 120 118 117 114 117 103 Z" fill="url(#cupGoldRef)" />
-      <ellipse cx="110" cy="103" rx="12" ry="2.5" fill="url(#rimGoldRef)" />
-      <path d="M 86 56 C 58 56 56 86 86 92" stroke="url(#cupGoldRef)" strokeWidth="6.5" strokeLinecap="round" fill="none" />
-      <path d="M 86 56 C 60 56 58 84 86 90" stroke="#FFFBEB" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.8" />
-      <path d="M 134 56 C 162 56 164 86 134 92" stroke="url(#cupGoldRef)" strokeWidth="6.5" strokeLinecap="round" fill="none" />
-      <path d="M 134 56 C 160 56 162 84 134 90" stroke="#FFFBEB" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.8" />
-      <path d="M 82 48 C 82 90 95 102 110 102 C 125 102 138 90 138 48 Z" fill="url(#cupGoldRef)" />
-      <path d="M 86 51 C 86 84 95 94 105 97 C 101 94 93 85 93 51 Z" fill="#FFFFFF" opacity="0.45" />
-      <ellipse cx="110" cy="48" rx="28" ry="6.5" fill="url(#rimGoldRef)" stroke="#FFFBEB" strokeWidth="0.8" />
-      <ellipse cx="110" cy="48" rx="24" ry="4.5" fill="#92400E" />
+      {/* Base Stand for Shield */}
+      <path d="M 94 132 L 126 132 L 132 142 L 88 142 Z" fill="#7C2D12" />
+      <rect x="96" y="134" width="28" height="6" rx="1.5" fill="#CD7F32" />
 
-      {/* Prominent Chunky 3D Star on Cup */}
-      <g className="gsap-trophy-star" transform="translate(110, 74)">
-        <circle cx="0" cy="0" r="16" fill="#FEF08A" opacity="0.4" />
-        <polygon points="0,-15 4.5,-4.5 15,-4.5 6.8,2.6 9.8,13 0,6.8 -9.8,13 -6.8,2.6 -15,-4.5 -4.5,-4.5" fill="#FEF08A" stroke="#D97706" strokeWidth="1" />
-        <polygon points="0,-15 0,0 -4.5,-4.5" fill="#FFFBEB" />
-        <polygon points="15,-4.5 0,0 6.8,2.6" fill="#FDE047" />
-        <polygon points="9.8,13 0,0 0,6.8" fill="#F59E0B" />
-        <polygon points="-9.8,13 0,0 0,6.8" fill="#D97706" />
-        <polygon points="-15,-4.5 0,0 -6.8,2.6" fill="#B45309" />
-        <g className="gsap-trophy-flare" transform="translate(-9, -9)">
-          <polygon points="0,-6 1.8,-1.8 6,0 1.8,1.8 0,6 -1.8,1.8 -6,0 -1.8,-1.8" fill="#FFFFFF" />
+      {/* Main Bronze Shield Contour */}
+      <path
+        d="M 110 46 C 138 46 154 52 156 56 C 156 98 140 128 110 138 C 80 128 64 98 64 56 C 66 52 82 46 110 46 Z"
+        fill="url(#shieldBronzeGrad)"
+        stroke="url(#shieldRimBronze)"
+        strokeWidth="2.5"
+      />
+
+      {/* Inner Inset Shield Border */}
+      <path
+        d="M 110 52 C 133 52 146 57 148 60 C 148 94 135 120 110 130 C 85 120 72 94 72 60 C 74 57 87 52 110 52 Z"
+        fill="none"
+        stroke="#FED7AA"
+        strokeWidth="1.2"
+        strokeDasharray="4 2"
+        opacity="0.85"
+      />
+
+      {/* Gloss Specular Highlight */}
+      <path
+        d="M 78 62 C 78 88 88 108 104 118 C 96 110 88 94 88 72 C 88 64 92 58 98 56 C 86 57 80 59 78 62 Z"
+        fill="#FFFFFF"
+        opacity="0.35"
+      />
+
+      {/* Embossed Bronze 3D Star on Shield */}
+      <g className="gsap-trophy-star" transform="translate(110, 88)">
+        <circle cx="0" cy="0" r="18" fill="#FDBA74" opacity="0.3" />
+        <polygon points="0,-16 4.8,-4.8 16,-4.8 7.2,2.8 10.4,14 0,7.2 -10.4,14 -7.2,2.8 -16,-4.8 -4.8,-4.8" fill="#FED7AA" stroke="#7C2D12" strokeWidth="1" />
+        <polygon points="0,-16 0,0 -4.8,-4.8" fill="#FFF7ED" />
+        <polygon points="16,-4.8 0,0 7.2,2.8" fill="#FDBA74" />
+        <polygon points="10.4,14 0,0 0,7.2" fill="#CD7F32" />
+        <polygon points="-10.4,14 0,0 0,7.2" fill="#9A3412" />
+        <polygon points="-16,-4.8 0,0 -7.2,2.8" fill="#7C2D12" />
+        <g className="gsap-trophy-flare" transform="translate(-8, -8)">
+          <polygon points="0,-5 1.5,-1.5 5,0 1.5,1.5 0,5 -1.5,1.5 -5,0 -1.5,-1.5" fill="#FFFFFF" />
         </g>
       </g>
     </g>
 
-    {/* Confetti & Sparkles */}
-    <path className="gsap-confetti" d="M 174 36 Q 184 46 178 58" stroke="#0284C7" strokeWidth="3" strokeLinecap="round" fill="none" />
-    <path className="gsap-confetti" d="M 190 50 Q 198 60 192 72" stroke="#F59E0B" strokeWidth="3" strokeLinecap="round" fill="none" />
-    <path className="gsap-confetti" d="M 44 40 Q 52 50 46 62" stroke="#06B6D4" strokeWidth="3" strokeLinecap="round" fill="none" />
-    <path className="gsap-confetti" d="M 32 76 Q 40 86 34 96" stroke="#F43F5E" strokeWidth="3" strokeLinecap="round" fill="none" />
-    <circle className="gsap-confetti" cx="168" cy="26" r="2.5" fill="#3B82F6" />
-    <circle className="gsap-confetti" cx="54" cy="32" r="2.5" fill="#FBBF24" />
-    <circle className="gsap-confetti" cx="184" cy="92" r="2.5" fill="#10B981" />
-    <g className="gsap-sparkle-star" transform="translate(176, 76)">
-      <polygon points="0,-4 1.2,-1.2 4,0 1.2,1.2 0,4 -1.2,1.2 -4,0 -1.2,-1.2" fill="#FDE047" />
+    {/* Bronze Confetti & Sparkles */}
+    <circle className="gsap-confetti" cx="168" cy="46" r="3" fill="#CD7F32" />
+    <circle className="gsap-confetti" cx="52" cy="54" r="2.5" fill="#F97316" />
+    <circle className="gsap-confetti" cx="178" cy="98" r="2.5" fill="#EA580C" />
+    <g className="gsap-sparkle-star" transform="translate(172, 74)">
+      <polygon points="0,-4 1.2,-1.2 4,0 1.2,1.2 0,4 -1.2,1.2 -4,0 -1.2,-1.2" fill="#FED7AA" />
     </g>
-    <g className="gsap-sparkle-star" transform="translate(48, 82)">
-      <polygon points="0,-4 1.2,-1.2 4,0 1.2,1.2 0,4 -1.2,1.2 -4,0 -1.2,-1.2" fill="#38BDF8" />
+    <g className="gsap-sparkle-star" transform="translate(48, 86)">
+      <polygon points="0,-4 1.2,-1.2 4,0 1.2,1.2 0,4 -1.2,1.2 -4,0 -1.2,-1.2" fill="#FDBA74" />
     </g>
   </svg>
 );
 
 /**
- * 4.0–4.5: Award Medal with Laurel Leaves (Exceeds Expectations - Emerald/Teal)
+ * 4.0–4.5: Award Medal with Laurel Leaves (Exceeds Expectations - Prestigious 2nd Place Silver)
  */
 const MedalIllustration: React.FC = () => (
   <svg viewBox="0 0 220 200" className="w-40 h-36 sm:w-48 sm:h-44 drop-shadow-md overflow-visible">
     <defs>
-      <linearGradient id="podiumTeal" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#99F6E4" />
-        <stop offset="100%" stopColor="#5EEAD4" />
+      <linearGradient id="podiumSilver" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#F8FAFC" />
+        <stop offset="100%" stopColor="#CBD5E1" />
       </linearGradient>
-      <radialGradient id="medalGold" cx="35%" cy="35%" r="65%">
-        <stop offset="0%" stopColor="#FFFBEB" />
-        <stop offset="30%" stopColor="#FDE047" />
-        <stop offset="70%" stopColor="#F59E0B" />
-        <stop offset="100%" stopColor="#B45309" />
+      <radialGradient id="medalSilver" cx="35%" cy="35%" r="65%">
+        <stop offset="0%" stopColor="#FFFFFF" />
+        <stop offset="25%" stopColor="#F1F5F9" />
+        <stop offset="60%" stopColor="#CBD5E1" />
+        <stop offset="90%" stopColor="#94A3B8" />
+        <stop offset="100%" stopColor="#64748B" />
       </radialGradient>
-      <linearGradient id="ribbonTeal" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#0D9488" />
-        <stop offset="100%" stopColor="#042F2E" />
+      <linearGradient id="ribbonSilver" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#2563EB" />
+        <stop offset="50%" stopColor="#1D4ED8" />
+        <stop offset="100%" stopColor="#1E3A8A" />
       </linearGradient>
       <linearGradient id="laurelGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#34D399" />
-        <stop offset="100%" stopColor="#059669" />
+        <stop offset="0%" stopColor="#93C5FD" />
+        <stop offset="100%" stopColor="#475569" />
       </linearGradient>
     </defs>
 
     {/* Ground Shadow & Stepped Circular Podium */}
-    <ellipse cx="110" cy="180" rx="72" ry="11" fill="#94A3B8" opacity="0.3" />
-    <path d="M 38 158 C 38 170 182 170 182 158 L 182 166 C 182 178 38 178 38 166 Z" fill="url(#podiumTeal)" />
-    <ellipse cx="110" cy="158" rx="72" ry="13" fill="#CCFBF1" stroke="#99F6E4" strokeWidth="0.8" />
+    <ellipse cx="110" cy="180" rx="72" ry="11" fill="#64748B" opacity="0.3" />
+    <path d="M 38 158 C 38 170 182 170 182 158 L 182 166 C 182 178 38 178 38 166 Z" fill="url(#podiumSilver)" />
+    <ellipse cx="110" cy="158" rx="72" ry="13" fill="#FFFFFF" stroke="#CBD5E1" strokeWidth="1" />
     <path d="M 52 144 C 52 155 168 155 168 144 L 168 150 C 168 161 52 161 52 150 Z" fill="#E2E8F0" />
-    <ellipse cx="110" cy="144" rx="58" ry="11" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="0.8" />
+    <ellipse cx="110" cy="144" rx="58" ry="11" fill="#FFFFFF" stroke="#E2E8F0" strokeWidth="1" />
 
-    {/* Laurel Leaves Wreath Framing */}
+    {/* Laurel Leaves Wreath Framing - Gleaming Silver & Crystal */}
     <g className="gsap-leaf-left">
       <path d="M 38 148 C 22 134 20 106 36 82 C 40 98 48 126 46 148 Z" fill="url(#laurelGrad)" />
-      <path d="M 46 128 C 34 116 34 96 48 84 C 52 98 52 116 46 128 Z" fill="#34D399" />
-      <circle cx="34" cy="88" r="3" fill="#FDE047" />
+      <path d="M 46 128 C 34 116 34 96 48 84 C 52 98 52 116 46 128 Z" fill="#60A5FA" />
+      <circle cx="34" cy="88" r="3" fill="#FFFFFF" stroke="#93C5FD" strokeWidth="0.8" />
     </g>
     <g className="gsap-leaf-right">
       <path d="M 182 148 C 198 134 200 106 184 82 C 180 98 172 126 174 148 Z" fill="url(#laurelGrad)" />
-      <path d="M 174 128 C 186 116 186 96 172 84 C 168 98 168 116 174 128 Z" fill="#34D399" />
-      <circle cx="186" cy="88" r="3" fill="#FDE047" />
+      <path d="M 174 128 C 186 116 186 96 172 84 C 168 98 168 116 174 128 Z" fill="#60A5FA" />
+      <circle cx="186" cy="88" r="3" fill="#FFFFFF" stroke="#93C5FD" strokeWidth="0.8" />
     </g>
 
-    {/* Hanging Neck Ribbon */}
+    {/* Hanging Neck Ribbon - Olympic Royal Blue with Silver Accents */}
     <g className="gsap-trophy-body">
-      <polygon points="92,34 104,80 110,80 100,34" fill="url(#ribbonTeal)" />
-      <polygon points="128,34 116,80 110,80 120,34" fill="url(#ribbonTeal)" />
+      <polygon points="92,34 104,80 110,80 100,34" fill="url(#ribbonSilver)" />
+      <polygon points="128,34 116,80 110,80 120,34" fill="url(#ribbonSilver)" />
+      <polygon points="98,34 107,80 109,80 102,34" fill="#60A5FA" opacity="0.6" />
+      <polygon points="122,34 113,80 111,80 118,34" fill="#60A5FA" opacity="0.6" />
 
-      {/* Gold Medal Disc Assembly */}
-      <circle cx="110" cy="98" r="36" fill="url(#medalGold)" stroke="#FFFBEB" strokeWidth="2.5" />
-      <circle cx="110" cy="98" r="30" fill="none" stroke="#B45309" strokeWidth="1.5" strokeDasharray="3 2" />
+      {/* Brilliant Mirror-Finish Silver Medal Disc Assembly */}
+      <circle cx="110" cy="98" r="36" fill="url(#medalSilver)" stroke="#FFFFFF" strokeWidth="3" />
+      <circle cx="110" cy="98" r="30" fill="none" stroke="#475569" strokeWidth="1.5" strokeDasharray="3 2" />
 
-      {/* Embossed 3D Star on Medal with Gentle Star-Fill Glow */}
+      {/* Embossed 3D Star on Medal with Crystal Silver Glow */}
       <g className="gsap-trophy-star" transform="translate(110, 98)">
-        <circle cx="0" cy="0" r="18" fill="#FEF08A" opacity="0.3" />
-        <polygon points="0,-16 4.8,-4.8 16,-4.8 7.2,2.8 10.4,14 0,7.2 -10.4,14 -7.2,2.8 -16,-4.8 -4.8,-4.8" fill="#FFFBEB" stroke="#D97706" strokeWidth="1" />
+        <circle cx="0" cy="0" r="18" fill="#E2E8F0" opacity="0.6" />
+        <polygon points="0,-16 4.8,-4.8 16,-4.8 7.2,2.8 10.4,14 0,7.2 -10.4,14 -7.2,2.8 -16,-4.8 -4.8,-4.8" fill="#FFFFFF" stroke="#334155" strokeWidth="1.2" />
         <polygon points="0,-16 0,0 -4.8,-4.8" fill="#FFFFFF" />
-        <polygon points="16,-4.8 0,0 7.2,2.8" fill="#FDE047" />
-        <polygon points="10.4,14 0,0 0,7.2" fill="#F59E0B" />
-        <polygon points="-10.4,14 0,0 0,7.2" fill="#D97706" />
-        <polygon points="-16,-4.8 0,0 -7.2,2.8" fill="#B45309" />
+        <polygon points="16,-4.8 0,0 7.2,2.8" fill="#F1F5F9" />
+        <polygon points="10.4,14 0,0 0,7.2" fill="#E2E8F0" />
+        <polygon points="-10.4,14 0,0 0,7.2" fill="#CBD5E1" />
+        <polygon points="-16,-4.8 0,0 -7.2,2.8" fill="#94A3B8" />
         <g className="gsap-trophy-flare" transform="translate(-8, -8)">
           <polygon points="0,-6 1.8,-1.8 6,0 1.8,1.8 0,6 -1.8,1.8 -6,0 -1.8,-1.8" fill="#FFFFFF" />
         </g>
       </g>
     </g>
 
-    {/* Confetti & Sparkles */}
-    <circle className="gsap-confetti" cx="166" cy="38" r="3" fill="#0D9488" />
-    <circle className="gsap-confetti" cx="54" cy="46" r="3" fill="#F59E0B" />
-    <circle className="gsap-confetti" cx="178" cy="98" r="2.5" fill="#10B981" />
-    <path className="gsap-confetti" d="M 186 52 Q 192 64 186 76" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-    <path className="gsap-confetti" d="M 34 68 Q 42 78 36 88" stroke="#F59E0B" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+    {/* Crystal Confetti & Sparkles */}
+    <circle className="gsap-confetti" cx="166" cy="38" r="3" fill="#3B82F6" />
+    <circle className="gsap-confetti" cx="54" cy="46" r="2.5" fill="#60A5FA" />
+    <circle className="gsap-confetti" cx="178" cy="98" r="2.5" fill="#93C5FD" />
+    <g className="gsap-sparkle-star" transform="translate(176, 76)">
+      <polygon points="0,-5 1.5,-1.5 5,0 1.5,1.5 0,5 -1.5,1.5 -5,0 -1.5,-1.5" fill="#38BDF8" />
+    </g>
+    <g className="gsap-sparkle-star" transform="translate(46, 82)">
+      <polygon points="0,-5 1.5,-1.5 5,0 1.5,1.5 0,5 -1.5,1.5 -5,0 -1.5,-1.5" fill="#60A5FA" />
+    </g>
   </svg>
 );
 
@@ -570,9 +590,10 @@ export const RevealedRatingModal: React.FC<RevealedRatingModalProps> = ({ data, 
         return <MedalIllustration />;
       case "champion_trophy":
         return <ChampionTrophyIllustration />;
+      case "bronze_shield":
       case "trophy":
       default:
-        return <TrophyIllustration />;
+        return <BronzeShieldIllustration />;
     }
   };
 

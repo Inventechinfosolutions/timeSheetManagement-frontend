@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
+  ArrowRight,
   Check,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Send,
   AlertCircle,
@@ -1272,7 +1274,6 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         return;
       }
     }
-
     Modal.confirm({
       title: "Submit Quarterly Appraisal",
       content:
@@ -1609,8 +1610,13 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   variant="outline"
                   size="md"
                   onClick={onBack}
-                  leftIcon={<ArrowLeft className="w-4 h-4" />}
-                  className="px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400"
+                  leftIcon={
+                    <span className="relative inline-flex items-center justify-center w-4 h-4 shrink-0 self-center leading-none">
+                      <ChevronLeft className="w-4 h-4 shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:-translate-x-1" />
+                      <ArrowLeft className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
+                    </span>
+                  }
+                  className="group px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400 [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
                 >
                   Back
                 </Button>
@@ -1619,7 +1625,13 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   variant="outline"
                   size="md"
                   onClick={handlePrev}
-                  className="px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400"
+                  leftIcon={
+                    <span className="relative inline-flex items-center justify-center w-4 h-4 shrink-0 self-center leading-none">
+                      <ChevronLeft className="w-4 h-4 shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:-translate-x-1" />
+                      <ArrowLeft className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
+                    </span>
+                  }
+                  className="group px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400 [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
                 >
                   Previous
                 </Button>
@@ -1645,8 +1657,13 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     size="md"
                     onClick={handleNext}
                     disabled={saving}
-                    rightIcon={<ChevronRight className="w-4 h-4" />}
-                    className="px-6 py-2.5 rounded-xl font-bold !bg-gradient-to-b !from-[#3B82F6] !to-[#1D4ED8] hover:!from-[#2563EB] hover:!to-[#1E40AF] !text-white shadow-md shadow-blue-500/30 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all !shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.45),0_8px_20px_rgba(37,99,235,0.35)]"
+                    rightIcon={
+                      <span className="relative inline-flex items-center justify-center w-4 h-4 shrink-0 self-center leading-none">
+                        <ChevronRight className="w-4 h-4 shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:translate-x-1" />
+                        <ArrowRight className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1" />
+                      </span>
+                    }
+                    className="group px-6 py-2.5 rounded-xl font-bold !bg-gradient-to-b !from-[#3B82F6] !to-[#1D4ED8] hover:!from-[#2563EB] hover:!to-[#1E40AF] !text-white shadow-md shadow-blue-500/30 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all !shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.45),0_8px_20px_rgba(37,99,235,0.35)] [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
                   >
                     Next Step
                   </Button>

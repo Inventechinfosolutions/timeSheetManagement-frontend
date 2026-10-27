@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { StepProps } from "../../../types/appraisal.types";
-import { Star, CheckCircle2, AlertCircle } from "lucide-react";
+import { StepProps, ReviewFormData } from "../../../types/appraisal.types";
+import { Star, AlertCircle } from "lucide-react";
 import {
   animateStarPop,
   animateStarHover,
@@ -272,29 +272,30 @@ export const TeamContributionStep: React.FC<StepProps> = ({
             const hovered = hoveredStars[criterion.key] || 0;
             const isSelected = currentRating > 0;
             const criterionError = errors?.[criterion.key];
-
             const descError = errors?.[criterion.descKey];
 
             return (
               <div
                 key={criterion.key}
                 id={`field-criterion-${criterion.key}`}
-                className={`p-3.5 rounded-2xl border-[1.5px] transition-all duration-300 bg-white flex flex-col gap-3 shadow-2xs ${
+                className={`p-4 rounded-2xl border transition-all duration-300 bg-white flex flex-col justify-between gap-3 shadow-2xs hover:shadow-sm ${
                   criterionError || descError
                     ? "border-red-400 bg-red-50/20 ring-2 ring-red-100"
-                    : "border-[#E2E8F0] hover:border-[#CBD5E1]"
+                    : isSelected
+                    ? "border-blue-200/90 hover:border-blue-300"
+                    : "border-slate-200/90 hover:border-slate-300"
                 }`}
               >
-                {/* Top Row: Title & Star Ratings (Label Badge Removed) */}
-                <div className="flex flex-wrap items-center justify-between gap-2.5">
-                  <div className="flex items-center gap-2 min-w-0">
-                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB] shrink-0" />}
+                {/* Top Row: Title & Star Ratings (No icon, no score badge) */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <span className="text-xs sm:text-[13px] font-bold text-[#0F172A] leading-snug">
-                      {criterion.title} <span className="text-red-500">*</span>
+                      {criterion.title}
                     </span>
+                    <span className="text-red-500 font-bold text-xs">*</span>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center shrink-0">
                     <div
                       className="flex items-center gap-0.5"
                       onMouseLeave={() =>
@@ -330,12 +331,6 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                         );
                       })}
                     </div>
-
-                    {currentRating > 0 && (
-                      <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-200 whitespace-nowrap">
-                        {currentRating}.0 / 5.0
-                      </span>
-                    )}
                   </div>
                 </div>
 
@@ -365,7 +360,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                     } ${readOnly ? "eval-textarea-readonly" : ""}`}
                   />
                   {descError && (
-                    <p className="text-xs text-red-600 font-semibold flex items-center gap-1.5 animate-in fade-in duration-200">
+                    <p className="mt-1 text-xs text-red-600 font-semibold flex items-center gap-1.5 animate-in fade-in duration-200">
                       <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
                       <span>{descError}</span>
                     </p>

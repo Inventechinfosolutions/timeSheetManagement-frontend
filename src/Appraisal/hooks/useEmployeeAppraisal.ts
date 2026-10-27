@@ -16,6 +16,7 @@ export interface UseEmployeeAppraisalReturn {
   activeAssignment: QuarterlyReviewAssignment | null;
   formData: ReviewFormData;
   financialYear: string;
+  defaultYear: string;
   quarter: string;
   statusFilter: string;
   yearOptions: { value: string; label: string }[];
@@ -247,6 +248,7 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
     activeAssignment,
     formData,
     financialYear,
+    defaultYear: defaultYear.current,
     quarter,
     statusFilter,
     yearOptions,

@@ -445,8 +445,12 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     </div>
   );
 
+  const hasBackButton =
+    buttonState === AssignButtonState.CONFIRM ||
+    (Boolean(onBack) && buttonState === AssignButtonState.IDLE);
+
   const modalFooter = (
-    <div className="flex items-center justify-end gap-3 w-full">
+    <div className="flex items-center justify-between w-full flex-1">
       {buttonState === AssignButtonState.CONFIRM ? (
         <button
           type="button"
@@ -470,7 +474,9 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
           <ArrowLeft className="w-4 h-4 shrink-0" />
           <span>Back</span>
         </button>
-      ) : null}
+      ) : (
+        <div />
+      )}
       <button
         type="button"
         disabled={buttonState === AssignButtonState.ANIMATING || buttonState === AssignButtonState.ASSIGNED}
@@ -516,7 +522,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       closeBtnClassName="assign-modal-close-btn"
       closeOnBackdrop={false}
       closeOnEsc={false}
-      className={`assign-quarterly-modal-dialog ${isModalClosing ? "modal-is-closing" : ""} p-5 sm:p-6 overflow-hidden flex flex-col justify-between [&>div:first-child]:border-none [&>div:first-child]:pb-1.5 [&>div:first-child]:mb-1.5 [&>div:last-child]:border-none [&>div:last-child]:pt-2.5 [&>div:last-child]:mt-2.5`}
+      className={`assign-quarterly-modal-dialog ${isModalClosing ? "modal-is-closing" : ""} p-5 sm:p-6 overflow-hidden flex flex-col justify-between [&>div:first-child]:border-none [&>div:first-child]:pb-1.5 [&>div:first-child]:mb-1.5 [&>div:last-child]:border-none [&>div:last-child]:pt-2.5 [&>div:last-child]:mt-2.5 [&>div:last-child]:w-full`}
     >
       {buttonState !== AssignButtonState.IDLE && submitSummary ? (
         <AssignSubmitPanel summary={submitSummary} status={buttonState} error={assignError} />

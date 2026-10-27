@@ -639,12 +639,18 @@ export const ManagerQuarterlyReview: React.FC = () => {
                   placeholder="Department"
                   allowClear={true}
                   defaultValue=""
-                  prefixIcon={<Building2 size={14} className="filter-icon-dept text-[#4318FF]" />}
+                  prefixIcon={
+                    <span className="filter-icon-badge filter-icon-badge-dept">
+                      <Building2 size={13} />
+                    </span>
+                  }
                   options={departmentOptions}
                   value={department}
                   onChange={(value) => setDepartment(value || AppraisalFilterAll.ALL)}
-                  maxLabelWidth="max-w-[100px]"
-                  buttonClassName="manager-review-filter-btn rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[136px]"
+                  maxLabelWidth="max-w-[85px]"
+                  buttonClassName={`manager-review-filter-btn filter-btn-dept ${
+                    department && department !== AppraisalFilterAll.ALL ? "filter-active" : ""
+                  } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[130px]`}
                 />
               )}
 

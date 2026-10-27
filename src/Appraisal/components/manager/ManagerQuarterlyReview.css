@@ -634,6 +634,22 @@
   transition: transform 0.25s ease, background 0.25s ease;
 }
 
+/* Department (Royal Indigo #4318FF) */
+.filter-icon-badge-dept {
+  background: #EEF2FF;
+  color: #4318FF;
+}
+
+.filter-btn-dept:hover .filter-icon-badge-dept {
+  background: #E0E7FF;
+  color: #3730A3;
+  transform: scale(1.08) rotate(-4deg);
+}
+
+.filter-btn-dept.filter-active {
+  border-color: rgba(67, 24, 255, 0.4) !important;
+}
+
 /* Financial Year (Royal Blue #2563EB) */
 .filter-icon-badge-fy {
   background: #EFF6FF;

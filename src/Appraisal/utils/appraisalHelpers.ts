@@ -866,7 +866,7 @@ export interface RatingTierConfig {
   starFilledClass: string;
   starEmptyClass: string;
   starAnimation: "none" | "gentle-fill" | "celebrate";
-  illustrationType: "sprout" | "steps" | "trophy" | "medal" | "champion_trophy";
+  illustrationType: "sprout" | "steps" | "trophy" | "medal" | "champion_trophy" | "bronze_shield";
 }
 
 export const getRatingTierConfig = (scoreValue: number): RatingTierConfig => {
@@ -944,7 +944,7 @@ export const getRatingTierConfig = (scoreValue: number): RatingTierConfig => {
     };
   }
 
-  // 3.0–3.9 — Meets Expectations (Mint / Green)
+  // 3.0–3.9 — Meets Expectations (Bronze)
   if (score < 4.0) {
     return {
       key: "meets_expectations",
@@ -955,32 +955,32 @@ export const getRatingTierConfig = (scoreValue: number): RatingTierConfig => {
       quoteMessage:
         "Solid work! Keep growing your impact. You have accomplished your core quarterly objectives and contributed positively to team milestones. Keep striving for even higher impact in the next cycle!",
       motivationalLines: ["Small steps", "create big", "success!"],
-      theme: "mint",
-      accentHex: "#10B981",
-      badgeBgHex: "#DCFCE7",
-      badgeBorderHex: "#BBF7D0",
-      badgeTextHex: "#15803D",
-      cardGlow: "shadow-[0_20px_50px_-10px_rgba(16,185,129,0.22)]",
-      bgSwoosh: "from-emerald-100/60 via-teal-50/40 to-transparent",
-      bgAura: "bg-emerald-200/35",
-      badgeBg: "bg-[#DCFCE7]",
-      badgeBorder: "border-[#BBF7D0]",
-      badgeText: "text-[#15803D]",
-      quoteBg: "bg-[#F0FDF4]",
-      quoteBorder: "border-[#DCFCE7]",
-      quoteBar: "bg-[#10B981]",
-      quoteText: "text-[#15803D]",
-      greetingColor: "text-emerald-600",
-      underlineColor: "text-emerald-500",
-      rayColor: "text-emerald-400",
-      starFilledClass: "text-emerald-500 fill-emerald-500",
-      starEmptyClass: "text-emerald-200 fill-emerald-50",
+      theme: "bronze",
+      accentHex: "#CD7F32",
+      badgeBgHex: "#FDF4EC",
+      badgeBorderHex: "#E2BA98",
+      badgeTextHex: "#8C4A1A",
+      cardGlow: "shadow-[0_20px_50px_-10px_rgba(205,127,50,0.25)]",
+      bgSwoosh: "from-amber-100/50 via-orange-50/30 to-transparent",
+      bgAura: "bg-amber-600/15",
+      badgeBg: "bg-[#FDF4EC]",
+      badgeBorder: "border-[#E2BA98]",
+      badgeText: "text-[#8C4A1A]",
+      quoteBg: "bg-[#FFF9F5]",
+      quoteBorder: "border-[#F5DECC]",
+      quoteBar: "bg-[#CD7F32]",
+      quoteText: "text-[#8C4A1A]",
+      greetingColor: "text-[#A35C26]",
+      underlineColor: "text-[#CD7F32]",
+      rayColor: "text-[#CD7F32]",
+      starFilledClass: "text-[#CD7F32] fill-[#CD7F32]",
+      starEmptyClass: "text-[#E8C5A5] fill-[#FDF4EC]",
       starAnimation: "none",
-      illustrationType: "trophy",
+      illustrationType: "bronze_shield",
     };
   }
 
-  // 4.0–4.5 — Exceeds Expectations (Emerald / Teal)
+  // 4.0–4.5 — Exceeds Expectations (Silver)
   if (score <= 4.5) {
     return {
       key: "exceeds_expectations",
@@ -991,26 +991,26 @@ export const getRatingTierConfig = (scoreValue: number): RatingTierConfig => {
       quoteMessage:
         "Excellent work! You're making a real difference. Your strong initiative, deliverable quality, and collaborative drive consistently elevate benchmark goals.",
       motivationalLines: ["Making a", "real & lasting", "difference!"],
-      theme: "emerald",
-      accentHex: "#0D9488",
-      badgeBgHex: "#CCFBF1",
-      badgeBorderHex: "#99F6E4",
-      badgeTextHex: "#0F766E",
-      cardGlow: "shadow-[0_20px_55px_-10px_rgba(13,148,136,0.28)]",
-      bgSwoosh: "from-teal-100/65 via-emerald-50/45 to-transparent",
-      bgAura: "bg-teal-200/40",
-      badgeBg: "bg-[#CCFBF1]",
-      badgeBorder: "border-[#99F6E4]",
-      badgeText: "text-[#0F766E]",
-      quoteBg: "bg-[#F0FDFA]",
-      quoteBorder: "border-[#CCFBF1]",
-      quoteBar: "bg-[#0D9488]",
-      quoteText: "text-[#0F766E]",
-      greetingColor: "text-teal-600",
-      underlineColor: "text-teal-500",
-      rayColor: "text-teal-400",
-      starFilledClass: "text-teal-500 fill-teal-500",
-      starEmptyClass: "text-teal-200 fill-teal-50",
+      theme: "silver",
+      accentHex: "#475569",
+      badgeBgHex: "#F1F5F9",
+      badgeBorderHex: "#94A3B8",
+      badgeTextHex: "#1E293B",
+      cardGlow: "shadow-[0_20px_55px_-10px_rgba(71,85,105,0.25)]",
+      bgSwoosh: "from-slate-200/80 via-blue-50/40 to-transparent",
+      bgAura: "bg-slate-300/40",
+      badgeBg: "bg-[#F1F5F9]",
+      badgeBorder: "border-[#94A3B8]",
+      badgeText: "text-[#1E293B] font-extrabold",
+      quoteBg: "bg-[#F8FAFC]",
+      quoteBorder: "border-[#CBD5E1]",
+      quoteBar: "bg-[#475569]",
+      quoteText: "text-[#1E293B]",
+      greetingColor: "text-slate-800 font-extrabold",
+      underlineColor: "text-slate-700",
+      rayColor: "text-slate-500",
+      starFilledClass: "text-slate-700 fill-[#E2E8F0] drop-shadow-[0_2px_4px_rgba(71,85,105,0.35)]",
+      starEmptyClass: "text-slate-300 fill-slate-100",
       starAnimation: "gentle-fill",
       illustrationType: "medal",
     };

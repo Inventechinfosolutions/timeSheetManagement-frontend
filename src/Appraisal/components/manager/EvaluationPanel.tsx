@@ -31,10 +31,12 @@ import {
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
 import { EmployeePerformanceStatus, QuarterlyReviewStatus } from "../../enums/appraisal.enums";
 import { AppraisalApi, formatAppraisalDisplayDate, readApiError, RevealedRating } from "../../reducers/appraisal.reducer";
-import { DatePicker, Dropdown } from "../../../components/ui";
-import { message } from "antd";
+import { Dropdown } from "../../../components/ui";
+import { DatePicker as AntDatePicker, ConfigProvider, message } from "antd";
+import dayjs from "dayjs";
 import { getRatingTierConfig } from "../../utils/appraisalHelpers";
 import "./EvaluationPanel.css";
+import "./AssignQuarterlyReviewModal.css";
 import AttachmentItem from "../common/AttachmentItem";
 
 export interface EvaluationData {
@@ -155,6 +157,21 @@ const ENVIRONMENT_RATINGS: Record<number, { label: string; emoji: string }> = {
   5: { label: "Excellent", emoji: "🤩" },
 };
 
+const datePickerTheme = {
+  token: {
+    borderRadius: 14,
+    controlHeight: 42,
+    colorBgContainer: "#FFFFFF",
+    colorBorder: "#BFDBFE",
+    colorPrimary: "#2563EB",
+  },
+  components: {
+    DatePicker: {
+      cellHeight: 24,
+      cellWidth: 26,
+    },
+  },
+};
 
 export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   record,
@@ -598,6 +615,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const [assignmentDescription, setAssignmentDescription] = useState<string>(record.description || "");
   const [savingAssignment, setSavingAssignment] = useState<boolean>(false);
   const [assignmentError, setAssignmentError] = useState<string>("");
+  const datePickerWrapperRef = useRef<HTMLDivElement>(null);
+  const [datePickerWidth, setDatePickerWidth] = useState<number>(0);
 
   const [strengths, setStrengths] = useState<string>(managerEvaluation?.performanceStrengths || "");
   const [improvements, setImprovements] = useState<string>(managerEvaluation?.areasOfImprovement || "");
@@ -612,6 +631,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const [finalManagerComments, setFinalManagerComments] = useState<string>(managerEvaluation?.finalManagerComments || "");
   const [managerConfirmation, setManagerConfirmation] = useState<boolean>(Boolean(managerEvaluation?.managerConfirmation));
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
+  const lastEvaluationResultRef = useRef<EvaluationData | null>(null);
   const [isDraftSaving, setIsDraftSaving] = useState<boolean>(false);
   const [finalPerformanceRating, setFinalPerformanceRating] = useState<number>(() => {
     const perfRating = Number(managerEvaluation?.finalPerformanceRating);
@@ -737,6 +757,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [submitButtonState, setSubmitButtonState] = useState<"idle" | "animating" | "assigned">("idle");
+  const [confirmSubmitState, setConfirmSubmitState] = useState<"idle" | "submitting" | "success">("idle");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const clearFieldError = (fieldKey: string) => {
@@ -1065,16 +1086,17 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     }
 
     setFieldErrors({});
+    setConfirmSubmitState("idle");
     // Open confirm modal before final submit
     setShowConfirmModal(true);
   };
 
   // Called after user confirms in the modal
   const handleConfirmedSubmit = () => {
-    setShowConfirmModal(false);
-    if (submitButtonState !== "idle") return;
+    if (confirmSubmitState !== "idle" || isSubmitting) return;
     if (!reviewId) {
       message.error("This review cannot be saved.");
+      setShowConfirmModal(false);
       return;
     }
 
@@ -1086,9 +1108,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       improvements,
       remarks,
     };
+    lastEvaluationResultRef.current = evaluationResult;
 
-    setSubmitButtonState("animating");
     setIsSubmitting(true);
+    setConfirmSubmitState("submitting");
 
     void AppraisalApi.evaluateReview(reviewId, {
       managerId: record.managerId || record.assignedBy || undefined,
@@ -1117,19 +1140,24 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       isDraft: false,
     })
       .then(() => {
+        setConfirmSubmitState("success");
         setSubmitButtonState("assigned");
         setIsSubmitting(false);
-        setIsSuccess(true);
-        scrollToTop();
-        onSubmitEvaluation?.(record.reviewId ? String(record.reviewId) : record.id, evaluationResult);
+
+        // Keep the success state visible before closing the modal and returning to dashboard
         setTimeout(() => {
-          scrollToTop();
+          setShowConfirmModal(false);
+          setConfirmSubmitState("idle");
+          if (lastEvaluationResultRef.current) {
+            onSubmitEvaluation?.(record.reviewId ? String(record.reviewId) : record.id, lastEvaluationResultRef.current);
+          }
+          message.success("Evaluation submitted successfully!");
           onBack();
-          setSubmitButtonState("idle");
         }, 1200);
       })
       .catch((error) => {
         setIsSubmitting(false);
+        setConfirmSubmitState("idle");
         setSubmitButtonState("idle");
         message.error(readApiError(error));
       });
@@ -1315,6 +1343,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     .join("")
     .substring(0, 2)
     .toUpperCase();
+
+
 
   return (
     <div ref={panelTopRef} className="evaluation-panel-container relative">
@@ -1502,7 +1532,46 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       {deadlineDate || "—"}
                     </div>
                   ) : (
-                    <DatePicker className="w-full" value={deadlineDate} onChange={setDeadlineDate} />
+                    <div ref={datePickerWrapperRef} className="w-full">
+                      <ConfigProvider theme={datePickerTheme}>
+                        <AntDatePicker
+                          inputReadOnly={true}
+                          showToday={false}
+                          placement="bottomLeft"
+                          popupAlign={{ overflow: { adjustY: false } }}
+                          popupStyle={datePickerWidth ? { width: `${datePickerWidth}px` } : undefined}
+                          onOpenChange={(open) => {
+                            if (open && datePickerWrapperRef.current) {
+                              const rect = datePickerWrapperRef.current.getBoundingClientRect();
+                              if (rect.width > 0) {
+                                const w = Math.round(rect.width);
+                                setDatePickerWidth(w);
+                                document.documentElement.style.setProperty("--date-picker-width", `${w}px`);
+                              }
+                            }
+                          }}
+                          classNames={{
+                            popup: "hide-other-months show-weekdays assign-ant-datepicker-popup",
+                          }}
+                          value={deadlineDate ? dayjs(deadlineDate, "DD-MM-YYYY") : null}
+                          onChange={(date) => {
+                            const formatted = date ? date.format("DD-MM-YYYY") : "";
+                            setDeadlineDate(formatted);
+                            setAssignmentError("");
+                          }}
+                          format="DD-MM-YYYY"
+                          placeholder="dd-mm-yyyy"
+                          disabledDate={(current) => {
+                            const fromDateObj = assignedDate ? dayjs(assignedDate, "DD-MM-YYYY") : null;
+                            if (!fromDateObj || !fromDateObj.isValid()) {
+                              return false;
+                            }
+                            return current && current.isBefore(fromDateObj, "day");
+                          }}
+                          className="w-full rounded-xl border border-blue-200/70 bg-white px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control"
+                        />
+                      </ConfigProvider>
+                    </div>
                   )}
                 </div>
               </div>
@@ -3213,51 +3282,108 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       {showConfirmModal && typeof document !== "undefined" && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 eval-themed-modal-overlay animate-in fade-in duration-200"
-          onClick={() => setShowConfirmModal(false)}
+          onClick={() => !isSubmitting && confirmSubmitState === "idle" && setShowConfirmModal(false)}
         >
           <div
             className="eval-themed-modal-card max-w-sm w-full p-6 sm:p-7 text-[#2B3674] relative shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <button
-              type="button"
-              onClick={() => setShowConfirmModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors z-20"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            {!isSubmitting && confirmSubmitState === "idle" && (
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors z-20 cursor-pointer"
+                title="Cancel"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
 
             <div className="text-center space-y-3 mb-6">
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-amber-500/25">
-                <Send className="w-5 h-5" />
+              <div
+                className={`w-12 h-12 mx-auto rounded-2xl flex items-center justify-center text-white transition-all duration-300 ${
+                  confirmSubmitState === "success"
+                    ? "bg-gradient-to-tr from-[#10B981] to-[#059669] shadow-lg shadow-emerald-500/25 scale-105"
+                    : "bg-gradient-to-tr from-amber-400 to-orange-500 shadow-lg shadow-amber-500/25"
+                }`}
+              >
+                {confirmSubmitState === "success" ? (
+                  <Check className="w-5 h-5 text-white stroke-[2.5]" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
               </div>
-              <h3 className="text-lg font-bold tracking-tight text-[#2B3674]">Submit Final Review?</h3>
+              <h3 className="text-lg font-bold tracking-tight text-[#2B3674]">
+                {confirmSubmitState === "success" ? "Review Submitted!" : "Submit Final Review?"}
+              </h3>
               <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
-                Once submitted, the appraisal will be <span className="font-bold text-[#2B3674]">finalized and shared with the employee</span>. This action cannot be undone.
+                {confirmSubmitState === "success" ? (
+                  <span>
+                    The appraisal has been{" "}
+                    <span className="font-bold text-[#10B981]">successfully finalized and shared</span> with the employee.
+                  </span>
+                ) : (
+                  <span>
+                    Once submitted, the appraisal will be{" "}
+                    <span className="font-bold text-[#2B3674]">finalized and shared with the employee</span>. This action cannot be undone.
+                  </span>
+                )}
               </p>
             </div>
 
-            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-5">
-              <p className="text-xs font-semibold text-amber-800 text-center">
-                ⚠️ Please make sure all information is accurate before submitting.
-              </p>
-            </div>
+            {confirmSubmitState === "success" ? (
+              <div className="p-3.5 rounded-xl bg-[#ECFDF5] border-2 border-[#10B981] mb-5 shadow-sm transition-all duration-300 animate-in fade-in">
+                <p className="text-xs font-bold text-[#065F46] text-center flex items-center justify-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-[#059669] shrink-0" />
+                  <span>Review evaluation submitted successfully!</span>
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 mb-5 transition-all duration-300">
+                <p className="text-xs font-semibold text-amber-800 text-center flex items-center justify-center gap-1.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Please make sure all information is accurate before submitting.</span>
+                </p>
+              </div>
+            )}
 
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
+                disabled={isSubmitting || confirmSubmitState !== "idle"}
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#2B3674] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
+                className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#2B3674] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 type="button"
+                disabled={confirmSubmitState !== "idle"}
                 onClick={handleConfirmedSubmit}
-                className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                className={`flex-1 py-3 rounded-2xl text-white text-xs font-bold transition-all duration-350 flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed eval-confirm-submit-btn ${
+                  confirmSubmitState === "idle"
+                    ? "confirm-btn-idle active:scale-[0.98]"
+                    : confirmSubmitState === "submitting"
+                    ? "confirm-btn-submitting"
+                    : "confirm-btn-success"
+                }`}
               >
-                <Send className="w-3.5 h-3.5" />
-                <span>Yes, Submit Review</span>
+                <span className="confirm-btn-icon-box">
+                  {confirmSubmitState === "success" ? (
+                    <Check className="w-3.5 h-3.5 text-white stroke-[3] confirm-icon-check" />
+                  ) : (
+                    <Send
+                      className={`w-3.5 h-3.5 text-white -rotate-12 ${
+                        confirmSubmitState === "submitting" ? "confirm-icon-launching" : ""
+                      }`}
+                    />
+                  )}
+                </span>
+                <span className={`confirm-btn-label ${confirmSubmitState === "success" ? "confirm-btn-label-slide" : ""}`}>
+                  {confirmSubmitState === "success"
+                    ? "Review Submitted!"
+                    : "Yes, Submit Review"}
+                </span>
               </button>
             </div>
           </div>
