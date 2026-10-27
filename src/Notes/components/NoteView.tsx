@@ -32,6 +32,7 @@ import {
   absorbOrphansIntoPages,
   buildDocumentPagesHtml,
   isNoteLandscape,
+  paginateToA4Sheets,
 } from "../utils/documentLayout";
 import { refreshAttachmentBadges } from "../utils/noteEditorAttachmentHelpers";
 import {
@@ -103,12 +104,11 @@ export const NoteView: React.FC<NoteViewProps> = ({
   useLayoutEffect(() => {
     if (!showA4Content || !contentRef.current) return;
     const root = contentRef.current;
-    // Match edit: keep saved page layout — do NOT reflow onto a next sheet
     absorbOrphansIntoPages(root, isLandscape);
     wrapWideTablesInRoot(root);
     wrapNoteInlineImages(root);
+    paginateToA4Sheets(root, isLandscape, true);
     refreshAttachmentBadges(root);
-    wrapWideTablesInRoot(root);
     let cancelled = false;
     (async () => {
       if (onHydrateInlineImages) {
@@ -116,7 +116,7 @@ export const NoteView: React.FC<NoteViewProps> = ({
       }
       if (cancelled || !contentRef.current) return;
       wrapNoteInlineImages(contentRef.current);
-      wrapWideTablesInRoot(contentRef.current);
+      paginateToA4Sheets(contentRef.current, isLandscape, true);
     })();
     return () => {
       cancelled = true;

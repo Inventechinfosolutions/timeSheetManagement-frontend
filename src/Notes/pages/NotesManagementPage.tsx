@@ -237,7 +237,8 @@ export const NotesManagementPage: React.FC = () => {
         open={previewImageModal.open}
         url={previewImageModal.url}
         title={previewImageModal.title}
-        onClose={() => setPreviewImageModal({ open: false, url: "", title: "" })}
+        mimeType={previewImageModal.mimeType}
+        onClose={() => setPreviewImageModal({ open: false, url: "", title: "", mimeType: "" })}
       />
 
       {/* Global Excel Spreadsheet Editor Modal */}
