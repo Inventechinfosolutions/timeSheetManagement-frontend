@@ -128,7 +128,7 @@ const AttendenceEditRequests = () => {
 
   return (
     <div className="p-4 md:p-8 bg-[#F4F7FE] font-sans text-[#2B3674]">
-      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="mb-0 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#2B3674]">
               Access Ticket
