@@ -240,9 +240,11 @@ export interface ReviewFormData {
   supportOrTrainingRequired?: string;
   // Step 5: Company Environment
   workCultureFeedback: string;
+  feedbackOnWorkCulture?: string;
   toolingAndResources: string;
   workLifeBalance?: string;
   suggestionsForImprovement?: string;
+  rateCompanyEnvironment?: string;
   companyEnvironmentRating?: number;
   toolingAndResourcesRating?: number;
   managementSupportRating: number;

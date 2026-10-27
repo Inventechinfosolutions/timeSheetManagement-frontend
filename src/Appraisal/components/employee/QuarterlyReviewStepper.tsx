@@ -757,6 +757,21 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         stepErrors.managementSupportRating = "Please rate manager support (1 to 5).";
         if (!firstFieldId) firstFieldId = "field-managementSupportRating";
       }
+      const culture = (data.workCultureFeedback || data.feedbackOnWorkCulture || "").trim();
+      if (!culture) {
+        stepErrors.workCultureFeedback = "Feedback on work culture is required.";
+        if (!firstFieldId) firstFieldId = "field-workCultureFeedback";
+      }
+      const lifeBalance = (data.workLifeBalance || "").trim();
+      if (!lifeBalance) {
+        stepErrors.workLifeBalance = "Work life balance feedback is required.";
+        if (!firstFieldId) firstFieldId = "field-workLifeBalance";
+      }
+      const suggestions = (data.suggestionsForImprovement || "").trim();
+      if (!suggestions) {
+        stepErrors.suggestionsForImprovement = "Suggestions for improvement is required.";
+        if (!firstFieldId) firstFieldId = "field-suggestionsForImprovement";
+      }
     } else if (stepNum === 6) {
       const selfRating = data.overallSelfRating || 0;
       if (!selfRating || selfRating <= 0) {
