@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { StepProps, ReviewFormData } from "../../../types/appraisal.types";
 import { Star, Edit3, AlertCircle, CheckCircle2, ChevronDown, Calendar, FileText } from "lucide-react";
 import { getQuarterPeriod } from "../../../utils/appraisalHelpers";
+import { ENVIRONMENT_SCORES } from "../../../constants/appraisal.constants";
 import {
   initScrollRevealCards,
   animateStarPop,
@@ -11,6 +12,7 @@ import {
 } from "../../../animations/appraisalAnimations";
 import AttachmentItem from "../../common/AttachmentItem";
 import "../AppraisalDashboard.css";
+import { renderAnimatedEmojiIcon } from "./CompanyEnvironmentStep";
 
 const RATING_LABELS: Record<number, string> = {
   1: "Needs Improvement",
@@ -19,6 +21,14 @@ const RATING_LABELS: Record<number, string> = {
   4: "Exceeds Expectations",
   5: "Outstanding",
 };
+
+const RATING_OPTIONS = [
+  { id: 1, label: "Very Bad", emoji: "😡", enumVal: "VERY_BAD" },
+  { id: 2, label: "Bad", emoji: "🙁", enumVal: "BAD" },
+  { id: 3, label: "Neutral", emoji: "😐", enumVal: "NEUTRAL" },
+  { id: 4, label: "Good", emoji: "😊", enumVal: "GOOD" },
+  { id: 5, label: "Excellent", emoji: "🤩", enumVal: "EXCELLENT" },
+] as const;
 
 const TEAM_CRITERIA: { key: string; title: string; descKey: keyof ReviewFormData }[] = [
   { key: "communication", title: "Communication & Coordination", descKey: "communicationDescription" },
@@ -285,6 +295,7 @@ export const ReviewStep: React.FC<StepProps> = ({
     (formData.companyEnvironmentRating && formData.companyEnvironmentRating > 0) ||
     (formData.toolingAndResourcesRating && formData.toolingAndResourcesRating > 0) ||
     (formData.managementSupportRating && formData.managementSupportRating > 0) ||
+    Boolean(formData.rateCompanyEnvironment) ||
     Boolean(formData.challengesAffectingProductivity?.trim()) ||
     Boolean(formData.suggestionsForImprovement?.trim()) ||
     Boolean(formData.workCultureFeedback?.trim()) ||
@@ -1039,6 +1050,25 @@ export const ReviewStep: React.FC<StepProps> = ({
             </div>
             <div className="flex items-center gap-2.5">
               {(() => {
+                const envScore =
+                  formData.rateCompanyEnvironment && ENVIRONMENT_SCORES[formData.rateCompanyEnvironment]
+                    ? ENVIRONMENT_SCORES[formData.rateCompanyEnvironment]
+                    : 0;
+                const envInfo = RATING_OPTIONS.find((r) => r.id === envScore);
+
+                if (envScore > 0) {
+                  return (
+                    <div className="px-3 py-1 rounded-xl bg-blue-50 border border-blue-200/80 shadow-2xs flex items-center gap-2 shrink-0 eval-stagger-item eval-stagger-2">
+                      <div className="w-5 h-5 flex items-center justify-center shrink-0 [&>svg]:w-5 [&>svg]:h-5">
+                        {renderAnimatedEmojiIcon(envScore, true)}
+                      </div>
+                      <span className="text-xs font-bold text-[#2563EB]">
+                        {envInfo?.label || "Rated"} ({envScore}/5)
+                      </span>
+                    </div>
+                  );
+                }
+
                 const scores = [
                   formData.companyEnvironmentRating,
                   formData.toolingAndResourcesRating,
@@ -1125,10 +1155,30 @@ export const ReviewStep: React.FC<StepProps> = ({
             </div>
           </div>
 
-          {/* Qualitative Fields Side by Side */}
+          {/* Qualitative Fields 2x2 Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1 items-stretch">
-            {/* Challenges Affecting Productivity */}
+            {/* Feedback on Work Culture */}
             <div className="eval-stagger-item eval-stagger-3 flex flex-col">
+              <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                Feedback on Work Culture
+              </label>
+              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                {formData.workCultureFeedback || formData.feedbackOnWorkCulture || "—"}
+              </div>
+            </div>
+
+            {/* Work Life Balance */}
+            <div className="eval-stagger-item eval-stagger-3 flex flex-col">
+              <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                Work Life Balance
+              </label>
+              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                {formData.workLifeBalance || "—"}
+              </div>
+            </div>
+
+            {/* Challenges Affecting Productivity */}
+            <div className="eval-stagger-item eval-stagger-4 flex flex-col">
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Challenges Affecting Productivity
               </label>
@@ -1143,7 +1193,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 Suggestions for Improvement
               </label>
               <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
-                {formData.suggestionsForImprovement || "—"}
+                {formData.suggestionsForImprovement || formData.toolingAndResources || "—"}
               </div>
             </div>
           </div>
