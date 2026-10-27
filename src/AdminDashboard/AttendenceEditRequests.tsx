@@ -115,10 +115,20 @@ const AttendenceEditRequests = () => {
 
   const pages = Math.max(1, totalPages || 0);
 
+  const submittedTime = (req: {
+    submittedDate?: string | null;
+    createdAt?: string;
+    created_at?: string;
+    id?: number;
+  }) => {
+    const raw = req.submittedDate || req.createdAt || req.created_at;
+    const time = raw ? new Date(raw).getTime() : 0;
+    return Number.isFinite(time) ? time : 0;
+  };
+
   return (
-    <div className="p-4 md:p-8 bg-[#F4F7FE] font-sans text-[#2B3674]">
-      <div className="mb-6">
-        <div className="flex flex-col gap-4">
+    <div className="p-4 md:px-8 md:pb-8 md:pt-0 bg-[#F4F7FE] font-sans text-[#2B3674]">
+      <div className="sticky top-0 z-40 bg-[#F4F7FE] -mx-4 px-4 py-2 mb-4 md:mx-0 md:px-0 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#2B3674]">
               Access Ticket
@@ -128,8 +138,7 @@ const AttendenceEditRequests = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-end justify-between gap-3 w-full">
-            <div className="flex flex-wrap items-end gap-3 ml-auto">
+          <div className="flex flex-wrap items-end gap-3">
               <div className="flex flex-col gap-1.5 relative">
                 <span className="text-xs font-bold text-gray-400 pl-1">
                   Status
@@ -218,9 +227,7 @@ const AttendenceEditRequests = () => {
                   </button>
                 </div>
               )}
-            </div>
           </div>
-        </div>
       </div>
 
       <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-4">
@@ -238,7 +245,7 @@ const AttendenceEditRequests = () => {
                   Department
                 </th>
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                  Submitted
+                  Submitted Date
                 </th>
                 <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[140px] w-[180px] min-w-[180px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                   Status
@@ -267,7 +274,16 @@ const AttendenceEditRequests = () => {
                   </td>
                 </tr>
               ) : (
-                entities.map((req, index) => (
+                [...entities]
+                  .sort((a, b) => {
+                    const timeA = submittedTime(a);
+                    const timeB = submittedTime(b);
+                    if (timeA === timeB) {
+                      return (b.id || 0) - (a.id || 0);
+                    }
+                    return timeB - timeA;
+                  })
+                  .map((req, index) => (
                   <tr
                     key={req.id}
                     className={`group transition-all duration-200 ${
@@ -308,11 +324,13 @@ const AttendenceEditRequests = () => {
                       </span>
                     </td>
                     <td className="py-4 px-4 text-center text-sm font-semibold text-[#475569] whitespace-nowrap">
-                      {req.submittedDate || req.createdAt
-                        ? dayjs(req.submittedDate || req.createdAt).format(
-                            "DD MMM - YYYY",
-                          )
-                        : "N/A"}
+                      {req.submittedDate
+                        ? dayjs(req.submittedDate).format("DD MMM - YYYY")
+                        : req.created_at
+                          ? dayjs(req.created_at).format("DD MMM - YYYY")
+                          : req.createdAt
+                            ? dayjs(req.createdAt).format("DD MMM - YYYY")
+                            : "N/A"}
                     </td>
                     <td
                       className={`py-4 px-3 text-center sticky right-[140px] w-[180px] min-w-[180px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${
