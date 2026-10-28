@@ -659,7 +659,9 @@ const AdminDashboard = () => {
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    {departments.map((dept) => (
+                    {departments
+                      .filter((dept) => dept.departmentName?.trim().toUpperCase() !== "CEO")
+                      .map((dept) => (
                       <button
                         key={dept.id}
                         type="button"

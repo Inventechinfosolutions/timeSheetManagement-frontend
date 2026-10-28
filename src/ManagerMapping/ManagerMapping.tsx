@@ -364,7 +364,9 @@ const ManagerMapping: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex flex-col gap-2">
-                    {departments.map((dept) => (
+                    {departments
+                      .filter((dept) => dept.departmentName?.trim().toUpperCase() !== "CEO")
+                      .map((dept) => (
                       <button
                         key={dept.id}
                         onClick={() =>
@@ -680,7 +682,9 @@ const ManagerMapping: React.FC = () => {
                     >
                       All Departments
                     </button>
-                    {departments.map((dept) => (
+                    {departments
+                      .filter((dept) => dept.departmentName?.trim().toUpperCase() !== "CEO")
+                      .map((dept) => (
                       <button
                         key={dept.id}
                         onClick={() => {

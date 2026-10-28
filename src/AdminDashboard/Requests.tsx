@@ -1149,7 +1149,9 @@ const Requests = () => {
                         >
                           All Departments
                         </button>
-                        {departments.map((dept: any) => (
+                        {departments
+                          .filter((dept: any) => dept.departmentName?.trim().toUpperCase() !== "CEO")
+                          .map((dept: any) => (
                           <button
                             key={dept.id}
                             onClick={() => {

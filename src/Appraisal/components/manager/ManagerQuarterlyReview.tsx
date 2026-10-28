@@ -123,10 +123,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
   }, [dispatch, departments]);
 
   useEffect(() => {
-    if (managerId && !entity?.department) {
-      dispatch(getEntity(managerId));
-    }
-  }, [managerId, entity?.department, dispatch]);
+    if (isAdmin || isCeo || !managerId || entity?.department) return;
+    dispatch(getEntity(managerId));
+  }, [isAdmin, isCeo, managerId, entity?.department, dispatch]);
 
   const fullDepartmentName = useMemo(() => {
     const rawDept =
@@ -425,7 +424,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const departmentOptions = [
     { value: AppraisalFilterAll.ALL, label: "Department" },
     ...(departments || [])
-      .filter((dept) => !(isCeo && dept.departmentName?.trim().toUpperCase() === "CEO"))
+      .filter((dept) => dept.departmentName?.trim().toUpperCase() !== "CEO")
       .map((dept) => ({
         value: dept.departmentName,
         label: dept.departmentName,
