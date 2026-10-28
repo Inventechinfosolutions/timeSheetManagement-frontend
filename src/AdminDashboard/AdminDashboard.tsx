@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 import Chart from "react-apexcharts";
 import { useLocation, useNavigate } from "react-router-dom";
 import { RootState } from "../store";
-import { getEntities } from "../reducers/employeeDetails.reducer";
+import { clearErrorMessage, getEntities, getEntity } from "../reducers/employeeDetails.reducer";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
   Users,
@@ -147,30 +147,86 @@ const AdminDashboard = () => {
   const [isLockDeptOpen, setIsLockDeptOpen] = useState(false);
   const [activeLockType, setActiveLockType] = useState<"Weekly" | "Monthly">("Weekly");
   const [isUpdatingLock, setIsUpdatingLock] = useState(false);
+  const [managerOwnDepartment, setManagerOwnDepartment] = useState("");
+  const [managerDeptStatus, setManagerDeptStatus] = useState<
+    "idle" | "loading" | "ready" | "missing"
+  >("idle");
+
+  const applyLockType = (lockType?: string) => {
+    if (!lockType) return;
+    setActiveLockType(lockType === "Monthly" ? "Monthly" : "Weekly");
+  };
 
   useEffect(() => {
-    if (isManagerView && currentUser?.department) {
-      const dept = String(currentUser.department);
-      setSelectedLockDepartment(dept);
-      dispatch(fetchLockType({ department: dept })).then((res: any) => {
-        if (res.payload?.lockType) {
-          setActiveLockType(
-            res.payload.lockType === "Monthly" ? "Monthly" : "Weekly",
-          );
+    if (!isManagerView) return;
+    const lookupIds = Array.from(
+      new Set(
+        [currentUser?.employeeId, currentUser?.loginId]
+          .filter((id): id is string => Boolean(id))
+          .map(String),
+      ),
+    );
+    if (lookupIds.length === 0) {
+      setManagerDeptStatus("missing");
+      return;
+    }
+
+    let cancelled = false;
+    setManagerDeptStatus("loading");
+
+    const readDepartment = (profile: any) =>
+      String(
+        profile?.department ??
+          profile?.department_name ??
+          profile?.departmentName ??
+          "",
+      ).trim();
+
+    (async () => {
+      for (const id of lookupIds) {
+        try {
+          const profile = await dispatch(getEntity(id)).unwrap();
+          const dept = readDepartment(profile);
+          if (dept) {
+            if (!cancelled) {
+              setManagerOwnDepartment(dept);
+              setManagerDeptStatus("ready");
+            }
+            return;
+          }
+        } catch {
+          if (!cancelled) dispatch(clearErrorMessage());
         }
-      });
-    } else if (!isManagerView && departments.length > 0 && !selectedLockDepartment) {
+      }
+      if (!cancelled) {
+        setManagerOwnDepartment("");
+        setManagerDeptStatus("missing");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isManagerView, currentUser?.employeeId, currentUser?.loginId, dispatch]);
+
+  useEffect(() => {
+    if (!isManagerView || !managerOwnDepartment) return;
+    setSelectedLockDepartment(managerOwnDepartment);
+    dispatch(fetchLockType({ department: managerOwnDepartment })).then((res: any) => {
+      applyLockType(res.payload?.lockType);
+    });
+  }, [isManagerView, managerOwnDepartment, dispatch]);
+
+  useEffect(() => {
+    if (isManagerView) return;
+    if (departments.length > 0 && !selectedLockDepartment) {
       const defaultDept = departments[0].departmentName;
       setSelectedLockDepartment(defaultDept);
       dispatch(fetchLockType({ department: defaultDept })).then((res: any) => {
-        if (res.payload?.lockType) {
-          setActiveLockType(
-            res.payload.lockType === "Monthly" ? "Monthly" : "Weekly",
-          );
-        }
+        applyLockType(res.payload?.lockType);
       });
     }
-  }, [isManagerView, currentUser?.department, departments, selectedLockDepartment, dispatch]);
+  }, [isManagerView, departments, selectedLockDepartment, dispatch]);
 
   const handleSelectLockDepartment = async (deptName: string) => {
     setSelectedLockDepartment(deptName);
@@ -191,10 +247,12 @@ const AdminDashboard = () => {
 
   const handleToggleLockType = async (type: "Weekly" | "Monthly") => {
     if (type === activeLockType) return;
-    const targetDept =
-      selectedLockDepartment ||
-      (departments.length > 0 ? departments[0].departmentName : "") ||
-      (currentUser?.department ? String(currentUser.department) : "");
+    const targetDept = isManagerView
+      ? managerOwnDepartment
+      : selectedLockDepartment ||
+        (departments.length > 0 ? departments[0].departmentName : "");
+
+    if (!targetDept) return;
 
     // Immediately toggle state in UI
     setActiveLockType(type);
@@ -625,6 +683,19 @@ const AdminDashboard = () => {
             <span className="text-sm font-bold text-[#5B6780] pl-1">
               Department
             </span>
+            {isManagerView ? (
+              <div className="w-full h-[52px] flex items-center gap-3 px-5 bg-white rounded-full shadow-[0px_4px_20px_rgba(0,0,0,0.05)] border border-gray-100 text-sm font-bold text-[#2B3674]">
+                <div className="w-8 h-8 rounded-full bg-[#EEF2FF] flex items-center justify-center text-[#1055E8] shrink-0">
+                  <Briefcase size={16} />
+                </div>
+                <span className="truncate">
+                  {managerOwnDepartment ||
+                    (managerDeptStatus === "missing"
+                      ? "Department unavailable"
+                      : "Loading department…")}
+                </span>
+              </div>
+            ) : (
             <button
               type="button"
               onClick={() => setIsLockDeptOpen(!isLockDeptOpen)}
@@ -645,8 +716,9 @@ const AdminDashboard = () => {
                 }`}
               />
             </button>
+            )}
 
-            {isLockDeptOpen && (
+            {!isManagerView && isLockDeptOpen && (
               <>
                 <div
                   className="fixed inset-0 z-40"
@@ -692,9 +764,9 @@ const AdminDashboard = () => {
               {/* Weekly Button */}
               <button
                 type="button"
-                disabled={isUpdatingLock}
+                disabled={isUpdatingLock || (isManagerView && !managerOwnDepartment)}
                 onClick={() => handleToggleLockType("Weekly")}
-                className={`h-full px-6 rounded-full font-bold text-[15px] sm:text-base flex items-center gap-2.5 transition-all duration-200 cursor-pointer select-none ${
+                className={`h-full px-6 rounded-full font-bold text-[15px] sm:text-base flex items-center gap-2.5 transition-all duration-200 cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed ${
                   activeLockType === "Weekly"
                     ? "bg-[#1055E8] text-white shadow-[0px_2px_8px_rgba(16,85,232,0.3)]"
                     : "bg-transparent text-[#1B2559] hover:text-[#1055E8]"
@@ -716,9 +788,9 @@ const AdminDashboard = () => {
               {/* Monthly Button */}
               <button
                 type="button"
-                disabled={isUpdatingLock}
+                disabled={isUpdatingLock || (isManagerView && !managerOwnDepartment)}
                 onClick={() => handleToggleLockType("Monthly")}
-                className={`h-full px-6 rounded-full font-bold text-[15px] sm:text-base flex items-center gap-2.5 transition-all duration-200 cursor-pointer select-none ${
+                className={`h-full px-6 rounded-full font-bold text-[15px] sm:text-base flex items-center gap-2.5 transition-all duration-200 cursor-pointer select-none disabled:opacity-50 disabled:cursor-not-allowed ${
                   activeLockType === "Monthly"
                     ? "bg-[#1055E8] text-white shadow-[0px_2px_8px_rgba(16,85,232,0.3)]"
                     : "bg-transparent text-[#1B2559] hover:text-[#1055E8]"

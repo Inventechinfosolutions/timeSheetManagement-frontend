@@ -5,6 +5,7 @@ interface DocumentPreviewModalProps {
   open: boolean;
   url: string;
   title: string;
+  mimeType?: string;
   onClose: () => void;
 }
 
@@ -12,20 +13,48 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
   open,
   url,
   title,
+  mimeType,
   onClose,
 }) => {
+  const [detectedType, setDetectedType] = React.useState<string>("");
+
+  React.useEffect(() => {
+    if (!url) {
+      setDetectedType("");
+      return;
+    }
+    if (url.startsWith("blob:") || url.startsWith("data:")) {
+      fetch(url)
+        .then((r) => r.blob())
+        .then((b) => {
+          if (b.type) setDetectedType(b.type);
+        })
+        .catch(() => {});
+    }
+  }, [url]);
+
+  const effectiveMime = (mimeType || detectedType || "").toLowerCase();
   const titleLower = (title || "").toLowerCase();
-  const isPdf = titleLower.endsWith(".pdf") || url.includes("pdf");
-  // Include pasted screenshots (data:image / titled Screenshot) — not only file extensions
+  const isPdf =
+    titleLower.endsWith(".pdf") ||
+    url.includes("pdf") ||
+    effectiveMime.includes("pdf");
   const isImage =
     /^data:image\//i.test(url) ||
     titleLower === "screenshot" ||
     titleLower.startsWith("screenshot.") ||
     /\.(png|jpe?g|webp|gif|svg|bmp)(\?.*)?$/i.test(titleLower) ||
     /\.(png|jpe?g|webp|gif|svg|bmp)/i.test(url) ||
+    effectiveMime.startsWith("image/") ||
     /[?&]mime=image\//i.test(url);
-  const isWord = /\.(docx?|rtf|odt)$/i.test(titleLower);
-  const isExcel = /\.(xlsx?|csv)$/i.test(titleLower);
+  const isWord =
+    /\.(docx?|rtf|odt)$/i.test(titleLower) ||
+    effectiveMime.includes("word") ||
+    effectiveMime.includes("officedocument.wordprocessingml");
+  const isExcel =
+    /\.(xlsx?|csv)$/i.test(titleLower) ||
+    effectiveMime.includes("sheet") ||
+    effectiveMime.includes("excel");
 
   // PDF open parameters to hide the left thumbnail/contents sidebar and fit full page width
   const pdfViewerUrl =
