@@ -212,6 +212,7 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
     if (isOpen) {
       setDescription(
         requestDetails?.description ||
+        assignment?.editRequestReason ||
         (assignment as any)?.editRequestReason ||
         ""
       );
@@ -462,10 +463,10 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
                   }
                   className={`w-full rounded-xl border ${error ? "border-red-400 bg-red-50/20" : "border-slate-200"
                     } p-2.5 text-xs text-[#0F172A] ${isReadOnly
-                      ? "bg-slate-50/90 text-slate-600 cursor-not-allowed select-none"
+                      ? "bg-slate-50/90 text-slate-700 select-text"
                       : "placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100/60"
-                    } transition-all resize-none min-h-[85px] leading-relaxed`}
-                  disabled={isSubmitting || isReadOnly}
+                    } transition-all resize-none min-h-[85px] leading-relaxed break-words break-all whitespace-pre-wrap`}
+                  disabled={isSubmitting}
                 />
 
                 {error && (

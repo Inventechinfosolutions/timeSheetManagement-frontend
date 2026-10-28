@@ -113,6 +113,7 @@ export interface QuarterlyReviewAssignment {
   editAllowedUntil?: string;
   reassignCount?: number;
   auditHistory?: AppraisalAuditEntry[];
+  editRequestReason?: string | null;
 }
 
 export interface AccessRequest {

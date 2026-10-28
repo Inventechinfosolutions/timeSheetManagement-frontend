@@ -516,6 +516,7 @@ export const toPerformanceAssignment = (
     submittedAt: row.submittedAt || undefined,
     editAllowedUntil: row.editAllowedUntil || undefined,
     reassignCount: row.reassignCount || 0,
+    editRequestReason: row.editRequestReason || (row as any).edit_request_reason || undefined,
   };
 };
 
@@ -551,6 +552,7 @@ export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyRev
     editAllowedUntil: review.performanceDetails?.editAllowedUntil || undefined,
     reassignCount: review.reassignCount || review.performanceDetails?.reassignCount || 0,
     auditHistory: review.auditHistory || review.performanceDetails?.auditHistory || undefined,
+    editRequestReason: review.performanceDetails?.editRequestReason || (review as any).editRequestReason || (review as any).edit_request_reason || undefined,
   };
 };
 
