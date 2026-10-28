@@ -252,6 +252,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
   onRemoveAttachment,
   readOnly = false,
   onSaveProject,
+  onPersistDraft,
   onDeleteProject,
 }) => {
   const projectName = formData.projectName || "";
@@ -429,13 +430,21 @@ export const AchievementsStep: React.FC<StepProps> = ({
   const handleAddTechnology = (tech: string) => {
     const trimmed = tech.trim();
     if (!trimmed) return;
-    if (!technologiesUsed.includes(trimmed)) {
-      onChange("technologiesUsed", [...technologiesUsed, trimmed]);
-      setAddErrors((prev) => ({ ...prev, technologiesUsed: "" }));
-      if (clearError) {
-        clearError("technologiesUsed");
-        clearError("projects");
-      }
+    const existing = technologiesUsed.find(
+      (item) => item.toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (existing) {
+      const duplicateMessage = `${existing} is already added.`;
+      setAddErrors((prev) => ({ ...prev, technologiesUsed: duplicateMessage }));
+      message.error(duplicateMessage);
+      setTechInput("");
+      return;
+    }
+    onChange("technologiesUsed", [...technologiesUsed, trimmed]);
+    setAddErrors((prev) => ({ ...prev, technologiesUsed: "" }));
+    if (clearError) {
+      clearError("technologiesUsed");
+      clearError("projects");
     }
     setTechInput("");
   };
@@ -588,7 +597,19 @@ export const AchievementsStep: React.FC<StepProps> = ({
     }
   };
 
-  const handleAddMoreClick = () => {
+  const storeDraft = async (nextProjects: PerformanceProject[], draftIndex: number) => {
+    if (onPersistDraft) {
+      const saved = await onPersistDraft(nextProjects, draftIndex);
+      if (!saved) {
+        message.error("Failed to save draft.");
+        return false;
+      }
+    }
+    onChange("projects", nextProjects);
+    return true;
+  };
+
+  const handleAddMoreClick = async () => {
     if (editingIndex !== null) {
       const originalProject = projects[editingIndex];
       // Only preserve as draft if this item was ALREADY a draft
@@ -611,7 +632,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
           attachments: [...attachments],
           isDraft: true,
         };
-        onChange("projects", nextProjects);
+        const saved = await storeDraft(nextProjects, editingIndex);
+        if (!saved) return;
       }
       handleCancelEdit();
     } else if (!draftIsEmpty) {
@@ -632,7 +654,9 @@ export const AchievementsStep: React.FC<StepProps> = ({
         attachments: [...attachments],
         isDraft: true,
       };
-      onChange("projects", [...projects, currentDraft]);
+      const nextProjects = [...projects, currentDraft];
+      const saved = await storeDraft(nextProjects, nextProjects.length - 1);
+      if (!saved) return;
       handleCancelEdit();
     }
     const inputElement = document.getElementById("field-projects");
@@ -644,7 +668,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
     }, 100);
   };
 
-  const handleEditProject = (targetIndex: number) => {
+  const handleEditProject = async (targetIndex: number) => {
     const projectToEdit = projects[targetIndex];
     if (!projectToEdit) return;
 
@@ -675,7 +699,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
           isDraft: true,
         };
         nextProjects.push(currentDraft);
-        onChange("projects", nextProjects);
+        const saved = await storeDraft(nextProjects, nextProjects.length - 1);
+        if (!saved) return;
       }
     } else if (editingIndex >= 0 && editingIndex < projects.length) {
       const original = projects[editingIndex];
@@ -699,7 +724,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
           attachments: [...attachments],
           isDraft: true,
         };
-        onChange("projects", nextProjects);
+        const saved = await storeDraft(nextProjects, editingIndex);
+        if (!saved) return;
       }
     }
 
@@ -1223,7 +1249,10 @@ export const AchievementsStep: React.FC<StepProps> = ({
               <input
                 type="text"
                 value={techInput}
-                onChange={(e) => setTechInput(e.target.value)}
+                onChange={(e) => {
+                  setTechInput(e.target.value);
+                  setAddErrors((prev) => ({ ...prev, technologiesUsed: "" }));
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();

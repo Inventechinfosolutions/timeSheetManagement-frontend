@@ -751,14 +751,30 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   };
 
   const savePendingProject = async (data: ReviewFormData): Promise<void> => {
-    if (!isProjectDraftComplete(data)) {
+    const draft = draftProjectFromForm(data);
+    const hasAnyProjectInput = Boolean(
+      draft.projectName ||
+      draft.description ||
+      draft.projectRole ||
+      draft.responsibilityType ||
+      draft.keyResponsibilities ||
+      (draft.challengesFaced || draft.challenge) ||
+      draft.keyAchievementsOutcomes ||
+      (draft.technologiesUsed || []).length > 0,
+    );
+    if (!hasAnyProjectInput) {
       return;
     }
+    const complete = isProjectDraftComplete(data);
     const id = await ensurePerformanceId();
-    const nextProject = draftProjectFromForm(data);
-    const editingIndex = data.editingProjectIndex;
     const projects = data.projects || [];
-    if (typeof editingIndex === "number" && editingIndex >= 0 && editingIndex < projects.length) {
+    const editingIndex = data.editingProjectIndex;
+    const isEdit = typeof editingIndex === "number" && editingIndex >= 0 && editingIndex < projects.length;
+    if (!complete && isEdit && !projects[editingIndex]?.isDraft) {
+      return;
+    }
+    const nextProject = { ...draft, isDraft: !complete };
+    if (isEdit && typeof editingIndex === "number") {
       const patch = changedProjectFields(projects[editingIndex], nextProject);
       if (Object.keys(patch).length > 0) {
         await AppraisalApi.patchPerformanceProject(id, editingIndex, patch);
@@ -959,6 +975,31 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       return false;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePersistDraft = async (
+    nextProjects: PerformanceProject[],
+    draftIndex: number,
+  ): Promise<boolean> => {
+    const draft = nextProjects[draftIndex];
+    if (!draft) return false;
+    try {
+      const id = await ensurePerformanceId();
+      const previous = formDataRef.current.projects || [];
+      const draftProject = { ...draft, isDraft: true };
+      if (draftIndex >= previous.length) {
+        await AppraisalApi.createPerformanceProject(id, toProjectWriteBody(draftProject));
+      } else {
+        const patch = changedProjectFields(previous[draftIndex], draftProject);
+        if (Object.keys(patch).length > 0) {
+          await AppraisalApi.patchPerformanceProject(id, draftIndex, patch);
+        }
+      }
+      return true;
+    } catch (error) {
+      setSaveError(readApiError(error));
+      return false;
     }
   };
 
@@ -1286,6 +1327,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onRemoveAttachment={removeAttachment}
             readOnly={readOnly}
             onSaveProject={handleSaveProject}
+            onPersistDraft={handlePersistDraft}
             onDeleteProject={handleDeleteProject}
           />
         );
