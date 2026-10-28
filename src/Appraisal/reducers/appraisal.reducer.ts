@@ -399,13 +399,12 @@ export const AppraisalApi = {
       innovationProblemSolving?: number;
       performanceStrengths?: string;
       areasOfImprovement?: string;
-      additionalRemarks?: string;
+      managerComment?: string;
       goalsForNextReviewPeriod?: string;
       trainingDevelopmentRecommendations?: string;
       careerGrowthRecommendation?: string;
       reviewOutcome?: string;
       performanceAction?: string;
-      finalManagerComments?: string;
       managerConfirmation?: boolean;
       finalRating?: number;
       isDraft?: boolean;
@@ -431,16 +430,14 @@ export const AppraisalApi = {
       innovationProblemSolving?: number;
       performanceStrengths?: string;
       areasOfImprovement?: string;
-      additionalRemarks?: string;
+      managerComment?: string;
       goalsForNextReviewPeriod?: string;
       trainingDevelopmentRecommendations?: string;
       careerGrowthRecommendation?: string;
       reviewOutcome?: string;
       performanceAction?: string;
-      finalManagerComments?: string;
       managerConfirmation?: boolean;
       finalRating?: number;
-      finalPerformanceRating?: number;
       isDraft?: boolean;
     },
   ): Promise<ManagerReviewApiRecord> => {

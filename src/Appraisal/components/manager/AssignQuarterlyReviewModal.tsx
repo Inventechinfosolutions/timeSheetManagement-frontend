@@ -458,7 +458,17 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     buttonState === AssignButtonState.CONFIRM ||
     (Boolean(onBack) && buttonState === AssignButtonState.IDLE);
 
-  const modalFooter = (
+  const modalFooter = assignmentNoticeCount > 0 ? (
+    <div className="flex w-full justify-center pt-1">
+      <button
+        type="button"
+        onClick={closeAssignmentNotice}
+        className="px-8 py-2.5 text-sm font-bold text-white bg-[#4318FF] hover:bg-[#3311CC] rounded-xl shadow-lg hover:shadow-xl transition-all"
+      >
+        Close
+      </button>
+    </div>
+  ) : (
     <div className="flex items-center justify-between w-full flex-1 pt-1">
       {buttonState === AssignButtonState.CONFIRM ? (
         <button
@@ -553,10 +563,9 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   );
 
   return (
-    <>
     <Modal
-      open={isOpen && assignmentNoticeCount === 0}
-      onClose={handleModalClose}
+      open={isOpen}
+      onClose={assignmentNoticeCount > 0 ? closeAssignmentNotice : handleModalClose}
       title={modalTitle}
       footer={modalFooter}
       maxWidth="2xl"
@@ -566,7 +575,26 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       closeOnEsc={false}
       className={`assign-quarterly-modal-dialog ${isModalClosing ? "modal-is-closing" : ""} p-5 sm:p-6 overflow-hidden flex flex-col [&>div:first-child]:border-none [&>div:first-child]:pb-1.5 [&>div:first-child]:mb-1.5 [&>div:last-child]:border-none [&>div:last-child]:pt-2 [&>div:last-child]:mt-1.5 [&>div:last-child]:w-full`}
     >
-      {buttonState !== AssignButtonState.IDLE && submitSummary ? (
+      {assignmentNoticeCount > 0 ? (
+        <div className="overflow-hidden rounded-2xl border border-[#E2E8F0]">
+          <div className="bg-gradient-to-r from-[#4318FF] to-[#868CFF] p-6 text-white text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm shadow-inner">
+              <CheckCircle size={32} className="text-white" />
+            </div>
+            <h3 className="text-xl font-bold">Successful!</h3>
+            <p className="text-blue-100 text-sm mt-1">Appraisal assigned successfully!</p>
+          </div>
+          <div className="p-6 text-center">
+            <div className="p-3 bg-green-50 rounded-xl border border-green-100">
+              <p className="text-sm text-green-800 font-medium">
+                {assignmentNoticeCount === 1
+                  ? "The employee will receive the assignment email."
+                  : "The employees will receive the assignment email."}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : buttonState !== AssignButtonState.IDLE && submitSummary ? (
         <AssignSubmitPanel summary={submitSummary} status={buttonState} error={assignError} />
       ) : (
         <div key={formSession} className="space-y-3 flex flex-col min-h-0">
@@ -782,38 +810,6 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
         </div>
       )}
     </Modal>
-    {assignmentNoticeCount > 0 && (
-      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 overflow-hidden">
-          <div className="bg-gradient-to-r from-[#4318FF] to-[#868CFF] p-6 text-white text-center">
-            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm shadow-inner">
-              <CheckCircle size={32} className="text-white" />
-            </div>
-            <h3 className="text-xl font-bold">Action Successful!</h3>
-            <p className="text-blue-100 text-sm mt-1">Appraisal assigned successfully!</p>
-          </div>
-          <div className="p-6 space-y-5 text-center">
-            <div className="p-3 bg-green-50 rounded-xl border border-green-100">
-              <p className="text-sm text-green-800 font-medium">
-                {assignmentNoticeCount === 1
-                  ? "The employee will receive the assignment email."
-                  : "The employees will receive the assignment email."}
-              </p>
-            </div>
-            <div className="flex gap-3 pt-2 justify-center">
-              <button
-                type="button"
-                onClick={closeAssignmentNotice}
-                className="px-8 py-2.5 text-sm font-bold text-white bg-[#4318FF] hover:bg-[#3311CC] rounded-xl shadow-lg hover:shadow-xl transition-all"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
-    </>
   );
 };
 

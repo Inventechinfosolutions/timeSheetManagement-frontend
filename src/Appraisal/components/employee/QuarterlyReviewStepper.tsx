@@ -217,6 +217,11 @@ const STEP_DEFINITIONS = [
   { id: 6, label: "Final Review", IconComponent: StepFinalReviewIcon },
 ];
 
+const stepSavedMessage = (stepId: number) => {
+  const label = STEP_DEFINITIONS.find((step) => step.id === stepId)?.label || "Step";
+  return `${label} saved successfully`;
+};
+
 const quarterValue = (value: string): QuaterlyEnum | null => {
   if (
     value === QuaterlyEnum.Q1 ||
@@ -1101,7 +1106,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     // 2. Fetch fresh data via GET by id to keep state synchronized
     await loadFreshForm(false);
 
-    message.success("Saved successfully");
+    message.success(stepSavedMessage(currentStep));
     console.info(`[Appraisal] Step ${currentStep} saved successfully. Moving to Step ${currentStep + 1}`);
 
     // 4. Navigate to next step
@@ -1164,7 +1169,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT, currentStep);
     if (!saved) return;
     await loadFreshForm(false);
-    message.success("Saved successfully");
+    message.success(stepSavedMessage(currentStep));
     console.info(`[Appraisal] Step ${currentStep} saved successfully. Moving to Step ${targetStep}`);
     goToStep(targetStep, true);
   };
@@ -1190,7 +1195,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       if (existingId) {
         await persistStep(false, emptyReviewFormData, EmployeePerformanceStatus.NOT_STARTED);
       }
-      message.success("Saved successfully");
+      message.success(stepSavedMessage(currentStep));
       console.info("[Appraisal] Form cleared, status reset to NOT_STARTED");
       scrollToTop();
       onBack();
@@ -1224,7 +1229,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (!saved) {
       return;
     }
-    message.success("Saved successfully");
+    message.success(stepSavedMessage(currentStep));
     console.info("[Appraisal] Draft saved successfully and exiting");
     scrollToTop();
     onBack();
@@ -1620,8 +1625,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             )}
 
             {/* Stepper Navigation Footer */}
-            <div className={`flex items-center ${readOnly && isNotStarted ? "justify-end" : "justify-between"} pt-6 mt-8 border-t border-blue-100`}>
-              {!(readOnly && isNotStarted) && (
+            <div className={`flex items-center ${readOnly ? "justify-end" : "justify-between"} pt-6 mt-8 border-t border-blue-100`}>
+              {!readOnly && (
                 currentStep === 1 ? (
                   <Button
                     variant="outline"
@@ -1692,7 +1697,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     onClick={onBack}
                     className="px-6 py-2.5 rounded-xl font-bold border-blue-200 bg-white hover:bg-blue-50 text-[#2563EB] shadow-xs cursor-pointer"
                   >
-                    Back to Reviews
+                    Back to List
                   </Button>
                 ) : (
                   <Button

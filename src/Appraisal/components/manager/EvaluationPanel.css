@@ -337,6 +337,15 @@
   box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
 }
 
+.eval-submission-col .grid > * {
+  min-width: 0;
+}
+
+.eval-submission-col .eval-step-card .whitespace-pre-line {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 /* Employee Submission Inputs: Blocked Cursor (Only for read-only submission cards) */
 .eval-submission-col .eval-readonly-field,
 .eval-submission-col .eval-step-card input,

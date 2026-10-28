@@ -819,7 +819,7 @@ export const AppraisalDashboard: React.FC = () => {
     innovationProblemSolving?: number | string | null;
     performanceStrengths?: string | null;
     areasOfImprovement?: string | null;
-    additionalRemarks?: string | null;
+    managerComment?: string | null;
   }>();
 
   const [isRatingAuthModalOpen, setIsRatingAuthModalOpen] = useState<boolean>(false);

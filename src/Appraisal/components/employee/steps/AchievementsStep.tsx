@@ -435,9 +435,10 @@ export const AchievementsStep: React.FC<StepProps> = ({
     );
     if (existing) {
       const duplicateMessage = `${existing} is already added.`;
-      setAddErrors((prev) => ({ ...prev, technologiesUsed: duplicateMessage }));
       message.error(duplicateMessage);
       setTechInput("");
+      setAddErrors((prev) => ({ ...prev, technologiesUsed: "" }));
+      if (clearError) clearError("technologiesUsed");
       return;
     }
     onChange("technologiesUsed", [...technologiesUsed, trimmed]);

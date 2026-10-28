@@ -80,15 +80,13 @@ export interface ManagerQuarterlyReviewRecord {
     overallPerformanceRating?: number | string | null;
     performanceStrengths?: string | null;
     areasOfImprovement?: string | null;
-    additionalRemarks?: string | null;
+    managerComment?: string | null;
     goalsForNextReviewPeriod?: string | null;
     trainingDevelopmentRecommendations?: string | null;
     careerGrowthRecommendation?: string | null;
     reviewOutcome?: string | null;
     performanceAction?: string | null;
-    finalManagerComments?: string | null;
     managerConfirmation?: boolean | null;
-    finalPerformanceRating?: number | null;
   };
 }
 
@@ -324,14 +322,12 @@ export interface RevealedRating {
   overallPerformanceRating?: number | null;
   performanceStrengths: string;
   areasOfImprovement: string;
-  additionalRemarks: string;
+  managerComment: string;
   goalsForNextReviewPeriod?: string | null;
   trainingDevelopmentRecommendations?: string | null;
   careerGrowthRecommendation?: string | null;
   reviewOutcome?: string | null;
   performanceAction?: string | null;
-  finalPerformanceRating?: number | null;
-  finalManagerComments?: string | null;
   managerConfirmation?: boolean | null;
   passwordVerified: boolean;
 }
@@ -415,15 +411,13 @@ export interface ManagerReviewApiRecord {
   overallPerformanceRating?: number | string | null;
   performanceStrengths?: string | null;
   areasOfImprovement?: string | null;
-  additionalRemarks?: string | null;
+  managerComment?: string | null;
   goalsForNextReviewPeriod?: string | null;
   trainingDevelopmentRecommendations?: string | null;
   careerGrowthRecommendation?: string | null;
   reviewOutcome?: string | null;
   performanceAction?: string | null;
-  finalManagerComments?: string | null;
   managerConfirmation?: boolean | null;
-  finalPerformanceRating?: number | null;
   canRequestEdit?: boolean;
   remainingRequestHours?: number;
   canEdit?: boolean;
@@ -584,15 +578,13 @@ export interface EmployeeReviewDetail {
   overallPerformanceRating?: number | string | null;
   performanceStrengths?: string | null;
   areasOfImprovement?: string | null;
-  additionalRemarks?: string | null;
+  managerComment?: string | null;
   goalsForNextReviewPeriod?: string | null;
   trainingDevelopmentRecommendations?: string | null;
   careerGrowthRecommendation?: string | null;
   reviewOutcome?: string | null;
   performanceAction?: string | null;
-  finalManagerComments?: string | null;
   managerConfirmation?: boolean | null;
-  finalPerformanceRating?: number | null;
   performanceDetails?: EmployeePerformanceDetail | null;
 }
 

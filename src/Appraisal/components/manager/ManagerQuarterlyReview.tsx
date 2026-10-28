@@ -207,7 +207,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
               innovationProblemSolving: evaluation.scores.innovation,
               performanceStrengths: evaluation.strengths,
               areasOfImprovement: evaluation.improvements,
-              additionalRemarks: evaluation.remarks,
+              managerComment: evaluation.remarks,
             },
           };
         }

@@ -480,15 +480,13 @@ export const toManagerReviewRecord = (
     overallPerformanceRating: review.overallPerformanceRating,
     performanceStrengths: review.performanceStrengths,
     areasOfImprovement: review.areasOfImprovement,
-    additionalRemarks: review.additionalRemarks,
+    managerComment: review.managerComment,
     goalsForNextReviewPeriod: review.goalsForNextReviewPeriod,
     trainingDevelopmentRecommendations: review.trainingDevelopmentRecommendations,
     careerGrowthRecommendation: review.careerGrowthRecommendation,
     reviewOutcome: review.reviewOutcome,
     performanceAction: review.performanceAction,
-    finalManagerComments: review.finalManagerComments,
     managerConfirmation: review.managerConfirmation,
-    finalPerformanceRating: review.finalPerformanceRating,
   },
 });
 
