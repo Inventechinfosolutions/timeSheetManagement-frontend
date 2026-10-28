@@ -282,6 +282,9 @@ export const toReviewFormData = (
     overallEmployeeComments?: string;
     careerGrowthInterests?: string;
     confirmationAccepted?: boolean;
+    rateCompanyEnvironment?: string;
+    workCultureFeedback?: string;
+    workLifeBalance?: string;
   } | null = null;
 
   const rawCulture = performance.feedbackOnWorkCulture;
@@ -428,17 +431,31 @@ export const toReviewFormData = (
     nextQuarterLearningGoals,
     supportOrTrainingRequired,
     workCultureFeedback:
-      performance.feedbackOnWorkCulture && !performance.feedbackOnWorkCulture.trim().startsWith("{")
+      (performance as any).workCultureFeedback ||
+      (performance.feedbackOnWorkCulture && !performance.feedbackOnWorkCulture.trim().startsWith("{")
         ? performance.feedbackOnWorkCulture
-        : "",
+        : "") ||
+      parsedEnvMeta?.workCultureFeedback ||
+      "",
     feedbackOnWorkCulture:
-      performance.feedbackOnWorkCulture && !performance.feedbackOnWorkCulture.trim().startsWith("{")
+      (performance as any).workCultureFeedback ||
+      (performance.feedbackOnWorkCulture && !performance.feedbackOnWorkCulture.trim().startsWith("{")
         ? performance.feedbackOnWorkCulture
-        : "",
-    workLifeBalance: performance.workLifeBalance || "",
+        : "") ||
+      parsedEnvMeta?.workCultureFeedback ||
+      "",
+    workLifeBalance:
+      performance.workLifeBalance ||
+      (performance as any).workLifeBalance ||
+      parsedEnvMeta?.workLifeBalance ||
+      "",
     suggestionsForImprovement,
     challengesAffectingProductivity,
-    rateCompanyEnvironment: performance.rateCompanyEnvironment || "",
+    rateCompanyEnvironment:
+      performance.rateCompanyEnvironment ||
+      (performance as any).rateCompanyEnvironment ||
+      parsedEnvMeta?.rateCompanyEnvironment ||
+      "",
     companyEnvironmentRating,
     toolingAndResourcesRating,
     managementSupportRating,

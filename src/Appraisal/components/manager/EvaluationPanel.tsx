@@ -35,6 +35,8 @@ import { Dropdown } from "../../../components/ui";
 import { DatePicker as AntDatePicker, ConfigProvider, message } from "antd";
 import dayjs from "dayjs";
 import { getRatingTierConfig } from "../../utils/appraisalHelpers";
+import { ENVIRONMENT_SCORES } from "../../constants/appraisal.constants";
+import { renderAnimatedEmojiIcon } from "../employee/steps/CompanyEnvironmentStep";
 import "./EvaluationPanel.css";
 import "./AssignQuarterlyReviewModal.css";
 import AttachmentItem from "../common/AttachmentItem";
@@ -2079,32 +2081,56 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         5
                       </span>
                       <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                        Environment
+                        Step 5: Environment
                       </h3>
                     </div>
-                    {(() => {
-                      const scores = [
-                        formData.companyEnvironmentRating,
-                        formData.toolingAndResourcesRating,
-                        formData.managementSupportRating,
-                      ].filter((s): s is number => Boolean(s && s > 0));
+                    <div className="flex items-center gap-2.5">
+                      {(() => {
+                        const rawEnv = formData.rateCompanyEnvironment;
+                        const envScore =
+                          rawEnv && ENVIRONMENT_SCORES[rawEnv]
+                            ? ENVIRONMENT_SCORES[rawEnv]
+                            : typeof rawEnv === "number"
+                            ? rawEnv
+                            : (ENVIRONMENT_RATINGS[Number(rawEnv)] ? Number(rawEnv) : 0);
+                        const envInfo = ENVIRONMENT_RATINGS[envScore];
 
-                      const avgScore =
-                        scores.length > 0
-                          ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
-                          : null;
+                        if (envScore > 0) {
+                          return (
+                            <div className="px-3 py-1 rounded-xl bg-blue-50 border border-blue-200/80 shadow-2xs flex items-center gap-2 shrink-0 eval-stagger-item eval-stagger-2">
+                              <div className="w-5 h-5 flex items-center justify-center shrink-0 [&>svg]:w-5 [&>svg]:h-5">
+                                {renderAnimatedEmojiIcon(envScore, true)}
+                              </div>
+                              <span className="text-xs font-bold text-[#2563EB]">
+                                {envInfo?.label || "Rated"} ({envScore}/5)
+                              </span>
+                            </div>
+                          );
+                        }
 
-                      return avgScore ? (
-                        <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
-                          <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
-                          <span className="text-[11px] font-semibold text-[#64748B]">Average:</span>
-                          <span className="text-xs sm:text-sm font-extrabold text-[#0F172A]">
-                            {avgScore}
-                          </span>
-                          <span className="text-[10px] font-bold text-[#94A3B8]">/ 5.0</span>
-                        </div>
-                      ) : null;
-                    })()}
+                        const scores = [
+                          formData.companyEnvironmentRating,
+                          formData.toolingAndResourcesRating,
+                          formData.managementSupportRating,
+                        ].filter((s): s is number => Boolean(s && s > 0));
+
+                        const avgScore =
+                          scores.length > 0
+                            ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
+                            : null;
+
+                        return avgScore ? (
+                          <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
+                            <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
+                            <span className="text-[11px] font-semibold text-[#64748B]">Average:</span>
+                            <span className="text-xs sm:text-sm font-extrabold text-[#0F172A]">
+                              {avgScore}
+                            </span>
+                            <span className="text-[10px] font-bold text-[#94A3B8]">/ 5.0</span>
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
                   </div>
 
                   {/* Environment Dimensions Rating Preview (Exact Image 2 Style) */}
@@ -2129,7 +2155,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       ].map((item, idx) => (
                         <div
                           key={idx}
-                          className="p-3 bg-white border border-[#E2E8F0] rounded-xl flex items-center justify-between gap-2 shadow-2xs"
+                          className="p-3 bg-white border border-[#CBD5E1] rounded-lg flex items-center justify-between gap-2 shadow-2xs"
                         >
                           <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug">
                             {item.title}
@@ -2157,15 +2183,41 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
                   </div>
 
-                  {/* Qualitative Text Areas Side by Side */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+                  {/* Qualitative Text Areas 2x2 Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1 items-stretch">
+                    {/* Feedback on Work Culture */}
+                    <div className="eval-stagger-item eval-stagger-3 flex flex-col">
+                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                        Feedback on Work Culture
+                      </label>
+                      <div
+                        className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[44px] flex-1 shadow-2xs"
+                        title="Employee submitted response (Read-only)"
+                      >
+                        {formData.workCultureFeedback || formData.feedbackOnWorkCulture || "—"}
+                      </div>
+                    </div>
+
+                    {/* Work Life Balance */}
+                    <div className="eval-stagger-item eval-stagger-3 flex flex-col">
+                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
+                        Work Life Balance
+                      </label>
+                      <div
+                        className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[44px] flex-1 shadow-2xs"
+                        title="Employee submitted response (Read-only)"
+                      >
+                        {formData.workLifeBalance || "—"}
+                      </div>
+                    </div>
+
                     {/* Challenges Affecting Productivity */}
-                    <div className="eval-stagger-item eval-stagger-3">
-                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
+                    <div className="eval-stagger-item eval-stagger-4 flex flex-col">
+                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Challenges Affecting Productivity
                       </label>
                       <div
-                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[75px] shadow-2xs"
+                        className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[44px] flex-1 shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
                         {formData.challengesAffectingProductivity || "—"}
@@ -2173,15 +2225,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </div>
 
                     {/* Suggestions for Improvement */}
-                    <div className="eval-stagger-item eval-stagger-4">
-                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
+                    <div className="eval-stagger-item eval-stagger-4 flex flex-col">
+                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Suggestions for Improvement
                       </label>
                       <div
-                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[75px] shadow-2xs"
+                        className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[44px] flex-1 shadow-2xs"
                         title="Employee submitted response (Read-only)"
                       >
-                        {formData.suggestionsForImprovement || "—"}
+                        {formData.suggestionsForImprovement || formData.toolingAndResources || "—"}
                       </div>
                     </div>
                   </div>
