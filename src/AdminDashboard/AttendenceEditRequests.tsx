@@ -41,6 +41,7 @@ const AttendenceEditRequests = () => {
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const isAdmin = isAdminAccess(currentUser);
   const isCeo = isCeoUser(currentUser);
+  const showDepartment = isAdmin;
   const isManager = !!(
     !isAdmin &&
     (currentUser?.userType === UserType.MANAGER ||
@@ -236,7 +237,7 @@ const AttendenceEditRequests = () => {
 
       <div className="bg-white rounded-[20px] shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100 mb-4">
         <div className="overflow-x-auto overflow-y-visible custom-scrollbar">
-          <table className="w-full min-w-[900px] border-separate border-spacing-0">
+          <table className={`w-full border-separate border-spacing-0 ${showDepartment ? "min-w-[900px]" : "table-fixed"}`}>
             <thead>
               <tr className="bg-[#4318FF] text-white">
                 <th className="py-4 pl-6 pr-2 text-center text-[13px] font-bold uppercase tracking-wider whitespace-nowrap w-16">
@@ -245,16 +246,18 @@ const AttendenceEditRequests = () => {
                 <th className="py-4 px-4 text-[13px] font-bold uppercase tracking-wider text-left whitespace-nowrap min-w-[200px]">
                   Employee
                 </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                  Department
-                </th>
+                {showDepartment && (
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Department
+                  </th>
+                )}
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Submitted Date
                 </th>
-                <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[140px] w-[180px] min-w-[180px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                <th className={`px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap bg-[#4318FF] ${showDepartment ? "sticky right-[140px] w-[180px] min-w-[180px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]" : "w-[18%]"}`}>
                   Status
                 </th>
-                <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-0 w-[140px] min-w-[140px] bg-[#4318FF] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
+                <th className={`px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap bg-[#4318FF] ${showDepartment ? "sticky right-0 w-[140px] min-w-[140px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]" : "w-[16%] border-l border-white/35"}`}>
                   Actions
                 </th>
               </tr>
@@ -262,7 +265,7 @@ const AttendenceEditRequests = () => {
             <tbody className="divide-y divide-gray-50">
               {loading && entities.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-gray-400">
+                  <td colSpan={showDepartment ? 6 : 5} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center justify-center py-6">
                       <WorksphereLogoLoader />
                     </div>
@@ -270,7 +273,7 @@ const AttendenceEditRequests = () => {
                 </tr>
               ) : entities.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-gray-400">
+                  <td colSpan={showDepartment ? 6 : 5} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center gap-2">
                       <Clock size={40} className="text-gray-200" />
                       <p className="font-medium text-lg">No requests found</p>
@@ -322,11 +325,13 @@ const AttendenceEditRequests = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="py-4 px-4 text-center whitespace-nowrap">
-                      <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
-                        {req.department || "N/A"}
-                      </span>
-                    </td>
+                    {showDepartment && (
+                      <td className="py-4 px-4 text-center whitespace-nowrap">
+                        <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
+                          {req.department || "N/A"}
+                        </span>
+                      </td>
+                    )}
                     <td className="py-4 px-4 text-center text-sm font-semibold text-[#475569] whitespace-nowrap">
                       {req.submittedDate
                         ? dayjs(req.submittedDate).format("DD MMM - YYYY")
@@ -337,7 +342,11 @@ const AttendenceEditRequests = () => {
                             : "N/A"}
                     </td>
                     <td
-                      className={`py-4 px-3 text-center sticky right-[140px] w-[180px] min-w-[180px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${
+                      className={`py-4 px-3 text-center ${
+                        showDepartment
+                          ? "sticky right-[140px] w-[180px] min-w-[180px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]"
+                          : ""
+                      } ${
                         index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
                       } group-hover:bg-gray-100`}
                     >
@@ -350,7 +359,11 @@ const AttendenceEditRequests = () => {
                       </span>
                     </td>
                     <td
-                      className={`py-4 px-3 sticky right-0 w-[140px] min-w-[140px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${
+                      className={`py-4 px-3 ${
+                        showDepartment
+                          ? "sticky right-0 w-[140px] min-w-[140px] z-20 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)]"
+                          : "border-l border-[#E8EDF5]"
+                      } ${
                         index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
                       } group-hover:bg-gray-100`}
                     >
@@ -403,6 +416,7 @@ const AttendenceEditRequests = () => {
           </table>
         </div>
 
+        {showDepartment && (
         <div className="flex justify-center items-center py-2 bg-gray-50/30 border-t border-gray-100">
           <div className="flex items-center gap-2 text-[#A3AED0] opacity-80">
             <ArrowRightLeft size={14} className="animate-pulse" />
@@ -411,6 +425,7 @@ const AttendenceEditRequests = () => {
             </span>
           </div>
         </div>
+        )}
 
         <div className="flex flex-col sm:flex-row justify-between items-center p-4 lg:px-10 lg:pb-6 gap-4">
           <div className="text-sm font-bold text-[#A3AED0] text-center sm:text-left">

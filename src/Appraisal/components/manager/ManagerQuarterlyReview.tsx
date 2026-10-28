@@ -735,8 +735,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
             </div>
           </CardHeader>
 
-          <CardContent className="p-0 flex-1 flex flex-col min-h-0 justify-center">
-            <div className="relative flex-1 flex flex-col min-h-0 justify-center">
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+            <div className={`relative flex-1 flex flex-col min-h-0 ${assignments.length === 0 ? "justify-center" : ""}`}>
               {assignments.length > 0 ? (
                 <QuarterlyReviewTable
                   data={assignments}

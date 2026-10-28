@@ -364,7 +364,7 @@ export const toStepPatch = (
     };
   }
   if (step === 6) {
-    return {
+  return {
       stepFinalReview: {
         overallSelfRating: formData.overallSelfRating || null,
         overallEmployeeComments: trimText(formData.overallEmployeeComments),
@@ -388,17 +388,17 @@ export const toProjectWriteBody = (project: PerformanceProject) => ({
   keyResponsibilities: trimText(project.keyResponsibilities),
   solutionsImplemented: trimText(project.solutionsImplemented),
   keyAchievementsOutcomes: trimText(project.keyAchievementsOutcomes),
-  technologiesUsed: Array.isArray(project.technologiesUsed) ? project.technologiesUsed : [],
-  isDraft: Boolean(project.isDraft),
-  attachments: (project.attachments || [])
-    .filter((file) => Boolean(file && file.fileName && file.objectKey))
-    .map((file) => ({
-      fileName: file.fileName,
-      fileUrl: file.objectKey,
-      fileSize: file.fileSize || 0,
-      fileType: file.fileType || "",
-      objectKey: file.objectKey,
-    })),
+      technologiesUsed: Array.isArray(project.technologiesUsed) ? project.technologiesUsed : [],
+      isDraft: Boolean(project.isDraft),
+      attachments: (project.attachments || [])
+        .filter((file) => Boolean(file && file.fileName && file.objectKey))
+        .map((file) => ({
+          fileName: file.fileName,
+          fileUrl: file.objectKey,
+          fileSize: file.fileSize || 0,
+          fileType: file.fileType || "",
+          objectKey: file.objectKey,
+        })),
 });
 
 export const changedProjectFields = (
