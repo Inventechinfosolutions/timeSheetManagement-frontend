@@ -1,6 +1,5 @@
 import React from "react";
 import { Check, Info } from "lucide-react";
-import { WorksphereLogoLoader } from "../../../components/ApiLoadingSpinner";
 import { AssignButtonState } from "../../enums/appraisal.enums";
 
 export interface AssignSubmitPerson {
@@ -36,7 +35,6 @@ export const AssignSubmitPanel: React.FC<AssignSubmitPanelProps> = ({ summary, s
         </div>
       )}
 
-      {/* Note Banner */}
       <div
         className={`rounded-xl border p-2.5 sm:p-3 text-left flex items-start gap-3 shadow-2xs shrink-0 transition-all duration-300 ${
           submitted

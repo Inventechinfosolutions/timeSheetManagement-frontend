@@ -34,10 +34,10 @@ import {
   PerformanceProject,
 } from "../../types/appraisal.types";
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
-import { AppraisalApi, readApiError, toPerformancePayload, toReviewFormData } from "../../reducers/appraisal.reducer";
+import { AppraisalApi, readApiError, toReviewFormData, toStepPatch, toProjectWriteBody, changedProjectFields } from "../../reducers/appraisal.reducer";
 import { readProjectList } from "../../utils/appraisalHelpers";
 import { EmployeePerformanceStatus, QuaterlyEnum, QuarterlyReviewStatus } from "../../enums/appraisal.enums";
-import { message, Modal } from "antd";
+import { message } from "antd";
 import OverviewStep from "./steps/OverviewStep";
 import AchievementsStep from "./steps/AchievementsStep";
 import TeamContributionStep from "./steps/TeamContributionStep";
@@ -479,141 +479,6 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     handleClearError(field as string);
   };
 
-  const commitDraftsIfNeeded = (currentData: ReviewFormData): ReviewFormData => {
-    let updated = { ...currentData };
-    let hasChanged = false;
-
-    // Step 2: Auto-commit or update project draft
-    const pName = (updated.projectName || "").trim();
-    const pDesc = (updated.projectDescription || "").trim();
-    const pChallenge = (updated.challengesFaced || updated.projectChallenge || "").trim();
-    const pRole = (updated.projectRole || "").trim();
-    const pResp = (updated.responsibilityType || "").trim();
-    const pKeyResp = (updated.keyResponsibilities || "").trim();
-    const pOutcomes = (updated.keyAchievementsOutcomes || "").trim();
-    const pTechs = Array.isArray(updated.technologiesUsed) ? updated.technologiesUsed : [];
-
-    const hasAnyDraft = Boolean(
-      pName ||
-      pDesc ||
-      pChallenge ||
-      pRole ||
-      pResp ||
-      updated.leadershipQualities ||
-      updated.clientReviewFeedback ||
-      pKeyResp ||
-      pOutcomes ||
-      pTechs.length > 0 ||
-      (updated.projectAttachments && updated.projectAttachments.length > 0)
-    );
-
-    const isComplete = Boolean(
-      pName &&
-      pDesc &&
-      pRole &&
-      pResp &&
-      pKeyResp &&
-      pChallenge &&
-      pOutcomes &&
-      pTechs.length > 0
-    );
-
-    const editIdx = updated.editingProjectIndex;
-    const isEditing = typeof editIdx === "number" && editIdx >= 0 && editIdx < (updated.projects || []).length;
-
-    if (isEditing) {
-      const existing = [...(updated.projects || [])];
-      existing[editIdx] = {
-        ...existing[editIdx],
-        projectName: pName || existing[editIdx].projectName || "Untitled Project",
-        description: pDesc || existing[editIdx].description || "",
-        challenge: pChallenge || existing[editIdx].challenge || "",
-        challengesFaced: pChallenge || existing[editIdx].challengesFaced || "",
-        projectRole: pRole || existing[editIdx].projectRole || "",
-        responsibilityType: pResp || existing[editIdx].responsibilityType || "",
-        leadershipQualities: updated.leadershipQualities || existing[editIdx].leadershipQualities || "",
-        clientReviewFeedback: updated.clientReviewFeedback || existing[editIdx].clientReviewFeedback || "",
-        keyResponsibilities: pKeyResp || existing[editIdx].keyResponsibilities || "",
-        solutionsImplemented: updated.solutionsImplemented || existing[editIdx].solutionsImplemented || "",
-        keyAchievementsOutcomes: pOutcomes || existing[editIdx].keyAchievementsOutcomes || "",
-        technologiesUsed: updated.technologiesUsed ? [...updated.technologiesUsed] : existing[editIdx].technologiesUsed || [],
-        attachments: updated.projectAttachments ? [...updated.projectAttachments] : existing[editIdx].attachments || [],
-        isDraft: existing[editIdx].isDraft ? !isComplete : false,
-      };
-      if (isComplete) {
-        updated = {
-          ...updated,
-          projects: existing,
-          editingProjectIndex: null,
-          projectName: "",
-          projectDescription: "",
-          projectRole: "",
-          responsibilityType: "",
-          leadershipQualities: "",
-          clientReviewFeedback: "",
-          keyResponsibilities: "",
-          challengesFaced: "",
-          projectChallenge: "",
-          solutionsImplemented: "",
-          keyAchievementsOutcomes: "",
-          technologiesUsed: [],
-          projectAttachments: [],
-        };
-        hasChanged = true;
-      }
-    } else if (hasAnyDraft && isComplete) {
-      const existing = updated.projects || [];
-      const newProject: PerformanceProject = {
-        projectName: pName,
-        description: pDesc,
-        challenge: pChallenge,
-        challengesFaced: pChallenge,
-        projectRole: pRole,
-        responsibilityType: pResp,
-        leadershipQualities: updated.leadershipQualities || "",
-        clientReviewFeedback: updated.clientReviewFeedback || "",
-        keyResponsibilities: pKeyResp,
-        solutionsImplemented: updated.solutionsImplemented || "",
-        keyAchievementsOutcomes: pOutcomes,
-        technologiesUsed: [...pTechs],
-        attachments: updated.projectAttachments ? [...updated.projectAttachments] : [],
-        isDraft: false,
-      };
-      updated = {
-        ...updated,
-        projects: [...existing, newProject],
-        editingProjectIndex: null,
-        projectName: "",
-        projectDescription: "",
-        projectRole: "",
-        responsibilityType: "",
-        leadershipQualities: "",
-        clientReviewFeedback: "",
-        keyResponsibilities: "",
-        challengesFaced: "",
-        projectChallenge: "",
-        solutionsImplemented: "",
-        keyAchievementsOutcomes: "",
-        technologiesUsed: [],
-        projectAttachments: [],
-      };
-      hasChanged = true;
-    }
-
-    // Step 4: Sync goals list if needed
-    const skillsLearned = (updated.skillsAcquired || "").trim();
-    const nextGoals = (updated.nextQuarterLearningGoals || "").trim();
-    const goalsList = [skillsLearned, nextGoals].filter(Boolean);
-    if (goalsList.length > 0 && (!updated.learningGoalItems || updated.learningGoalItems.length === 0)) {
-      updated = {
-        ...updated,
-        learningGoalItems: goalsList,
-      };
-      hasChanged = true;
-    }
-
-    return hasChanged ? updated : currentData;
-  };
 
   const validateStep = (
     stepNum: number,
@@ -822,14 +687,12 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (!assignment.employeeId || !quarter || !assignment.financialYear) {
       throw new Error("This quarter is missing an employee, quarter, or financial year.");
     }
-    const created = await AppraisalApi.createPerformance(
-      toPerformancePayload(
-        assignment.employeeId,
-        quarter,
-        assignment.financialYear,
-        formDataRef.current,
-      ),
-    );
+    const created = await AppraisalApi.createPerformance({
+      employeeId: assignment.employeeId,
+      quarter,
+      financialYear: assignment.financialYear,
+      status: EmployeePerformanceStatus.NOT_STARTED,
+    });
     performanceIdRef.current = created.id;
     setPerformanceId(created.id);
     return created.id;
@@ -856,24 +719,86 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
   };
 
+  const draftProjectFromForm = (data: ReviewFormData): PerformanceProject => ({
+    projectName: (data.projectName || "").trim(),
+    description: (data.projectDescription || "").trim(),
+    challenge: (data.challengesFaced || data.projectChallenge || "").trim(),
+    challengesFaced: (data.challengesFaced || data.projectChallenge || "").trim(),
+    projectRole: (data.projectRole || "").trim(),
+    responsibilityType: (data.responsibilityType || "").trim(),
+    leadershipQualities: data.leadershipQualities || "",
+    clientReviewFeedback: data.clientReviewFeedback || "",
+    keyResponsibilities: (data.keyResponsibilities || "").trim(),
+    solutionsImplemented: data.solutionsImplemented || "",
+    keyAchievementsOutcomes: (data.keyAchievementsOutcomes || "").trim(),
+    technologiesUsed: Array.isArray(data.technologiesUsed) ? [...data.technologiesUsed] : [],
+    attachments: data.projectAttachments ? [...data.projectAttachments] : [],
+    isDraft: false,
+  });
+
+  const isProjectDraftComplete = (data: ReviewFormData): boolean => {
+    const draft = draftProjectFromForm(data);
+    return Boolean(
+      draft.projectName &&
+      draft.description &&
+      draft.projectRole &&
+      draft.responsibilityType &&
+      draft.keyResponsibilities &&
+      (draft.challengesFaced || draft.challenge) &&
+      draft.keyAchievementsOutcomes &&
+      (draft.technologiesUsed || []).length > 0,
+    );
+  };
+
+  const savePendingProject = async (data: ReviewFormData): Promise<void> => {
+    if (!isProjectDraftComplete(data)) {
+      return;
+    }
+    const id = await ensurePerformanceId();
+    const nextProject = draftProjectFromForm(data);
+    const editingIndex = data.editingProjectIndex;
+    const projects = data.projects || [];
+    if (typeof editingIndex === "number" && editingIndex >= 0 && editingIndex < projects.length) {
+      const patch = changedProjectFields(projects[editingIndex], nextProject);
+      if (Object.keys(patch).length > 0) {
+        await AppraisalApi.patchPerformanceProject(id, editingIndex, patch);
+      }
+      return;
+    }
+    await AppraisalApi.createPerformanceProject(id, toProjectWriteBody(nextProject));
+  };
+
   const persistStep = async (
     asDraft = false,
     dataToPersist: ReviewFormData = formData,
     targetStatus?: EmployeePerformanceStatus | string,
+    stepNumber?: number,
   ): Promise<boolean> => {
     const quarter = quarterValue(assignment.quarter);
     if (!assignment.employeeId || !quarter || !assignment.financialYear) {
       setSaveError("This quarter is missing an employee, quarter, or financial year.");
       return false;
     }
-    const payload = toPerformancePayload(
-      assignment.employeeId,
-      quarter,
-      assignment.financialYear,
-      dataToPersist,
-    );
+    const payload: {
+      status?: EmployeePerformanceStatus | string;
+      clearSteps?: boolean;
+      stepOverview?: Record<string, unknown> | null;
+      stepTeamwork?: Record<string, unknown> | null;
+      stepLearning?: Record<string, unknown> | null;
+      stepEnvironment?: Record<string, unknown> | null;
+      stepFinalReview?: Record<string, unknown> | null;
+    } = {};
+    const resetting = targetStatus === EmployeePerformanceStatus.NOT_STARTED && !hasAnyDataEntered(dataToPersist);
     if (targetStatus) {
       payload.status = targetStatus;
+    }
+    if (resetting) {
+      payload.clearSteps = true;
+    } else if (stepNumber && stepNumber !== 2) {
+      Object.assign(payload, toStepPatch(stepNumber, dataToPersist));
+    }
+    if (asDraft && !payload.status && !isReassignedReview && !resetting) {
+      payload.status = EmployeePerformanceStatus.DRAFT;
     }
     setSaving(true);
     setSaveError("");
@@ -896,17 +821,27 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         }
       }
       if (existingId) {
-        await AppraisalApi.updatePerformance(existingId, payload);
         performanceIdRef.current = existingId;
         setPerformanceId(existingId);
+        if (Object.keys(payload).length > 0) {
+          await AppraisalApi.updatePerformance(existingId, payload);
+        }
+        if (stepNumber === 2 && !resetting) {
+          await savePendingProject(dataToPersist);
+        }
         return true;
       }
-      const shouldSaveAsDraft = asDraft && !isReassignedReview;
-      const saved = shouldSaveAsDraft
-        ? await AppraisalApi.savePerformanceDraft(payload)
-        : await AppraisalApi.createPerformance(payload);
+      const saved = await AppraisalApi.createPerformance({
+        employeeId: assignment.employeeId,
+        quarter,
+        financialYear: assignment.financialYear,
+        ...payload,
+      });
       performanceIdRef.current = saved.id;
       setPerformanceId(saved.id);
+      if (stepNumber === 2 && !resetting) {
+        await savePendingProject(dataToPersist);
+      }
       return true;
     } catch (error) {
       const apiErrMsg = readApiError(error);
@@ -979,36 +914,52 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   const handleSaveProject = async (
     updatedProjects: PerformanceProject[],
   ): Promise<boolean> => {
-    const updatedData: ReviewFormData = {
-      ...formDataRef.current,
-      projects: updatedProjects,
-      editingProjectIndex: null,
-      projectName: "",
-      projectDescription: "",
-      projectRole: "",
-      responsibilityType: "",
-      leadershipQualities: "",
-      clientReviewFeedback: "",
-      keyResponsibilities: "",
-      challengesFaced: "",
-      projectChallenge: "",
-      solutionsImplemented: "",
-      keyAchievementsOutcomes: "",
-      technologiesUsed: [],
-      projectAttachments: [],
-    };
-    setFormData(updatedData);
-    formDataRef.current = updatedData;
-
-    const targetStatus = !isReassignedReview
-      ? EmployeePerformanceStatus.DRAFT
-      : undefined;
-
-    const saved = await persistStep(true, updatedData, targetStatus);
-    if (saved) {
+    const previous = formDataRef.current.projects || [];
+    const editingIndex = formDataRef.current.editingProjectIndex;
+    const isEdit = typeof editingIndex === "number" && editingIndex >= 0 && editingIndex < previous.length;
+    setSaving(true);
+    setSaveError("");
+    try {
+      const id = await ensurePerformanceId();
+      if (isEdit && typeof editingIndex === "number") {
+        const patch = changedProjectFields(previous[editingIndex], updatedProjects[editingIndex]);
+        if (Object.keys(patch).length > 0) {
+          await AppraisalApi.patchPerformanceProject(id, editingIndex, patch);
+        }
+      } else {
+        const created = updatedProjects[updatedProjects.length - 1];
+        if (created) {
+          await AppraisalApi.createPerformanceProject(id, toProjectWriteBody(created));
+        }
+      }
+      const updatedData: ReviewFormData = {
+        ...formDataRef.current,
+        projects: updatedProjects,
+        editingProjectIndex: null,
+        projectName: "",
+        projectDescription: "",
+        projectRole: "",
+        responsibilityType: "",
+        leadershipQualities: "",
+        clientReviewFeedback: "",
+        keyResponsibilities: "",
+        challengesFaced: "",
+        projectChallenge: "",
+        solutionsImplemented: "",
+        keyAchievementsOutcomes: "",
+        technologiesUsed: [],
+        projectAttachments: [],
+      };
+      setFormData(updatedData);
+      formDataRef.current = updatedData;
       await loadFreshForm(false);
+      return true;
+    } catch (error) {
+      setSaveError(readApiError(error));
+      return false;
+    } finally {
+      setSaving(false);
     }
-    return saved;
   };
 
   const handleDeleteProject = async (
@@ -1050,8 +1001,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (existingId) {
       try {
         const updatedPerf = await AppraisalApi.deletePerformanceProject(existingId, index);
-        const freshProjects = updatedPerf?.projects
-          ? readProjectList(updatedPerf.projects)
+        const freshProjects = updatedPerf?.stepAchievements?.projects
+          ? readProjectList(updatedPerf.stepAchievements.projects)
           : updatedProjects;
 
         const nextData: ReviewFormData = {
@@ -1063,7 +1014,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         setFormData(nextData);
         return true;
       } catch (error) {
-        console.warn("[Appraisal] deletePerformanceProject endpoint failed, falling back to updatePerformance:", error);
+        setSaveError(readApiError(error));
+        return false;
       }
     }
 
@@ -1074,13 +1026,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     };
     setFormData(nextData);
     formDataRef.current = nextData;
-
-    const targetStatus = !isReassignedReview
-      ? EmployeePerformanceStatus.DRAFT
-      : undefined;
-
-    const saved = await persistStep(true, nextData, targetStatus);
-    return saved;
+    return true;
   };
 
   const handleNext = async () => {
@@ -1095,14 +1041,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       return;
     }
 
-    let currentData = formData;
-    if (currentStep === 2 || currentStep === 4) {
-      currentData = commitDraftsIfNeeded(formData);
-      if (currentData !== formData) {
-        setFormData(currentData);
-        formDataRef.current = currentData;
-      }
-    }
+    const currentData = formData;
 
     const validation = validateStep(currentStep, currentData);
     if (!validation.isValid) {
@@ -1113,16 +1052,15 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     setErrors({});
 
     // 1. Save changes via PUT by id
-    const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT);
+    const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT, currentStep);
     if (!saved) {
       return;
     }
 
     // 2. Fetch fresh data via GET by id to keep state synchronized
-    await loadFreshForm();
+    await loadFreshForm(false);
 
-    // 3. Show success toast message & log
-    message.success(`Step ${currentStep} saved successfully`);
+    message.success("Saved successfully");
     console.info(`[Appraisal] Step ${currentStep} saved successfully. Moving to Step ${currentStep + 1}`);
 
     // 4. Navigate to next step
@@ -1167,14 +1105,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       return;
     }
 
-    let currentData = formData;
-    if (currentStep === 2 || currentStep === 4) {
-      currentData = commitDraftsIfNeeded(formData);
-      if (currentData !== formData) {
-        setFormData(currentData);
-        formDataRef.current = currentData;
-      }
-    }
+    const currentData = formData;
 
     for (let s = currentStep; s < targetStep; s++) {
       const validation = validateStep(s, currentData);
@@ -1189,10 +1120,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
 
     setErrors({});
-    const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT);
+    const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT, currentStep);
     if (!saved) return;
-    await loadFreshForm();
-    message.success(`Step ${currentStep} saved successfully`);
+    await loadFreshForm(false);
+    message.success("Saved successfully");
     console.info(`[Appraisal] Step ${currentStep} saved successfully. Moving to Step ${targetStep}`);
     goToStep(targetStep, true);
   };
@@ -1206,14 +1137,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       return;
     }
 
-    let currentData = formData;
-    if (currentStep === 2 || currentStep === 4) {
-      currentData = commitDraftsIfNeeded(formData);
-      if (currentData !== formData) {
-        setFormData(currentData);
-        formDataRef.current = currentData;
-      }
-    }
+    const currentData = formData;
 
     const hasData = hasAnyDataEntered(currentData);
     const finishedFirstStep = currentStep > 1 || hasCompletedFirstStep(currentData);
@@ -1225,7 +1149,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       if (existingId) {
         await persistStep(false, emptyReviewFormData, EmployeePerformanceStatus.NOT_STARTED);
       }
-      message.info("Form reset and saved");
+      message.success("Saved successfully");
       console.info("[Appraisal] Form cleared, status reset to NOT_STARTED");
       scrollToTop();
       onBack();
@@ -1254,18 +1178,19 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       targetStatus === EmployeePerformanceStatus.DRAFT,
       currentData,
       targetStatus,
+      currentStep,
     );
     if (!saved) {
       return;
     }
-    message.success("Draft saved successfully");
+    message.success("Saved successfully");
     console.info("[Appraisal] Draft saved successfully and exiting");
     scrollToTop();
     onBack();
   };
 
   const executeSubmit = async (currentData: ReviewFormData) => {
-    const saved = await persistStep(false, currentData);
+    const saved = await persistStep(false, currentData, undefined, currentStep);
     if (!saved) {
       return;
     }
@@ -1302,14 +1227,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (isLocked || saving) {
       return;
     }
-    let currentData = formData;
-    if (currentStep === 2 || currentStep === 4) {
-      currentData = commitDraftsIfNeeded(formData);
-      if (currentData !== formData) {
-        setFormData(currentData);
-        formDataRef.current = currentData;
-      }
-    }
+    const currentData = formData;
     for (let s = 1; s <= 6; s++) {
       const validation = validateStep(s, currentData);
       if (!validation.isValid) {

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { message } from "antd";
 import { Button, Input, Modal, SearchDropdown, SearchDropdownOption } from "../../../components/ui";
 import { useAppSelector } from "../../../hooks";
 import { AppraisalCopy } from "../../constants/appraisal.constants";
@@ -106,6 +107,7 @@ export const GrantEditModal: React.FC<GrantEditModalProps> = ({ isOpen, onClose 
         editAllowedUntil:
           approved && deadline ? new Date(deadline).toISOString() : undefined,
       });
+      message.success("Saved successfully");
       onClose();
     } catch (requestError) {
       setError(readApiError(requestError));

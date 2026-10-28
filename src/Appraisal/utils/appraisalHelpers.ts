@@ -1,9 +1,6 @@
 import axios from "axios";
-import { QuaterlyEnum } from "../enums/appraisal.enums";
 import {
   AppraisalCopy,
-  ENVIRONMENT_SCORES,
-  ENVIRONMENT_RATINGS,
 } from "../constants/appraisal.constants";
 import { emptyReviewFormData } from "../constants/emptyReviewForm";
 import {
@@ -147,7 +144,7 @@ export const isResubmittedStatus = (status?: string | null): boolean => {
 // FORM DATA & PAYLOAD PARSERS
 // 
 export const readProjectList = (
-  value: EmployeePerformanceDetail["projects"],
+  value: PerformanceProject[] | string | null | undefined,
 ): PerformanceProject[] => {
   const source = typeof value === "string" ? (() => {
     try {
@@ -225,417 +222,201 @@ export const readLearningGoalList = (
   return [trimmed];
 };
 
+const stepText = (step: Record<string, any> | null | undefined, key: string): string => {
+  const value = step?.[key];
+  return typeof value === "string" ? value : "";
+};
+
+const stepNumber = (step: Record<string, any> | null | undefined, key: string): number => {
+  const value = step?.[key];
+  return typeof value === "number" ? value : 0;
+};
+
 export const toReviewFormData = (
   performance: EmployeePerformanceDetail | null | undefined,
 ): ReviewFormData => {
   if (!performance) {
     return emptyReviewFormData;
   }
-  const rawOverview = performance.overview || "";
-  const projectsList = readProjectList(performance.projects);
-  const fallbackProjects: PerformanceProject[] = projectsList;
-
-  let parsedMeta: {
-    skillsAcquired?: string;
-    certificationsOrCourses?: string;
-    skillsToImprove?: string;
-    nextQuarterLearningGoals?: string;
-    supportOrTrainingRequired?: string;
-  } | null = null;
-
-  const rawGoals = performance.learningGoals;
-  if (Array.isArray(rawGoals) && rawGoals.length > 0) {
-    const firstItem = rawGoals[0];
-    if (typeof firstItem === "string" && firstItem.trim().startsWith("{")) {
-      try {
-        parsedMeta = JSON.parse(firstItem.trim());
-      } catch {
-        parsedMeta = null;
-      }
-    }
-  } else if (typeof rawGoals === "string" && rawGoals.trim().startsWith("{")) {
-    try {
-      parsedMeta = JSON.parse(rawGoals.trim());
-    } catch {
-      parsedMeta = null;
-    }
-  }
-
-  const skillsAcquired = performance.skillsAcquired || parsedMeta?.skillsAcquired || "";
-  const certificationsOrCourses =
-    performance.certificationsOrCourses || parsedMeta?.certificationsOrCourses || "";
-  const skillsToImprove = performance.skillsToImprove || parsedMeta?.skillsToImprove || "";
-  const nextQuarterLearningGoals =
-    performance.nextQuarterLearningGoals ||
-    parsedMeta?.nextQuarterLearningGoals ||
-    "";
-  const supportOrTrainingRequired =
-    performance.supportOrTrainingRequired || parsedMeta?.supportOrTrainingRequired || "";
-
-  let parsedEnvMeta: {
-    workEnvironmentSatisfaction?: number;
-    toolsAndResourcesRating?: number;
-    managementSupportRating?: number;
-    challengesAffectingProductivity?: string;
-    suggestionsForImprovement?: string;
-    overallSelfRating?: number;
-    overallEmployeeComments?: string;
-    careerGrowthInterests?: string;
-    confirmationAccepted?: boolean;
-    rateCompanyEnvironment?: string;
-    workCultureFeedback?: string;
-    workLifeBalance?: string;
-  } | null = null;
-
-  const rawCulture = performance.feedbackOnWorkCulture;
-  if (typeof rawCulture === "string" && rawCulture.trim().startsWith("{")) {
-    try {
-      parsedEnvMeta = JSON.parse(rawCulture.trim());
-    } catch {
-      parsedEnvMeta = null;
-    }
-  }
-
-  const companyEnvironmentRating =
-    performance.workEnvironmentRating ??
-    parsedEnvMeta?.workEnvironmentSatisfaction ??
-    0;
-  const toolingAndResourcesRating =
-    performance.toolsResourcesRating ??
-    parsedEnvMeta?.toolsAndResourcesRating ??
-    0;
-  const managementSupportRating =
-    performance.managerSupportRating ??
-    parsedEnvMeta?.managementSupportRating ??
-    0;
-  const challengesAffectingProductivity =
-    performance.challengesAffectingProductivity ||
-    parsedEnvMeta?.challengesAffectingProductivity ||
-    "";
-  const suggestionsForImprovement =
-    performance.suggestionsForImprovement ||
-    parsedEnvMeta?.suggestionsForImprovement ||
-    "";
-  const overallSelfRating =
-    performance.overallSelfRating ??
-    parsedEnvMeta?.overallSelfRating ??
-    0;
-  const overallEmployeeComments =
-    performance.overallEmployeeComments ||
-    parsedEnvMeta?.overallEmployeeComments ||
-    "";
-  const careerGrowthInterests =
-    performance.careerGrowthInterests ||
-    parsedEnvMeta?.careerGrowthInterests ||
-    "";
-  const confirmationAccepted =
-    performance.confirmationAccepted ??
-    parsedEnvMeta?.confirmationAccepted ??
-    false;
-  let parsedOverview: any = null;
-
-  if (rawOverview.trim().startsWith("{") && rawOverview.trim().endsWith("}")) {
-    try {
-      parsedOverview = JSON.parse(rawOverview);
-    } catch {
-      parsedOverview = null;
-    }
-  }
-
-  let rawSummary = (performance.overallPerformanceSummary || "").trim();
-  if (rawSummary.startsWith("{") && rawSummary.endsWith("}")) {
-    try {
-      const parsedSum = JSON.parse(rawSummary);
-      if (parsedSum && typeof parsedSum === "object") {
-        if (!parsedOverview) parsedOverview = parsedSum;
-        rawSummary = parsedSum.overallPerformanceSummary || "";
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  const overallPerformanceSummary =
-    rawSummary ||
-    parsedOverview?.overallPerformanceSummary ||
-    "";
-  const keyHighlights =
-    performance.keyHighlights || parsedOverview?.keyHighlights || "";
-  const majorContributions =
-    performance.majorContributions || parsedOverview?.majorContributions || "";
-  const areasForImprovement =
-    performance.areasForImprovement || parsedOverview?.areasForImprovement || "";
-  const reviewPeriodStart = parsedOverview?.reviewPeriodStart || "";
-  const reviewPeriodEnd = parsedOverview?.reviewPeriodEnd || "";
-
-  const teamCollaborationSummary =
-    performance.teamCollaborationSummary ||
-    parsedOverview?.teamCollaborationSummary ||
-    "";
-  const crossTeamContributions =
-    performance.crossTeamContributions ||
-    parsedOverview?.crossTeamContributions ||
-    "";
-  const knowledgeSharingMentoring =
-    performance.knowledgeSharingMentoring ||
-    parsedOverview?.knowledgeSharingMentoring ||
-    "";
-  const teamworkExamples =
-    performance.teamworkExamples || parsedOverview?.teamworkExamples || "";
-
-  const teamRatings =
-    performance.teamRatings ||
-    parsedOverview?.teamRatings || {
-      communication: performance.communicationTransparency || 0,
-      ownership: performance.reliabilityAccountability || 0,
-      collaboration: performance.crossDepartmentCollaboration || 0,
-      problemSolving: performance.adaptabilityInitiative || 0,
-      leadership: performance.peerSupportTeamSpirit || 0,
-      adaptability: performance.adaptabilityInitiative || 0,
-    };
+  const overviewStep = performance.stepOverview || {};
+  const teamworkStep = performance.stepTeamwork || {};
+  const learningStep = performance.stepLearning || {};
+  const environmentStep = performance.stepEnvironment || {};
+  const finalStep = performance.stepFinalReview || {};
+  const projectsList = readProjectList(performance.stepAchievements?.projects);
+  const teamRatings = (teamworkStep.teamRatings && typeof teamworkStep.teamRatings === "object"
+    ? teamworkStep.teamRatings
+    : {
+        communication: 0,
+        ownership: 0,
+        collaboration: 0,
+        problemSolving: 0,
+        leadership: 0,
+        adaptability: 0,
+      }) as ReviewFormData["teamRatings"];
+  const culture = stepText(environmentStep, "feedbackOnWorkCulture");
+  const comments = stepText(finalStep, "overallEmployeeComments");
 
   return {
     ...emptyReviewFormData,
-    overview: parsedOverview ? "" : rawOverview,
-    roleSummary: parsedOverview ? "" : rawOverview,
-    overallPerformanceSummary: overallPerformanceSummary || (parsedOverview ? "" : rawOverview),
-    keyHighlights,
-    majorContributions,
-    areasForImprovement,
-    reviewPeriodStart,
-    reviewPeriodEnd,
-    teamCollaborationSummary,
-    crossTeamContributions,
-    knowledgeSharingMentoring,
-    teamworkExamples,
+    overallPerformanceSummary: stepText(overviewStep, "overallPerformanceSummary"),
+    keyHighlights: stepText(overviewStep, "keyHighlights"),
+    majorContributions: stepText(overviewStep, "majorContributions"),
+    areasForImprovement: stepText(overviewStep, "areasForImprovement"),
+    reviewPeriodStart: stepText(overviewStep, "reviewPeriodStart"),
+    reviewPeriodEnd: stepText(overviewStep, "reviewPeriodEnd"),
+    teamCollaborationSummary: stepText(teamworkStep, "teamCollaborationSummary"),
+    crossTeamContributions: stepText(teamworkStep, "crossTeamContributions"),
+    knowledgeSharingMentoring: stepText(teamworkStep, "knowledgeSharingMentoring"),
+    teamworkExamples: stepText(teamworkStep, "teamworkExamples"),
     teamRatings,
-    communicationDescription: performance.communicationDescription || (performance as any).communicationDescription || "",
-    ownershipDescription: performance.ownershipDescription || (performance as any).ownershipDescription || "",
-    collaborationDescription: performance.collaborationDescription || (performance as any).collaborationDescription || "",
-    problemSolvingDescription: performance.problemSolvingDescription || (performance as any).problemSolvingDescription || "",
-    leadershipDescription: performance.leadershipDescription || (performance as any).leadershipDescription || "",
-    adaptabilityDescription: performance.adaptabilityDescription || (performance as any).adaptabilityDescription || "",
-    projectName: "",
-    projectTitle: "",
-    projectDescription: "",
-    projectChallenge: "",
-    projects: fallbackProjects,
-    projectAttachments: [],
-    learningGoals: "",
-    learningGoalItems: readLearningGoalList(
-      performance.learningGoals,
-    ).filter((item) => !item.startsWith("{")),
-    skillsAcquired,
-    certificationsOrCourses,
-    skillsToImprove,
-    nextQuarterLearningGoals,
-    supportOrTrainingRequired,
-    workCultureFeedback:
-      (performance as any).workCultureFeedback ||
-      (performance.feedbackOnWorkCulture && !performance.feedbackOnWorkCulture.trim().startsWith("{")
-        ? performance.feedbackOnWorkCulture
-        : "") ||
-      parsedEnvMeta?.workCultureFeedback ||
-      "",
-    feedbackOnWorkCulture:
-      (performance as any).workCultureFeedback ||
-      (performance.feedbackOnWorkCulture && !performance.feedbackOnWorkCulture.trim().startsWith("{")
-        ? performance.feedbackOnWorkCulture
-        : "") ||
-      parsedEnvMeta?.workCultureFeedback ||
-      "",
-    workLifeBalance:
-      performance.workLifeBalance ||
-      (performance as any).workLifeBalance ||
-      parsedEnvMeta?.workLifeBalance ||
-      "",
-    suggestionsForImprovement,
-    challengesAffectingProductivity,
-    rateCompanyEnvironment:
-      performance.rateCompanyEnvironment ||
-      (performance as any).rateCompanyEnvironment ||
-      parsedEnvMeta?.rateCompanyEnvironment ||
-      "",
-    companyEnvironmentRating,
-    toolingAndResourcesRating,
-    managementSupportRating,
-    overallSelfRating,
-    overallEmployeeComments,
-    careerGrowthInterests,
-    confirmationAccepted,
-    finalComments: overallEmployeeComments,
+    communicationDescription: stepText(teamworkStep, "communicationDescription"),
+    ownershipDescription: stepText(teamworkStep, "ownershipDescription"),
+    collaborationDescription: stepText(teamworkStep, "collaborationDescription"),
+    problemSolvingDescription: stepText(teamworkStep, "problemSolvingDescription"),
+    leadershipDescription: stepText(teamworkStep, "leadershipDescription"),
+    adaptabilityDescription: stepText(teamworkStep, "adaptabilityDescription"),
+    projects: projectsList,
+    skillsAcquired: stepText(learningStep, "skillsAcquired"),
+    certificationsOrCourses: stepText(learningStep, "certificationsOrCourses"),
+    skillsToImprove: stepText(learningStep, "skillsToImprove"),
+    nextQuarterLearningGoals: stepText(learningStep, "nextQuarterLearningGoals"),
+    supportOrTrainingRequired: stepText(learningStep, "supportOrTrainingRequired"),
+    workCultureFeedback: culture,
+    feedbackOnWorkCulture: culture,
+    workLifeBalance: stepText(environmentStep, "workLifeBalance"),
+    suggestionsForImprovement: stepText(environmentStep, "suggestionsForImprovement"),
+    challengesAffectingProductivity: stepText(environmentStep, "challengesAffectingProductivity"),
+    rateCompanyEnvironment: stepText(environmentStep, "rateCompanyEnvironment"),
+    companyEnvironmentRating: stepNumber(environmentStep, "workEnvironmentRating"),
+    toolingAndResourcesRating: stepNumber(environmentStep, "toolsResourcesRating"),
+    managementSupportRating: stepNumber(environmentStep, "managerSupportRating"),
+    overallSelfRating: stepNumber(finalStep, "overallSelfRating"),
+    overallEmployeeComments: comments,
+    careerGrowthInterests: stepText(finalStep, "careerGrowthInterests"),
+    confirmationAccepted: Boolean(finalStep.confirmationAccepted),
+    finalComments: comments,
   };
 };
 
-const scored = (value: number | undefined): number | undefined =>
-  value && value > 0 ? value : undefined;
 
-export const toPerformancePayload = (
-  employeeId: string,
-  quarter: QuaterlyEnum,
-  financialYear: string,
+const trimText = (value?: string | null): string => (value || "").trim();
+
+export const toStepPatch = (
+  step: number,
   formData: ReviewFormData,
-): PerformanceWritePayload => {
-  const hasStructuredOverview = Boolean(
-    (formData.overallPerformanceSummary || "").trim() ||
-    (formData.keyHighlights || "").trim() ||
-    (formData.majorContributions || "").trim() ||
-    (formData.areasForImprovement || "").trim() ||
-    (formData.teamCollaborationSummary || "").trim() ||
-    (formData.crossTeamContributions || "").trim() ||
-    (formData.knowledgeSharingMentoring || "").trim() ||
-    (formData.teamworkExamples || "").trim()
-  );
-  const plainOverview = (formData.overview || "").trim().startsWith("{")
-    ? ""
-    : (formData.overview || "").trim();
-  const overview = hasStructuredOverview
-    ? JSON.stringify({
-        overallPerformanceSummary: (formData.overallPerformanceSummary || "").trim(),
-        keyHighlights: (formData.keyHighlights || "").trim(),
-        majorContributions: (formData.majorContributions || "").trim(),
-        areasForImprovement: (formData.areasForImprovement || "").trim(),
+): Pick<
+  PerformanceWritePayload,
+  "stepOverview" | "stepTeamwork" | "stepLearning" | "stepEnvironment" | "stepFinalReview"
+> => {
+  if (step === 1) {
+    return {
+      stepOverview: {
+        overallPerformanceSummary: trimText(formData.overallPerformanceSummary || formData.overview),
+        keyHighlights: trimText(formData.keyHighlights),
+        majorContributions: trimText(formData.majorContributions),
+        areasForImprovement: trimText(formData.areasForImprovement),
         reviewPeriodStart: formData.reviewPeriodStart || "",
         reviewPeriodEnd: formData.reviewPeriodEnd || "",
-        teamCollaborationSummary: (formData.teamCollaborationSummary || "").trim(),
-        crossTeamContributions: (formData.crossTeamContributions || "").trim(),
-        knowledgeSharingMentoring: (formData.knowledgeSharingMentoring || "").trim(),
-        teamworkExamples: (formData.teamworkExamples || "").trim(),
-      })
-    : plainOverview;
-  const projects = (formData.projects || [])
-    .filter((project) => Boolean(project && (project.projectName?.trim() || project.description?.trim())))
-    .map((project) => ({
-      projectName: (project.projectName || "Untitled Project").trim(),
-      description: (project.description || "").trim(),
-      challenge: (project.challenge || project.challengesFaced || "").trim(),
-      challengesFaced: (project.challengesFaced || project.challenge || "").trim(),
-      projectRole: project.projectRole || "",
-      responsibilityType: project.responsibilityType || "",
-      leadershipQualities: (project.leadershipQualities || "").trim(),
-      clientReviewFeedback: (project.clientReviewFeedback || "").trim(),
-      keyResponsibilities: (project.keyResponsibilities || "").trim(),
-      solutionsImplemented: (project.solutionsImplemented || "").trim(),
-      keyAchievementsOutcomes: (project.keyAchievementsOutcomes || "").trim(),
-      technologiesUsed: Array.isArray(project.technologiesUsed) ? project.technologiesUsed : [],
-      isDraft: Boolean(project.isDraft),
-      attachments: (project.attachments || [])
-        .filter((file) => Boolean(file && file.fileName && file.objectKey))
-        .map((file) => ({
-          fileName: file.fileName,
-          fileUrl: file.objectKey,
-          fileSize: file.fileSize || 0,
-          fileType: file.fileType || "",
-          objectKey: file.objectKey,
-        })),
-    }));
-  const projectNames = projects.map((project) => project.projectName.trim()).join("\n");
-  const projectDescription = projects.map((project) => project.description.trim()).join("\n");
-  const challenge = projects.map((project) => project.challenge.trim()).join("\n");
+      },
+    };
+  }
+  if (step === 3) {
+    return {
+      stepTeamwork: {
+        teamCollaborationSummary: trimText(formData.teamCollaborationSummary),
+        crossTeamContributions: trimText(formData.crossTeamContributions),
+        knowledgeSharingMentoring: trimText(formData.knowledgeSharingMentoring),
+        teamworkExamples: trimText(formData.teamworkExamples),
+        teamRatings: formData.teamRatings || {},
+        communicationDescription: trimText(formData.communicationDescription),
+        ownershipDescription: trimText(formData.ownershipDescription),
+        collaborationDescription: trimText(formData.collaborationDescription),
+        problemSolvingDescription: trimText(formData.problemSolvingDescription),
+        leadershipDescription: trimText(formData.leadershipDescription),
+        adaptabilityDescription: trimText(formData.adaptabilityDescription),
+      },
+    };
+  }
+  if (step === 4) {
+    return {
+      stepLearning: {
+        skillsAcquired: trimText(formData.skillsAcquired),
+        certificationsOrCourses: trimText(formData.certificationsOrCourses),
+        skillsToImprove: trimText(formData.skillsToImprove),
+        supportOrTrainingRequired: trimText(formData.supportOrTrainingRequired),
+        nextQuarterLearningGoals: trimText(formData.nextQuarterLearningGoals),
+      },
+    };
+  }
+  if (step === 5) {
+    return {
+      stepEnvironment: {
+        workEnvironmentRating: formData.companyEnvironmentRating || null,
+        toolsResourcesRating: formData.toolingAndResourcesRating || null,
+        managerSupportRating: formData.managementSupportRating || null,
+        challengesAffectingProductivity: trimText(formData.challengesAffectingProductivity),
+        feedbackOnWorkCulture: trimText(formData.workCultureFeedback || formData.feedbackOnWorkCulture),
+        workLifeBalance: trimText(formData.workLifeBalance),
+        suggestionsForImprovement: trimText(formData.suggestionsForImprovement),
+        rateCompanyEnvironment: formData.rateCompanyEnvironment || null,
+      },
+    };
+  }
+  if (step === 6) {
+    return {
+      stepFinalReview: {
+        overallSelfRating: formData.overallSelfRating || null,
+        overallEmployeeComments: trimText(formData.overallEmployeeComments),
+        careerGrowthInterests: trimText(formData.careerGrowthInterests),
+        confirmationAccepted: Boolean(formData.confirmationAccepted),
+      },
+    };
+  }
+  return {};
+};
 
-  const skillsLearned = (formData.skillsAcquired || "").trim();
-  const certs = (formData.certificationsOrCourses || "").trim();
-  const toImprove = (formData.skillsToImprove || "").trim();
-  const nextGoals = (formData.nextQuarterLearningGoals || "").trim();
-  const support = (formData.supportOrTrainingRequired || "").trim();
+export const toProjectWriteBody = (project: PerformanceProject) => ({
+  projectName: trimText(project.projectName || project.title) || "Untitled Project",
+  description: trimText(project.description),
+  challenge: trimText(project.challenge || project.challengesFaced),
+  challengesFaced: trimText(project.challengesFaced || project.challenge),
+  projectRole: trimText(project.projectRole),
+  responsibilityType: trimText(project.responsibilityType),
+  leadershipQualities: trimText(project.leadershipQualities),
+  clientReviewFeedback: trimText(project.clientReviewFeedback),
+  keyResponsibilities: trimText(project.keyResponsibilities),
+  solutionsImplemented: trimText(project.solutionsImplemented),
+  keyAchievementsOutcomes: trimText(project.keyAchievementsOutcomes),
+  technologiesUsed: Array.isArray(project.technologiesUsed) ? project.technologiesUsed : [],
+  isDraft: Boolean(project.isDraft),
+  attachments: (project.attachments || [])
+    .filter((file) => Boolean(file && file.fileName && file.objectKey))
+    .map((file) => ({
+      fileName: file.fileName,
+      fileUrl: file.objectKey,
+      fileSize: file.fileSize || 0,
+      fileType: file.fileType || "",
+      objectKey: file.objectKey,
+    })),
+});
 
-  const metaGoalObj = {
-    skillsAcquired: skillsLearned,
-    certificationsOrCourses: certs,
-    skillsToImprove: toImprove,
-    nextQuarterLearningGoals: nextGoals,
-    supportOrTrainingRequired: support,
-  };
-  const metaGoalStr = JSON.stringify(metaGoalObj);
-  const learningGoalsList = [
-    metaGoalStr,
-    skillsLearned ? `Skills Learned: ${skillsLearned}` : "",
-    certs ? `Certifications: ${certs}` : "",
-    toImprove ? `Skills to Improve: ${toImprove}` : "",
-    nextGoals ? `Next Quarter Goals: ${nextGoals}` : "",
-    support ? `Support Required: ${support}` : "",
-  ].filter(Boolean);
-
-  const envRating = formData.companyEnvironmentRating || 0;
-  const toolsRating = formData.toolingAndResourcesRating || 0;
-  const mgrRating = formData.managementSupportRating || 0;
-  const challenges = (formData.challengesAffectingProductivity || "").trim();
-  const workCulture = (formData.workCultureFeedback || formData.feedbackOnWorkCulture || "").trim();
-  const workLife = (formData.workLifeBalance || "").trim();
-  const suggestions = (formData.suggestionsForImprovement || formData.toolingAndResources || "").trim();
-  const overallSelfRating = formData.overallSelfRating || 0;
-  const overallEmployeeComments = (formData.overallEmployeeComments || "").trim();
-  const careerGrowthInterests = (formData.careerGrowthInterests || "").trim();
-  const confirmationAccepted = Boolean(formData.confirmationAccepted);
-
-  const ratings = formData.teamRatings || {};
-  const rateCompanyEnv = formData.rateCompanyEnvironment || null;
-  const responsibilitiesHandled =
-    (formData.majorContributions || "").trim() ||
-    (hasStructuredOverview ? overview : plainOverview);
-
-  return {
-    employeeId,
-    quarter,
-    financialYear,
-    overview: (formData.overview || "").trim() || (hasStructuredOverview ? overview : null),
-    projects,
-    responsibilitiesHandled: responsibilitiesHandled || null,
-    deliverablesCompleted: projectDescription || null,
-    keyAccomplishments: projectNames || null,
-    challengesFaced: challenge || null,
-    skillsAcquired: skillsLearned || null,
-    learningGoals: learningGoalsList.length ? learningGoalsList : [],
-    feedbackOnWorkCulture: workCulture || null,
-    workLifeBalance: workLife || null,
-    suggestionsForImprovement: suggestions || null,
-    plannedDeliverables: nextGoals || null,
-    careerDevelopmentGoals: careerGrowthInterests || null,
-    communicationTransparency: scored(ratings.communication) ?? null,
-    crossDepartmentCollaboration: scored(ratings.collaboration || ratings.communication) ?? null,
-    reliabilityAccountability: scored(ratings.ownership || ratings.communication) ?? null,
-    peerSupportTeamSpirit: scored(ratings.leadership || ratings.communication) ?? null,
-    mentorshipKnowledgeSharing: scored(ratings.collaboration || ratings.communication) ?? null,
-    adaptabilityInitiative: scored(ratings.adaptability || ratings.problemSolving || ratings.communication) ?? null,
-    rateCompanyEnvironment: rateCompanyEnv || null,
-
-    // --- Step 1: Role & Quarter Overview ---
-    overallPerformanceSummary: (formData.overallPerformanceSummary || "").trim() || null,
-    keyHighlights: (formData.keyHighlights || "").trim() || null,
-    majorContributions: (formData.majorContributions || "").trim() || null,
-    areasForImprovement: (formData.areasForImprovement || "").trim() || null,
-
-    // --- Step 3: Teamwork & Collaboration ---
-    teamCollaborationSummary: (formData.teamCollaborationSummary || "").trim() || null,
-    crossTeamContributions: (formData.crossTeamContributions || "").trim() || null,
-    knowledgeSharingMentoring: (formData.knowledgeSharingMentoring || "").trim() || null,
-    teamworkExamples: (formData.teamworkExamples || "").trim() || null,
-    teamRatings: ratings,
-    communicationDescription: (formData.communicationDescription || "").trim() || null,
-    ownershipDescription: (formData.ownershipDescription || "").trim() || null,
-    collaborationDescription: (formData.collaborationDescription || "").trim() || null,
-    problemSolvingDescription: (formData.problemSolvingDescription || "").trim() || null,
-    leadershipDescription: (formData.leadershipDescription || "").trim() || null,
-    adaptabilityDescription: (formData.adaptabilityDescription || "").trim() || null,
-
-    // --- Step 4: Continuous Learning & Goals ---
-    certificationsOrCourses: certs || null,
-    skillsToImprove: toImprove || null,
-    supportOrTrainingRequired: support || null,
-    nextQuarterLearningGoals: nextGoals || null,
-
-    // --- Step 5: Environment ---
-    workEnvironmentRating: envRating || null,
-    toolsResourcesRating: toolsRating || null,
-    managerSupportRating: mgrRating || null,
-    challengesAffectingProductivity: challenges || null,
-
-    // --- Step 6: Review & Final Submission ---
-    overallSelfRating: overallSelfRating || null,
-    overallEmployeeComments: overallEmployeeComments || null,
-    careerGrowthInterests: careerGrowthInterests || null,
-    confirmationAccepted: confirmationAccepted,
-  };
+export const changedProjectFields = (
+  previous: PerformanceProject | undefined,
+  next: PerformanceProject,
+): Record<string, unknown> => {
+  const body = toProjectWriteBody(next);
+  if (!previous) {
+    return body;
+  }
+  const before = toProjectWriteBody(previous);
+  const patch: Record<string, unknown> = {};
+  (Object.keys(body) as Array<keyof typeof body>).forEach((key) => {
+    if (JSON.stringify(before[key] ?? null) !== JSON.stringify(body[key] ?? null)) {
+      patch[key] = body[key];
+    }
+  });
+  return patch;
 };
 
 // 
@@ -862,7 +643,7 @@ export interface RatingTierConfig {
   greetingText: string;
   quoteMessage: string;
   motivationalLines: string[];
-  theme: "coral" | "amber" | "mint" | "emerald" | "gold" | "red" | "orange";
+  theme: "coral" | "amber" | "mint" | "emerald" | "gold" | "red" | "orange" | "bronze" | "silver";
   accentHex: string;
   badgeBgHex: string;
   badgeBorderHex: string;

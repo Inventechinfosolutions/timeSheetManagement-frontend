@@ -350,6 +350,11 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
     inset 0 1px 1.5px rgba(255, 255, 255, 0.45) !important;
 }
 
+.assign-modal-submit-btn:disabled {
+  opacity: 1 !important;
+  cursor: default !important;
+}
+
 .assign-modal-submit-btn:hover:not(:disabled) {
   transform: translateY(-2.5px) scale(1.02) !important;
   background: linear-gradient(180deg, #2563EB 0%, #1E40AF 100%) !important;

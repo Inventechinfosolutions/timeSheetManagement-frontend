@@ -222,11 +222,34 @@ export const AppraisalApi = {
 
   updatePerformance: async (
     performanceId: number,
-    payload: PerformanceWritePayload,
+    payload: Partial<PerformanceWritePayload>,
   ): Promise<EmployeePerformanceDetail> => {
-    const response = await axios.put<EmployeePerformanceDetail>(
+    const response = await axios.patch<EmployeePerformanceDetail>(
       `${EMPLOYEE_PERFORMANCE_URL}/${performanceId}`,
       payload,
+    );
+    return response.data;
+  },
+
+  createPerformanceProject: async (
+    performanceId: number,
+    project: Record<string, unknown>,
+  ): Promise<EmployeePerformanceDetail> => {
+    const response = await axios.post<EmployeePerformanceDetail>(
+      `${EMPLOYEE_PERFORMANCE_URL}/${performanceId}/projects`,
+      project,
+    );
+    return response.data;
+  },
+
+  patchPerformanceProject: async (
+    performanceId: number,
+    projectIndex: number,
+    project: Record<string, unknown>,
+  ): Promise<EmployeePerformanceDetail> => {
+    const response = await axios.patch<EmployeePerformanceDetail>(
+      `${EMPLOYEE_PERFORMANCE_URL}/${performanceId}/projects/${projectIndex}`,
+      project,
     );
     return response.data;
   },
@@ -388,7 +411,7 @@ export const AppraisalApi = {
       isDraft?: boolean;
     },
   ): Promise<ManagerReviewApiRecord> => {
-    const response = await axios.put<ManagerReviewApiRecord>(`${QUARTERLY_REVIEW_URL}/${reviewId}`, payload);
+    const response = await axios.patch<ManagerReviewApiRecord>(`${QUARTERLY_REVIEW_URL}/${reviewId}`, payload);
     return response.data;
   },
 
@@ -421,7 +444,7 @@ export const AppraisalApi = {
       isDraft?: boolean;
     },
   ): Promise<ManagerReviewApiRecord> => {
-    const response = await axios.put<ManagerReviewApiRecord>(
+    const response = await axios.patch<ManagerReviewApiRecord>(
       `${QUARTERLY_REVIEW_URL}/${reviewId}/evaluate`,
       payload,
     );

@@ -1199,7 +1199,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       isDraft: true,
     })
       .then(() => {
-        message.success("Draft saved successfully.");
+        message.success("Saved successfully");
       })
       .catch((error) => {
         message.error(readApiError(error));
@@ -1330,7 +1330,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         deadline: deadlineDate,
         description: assignmentDescription.trim(),
       });
-      message.success("Assignment saved");
+      message.success("Saved successfully");
     } catch (error) {
       setAssignmentError(readApiError(error));
     } finally {

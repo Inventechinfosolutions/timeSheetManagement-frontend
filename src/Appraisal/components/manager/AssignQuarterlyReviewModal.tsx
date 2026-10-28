@@ -17,7 +17,7 @@ import {
   Dropdown,
   SearchDropdown,
 } from "../../../components/ui";
-import { DatePicker as AntDatePicker, ConfigProvider } from "antd";
+import { DatePicker as AntDatePicker, ConfigProvider, message } from "antd";
 import dayjs from "dayjs";
 import { AssignSubmitPanel, AssignSubmitSummary } from "./AssignSubmitPanel";
 import { loadAppraisalPeriod } from "../../utils/appraisalHelpers";
@@ -399,6 +399,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
 
     void Promise.all([apiCall, minAnimTime])
       .then(() => {
+        message.success("Saved successfully");
         setButtonState(AssignButtonState.ASSIGNED);
         setTimeout(() => {
           setIsModalClosing(true);

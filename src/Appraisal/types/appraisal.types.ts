@@ -527,68 +527,23 @@ export interface EmployeePerformanceDetail {
   submittedAt: string | null;
   createdAt?: string | null;
   lastModifiedDate?: string | null;
-  overview: string | null;
-  projects?: PerformanceProject[] | string | null;
-  communicationTransparency: number | null;
-  crossDepartmentCollaboration: number | null;
-  mentorshipKnowledgeSharing: number | null;
-  reliabilityAccountability: number | null;
-  peerSupportTeamSpirit: number | null;
-  adaptabilityInitiative: number | null;
-  learningGoals: string[] | string | null;
-  feedbackOnWorkCulture: string | null;
-  workLifeBalance: string | null;
-  suggestionsForImprovement: string | null;
-  rateCompanyEnvironment: string | null;
-  challengesAffectingProductivity?: string | null;
-  toolingAndResourcesRating?: number | null;
-  managementSupportRating?: number | null;
-  managerSupportRating?: number | null;
-  overallSelfRating?: number | null;
-  overallEmployeeComments?: string | null;
-  careerGrowthInterests?: string | null;
-  confirmationAccepted?: boolean | null;
-  overallPerformanceSummary?: string | null;
-  keyHighlights?: string | null;
-  majorContributions?: string | null;
-  areasForImprovement?: string | null;
-  teamCollaborationSummary?: string | null;
-  crossTeamContributions?: string | null;
-  knowledgeSharingMentoring?: string | null;
-  teamworkExamples?: string | null;
-  teamRatings?: Record<string, number | undefined> | null;
-  communicationDescription?: string | null;
-  ownershipDescription?: string | null;
-  collaborationDescription?: string | null;
-  problemSolvingDescription?: string | null;
-  leadershipDescription?: string | null;
-  adaptabilityDescription?: string | null;
-  certificationsOrCourses?: string | null;
-  nextQuarterLearningGoals?: string | null;
-  workEnvironmentRating?: number | null;
-  toolsResourcesRating?: number | null;
+  stepOverview?: Record<string, any> | null;
+  stepAchievements?: { projects?: PerformanceProject[] | string | null } | null;
+  stepTeamwork?: Record<string, any> | null;
+  stepLearning?: Record<string, any> | null;
+  stepEnvironment?: Record<string, any> | null;
+  stepFinalReview?: Record<string, any> | null;
   assignedBy?: string | null;
   assignedDate?: string | null;
   deadlineDate?: string | null;
   description?: string | null;
   reviewId?: number | null;
-  skillsAcquired: string | null;
-  skillsToImprove?: string | null;
-  careerDevelopmentGoals: string | null;
-  supportOrTrainingRequired?: string | null;
   canRequestEdit?: boolean;
   remainingRequestHours?: number;
   canEdit?: boolean;
   isEditWindowActive?: boolean;
   editRequestedAt?: string | null;
   editRequestReason?: string | null;
-  attachments?: Array<{
-    fileName: string;
-    fileUrl: string;
-    fileSize: number;
-    fileType: string;
-    objectKey: string;
-  }>;
   reassignCount?: number | null;
   auditHistory?: AppraisalAuditEntry[];
 }
@@ -648,63 +603,13 @@ export interface PerformanceWritePayload {
   quarter: QuaterlyEnum;
   financialYear: string;
   status?: EmployeePerformanceStatus | string;
-  overview?: string | null;
   projects?: PerformanceProject[];
-  responsibilitiesHandled?: string | null;
-  deliverablesCompleted?: string | null;
-  keyAccomplishments?: string | null;
-  challengesFaced?: string | null;
-  skillsAcquired?: string | null;
-  learningGoals?: string[] | null;
-  feedbackOnWorkCulture?: string | null;
-  workLifeBalance?: string | null;
-  suggestionsForImprovement?: string | null;
-  plannedDeliverables?: string | null;
-  careerDevelopmentGoals?: string | null;
-  communicationTransparency?: number | null;
-  crossDepartmentCollaboration?: number | null;
-  mentorshipKnowledgeSharing?: number | null;
-  reliabilityAccountability?: number | null;
-  peerSupportTeamSpirit?: number | null;
-  adaptabilityInitiative?: number | null;
-  rateCompanyEnvironment?: string | null;
-
-  // --- Step 1: Role & Quarter Overview ---
-  overallPerformanceSummary?: string | null;
-  keyHighlights?: string | null;
-  majorContributions?: string | null;
-  areasForImprovement?: string | null;
-
-  // --- Step 3: Teamwork & Collaboration ---
-  teamCollaborationSummary?: string | null;
-  crossTeamContributions?: string | null;
-  knowledgeSharingMentoring?: string | null;
-  teamworkExamples?: string | null;
-  teamRatings?: Record<string, number | undefined> | null;
-  communicationDescription?: string | null;
-  ownershipDescription?: string | null;
-  collaborationDescription?: string | null;
-  problemSolvingDescription?: string | null;
-  leadershipDescription?: string | null;
-  adaptabilityDescription?: string | null;
-
-  // --- Step 4: Continuous Learning & Goals ---
-  certificationsOrCourses?: string | null;
-  skillsToImprove?: string | null;
-  supportOrTrainingRequired?: string | null;
-  nextQuarterLearningGoals?: string | null;
-
-  // --- Step 5: Environment ---
-  workEnvironmentRating?: number | null;
-  toolsResourcesRating?: number | null;
-  managerSupportRating?: number | null;
-  challengesAffectingProductivity?: string | null;
-
-  // --- Step 6: Review & Final Submission ---
-  overallSelfRating?: number | null;
-  overallEmployeeComments?: string | null;
-  careerGrowthInterests?: string | null;
-  confirmationAccepted?: boolean;
+  stepOverview?: Record<string, unknown> | null;
+  stepTeamwork?: Record<string, unknown> | null;
+  stepLearning?: Record<string, unknown> | null;
+  stepEnvironment?: Record<string, unknown> | null;
+  stepFinalReview?: Record<string, unknown> | null;
+  clearSteps?: boolean;
 }
 
 export interface EmployeePerformanceListItem extends EmployeePerformanceDetail {
