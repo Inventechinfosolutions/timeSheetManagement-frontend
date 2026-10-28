@@ -11,7 +11,7 @@ import { AssignmentType, ManagerQuarterlyReviewRecord } from "../../types/apprai
 import { useAppDispatch, useAppSelector } from "../../../hooks";
 import { fetchDepartments } from "../../../reducers/masterDepartment.reducer";
 import { getEntity } from "../../../reducers/employeeDetails.reducer";
-import { isAdminAccess } from "../../../utils/roleAccess";
+import { isAdminAccess, isCeoUser } from "../../../utils/roleAccess";
 import {
   AppraisalApi,
   MasterFinancialYearOption,
@@ -49,6 +49,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { departments } = useAppSelector((state) => state.masterDepartments);
   const isAdmin = isAdminAccess(currentUser);
+  const isCeo = isCeoUser(currentUser);
   const isGlobalLoading = useAppSelector((state) => (state.apiLoading?.activeCount ?? 0) > 0);
   const managerId = currentUser?.employeeId || currentUser?.loginId || "";
   // Modal flow state (for visual presentation / prototyping)
@@ -382,6 +383,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
     const query = {
       ...(!isAdmin && managerId ? { assignerId: managerId } : {}),
+      ...(isCeo ? { role: "MANAGER" } : {}),
       department: selectedDept,
       page: tablePage,
       limit: QUARTERLY_REVIEW_TABLE_PAGE_SIZE,
@@ -418,14 +420,16 @@ export const ManagerQuarterlyReview: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [defaultsReady, isAdmin, managerId, debouncedSearch, financialYear, quarter, statusFilter, department, reloadKey, tablePage]);
+  }, [defaultsReady, isAdmin, isCeo, managerId, debouncedSearch, financialYear, quarter, statusFilter, department, reloadKey, tablePage]);
 
   const departmentOptions = [
     { value: AppraisalFilterAll.ALL, label: "Department" },
-    ...(departments || []).map((dept) => ({
-      value: dept.departmentName,
-      label: dept.departmentName,
-    })),
+    ...(departments || [])
+      .filter((dept) => !(isCeo && dept.departmentName?.trim().toUpperCase() === "CEO"))
+      .map((dept) => ({
+        value: dept.departmentName,
+        label: dept.departmentName,
+      })),
   ];
 
   const financialYearOptions = masterYears.map((year) => ({
@@ -554,7 +558,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
           {/* Action Area & Manager Department at top right */}
           <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-2.5 flex-wrap">
-            {fullDepartmentName && (
+            {fullDepartmentName && !isCeo && (
               <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white border border-[#E2E8F0] shadow-2xs shrink-0">
                 <Building2 className="w-4 h-4 text-[#2563EB] shrink-0" />
                 <span className="text-xs font-semibold text-[#64748B]">Department:</span>
@@ -787,6 +791,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
           assignmentType={assignmentType}
           selectedDepartment={selectedReviewDepartment}
           isAdmin={isAdmin}
+          managersOnly={isCeo}
           onAssign={handleAssignSuccess}
         />
       </div>

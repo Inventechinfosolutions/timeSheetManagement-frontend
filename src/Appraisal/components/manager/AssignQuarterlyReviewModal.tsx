@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { Send, Check, ArrowLeft, ChevronLeft } from "lucide-react";
+import { Send, Check, ArrowLeft, ChevronLeft, CheckCircle } from "lucide-react";
 import { AssignQuarterlyReviewModalProps } from "../../types/appraisal.types";
 import { useAppSelector } from "../../../hooks";
 import {
@@ -17,7 +17,7 @@ import {
   Dropdown,
   SearchDropdown,
 } from "../../../components/ui";
-import { DatePicker as AntDatePicker, ConfigProvider, message } from "antd";
+import { DatePicker as AntDatePicker, ConfigProvider } from "antd";
 import dayjs from "dayjs";
 import { AssignSubmitPanel, AssignSubmitSummary } from "./AssignSubmitPanel";
 import { loadAppraisalPeriod } from "../../utils/appraisalHelpers";
@@ -59,6 +59,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   onClose,
   onBack,
   assignmentType = AssignmentKind.INDIVIDUAL,
+  managersOnly = false,
   onAssign,
   selectedDepartment,
   isAdmin = false,
@@ -85,6 +86,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   const [errorField, setErrorField] = useState<AssignFormField | null>(null);
   const [submitSummary, setSubmitSummary] = useState<AssignSubmitSummary | null>(null);
   const [buttonState, setButtonState] = useState<AssignButtonState>(AssignButtonState.IDLE);
+  const [assignmentNoticeCount, setAssignmentNoticeCount] = useState(0);
   const [isModalClosing, setIsModalClosing] = useState<boolean>(false);
   const [formSession, setFormSession] = useState(0);
   const [trackedOpen, setTrackedOpen] = useState(isOpen);
@@ -101,6 +103,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       setTeamMembers([]);
       teamApplied.current = false;
       setSubmitSummary(null);
+      setAssignmentNoticeCount(0);
       setSelectedFinancialYear("");
       setSelectedQuarter("");
       setFromDate(todayDisplayDate());
@@ -151,7 +154,11 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   const loadEmployees = useCallback((search?: string) => {
     if (isAdmin && selectedDepartment) {
       setEmployeesLoading(true);
-      void AppraisalApi.getEmployeesByDepartment(selectedDepartment, search)
+      void AppraisalApi.getEmployeesByDepartment(
+        selectedDepartment,
+        search,
+        managersOnly ? "MANAGER" : undefined,
+      )
         .then((employees) => {
           setMappedEmployees(employees);
           if (search?.trim()) return;
@@ -192,7 +199,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       })
       .catch(() => setMappedEmployees([]))
       .finally(() => setEmployeesLoading(false));
-  }, [managerId, assignmentType, isAdmin, selectedDepartment]);
+  }, [managerId, assignmentType, isAdmin, selectedDepartment, managersOnly]);
 
   const loadFinancialYears = () => {
     if (yearsLoaded.current) return;
@@ -399,30 +406,29 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
 
     void Promise.all([apiCall, minAnimTime])
       .then(() => {
-        message.success("Saved successfully");
         setButtonState(AssignButtonState.ASSIGNED);
-        setTimeout(() => {
-          setIsModalClosing(true);
-        }, 1200);
-        setTimeout(() => {
-          onAssign?.({
-            quarter: selectedQuarter,
-            employee: selectedEmployees[0] || "",
-            financialYear: selectedFinancialYear,
-            fromDate,
-            toDate,
-            description,
-          });
-          onClose();
-          setIsModalClosing(false);
-          setButtonState(AssignButtonState.IDLE);
-        }, 1550);
+        setAssignmentNoticeCount(submitSummary.people.length);
       })
       .catch((error: unknown) => {
         setButtonState(AssignButtonState.CONFIRM);
         setErrorField(null);
         setAssignError(readApiError(error));
       });
+  };
+
+  const closeAssignmentNotice = () => {
+    setAssignmentNoticeCount(0);
+    onAssign?.({
+      quarter: selectedQuarter,
+      employee: selectedEmployees[0] || "",
+      financialYear: selectedFinancialYear,
+      fromDate,
+      toDate,
+      description,
+    });
+    onClose();
+    setIsModalClosing(false);
+    setButtonState(AssignButtonState.IDLE);
   };
 
   const handleBack = () => {
@@ -547,8 +553,9 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   );
 
   return (
+    <>
     <Modal
-      open={isOpen}
+      open={isOpen && assignmentNoticeCount === 0}
       onClose={handleModalClose}
       title={modalTitle}
       footer={modalFooter}
@@ -775,6 +782,38 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
         </div>
       )}
     </Modal>
+    {assignmentNoticeCount > 0 && (
+      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-100 overflow-hidden">
+          <div className="bg-gradient-to-r from-[#4318FF] to-[#868CFF] p-6 text-white text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm shadow-inner">
+              <CheckCircle size={32} className="text-white" />
+            </div>
+            <h3 className="text-xl font-bold">Action Successful!</h3>
+            <p className="text-blue-100 text-sm mt-1">Appraisal assigned successfully!</p>
+          </div>
+          <div className="p-6 space-y-5 text-center">
+            <div className="p-3 bg-green-50 rounded-xl border border-green-100">
+              <p className="text-sm text-green-800 font-medium">
+                {assignmentNoticeCount === 1
+                  ? "The employee will receive the assignment email."
+                  : "The employees will receive the assignment email."}
+              </p>
+            </div>
+            <div className="flex gap-3 pt-2 justify-center">
+              <button
+                type="button"
+                onClick={closeAssignmentNotice}
+                className="px-8 py-2.5 text-sm font-bold text-white bg-[#4318FF] hover:bg-[#3311CC] rounded-xl shadow-lg hover:shadow-xl transition-all"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 };
 

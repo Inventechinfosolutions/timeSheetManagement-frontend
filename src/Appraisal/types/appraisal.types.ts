@@ -23,6 +23,7 @@ export interface AssignQuarterlyReviewModalProps {
   assignmentType?: AssignmentType | null;
   selectedDepartment?: string;
   isAdmin?: boolean;
+  managersOnly?: boolean;
   onAssign?: (data: {
     quarter: string;
     employee: string;
@@ -496,6 +497,7 @@ export interface QuarterlyReviewListQuery {
   financialYear?: string;
   quarter?: QuaterlyEnum;
   status?: QuarterlyReviewStatus;
+  role?: string;
 }
 
 export interface QuarterlyReviewSearchQuery extends QuarterlyReviewListQuery {

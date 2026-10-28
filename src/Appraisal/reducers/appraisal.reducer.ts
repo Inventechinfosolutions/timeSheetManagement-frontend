@@ -470,13 +470,16 @@ export const AppraisalApi = {
     return response.data.items ?? [];
   },
 
-  getEmployeesByDepartment: async (department: string, search?: string): Promise<MappedEmployee[]> => {
+  getEmployeesByDepartment: async (department: string, search?: string, role?: string): Promise<MappedEmployee[]> => {
     const params: Record<string, string> = {};
     if (department && department !== 'All') {
       params.department = department;
     }
     if (search && search.trim()) {
       params.search = search.trim();
+    }
+    if (role) {
+      params.role = role;
     }
     const response = await axios.get<any[]>('/api/employee-details/list-select', {
       params,

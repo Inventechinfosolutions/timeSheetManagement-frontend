@@ -22,7 +22,7 @@ import {
 } from "../reducers/attendenceEditRequest.reducer";
 import { WorksphereLogoLoader } from "../components/ApiLoadingSpinner";
 import { UserType } from "../enums";
-import { isAdminAccess } from "../utils/roleAccess";
+import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
 
 const STATUS_OPTIONS = ["All", "Pending", "Approved", "Rejected"] as const;
 const PAGE_SIZE = 10;
@@ -40,6 +40,7 @@ const AttendenceEditRequests = () => {
   );
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const isAdmin = isAdminAccess(currentUser);
+  const isCeo = isCeoUser(currentUser);
   const isManager = !!(
     !isAdmin &&
     (currentUser?.userType === UserType.MANAGER ||
@@ -66,13 +67,14 @@ const AttendenceEditRequests = () => {
     page,
     limit: PAGE_SIZE,
     ...(isManager && currentLoginId ? { managerId: currentLoginId } : {}),
+    ...(isCeo ? { role: "MANAGER" } : {}),
     status: statusFilter,
   });
 
   useEffect(() => {
     dispatch(fetchEditRequestsForReview(reviewQuery()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch, isManager, currentLoginId, page, statusFilter]);
+  }, [dispatch, isManager, isCeo, currentLoginId, page, statusFilter]);
 
   const hasFilters = statusFilter !== "All";
 
@@ -124,7 +126,9 @@ const AttendenceEditRequests = () => {
               Access Ticket
             </h1>
             <p className="text-xs sm:text-sm text-gray-500 mt-1">
-              Review Locked-day edit requests from mapped employees.
+              {isCeo
+                ? "Review Locked-day edit requests from managers."
+                : "Review Locked-day edit requests from mapped employees."}
             </p>
           </div>
 
