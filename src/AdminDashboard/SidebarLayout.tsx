@@ -18,6 +18,7 @@ import {
   FileText,
   Inbox,
   ClipboardCheck,
+  CalendarCheck,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -98,6 +99,7 @@ const SidebarLayout = ({
       { name: "Employee Directory", icon: Users },
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Request Management", icon: Calendar },
+      { name: "Leave Management", icon: CalendarCheck },
       { name: "Appraisal", icon: ClipboardCheck },
       { name: "Access Ticket", icon: Unlock },
       { name: "Notes", icon: FileText },
@@ -108,19 +110,31 @@ const SidebarLayout = ({
     [],
   );
 
-  // Receptionist: hide Request Management from sidebar
+  // Receptionist: hide Request Management and Leave Management from sidebar
   const visibleAdminSidebarItems = useMemo(() => {
     const items =
       title === "Receptionist"
 
-        ? adminSidebarItems.filter((i) => i.name !== "Request Management")
+        ? adminSidebarItems.filter(
+            (i) => i.name !== "Request Management" && i.name !== "Leave Management",
+          )
         : adminSidebarItems;
-    if (title !== "CEO") return items;
-    return items
-      .filter((item) => item.name !== "Employee Directory")
-      .map((item) =>
-        item.name === "Admin Dashboard" ? { ...item, name: "CEO Dashboard" } : item,
-      );
+    if (title === "CEO" || title === "General Manager") {
+      return items
+        .filter((item) => item.name !== "Employee Directory" && item.name !== "Leave Management")
+        .map((item) =>
+          item.name === "Admin Dashboard"
+            ? {
+                ...item,
+                name:
+                  title === "CEO"
+                    ? "CEO Dashboard"
+                    : "General Manager Dashboard",
+              }
+            : item,
+        );
+    }
+    return items;
   }, [title, adminSidebarItems]);
 
 
@@ -144,6 +158,8 @@ const SidebarLayout = ({
         return "Leave Balance";
       case "work-management":
         return "Request Management";
+      case "leave-calculation":
+        return "Leave Management";
 
       case "appraisal":
       case "quarterly-review":
@@ -171,7 +187,9 @@ const SidebarLayout = ({
           ? "My Dashboard"
           : title === "CEO"
             ? "CEO Dashboard"
-            : "Admin Dashboard";
+            : title === "General Manager"
+              ? "General Manager Dashboard"
+              : "Admin Dashboard";
     }
   }, [tab, activeTab, title]);
 

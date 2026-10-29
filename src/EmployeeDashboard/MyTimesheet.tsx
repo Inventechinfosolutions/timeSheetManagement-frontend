@@ -112,7 +112,7 @@ const MyTimesheet = ({
     currentUser?.userType === UserType.MANAGER ||
     currentUser?.userType === UserType.TEAMLEAD ||
     (currentUser?.role &&
-      currentUser.role.toUpperCase().includes(UserType.MANAGER))
+      currentUser.role.toUpperCase() === UserType.MANAGER)
   );
   const isMyRoute =
     location.pathname.includes("my-dashboard") ||

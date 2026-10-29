@@ -19,7 +19,7 @@ import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
 import { fetchNotes } from "../reducers/notes.reducer";
 import { UserType } from "../enums";
-import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
+import { isAdminAccess, isCeoUser, isGeneralManagerUser } from "../utils/roleAccess";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import ScrollNavigator from "../components/ScrollNavigator";
 import Header from "../components/Header";
@@ -213,6 +213,8 @@ const SidebarLayout = ({
             <span className="text-xl font-bold text-white tracking-tight">
               {isCeoUser(currentUser)
                 ? "CEO"
+                : isGeneralManagerUser(currentUser)
+                ? "General Manager"
                 : isAdminAccess(currentUser)
                 ? "Admin"
                 : currentUser?.userType === UserType.MANAGER
@@ -249,6 +251,8 @@ const SidebarLayout = ({
                 <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
                   {isCeoUser(currentUser)
                     ? "CEO"
+                    : isGeneralManagerUser(currentUser)
+                    ? "General Manager"
                     : isAdminAccess(currentUser)
                     ? "Admin"
                     : currentUser?.userType === UserType.MANAGER
