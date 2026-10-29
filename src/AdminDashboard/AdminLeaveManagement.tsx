@@ -48,7 +48,7 @@ import {
   HalfDayType,
   UserStatus,
 } from "../enums";
-import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
+import { isAdminAccess, isCeoOrGmUser } from "../utils/roleAccess";
 import {
   Home,
   MapPin,
@@ -116,7 +116,7 @@ const AdminLeaveManagement = () => {
     return t;
   };
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
-  const isCeo = isCeoUser(currentUser);
+  const isCeo = isCeoOrGmUser(currentUser);
   const {
     entities = [] as LeaveRequest[],
     totalItems,

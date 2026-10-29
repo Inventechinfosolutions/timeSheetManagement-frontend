@@ -34,7 +34,7 @@ import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { fetchAdminDashboardSummary } from "../reducers/adminDashboard.reducer";
 import { SearchBox } from "../components/ui";
 import { getAllLeaveRequests } from "../reducers/leaveRequest.reducer";
-import { isCeoUser } from "../utils/roleAccess";
+import { isCeoUser, isGeneralManagerUser, isCeoOrGmUser } from "../utils/roleAccess";
 import {
   fetchLockType,
   updateLockType,
@@ -78,6 +78,8 @@ const AdminDashboard = () => {
   );
   const { currentUser } = useAppSelector((state: RootState) => state.user);
   const isCeo = isCeoUser(currentUser);
+  const isGm = isGeneralManagerUser(currentUser);
+  const isCeoOrGm = isCeoOrGmUser(currentUser);
 
   // Time-related constants
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -311,7 +313,7 @@ const AdminDashboard = () => {
   }, [dispatch, dashboardScope]);
 
   useEffect(() => {
-    if (!isCeo) return;
+    if (!isCeoOrGm) return;
     setManagerLeaveLoading(true);
     dispatch(
       getAllLeaveRequests({
@@ -333,7 +335,7 @@ const AdminDashboard = () => {
       }
       setManagerLeaveLoading(false);
     });
-  }, [dispatch, isCeo, currentMonth, currentYear]);
+  }, [dispatch, isCeoOrGm, currentMonth, currentYear]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -550,7 +552,7 @@ const AdminDashboard = () => {
           color: "bg-linear-to-r from-[#4318FF] to-[#868CFF]",
           onClick: isManagerView ? () => navigate(`${basePath}/employees`) : undefined,
         },
-        ...(isCeo && !isManagerView
+        ...(isCeoOrGm && !isManagerView
           ? [
               {
                 label: "Managers",
@@ -644,7 +646,9 @@ const AdminDashboard = () => {
               ? "My Team Dashboard"
               : isCeo
                 ? "CEO Dashboard"
-                : "Admin Dashboard"}
+                : isGm
+                  ? "General Manager Dashboard"
+                  : "Admin Dashboard"}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             {dayjs().format("dddd, D MMMM YYYY")} ·{" "}
@@ -919,7 +923,7 @@ const AdminDashboard = () => {
         </>
       )}
 
-      {isCeo && !isManagerView && (
+      {isCeoOrGm && !isManagerView && (
         <div className="mb-8 bg-white rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
             <div>

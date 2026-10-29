@@ -115,12 +115,22 @@ const SidebarLayout = ({
 
         ? adminSidebarItems.filter((i) => i.name !== "Request Management")
         : adminSidebarItems;
-    if (title !== "CEO") return items;
-    return items
-      .filter((item) => item.name !== "Employee Directory")
-      .map((item) =>
-        item.name === "Admin Dashboard" ? { ...item, name: "CEO Dashboard" } : item,
-      );
+    if (title === "CEO" || title === "General Manager") {
+      return items
+        .filter((item) => item.name !== "Employee Directory")
+        .map((item) =>
+          item.name === "Admin Dashboard"
+            ? {
+                ...item,
+                name:
+                  title === "CEO"
+                    ? "CEO Dashboard"
+                    : "General Manager Dashboard",
+              }
+            : item,
+        );
+    }
+    return items;
   }, [title, adminSidebarItems]);
 
 
@@ -171,7 +181,9 @@ const SidebarLayout = ({
           ? "My Dashboard"
           : title === "CEO"
             ? "CEO Dashboard"
-            : "Admin Dashboard";
+            : title === "General Manager"
+              ? "General Manager Dashboard"
+              : "Admin Dashboard";
     }
   }, [tab, activeTab, title]);
 

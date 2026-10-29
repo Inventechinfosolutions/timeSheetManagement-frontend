@@ -3,7 +3,7 @@ import SidebarLayout from "../AdminDashboard/SidebarLayout";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
 import { UserType } from "../enums";
-import { isCeoUser } from "../utils/roleAccess";
+import { isCeoUser, isGeneralManagerUser } from "../utils/roleAccess";
 
 const AdminLayout = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -12,6 +12,7 @@ const AdminLayout = () => {
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isCeo = isCeoUser(currentUser);
+  const isGm = isGeneralManagerUser(currentUser);
 
   // Determine active tab based on path parameter or current URL
   const getActiveTab = () => {
@@ -91,13 +92,21 @@ const AdminLayout = () => {
       case "edit-access":
         return "Access Ticket";
       default:
-        return isCeo ? "CEO Dashboard" : "Admin Dashboard";
+        return isCeo
+          ? "CEO Dashboard"
+          : isGm
+            ? "General Manager Dashboard"
+            : "Admin Dashboard";
     }
   };
 
   const dispatch = useAppDispatch();
   const handleTabChange = (tabName: string) => {
-    if (tabName === "Admin Dashboard" || tabName === "CEO Dashboard") {
+    if (
+      tabName === "Admin Dashboard" ||
+      tabName === "CEO Dashboard" ||
+      tabName === "General Manager Dashboard"
+    ) {
       dispatch(fetchUnreadNotifications());
       navigate("/admin-dashboard");
     } else if (tabName === "User & Role Management") {
@@ -133,7 +142,7 @@ const AdminLayout = () => {
     <SidebarLayout
       activeTab={getActiveTab()}
       onTabChange={handleTabChange}
-      title={isReceptionist ? "Receptionist" : isCeo ? "CEO" : "Admin"}
+      title={isReceptionist ? "Receptionist" : isCeo ? "CEO" : isGm ? "General Manager" : "Admin"}
     >
       <Outlet />
     </SidebarLayout>

@@ -63,6 +63,7 @@ const Landing = () => {
       } else if (
         currentUser.userType?.toUpperCase() === UserType.ADMIN ||
         currentUser.userType?.toUpperCase() === UserType.CEO ||
+        currentUser.userType?.toUpperCase() === UserType.GENERAL_MANAGER ||
         currentUser.userType?.toUpperCase() === UserType.RECEPTIONIST
       ) {
         navigate("/admin-dashboard");
