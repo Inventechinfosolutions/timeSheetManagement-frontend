@@ -43,7 +43,7 @@ import EmployeeListMobileCard from "./EmployeeListMobileCard";
 import Toast from "../components/Toast";
 import { SearchBox } from "../components/ui";
 import { UserType, EmploymentType, UserStatus } from "../enums";
-import { isAdminAccess } from "../utils/roleAccess";
+import { isAdminAccess, isEmployeeRole } from "../utils/roleAccess";
 
 const EmployeeListView = () => {
   const navigate = useNavigate();
@@ -297,14 +297,21 @@ const EmployeeListView = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]:
-        name === "employmentType"
-          ? (value as "" | EmploymentType)
-          : name === "gender"
-            ? (value as "" | "MALE" | "FEMALE")
-            : value,
+    setFormData((prev) => {
+      const next = {
+        ...prev,
+        [name]:
+          name === "employmentType"
+            ? (value as "" | EmploymentType)
+            : name === "gender"
+              ? (value as "" | "MALE" | "FEMALE")
+              : value,
+      };
+      // Only the Employee role can be an intern
+      if (name === "role" && value && !isEmployeeRole(value)) {
+        next.employmentType = "FULL_TIMER" as EmploymentType;
+      }
+      return next;
     });
     // Validation
     let error = "";
@@ -1535,7 +1542,9 @@ ${
                           <option value="FULL_TIMER">
                             Full-time employee{" "}
                           </option>
-                          <option value="INTERN">Intern </option>
+                          {(!formData.role || isEmployeeRole(formData.role)) && (
+                            <option value="INTERN">Intern </option>
+                          )}
                         </select>
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
                         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none">

@@ -42,6 +42,10 @@ export const isCeoOrGmUser = (
   return isCeoUser(user) || isGeneralManagerUser(user);
 };
 
+/** Plain Employee role (the only role that can be hired as an intern). */
+export const isEmployeeRole = (role?: string | null): boolean =>
+  String(role || "").toUpperCase() === UserType.EMPLOYEE;
+
 export const blockedByLabel = (blockedBy?: string | null): string => {
   const value = String(blockedBy || "").toUpperCase();
   if (value === UserType.ADMIN || value === "ADMIN") return "Admin";
