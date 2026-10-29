@@ -375,12 +375,13 @@ input[type="password"]::-webkit-password-reveal-button {
 
 /* Outer shell only — real paper is always the inner .page (never a second sheet) */
 .a4-page.doc-pages {
-  width: max-content !important;
+  width: 100% !important;
   min-width: 0 !important;
+  max-width: 100% !important;
   min-height: 0 !important;
   height: auto !important;
   padding: 0 !important;
-  margin: 0 auto !important;
+  margin: 0 !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -391,37 +392,39 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-content-view.doc-pages-editor {
   display: block;
   min-height: 0;
-  width: 210mm;
-  max-width: 210mm;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
   background: transparent;
 }
 
 .notes-rich-editor.is-landscape,
 .notes-content-view.is-landscape {
-  width: 297mm;
-  max-width: 297mm;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
 }
 
 .notes-rich-editor .page,
 .notes-content-view .page {
-  width: 210mm;
-  min-width: 210mm;
-  max-width: 210mm;
-  min-height: 297mm;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 520px;
   height: auto;
   flex-shrink: 0;
-  margin: 0 0 28px;
-  padding: 20mm 18mm;
+  margin: 0 !important;
+  padding: 20px 24px;
   background: #ffffff;
   color: #1e293b;
-  border: 1px solid #e2e8f0;
-  border-radius: 2px;
-  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.06);
+  border: none !important;
+  border-radius: 0;
+  box-shadow: none !important;
   box-sizing: border-box;
   position: relative;
   /* Allow horizontal scroll for wide email/pasted tables (was hidden → clipped columns) */
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
   word-wrap: break-word;
   overflow-wrap: anywhere;
 }
@@ -591,19 +594,19 @@ input[type="password"]::-webkit-password-reveal-button {
   margin-bottom: 0;
 }
 
-/* A4 landscape: 297mm × 210mm. Extra content paginates to the next sheet. */
+/* A4 landscape: full-width */
 .notes-rich-editor.is-landscape .page,
 .notes-content-view.is-landscape .page,
 .notes-rich-editor .page.is-landscape,
 .notes-content-view .page.is-landscape {
-  width: 297mm;
-  min-width: 297mm;
-  max-width: 297mm;
-  min-height: 210mm;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 520px;
   height: auto;
   max-height: none;
-  overflow-x: hidden;
-  overflow-y: visible;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
 }
 
 /* Pasted chat/code blocks must wrap inside the sheet — never push content off the left */
@@ -922,7 +925,7 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-content-view .note-table-scroll-inner {
   display: block !important;
   width: max-content !important;
-  min-width: 100% !important;
+  min-width: 0 !important;
   max-width: none !important;
 }
 
@@ -931,7 +934,7 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-rich-editor table.note-wide-table,
 .notes-content-view table.note-wide-table {
   width: max-content !important;
-  min-width: 100% !important;
+  min-width: 0 !important;
   max-width: none !important;
   table-layout: auto !important;
   border-collapse: collapse !important;
@@ -949,7 +952,34 @@ input[type="password"]::-webkit-password-reveal-button {
   white-space: nowrap !important;
   overflow-wrap: normal !important;
   word-break: normal !important;
-  min-width: 72px;
+  min-width: 120px !important;
+  max-width: none !important;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  vertical-align: middle !important;
+}
+
+/* Excel-like smooth horizontal scrollbar */
+.notes-rich-editor .note-table-scroll::-webkit-scrollbar,
+.notes-content-view .note-table-scroll::-webkit-scrollbar {
+  height: 8px !important;
+}
+
+.notes-rich-editor .note-table-scroll::-webkit-scrollbar-track,
+.notes-content-view .note-table-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+  border-radius: 4px !important;
+}
+
+.notes-rich-editor .note-table-scroll::-webkit-scrollbar-thumb,
+.notes-content-view .note-table-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+  border-radius: 4px !important;
+}
+
+.notes-rich-editor .note-table-scroll::-webkit-scrollbar-thumb:hover,
+.notes-content-view .note-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
 }
 
 .notes-rich-editor th,
@@ -1049,22 +1079,19 @@ input[type="password"]::-webkit-password-reveal-button {
 }
 
 .a4-page-workspace {
-  background-color: #f1f5f9;
-  padding: 3rem 1.5rem;
+  background-color: transparent;
+  padding: 0;
   display: flex;
-  justify-content: safe center;
+  justify-content: flex-start;
   align-items: flex-start;
-  /* Let the layout <main> scroll — nested max-height/overflow breaks
-     ScrollNavigator + sticky toolbar */
   overflow-x: auto;
   overflow-y: visible;
   max-height: none;
-  min-height: 720px;
+  min-height: 520px;
   width: 100%;
 }
 
-/* Landscape sheets are 297mm — wider than most viewports. Align left + allow
-   horizontal scroll so the left edge (and first characters) are never clipped. */
+/* Landscape sheets */
 .a4-page-workspace.is-landscape {
   justify-content: flex-start !important;
   overflow-x: auto !important;
@@ -1076,8 +1103,9 @@ input[type="password"]::-webkit-password-reveal-button {
   justify-content: flex-start;
   align-items: flex-start;
   flex-shrink: 0;
-  width: max-content;
-  margin: 10mm auto;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
 }
 
 .a4-page-workspace.is-landscape .a4-page-rotator {
@@ -1087,35 +1115,35 @@ input[type="password"]::-webkit-password-reveal-button {
 
 .a4-page-rotator.rot-0,
 .a4-page-rotator.rot-180 {
-  width: max-content;
+  width: 100% !important;
   min-height: 0;
-  margin: 10mm auto;
+  margin: 0 !important;
 }
 
-/* Sideways rotation keeps the portrait layout box unless the rotator
-   is sized to the visual box (297mm x 210mm) and the sheet is centered in it. */
 .a4-page-rotator.rot-90,
 .a4-page-rotator.rot-270 {
   position: relative;
-  width: 297mm;
-  height: 210mm;
-  min-height: 210mm;
-  margin: 10mm auto;
+  width: 100% !important;
+  height: auto;
+  min-height: 520px;
+  margin: 0 !important;
 }
 
 .a4-page {
-  min-width: 210mm;
-  width: max-content;
-  max-width: none !important;
-  min-height: 297mm;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 520px;
   height: auto;
   background-color: #ffffff;
-  padding: 20mm 18mm;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  padding: 20px 24px;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0;
   box-sizing: border-box;
   position: relative;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
   transform-origin: center center;
   transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }

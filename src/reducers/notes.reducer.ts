@@ -416,6 +416,8 @@ export const previewNoteAttachment = createAsyncThunk(
       const response = await axios.get(`${API_BASE}/attachments/${key}/view`, {
         params: fileName ? { name: fileName } : undefined,
         responseType: "blob",
+        skipGlobalLoader: true,
+        headers: { "x-skip-loader": "true" },
       });
       return {
         data: response.data,
@@ -436,6 +438,8 @@ export const downloadNoteAttachment = createAsyncThunk(
       const response = await axios.get(`${API_BASE}/attachments/${key}/download`, {
         params: fileName ? { name: fileName } : undefined,
         responseType: "blob",
+        skipGlobalLoader: true,
+        headers: { "x-skip-loader": "true" },
       });
       const contentType = response.headers?.["content-type"] || "application/octet-stream";
       const blob = new Blob([response.data], { type: contentType });
