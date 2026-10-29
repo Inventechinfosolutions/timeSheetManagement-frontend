@@ -864,6 +864,11 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   value={reassignDeadline}
                   onChange={handleReassignDeadlineChange}
                   placeholder="Select deadline date"
+                  disabledDate={(date) => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return date <= today;
+                  }}
                 />
                 {reassignError && (
                   <div className="flex items-center gap-1.5 mt-2 text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-200/90 rounded-xl p-2.5 animate-in fade-in duration-150">

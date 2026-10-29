@@ -1631,16 +1631,26 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           onChange={(date) => {
                             const formatted = date ? date.format("DD-MM-YYYY") : "";
                             setDeadlineDate(formatted);
+                            if (!formatted) {
+                              setAssignmentError("");
+                              return;
+                            }
+                            const deadlineIso = toIsoDate(formatted);
+                            const todayIso = toIsoDate(todayDisplayDate());
+                            if (deadlineIso && todayIso && deadlineIso <= todayIso) {
+                              setAssignmentError("Select a deadline after today.");
+                              return;
+                            }
                             setAssignmentError("");
                           }}
                           format="DD-MM-YYYY"
                           placeholder="dd-mm-yyyy"
                           disabledDate={(current) => {
-                            const fromDateObj = assignedDate ? dayjs(assignedDate, "DD-MM-YYYY") : null;
-                            if (!fromDateObj || !fromDateObj.isValid()) {
-                              return false;
-                            }
-                            return current && current.isBefore(fromDateObj, "day");
+                            if (!current) return false;
+                            const today = dayjs().startOf("day");
+                            const fromDateObj = assignedDate ? dayjs(assignedDate, "DD-MM-YYYY").startOf("day") : null;
+                            const baseDate = fromDateObj && fromDateObj.isValid() && fromDateObj.isAfter(today) ? fromDateObj : today;
+                            return current.isSame(baseDate, "day") || current.isBefore(baseDate, "day");
                           }}
                           className="w-full rounded-xl border border-blue-200/70 bg-white px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control"
                         />
@@ -1882,6 +1892,38 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                                   </label>
                                   <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
                                     {project.solutionsImplemented || "—"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
+                                <div>
+                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
+                                    Key Achievements / Outcomes
+                                  </label>
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
+                                    {project.keyAchievementsOutcomes || "—"}
+                                  </div>
+                                </div>
+                                <div>
+                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
+                                    Technologies / Tools Used
+                                  </label>
+                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-normal min-h-[75px] flex items-center shadow-2xs">
+                                    {(project.technologiesUsed || []).length > 0 ? (
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {project.technologiesUsed!.map((tech, tIdx) => (
+                                          <span
+                                            key={tIdx}
+                                            className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg shadow-2xs"
+                                          >
+                                            {tech}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <span className="text-[#0F172A] font-normal">—</span>
+                                    )}
                                   </div>
                                 </div>
                               </div>

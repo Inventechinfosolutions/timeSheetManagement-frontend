@@ -61,10 +61,8 @@ type DoclingDocument = {
 
 const MM_TO_PX = 96 / 25.4;
 
-const pageStyle = (landscape: boolean) => {
-  const width = landscape ? A4_LANDSCAPE_WIDTH_MM : A4_PORTRAIT_WIDTH_MM;
-  const minHeight = landscape ? A4_LANDSCAPE_HEIGHT_MM : A4_PORTRAIT_HEIGHT_MM;
-  return `width:${width}mm;min-width:${width}mm;max-width:${width}mm;min-height:${minHeight}mm;height:auto;max-height:none`;
+const pageStyle = (_landscape: boolean) => {
+  return "width:100%;min-width:0;max-width:100%;min-height:520px;height:auto;max-height:none";
 };
 
 const a4SheetHeightPx = (landscape: boolean) =>
@@ -79,12 +77,11 @@ const createSheet = (pageNo: number, landscape: boolean) => {
 };
 
 const applySheetBox = (el: HTMLElement, landscape: boolean, pageNo?: number) => {
-  const size = orientPageSize(0, 0, landscape);
-  el.style.width = `${size.widthMm}mm`;
-  el.style.minWidth = `${size.widthMm}mm`;
-  el.style.maxWidth = `${size.widthMm}mm`;
+  el.style.width = "100%";
+  el.style.minWidth = "0";
+  el.style.maxWidth = "100%";
   el.style.height = "auto";
-  el.style.minHeight = `${size.heightMm}mm`;
+  el.style.minHeight = "520px";
   el.style.maxHeight = "none";
   el.classList.toggle("is-landscape", landscape);
   if (pageNo) el.setAttribute("data-page", String(pageNo));
@@ -279,8 +276,7 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
 /**
  * Keep A4 width fixed, wrap content, and add another sheet when height overflows.
  */
-export function paginateToA4Sheets(root: HTMLElement, landscape: boolean, reflow = true) {
-  // Pull any Enter-created nodes outside .page back into the sheet first
+export function paginateToA4Sheets(root: HTMLElement, landscape: boolean, _reflow = true) {
   absorbOrphansIntoPages(root, landscape);
 
   let pages = Array.from(root.querySelectorAll(":scope > .page")) as HTMLElement[];
@@ -291,61 +287,17 @@ export function paginateToA4Sheets(root: HTMLElement, landscape: boolean, reflow
     pages = [sheet];
   }
 
-  pages.forEach((page, index) => applySheetBox(page, landscape, index + 1));
-
-  if (reflow && pages.length > 1) {
+  // Merge multiple pages into a single continuous page for normal full width
+  if (pages.length > 1) {
     const first = pages[0];
     pages.slice(1).forEach((page) => {
       while (page.firstChild) first.appendChild(page.firstChild);
       page.remove();
     });
     pages = [first];
-    applySheetBox(first, landscape, 1);
   }
 
-  for (let index = 0; index < pages.length; index += 1) {
-    const page = pages[index];
-    applySheetBox(page, landscape, index + 1);
-    const sheetHeight = a4SheetHeightPx(landscape);
-    const padBottom = parseFloat(getComputedStyle(page).paddingBottom || "0") || 75;
-    const maxUsableHeight = sheetHeight - padBottom;
-
-    let guard = 0;
-    while (guard < 200) {
-      const children = Array.from(page.children) as HTMLElement[];
-      const maxChildBottom = Math.max(
-        0,
-        ...children.map((c) => c.offsetTop + c.offsetHeight)
-      );
-      const hasOverflow = maxChildBottom > maxUsableHeight + 4 || page.scrollHeight > sheetHeight + 2;
-      if (!hasOverflow) break;
-
-      guard += 1;
-      const overflow = pushOverflowToNextPage(page, landscape);
-      if (!overflow || !overflow.childNodes.length) break;
-      const existingNext = pages[index + 1];
-      if (existingNext) {
-        while (overflow.lastChild) {
-          existingNext.insertBefore(overflow.lastChild, existingNext.firstChild);
-        }
-      } else {
-        page.after(overflow);
-        pages.splice(index + 1, 0, overflow);
-      }
-    }
-  }
-
-  // Drop blank sheets created by Docling/import (leading empty page)
-  const after = Array.from(root.querySelectorAll(":scope > .page")) as HTMLElement[];
-  after.forEach((page) => {
-    if (after.length > 1 && !hasVisibleContent(page.innerHTML)) {
-      page.remove();
-    }
-  });
-
-  Array.from(root.querySelectorAll(":scope > .page")).forEach((page, index) => {
-    applySheetBox(page as HTMLElement, landscape, index + 1);
-  });
+  pages.forEach((page) => applySheetBox(page, landscape, 1));
 }
 
 const pageMarkup = (
@@ -711,17 +663,14 @@ export function buildDocumentPagesHtml(
   const htmlPagesWithContent = htmlPages.filter((page) => hasVisibleContent(page.innerHTML));
 
   if (htmlPagesWithContent.length > 1) {
-    // Only keep pages that actually have content (skip blank leading PDF pages)
-    return joinNonEmptyPages(
-      htmlPagesWithContent.map((source, index) =>
-        pageMarkup(
-          index + 1,
-          jsonPages[index]?.size?.width || DEFAULT_PAGE_WIDTH_PT,
-          jsonPages[index]?.size?.height || DEFAULT_PAGE_HEIGHT_PT,
-          source.innerHTML.trim(),
-          landscape
-        )
-      )
+    // Merge all pages into a single continuous full-width document
+    const combinedInner = htmlPagesWithContent.map((source) => source.innerHTML.trim()).join("<br><br>");
+    return pageMarkup(
+      1,
+      DEFAULT_PAGE_WIDTH_PT,
+      DEFAULT_PAGE_HEIGHT_PT,
+      combinedInner,
+      landscape
     );
   }
 

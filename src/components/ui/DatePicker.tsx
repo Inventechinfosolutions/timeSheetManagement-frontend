@@ -34,6 +34,7 @@ export interface DatePickerProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+  disabledDate?: (date: Date) => boolean;
 }
 
 export const DatePicker: React.FC<DatePickerProps> = ({
@@ -42,6 +43,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   placeholder = "dd-mm-yyyy",
   className = "",
   disabled = false,
+  disabledDate,
 }) => {
   const selected = parseDisplay(value);
   const [open, setOpen] = useState(false);
@@ -235,17 +237,22 @@ export const DatePicker: React.FC<DatePickerProps> = ({
               {days.map((day, index) => {
                 if (!day) return <span key={`empty-${index}`} />;
                 const isSelected = selected?.toDateString() === day.toDateString();
+                const isDisabled = disabled || (disabledDate ? disabledDate(day) : false);
                 return (
                   <button
                     key={day.toISOString()}
                     type="button"
+                    disabled={isDisabled}
                     onClick={() => {
+                      if (isDisabled) return;
                       onChange(toDisplay(day));
                       setOpen(false);
                     }}
                     className={`h-8 rounded-lg text-xs font-semibold ${
                       isSelected
                         ? "bg-[#2563EB] text-white"
+                        : isDisabled
+                        ? "text-[#CBD5E1] cursor-not-allowed bg-slate-50/50"
                         : "text-[#0F172A] hover:bg-blue-50"
                     }`}
                   >

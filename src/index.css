@@ -373,14 +373,14 @@ input[type="password"]::-webkit-password-reveal-button {
   display: none !important;
 }
 
-/* Outer shell only — real paper is always the inner .page (never a second sheet) */
+/* Full width document canvas — no fixed A4 paper sheet locks */
 .a4-page.doc-pages {
-  width: max-content !important;
+  width: 100% !important;
   min-width: 0 !important;
   min-height: 0 !important;
   height: auto !important;
   padding: 0 !important;
-  margin: 0 auto !important;
+  margin: 0 !important;
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
@@ -391,35 +391,40 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-content-view.doc-pages-editor {
   display: block;
   min-height: 0;
-  width: 210mm;
-  max-width: 210mm;
+  width: 100% !important;
+  max-width: 100% !important;
   background: transparent;
+}
+
+.notes-rich-editor:empty,
+.notes-content-view:empty {
+  padding: 20px 24px !important;
 }
 
 .notes-rich-editor.is-landscape,
 .notes-content-view.is-landscape {
-  width: 297mm;
-  max-width: 297mm;
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 .notes-rich-editor .page,
 .notes-content-view .page {
-  width: 210mm;
-  min-width: 210mm;
-  max-width: 210mm;
-  min-height: 297mm;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 520px !important;
   height: auto;
   flex-shrink: 0;
-  margin: 0 0 28px;
-  padding: 20mm 18mm;
-  background: #ffffff;
+  margin: 0 !important;
+  padding: 20px 24px !important;
+  background: transparent !important;
   color: #1e293b;
-  border: 1px solid #e2e8f0;
-  border-radius: 2px;
-  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.06);
-  box-sizing: border-box;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
   position: relative;
-  /* Allow horizontal scroll for wide email/pasted tables (was hidden → clipped columns) */
+  /* Allow horizontal scroll for wide email/pasted tables */
   overflow-x: auto;
   overflow-y: visible;
   word-wrap: break-word;
@@ -591,18 +596,18 @@ input[type="password"]::-webkit-password-reveal-button {
   margin-bottom: 0;
 }
 
-/* A4 landscape: 297mm × 210mm. Extra content paginates to the next sheet. */
+/* A4 landscape: full width continuous layout */
 .notes-rich-editor.is-landscape .page,
 .notes-content-view.is-landscape .page,
 .notes-rich-editor .page.is-landscape,
 .notes-content-view .page.is-landscape {
-  width: 297mm;
-  min-width: 297mm;
-  max-width: 297mm;
-  min-height: 210mm;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 520px !important;
   height: auto;
   max-height: none;
-  overflow-x: hidden;
+  overflow-x: auto;
   overflow-y: visible;
 }
 
@@ -1049,35 +1054,28 @@ input[type="password"]::-webkit-password-reveal-button {
 }
 
 .a4-page-workspace {
-  background-color: #f1f5f9;
-  padding: 3rem 1.5rem;
-  display: flex;
-  justify-content: safe center;
-  align-items: flex-start;
-  /* Let the layout <main> scroll — nested max-height/overflow breaks
-     ScrollNavigator + sticky toolbar */
-  overflow-x: auto;
-  overflow-y: visible;
-  max-height: none;
-  min-height: 720px;
-  width: 100%;
+  background-color: transparent !important;
+  padding: 0 !important;
+  display: block !important;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
+  max-height: none !important;
+  min-height: auto !important;
+  width: 100% !important;
+  border: none !important;
 }
 
-/* Landscape sheets are 297mm — wider than most viewports. Align left + allow
-   horizontal scroll so the left edge (and first characters) are never clipped. */
 .a4-page-workspace.is-landscape {
   justify-content: flex-start !important;
-  overflow-x: auto !important;
-  overflow-y: visible;
+  overflow-x: visible !important;
+  overflow-y: visible !important;
 }
 
 .a4-page-rotator {
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
-  flex-shrink: 0;
-  width: max-content;
-  margin: 10mm auto;
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
 }
 
 .a4-page-workspace.is-landscape .a4-page-rotator {
@@ -1086,63 +1084,41 @@ input[type="password"]::-webkit-password-reveal-button {
 }
 
 .a4-page-rotator.rot-0,
-.a4-page-rotator.rot-180 {
-  width: max-content;
-  min-height: 0;
-  margin: 10mm auto;
-}
-
-/* Sideways rotation keeps the portrait layout box unless the rotator
-   is sized to the visual box (297mm x 210mm) and the sheet is centered in it. */
+.a4-page-rotator.rot-180,
 .a4-page-rotator.rot-90,
 .a4-page-rotator.rot-270 {
-  position: relative;
-  width: 297mm;
-  height: 210mm;
-  min-height: 210mm;
-  margin: 10mm auto;
+  display: block !important;
+  position: static !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
 }
 
 .a4-page {
-  min-width: 210mm;
-  width: max-content;
-  max-width: none !important;
-  min-height: 297mm;
-  height: auto;
-  background-color: #ffffff;
-  padding: 20mm 18mm;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  box-sizing: border-box;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  min-height: 520px !important;
+  height: auto !important;
+  background-color: transparent !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-sizing: border-box !important;
   position: relative;
-  transform-origin: center center;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: none !important;
 }
 
 /* Rotation Angles */
-.a4-page.rot-0 {
-  transform: rotate(0deg);
-}
-
+.a4-page.rot-0,
 .a4-page.rot-90,
+.a4-page.rot-180,
 .a4-page.rot-270 {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transition: none;
-}
-
-.a4-page.rot-90 {
-  transform: translate(-50%, -50%) rotate(90deg);
-}
-
-.a4-page.rot-180 {
-  transform: rotate(180deg);
-}
-
-.a4-page.rot-270 {
-  transform: translate(-50%, -50%) rotate(270deg);
+  transform: none !important;
+  position: static !important;
 }
 
 .a4-page table {
