@@ -153,9 +153,11 @@ const AdminEmployeeTimesheetWrapper = () => {
           reason: reason || "Timesheet Locked",
           blockedBy: isCeoUser(currentUser)
             ? UserType.CEO
-            : currentUser?.userType === UserType.ADMIN
-              ? UserType.ADMIN
-              : UserType.MANAGER,
+            : currentUser?.userType === UserType.GENERAL_MANAGER
+              ? UserType.GENERAL_MANAGER
+              : currentUser?.userType === UserType.ADMIN
+                ? UserType.ADMIN
+                : UserType.MANAGER,
         }),
       ).unwrap();
 
