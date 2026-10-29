@@ -32,6 +32,7 @@ export const orientPageSize = (
 ): { widthMm: number; heightMm: number } =>
   landscape
     ? { widthMm: A4_LANDSCAPE_WIDTH_MM, heightMm: A4_LANDSCAPE_HEIGHT_MM }
+    
     : { widthMm: A4_PORTRAIT_WIDTH_MM, heightMm: A4_PORTRAIT_HEIGHT_MM };
 
 export interface ExtractedPageSize {
@@ -62,9 +63,7 @@ type DoclingDocument = {
 const MM_TO_PX = 96 / 25.4;
 
 const pageStyle = (landscape: boolean) => {
-  const width = landscape ? A4_LANDSCAPE_WIDTH_MM : A4_PORTRAIT_WIDTH_MM;
-  const minHeight = landscape ? A4_LANDSCAPE_HEIGHT_MM : A4_PORTRAIT_HEIGHT_MM;
-  return `width:${width}mm;min-width:${width}mm;max-width:${width}mm;min-height:${minHeight}mm;height:auto;max-height:none`;
+  return `width:100%;min-width:0;max-width:100%;min-height:520px;height:auto;max-height:none`;
 };
 
 const a4SheetHeightPx = (landscape: boolean) =>
@@ -79,12 +78,11 @@ const createSheet = (pageNo: number, landscape: boolean) => {
 };
 
 const applySheetBox = (el: HTMLElement, landscape: boolean, pageNo?: number) => {
-  const size = orientPageSize(0, 0, landscape);
-  el.style.width = `${size.widthMm}mm`;
-  el.style.minWidth = `${size.widthMm}mm`;
-  el.style.maxWidth = `${size.widthMm}mm`;
+  el.style.width = "100%";
+  el.style.minWidth = "0";
+  el.style.maxWidth = "100%";
   el.style.height = "auto";
-  el.style.minHeight = `${size.heightMm}mm`;
+  el.style.minHeight = "520px";
   el.style.maxHeight = "none";
   el.classList.toggle("is-landscape", landscape);
   if (pageNo) el.setAttribute("data-page", String(pageNo));
@@ -301,6 +299,7 @@ export function paginateToA4Sheets(root: HTMLElement, landscape: boolean, reflow
     });
     pages = [first];
     applySheetBox(first, landscape, 1);
+    return;
   }
 
   for (let index = 0; index < pages.length; index += 1) {

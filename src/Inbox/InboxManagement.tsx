@@ -540,7 +540,10 @@ export const InboxManagement: React.FC = () => {
           }
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          onDebounce={(val) => setDebouncedSearch(val)}
+          onDebounce={(val) => {
+            const trimmed = val.trim();
+            setDebouncedSearch((prev) => (prev !== trimmed ? trimmed : prev));
+          }}
           onClear={() => {
             setSearchInput('');
             setDebouncedSearch('');

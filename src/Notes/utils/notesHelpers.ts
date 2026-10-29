@@ -1517,8 +1517,36 @@ const isEditorManagedTable = (table: HTMLTableElement) =>
     )
   );
 
-/** Strip width locks that clip Outlook/Gmail tables inside A4. */
+/** Prune trailing completely empty columns pasted from spreadsheets or documents */
+const pruneTrailingEmptyColumns = (table: HTMLTableElement) => {
+  const rows = Array.from(table.rows);
+  if (rows.length === 0) return;
+  const maxCols = Math.max(...rows.map((r) => r.cells.length));
+
+  for (let c = maxCols - 1; c >= 1; c--) {
+    let allEmpty = true;
+    for (const row of rows) {
+      const cell = row.cells[c];
+      if (cell && (cell.textContent?.trim() || cell.querySelector("img, svg, canvas, input, a, button"))) {
+        allEmpty = false;
+        break;
+      }
+    }
+    if (allEmpty) {
+      for (const row of rows) {
+        if (row.cells[c]) {
+          row.deleteCell(c);
+        }
+      }
+    } else {
+      break;
+    }
+  }
+};
+
+/** Strip width locks and trailing empty cells that stretch tables */
 const relaxPastedTableConstraints = (table: HTMLTableElement) => {
+  pruneTrailingEmptyColumns(table);
   table.classList.add("note-wide-table");
   table.removeAttribute("width");
   table.style.removeProperty("width");

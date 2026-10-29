@@ -406,17 +406,15 @@ export const NoteView: React.FC<NoteViewProps> = ({
           </div>
 
           {/* A4 description (kept) + Excel grid when present — Excel never replaces existing content */}
-          <div className="w-full flex flex-col gap-4">
+          <div className="w-full flex flex-col">
             {showA4Content ? (
               <div
-                className={`a4-page-workspace w-full rounded-2xl flex items-start overflow-x-auto overflow-y-visible bg-slate-100/80 p-4 sm:p-8 min-h-[720px] border border-slate-200/60${
-                  isLandscape ? " is-landscape justify-start" : " justify-center"
-                }`}
+                className="w-full flex items-start overflow-x-auto bg-transparent p-0 min-h-[600px]"
               >
-                <div className="a4-page-rotator">
-                  <div className="a4-page doc-pages">
+                <div className="a4-page-rotator w-full">
+                  <div className="a4-page doc-pages w-full">
                     <div
-                      className={`notes-content-view doc-pages-editor text-slate-800 text-sm sm:text-base leading-relaxed break-words${isLandscape ? " is-landscape" : ""}`}
+                      className={`notes-content-view doc-pages-editor w-full text-slate-800 text-sm sm:text-base leading-relaxed break-words${isLandscape ? " is-landscape" : ""}`}
                       ref={contentRef}
                       onClick={handleContentViewClick}
                       dangerouslySetInnerHTML={{
@@ -434,13 +432,11 @@ export const NoteView: React.FC<NoteViewProps> = ({
               </div>
             ) : !viewerWorkbook?.sheetNames?.length ? (
               <div
-                className={`a4-page-workspace w-full rounded-2xl flex items-start overflow-x-auto overflow-y-visible bg-slate-100/80 p-4 sm:p-8 min-h-[720px] border border-slate-200/60${
-                  isLandscape ? " is-landscape justify-start" : " justify-center"
-                }`}
+                className="w-full flex items-start overflow-visible bg-transparent p-0 min-h-[600px]"
               >
-                <div className="a4-page-rotator">
-                  <div className="a4-page doc-pages">
-                    <div className="notes-content-view doc-pages-editor">
+                <div className="a4-page-rotator w-full">
+                  <div className="a4-page doc-pages w-full">
+                    <div className="notes-content-view doc-pages-editor w-full">
                       <div className="page">
                         <div className="flex flex-col items-center justify-center py-24 text-center text-slate-400 gap-3">
                           <FileText className="w-12 h-12 text-slate-300 stroke-[1.5]" />

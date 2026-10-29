@@ -9,9 +9,7 @@ import {
   Loader2,
   Check,
   User,
-  FileType2,
   RectangleHorizontal,
-  FileSpreadsheet,
   AlignJustify,
   Undo2,
   Trash2,
@@ -44,7 +42,6 @@ import {
   NOTE_EDITOR_CHECKPOINT_EVENT,
 } from "../utils/notesHelpers";
 import { FONT_SIZES, BOLD_DARK_COLORS, LIGHT_SHADING_COLORS } from "../utils/noteEditorConstants";
-import { descriptionFromExcelWorkbook } from "../utils/excelExtract";
 import {
   applyLandscapeToPages,
   absorbOrphansIntoPages,
@@ -115,18 +112,13 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   setIsDraggingModalFile,
   highlightColor,
   setHighlightColor,
-  isImportingDocling,
   isExtractingExcel = false,
   totalAttachmentsCount,
   editorRef,
   fileInputRef,
-  doclingJsonInputRef,
-  excelExtractInputRef,
   onEditorInput,
   onExecuteCommand,
   onInsertLink,
-  onDoclingUpload,
-  onExcelExtract,
   onFileChange,
   onProcessDropFiles,
   onRemoveAttachment,
@@ -140,8 +132,6 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   onBack,
   autoSaveStatus = "idle",
   onToggleAutoSave,
-  xlsImportInputRef,
-  onXlsImport,
 }) => {
   const isProjectNote = formData.type === "PROJECT";
   // isVertical true = Portrait; false = Landscape (persisted on backend)
@@ -1840,7 +1830,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   </button>
                 </Popover>
 
-                <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
+                {/* <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" /> */}
 
                 {/* Temporarily hidden: Import PDF / Word
                 <input
@@ -1897,7 +1887,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                 */}
 
                 {/* Landscape / Portrait page */}
-                <button
+                {/* <button
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
@@ -1929,7 +1919,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                   <span className="whitespace-nowrap">
                     {isLandscape ? "Landscape" : "Portrait"}
                   </span>
-                </button>
+                </button> */}
 
                 <div className="h-4 w-px bg-slate-200 mx-0.5 shrink-0" />
 
@@ -2006,7 +1996,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
               </div>
 
               {/* A4 workspace (kept when content exists) + Excel grid viewer (appended, never replaces) */}
-              <div className="w-full flex flex-col gap-4">
+              <div className="w-full flex flex-col">
                 {showA4Editor && (
                   <div
                     onDragOver={(e) => {
@@ -2023,12 +2013,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                         onProcessDropFiles(droppedFiles);
                       }
                     }}
-                    className={`a4-page-workspace w-full flex items-start bg-slate-100/80 p-4 sm:p-8 min-h-[720px] overflow-x-auto${
-                      isLandscape ? " is-landscape justify-start" : " justify-center"
-                    }`}
+                    className="w-full flex items-start bg-transparent p-0 min-h-[600px] overflow-x-auto"
                   >
-                    <div className="a4-page-rotator">
-                      <div className="a4-page doc-pages">
+                    <div className="a4-page-rotator w-full">
+                      <div className="a4-page doc-pages w-full">
                     <div
                       ref={editorRef}
                       contentEditable
@@ -2095,7 +2083,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                             }
                           }}
                       data-placeholder="Write your notes, key updates, documentation, or action items here..."
-                          className={`notes-rich-editor doc-pages-editor outline-none text-slate-800 text-sm sm:text-base leading-relaxed${isLandscape ? " is-landscape" : ""}`}
+                          className={`notes-rich-editor doc-pages-editor w-full outline-none text-slate-800 text-sm sm:text-base leading-relaxed${isLandscape ? " is-landscape" : ""}`}
                     />
                   </div>
                 </div>
@@ -2103,7 +2091,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                 )}
 
                 {formData.excelWorkbook && (
-                  <div className="w-full overflow-auto bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 min-h-[480px]">
+                  <div className="w-full overflow-auto bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 min-h-[480px] mt-4">
                     <ExcelSpreadsheetView
                       embedded
                       workbook={formData.excelWorkbook}
