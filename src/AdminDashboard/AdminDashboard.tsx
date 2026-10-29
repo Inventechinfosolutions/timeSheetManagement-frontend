@@ -43,6 +43,7 @@ import TodaySnapshotCard from "./dashboard/TodaySnapshotCard";
 import PendingApprovalsCard from "./dashboard/PendingApprovalsCard";
 import EventsScroller from "./dashboard/EventsScroller";
 import PendingApprovalsTable from "./dashboard/PendingApprovalsTable";
+import DepartmentLockTypeCard, { LockTypeValue } from "./dashboard/DepartmentLockTypeCard";
 import { DashboardScope } from "../types/adminDashboard.types";
 
 const AdminDashboard = () => {
@@ -145,9 +146,9 @@ const AdminDashboard = () => {
   };
 
   // Department Lock Type State & Handlers
-  const [selectedLockDepartment, setSelectedLockDepartment] = useState("");
-  const [isLockDeptOpen, setIsLockDeptOpen] = useState(false);
   const [activeLockType, setActiveLockType] = useState<"Weekly" | "Monthly">("Weekly");
+  const [deptLockTypes, setDeptLockTypes] = useState<Record<string, LockTypeValue>>({});
+  const [updatingLockDept, setUpdatingLockDept] = useState<string | null>(null);
   const [isUpdatingLock, setIsUpdatingLock] = useState(false);
   const [managerOwnDepartment, setManagerOwnDepartment] = useState("");
   const [managerDeptStatus, setManagerDeptStatus] = useState<
@@ -213,7 +214,6 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (!isManagerView || !managerOwnDepartment) return;
-    setSelectedLockDepartment(managerOwnDepartment);
     dispatch(fetchLockType({ department: managerOwnDepartment })).then((res: any) => {
       applyLockType(res.payload?.lockType);
     });
@@ -221,47 +221,39 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     if (isManagerView) return;
-    if (departments.length > 0 && !selectedLockDepartment) {
-      const defaultDept = departments[0].departmentName;
-      setSelectedLockDepartment(defaultDept);
-      dispatch(fetchLockType({ department: defaultDept })).then((res: any) => {
-        applyLockType(res.payload?.lockType);
-      });
-    }
-  }, [isManagerView, departments, selectedLockDepartment, dispatch]);
+    setDeptLockTypes(
+      Object.fromEntries(
+        departments.map((d) => [
+          d.departmentName,
+          d.lockType === "Monthly" ? "Monthly" : "Weekly",
+        ]),
+      ),
+    );
+  }, [isManagerView, departments]);
 
-  const handleSelectLockDepartment = async (deptName: string) => {
-    setSelectedLockDepartment(deptName);
-    setIsLockDeptOpen(false);
+  const handleDeptLockChange = async (deptName: string, type: LockTypeValue) => {
+    const previous = deptLockTypes[deptName] || "Weekly";
+    if (previous === type) return;
+    setDeptLockTypes((prev) => ({ ...prev, [deptName]: type }));
+    setUpdatingLockDept(deptName);
     try {
-      const res = await dispatch(
-        fetchLockType({ department: deptName }),
-      ).unwrap();
-      if (res?.lockType) {
-        setActiveLockType(
-          res.lockType === "Monthly" ? "Monthly" : "Weekly",
-        );
-      }
-    } catch (err) {
-      console.error("Failed to fetch lock type for department:", err);
+      await dispatch(updateLockType({ lockType: type, department: deptName })).unwrap();
+      message.success(`Lock type set to ${type} for ${deptName}`);
+    } catch (err: any) {
+      setDeptLockTypes((prev) => ({ ...prev, [deptName]: previous }));
+      message.error(err?.message || "Failed to update lock type");
+    } finally {
+      setUpdatingLockDept(null);
     }
   };
 
+  // Manager view: lock type of the manager's own department
   const handleToggleLockType = async (type: "Weekly" | "Monthly") => {
     if (type === activeLockType) return;
-    const targetDept = isManagerView
-      ? managerOwnDepartment
-      : selectedLockDepartment ||
-        (departments.length > 0 ? departments[0].departmentName : "");
-
+    const targetDept = managerOwnDepartment;
     if (!targetDept) return;
 
-    // Immediately toggle state in UI
     setActiveLockType(type);
-    if (targetDept && !selectedLockDepartment) {
-      setSelectedLockDepartment(targetDept);
-    }
-
     setIsUpdatingLock(true);
     try {
       await dispatch(
@@ -679,82 +671,25 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      {/* Department & Lock Type Control Row */}
-      {currentUser?.userType !== UserType.RECEPTIONIST && (
+      {/* Manager: own department lock type */}
+      {isManagerView && (
         <div className="flex flex-wrap items-end gap-4 mb-6">
-          {/* Department Dropdown */}
-          <div className="flex flex-col gap-1.5 min-w-[240px] sm:min-w-[280px] relative">
+          {/* Department */}
+          <div className="flex flex-col gap-1.5 min-w-[240px] sm:min-w-[280px]">
             <span className="text-sm font-bold text-[#5B6780] pl-1">
               Department
             </span>
-            {isManagerView ? (
-              <div className="w-full h-[52px] flex items-center gap-3 px-5 bg-white rounded-full shadow-[0px_4px_20px_rgba(0,0,0,0.05)] border border-gray-100 text-sm font-bold text-[#2B3674]">
-                <div className="w-8 h-8 rounded-full bg-[#EEF2FF] flex items-center justify-center text-[#1055E8] shrink-0">
-                  <Briefcase size={16} />
-                </div>
-                <span className="truncate">
-                  {managerOwnDepartment ||
-                    (managerDeptStatus === "missing"
-                      ? "Department unavailable"
-                      : "Loading department…")}
-                </span>
+            <div className="w-full h-[52px] flex items-center gap-3 px-5 bg-white rounded-full shadow-[0px_4px_20px_rgba(0,0,0,0.05)] border border-gray-100 text-sm font-bold text-[#2B3674]">
+              <div className="w-8 h-8 rounded-full bg-[#EEF2FF] flex items-center justify-center text-[#1055E8] shrink-0">
+                <Briefcase size={16} />
               </div>
-            ) : (
-            <button
-              type="button"
-              onClick={() => setIsLockDeptOpen(!isLockDeptOpen)}
-              className="w-full h-[52px] flex items-center justify-between gap-3 px-5 bg-white rounded-full shadow-[0px_4px_20px_rgba(0,0,0,0.05)] border border-gray-100 hover:border-blue-200 transition-all text-sm font-bold text-[#2B3674] cursor-pointer"
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-[#EEF2FF] flex items-center justify-center text-[#1055E8] shrink-0">
-                  <Briefcase size={16} />
-                </div>
-                <span className="truncate">
-                  {selectedLockDepartment || "Select Department"}
-                </span>
-              </div>
-              <ChevronDown
-                size={18}
-                className={`text-[#1055E8] shrink-0 transition-transform duration-200 ${
-                  isLockDeptOpen ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-            )}
-
-            {!isManagerView && isLockDeptOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-40"
-                  onClick={() => setIsLockDeptOpen(false)}
-                />
-                <div className="absolute top-full left-0 mt-2 w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.12)] border border-gray-100 p-2.5 z-50 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="mb-2 px-2 pt-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-[#A3AED0]">
-                      Select Department
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    {departments.map((dept) => (
-                      <button
-                        key={dept.id}
-                        type="button"
-                        onClick={() =>
-                          handleSelectLockDepartment(dept.departmentName)
-                        }
-                        className={`w-full flex items-center px-3 py-2.5 rounded-xl text-xs font-bold transition-all text-left ${
-                          selectedLockDepartment === dept.departmentName
-                            ? "bg-[#1055E8] text-white shadow-sm"
-                            : "text-[#2B3674] hover:bg-[#F4F7FE]"
-                        }`}
-                      >
-                        {dept.departmentName}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>
-            )}
+              <span className="truncate">
+                {managerOwnDepartment ||
+                  (managerDeptStatus === "missing"
+                    ? "Department unavailable"
+                    : "Loading department…")}
+              </span>
+            </div>
           </div>
 
           {/* Lock Type Toggle Button */}
@@ -921,6 +856,17 @@ const AdminDashboard = () => {
             <div className="mb-4" />
           )}
         </>
+      )}
+
+      {!isManagerView && currentUser?.userType !== UserType.RECEPTIONIST && departments.length > 0 && (
+        <div className="mb-8">
+          <DepartmentLockTypeCard
+            departments={departments}
+            lockTypes={deptLockTypes}
+            updatingDepartment={updatingLockDept}
+            onChange={handleDeptLockChange}
+          />
+        </div>
       )}
 
       {isCeoOrGm && !isManagerView && (
