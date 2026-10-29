@@ -45,7 +45,7 @@ const AttendenceEditRequests = () => {
     (currentUser?.userType === UserType.MANAGER ||
       currentUser?.userType === UserType.TEAMLEAD ||
       (currentUser?.role &&
-        String(currentUser.role).toUpperCase().includes(UserType.MANAGER)))
+        String(currentUser.role).toUpperCase() === UserType.MANAGER))
   );
   const [statusFilter, setStatusFilter] =
     useState<(typeof STATUS_OPTIONS)[number]>("All");
