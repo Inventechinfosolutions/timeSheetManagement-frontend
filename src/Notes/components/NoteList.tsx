@@ -18,7 +18,7 @@ import { PopconfirmWithTooltip } from "../../components/ui/PopconfirmWithTooltip
 import dayjs from "dayjs";
 import { Note, NoteType } from "../types/notes.types";
 import { noteMatchesCreatedDate, noteMatchesSearch } from "../utils/notesHelpers";
-import { SearchBox } from "../../components/ui";
+import { SearchBox, Pagination } from "../../components/ui";
 import { useNoteDragDrop } from "../hooks/useNoteDragDrop";
 import { WorksphereLogoLoader } from "../../components/ApiLoadingSpinner";
 
@@ -38,6 +38,11 @@ interface NoteListProps {
   loadingSubNotes?: Record<number, boolean>;
   currentUser?: { loginId?: string } | null;
   dragDrop?: ReturnType<typeof useNoteDragDrop>;
+  childPages?: Record<number, number>;
+  childTotals?: Record<number, number>;
+  childFilters?: Record<number, { search: string; from: string; to: string }>;
+  onChildPageChange?: (parentId: number, page: number) => void;
+  onChildFilterChange?: (parentId: number, patch: Partial<{ search: string; from: string; to: string }>) => void;
   onToggleExpand: (noteId: number) => void;
   onStartView: (note: Note) => void;
   onStartEdit: (note: Note) => void;
@@ -65,6 +70,11 @@ export const NoteList: React.FC<NoteListProps> = ({
   expandedNotes,
   loadingSubNotes,
   currentUser,
+  childPages,
+  childTotals,
+  childFilters,
+  onChildPageChange,
+  onChildFilterChange,
   onToggleExpand,
   onStartView,
   onStartEdit,
@@ -77,19 +87,37 @@ export const NoteList: React.FC<NoteListProps> = ({
   onPageChange,
 }) => {
   const isProjectNotesTab = activeTab === "PROJECT";
-  const [childFilters, setChildFilters] = useState<
+  const CHILD_PAGE_SIZE = 3;
+  const [localChildFilters, setLocalChildFilters] = useState<
     Record<number, { search: string; from: string; to: string }>
   >({});
+  const [localChildPages, setLocalChildPages] = useState<Record<number, number>>({});
+
+  const getChildPage = (noteId: number) =>
+    (childPages && childPages[noteId]) || localChildPages[noteId] || 1;
+  const setChildPage = (noteId: number, page: number) => {
+    setLocalChildPages((prev) => ({ ...prev, [noteId]: page }));
+    if (onChildPageChange) {
+      onChildPageChange(noteId, page);
+    }
+  };
+
   const childFilterFor = (noteId: number) =>
-    childFilters[noteId] || { search: "", from: "", to: "" };
+    (childFilters && childFilters[noteId]) ||
+    localChildFilters[noteId] || { search: "", from: "", to: "" };
+
   const setChildFilter = (
     noteId: number,
     patch: Partial<{ search: string; from: string; to: string }>,
   ) => {
-    setChildFilters((prev) => ({
+    setLocalChildFilters((prev) => ({
       ...prev,
       [noteId]: { ...childFilterFor(noteId), ...prev[noteId], ...patch },
     }));
+    setLocalChildPages((prev) => ({ ...prev, [noteId]: 1 }));
+    if (onChildFilterChange) {
+      onChildFilterChange(noteId, patch);
+    }
   };
 
 
@@ -147,17 +175,20 @@ export const NoteList: React.FC<NoteListProps> = ({
                 const parentMatchesFilters =
                   noteMatchesSearch(note, searchQuery) &&
                   noteMatchesCreatedDate(note.createdAt, fromDate, toDate);
-                const visibleSubNotes = subNotes.filter((sub) => {
-                  const matchesGlobalSearch =
-                    parentMatchesFilters || noteMatchesSearch(sub, searchQuery);
-                  const matchesGlobalDate = noteMatchesCreatedDate(sub.createdAt, fromDate, toDate);
-                  return (
-                    matchesGlobalSearch &&
-                    matchesGlobalDate &&
-                    noteMatchesSearch(sub, childFilter.search) &&
-                    noteMatchesCreatedDate(sub.createdAt, childFilter.from, childFilter.to)
-                  );
-                });
+                const childCurrentPage = getChildPage(note.id);
+                const totalChildCount =
+                  (childTotals && childTotals[note.id] !== undefined)
+                    ? childTotals[note.id]
+                    : ((note as any).subNotesTotal !== undefined
+                        ? (note as any).subNotesTotal
+                        : ((note as any).subNotesCount !== undefined ? (note as any).subNotesCount : subNotes.length));
+
+                // When subNotes are paginated by the server (3 per page), display them directly.
+                // Fall back to client-side slice if an unpaginated list with > 3 items was provided.
+                const paginatedSubNotes =
+                  (note as any).subNotesTotal !== undefined || (childTotals && childTotals[note.id] !== undefined) || subNotes.length <= CHILD_PAGE_SIZE
+                    ? subNotes
+                    : subNotes.slice((childCurrentPage - 1) * CHILD_PAGE_SIZE, childCurrentPage * CHILD_PAGE_SIZE);
                 return (
                   <React.Fragment key={note.id}>
                     <tr className="hover:bg-slate-50/80 transition-colors">
@@ -377,12 +408,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                                 {(childFilter.search || childFilter.from || childFilter.to) && (
                                   <button
                                     type="button"
-                                    onClick={() =>
-                                      setChildFilters((prev) => ({
-                                        ...prev,
-                                        [note.id]: { search: "", from: "", to: "" },
-                                      }))
-                                    }
+                                    onClick={() => setChildFilter(note.id, { search: "", from: "", to: "" })}
                                     className="h-9 px-3 rounded-xl border border-slate-200 bg-white text-[11px] font-semibold text-slate-600 hover:bg-slate-50 cursor-pointer"
                                   >
                                     Clear
@@ -421,7 +447,7 @@ export const NoteList: React.FC<NoteListProps> = ({
                                         </div>
                                       </td>
                                     </tr>
-                                  ) : visibleSubNotes.length === 0 ? (
+                                  ) : paginatedSubNotes.length === 0 ? (
                                     <tr>
                                       <td colSpan={4} className="py-8 text-center text-slate-400">
                                         {subNotes.length === 0 ? (
@@ -442,14 +468,15 @@ export const NoteList: React.FC<NoteListProps> = ({
                                       </td>
                                     </tr>
                                   ) : (
-                                    visibleSubNotes.map((sub, subIdx) => {
+                                    paginatedSubNotes.map((sub, subIdx) => {
+                                      const subSlNo = (childCurrentPage - 1) * CHILD_PAGE_SIZE + subIdx + 1;
                                       return (
                                         <tr
                                           key={sub.id}
                                           className="hover:bg-slate-50 transition-colors"
                                         >
                                           <td className="py-3 px-5 text-center font-bold text-slate-700">
-                                            <span>{subIdx + 1}</span>
+                                            <span>{subSlNo}</span>
                                           </td>
                                           <td className="py-3 px-6">
                                             <span
@@ -549,6 +576,18 @@ export const NoteList: React.FC<NoteListProps> = ({
                                   )}
                                 </tbody>
                               </table>
+
+                              {totalChildCount > 0 && (
+                                <div className="p-3 border-t border-slate-100 bg-white">
+                                  <Pagination
+                                    currentPage={childCurrentPage}
+                                    totalItems={totalChildCount}
+                                    pageSize={CHILD_PAGE_SIZE}
+                                    onPageChange={(page) => setChildPage(note.id, page)}
+                                    showTotal={true}
+                                  />
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -582,11 +621,11 @@ export const NoteList: React.FC<NoteListProps> = ({
                 type="button"
                 onClick={() => onPageChange(currentPage - 1)}
                 disabled={currentPage <= 1}
-                className="px-2.5 py-1 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all flex items-center gap-1 font-semibold"
+                className="w-7 h-7 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all flex items-center justify-center font-semibold"
                 title="Previous page"
+                aria-label="Previous page"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Prev</span>
               </button>
 
               {/* Numbered Page Buttons */}
@@ -610,10 +649,10 @@ export const NoteList: React.FC<NoteListProps> = ({
                 type="button"
                 onClick={() => onPageChange(currentPage + 1)}
                 disabled={currentPage >= totalPages}
-                className="px-2.5 py-1 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all flex items-center gap-1 font-semibold"
+                className="w-7 h-7 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all flex items-center justify-center font-semibold"
                 title="Next page"
+                aria-label="Next page"
               >
-                <span className="hidden sm:inline">Next</span>
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
