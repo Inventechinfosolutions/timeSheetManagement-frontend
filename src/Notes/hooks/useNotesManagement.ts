@@ -8,6 +8,7 @@ import {
   fetchNoteStats,
   fetchProjectsList,
   fetchNoteById,
+  fetchSubNotes,
   createNote,
   updateNote,
   deleteNote,
@@ -94,6 +95,67 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   // Accordion expansion state for sub-tables
   const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
   const [loadingSubNotes, setLoadingSubNotes] = useState<Record<number, boolean>>({});
+  const [childPages, setChildPages] = useState<Record<number, number>>({});
+  const [childTotals, setChildTotals] = useState<Record<number, number>>({});
+  const [childFilters, setChildFilters] = useState<
+    Record<number, { search: string; from: string; to: string }>
+  >({});
+
+  const handleChildPageChange = async (parentId: number, page: number) => {
+    setChildPages((prev) => ({ ...prev, [parentId]: page }));
+    const filter = childFilters[parentId] || { search: "", from: "", to: "" };
+    setLoadingSubNotes((prev) => ({ ...prev, [parentId]: true }));
+    try {
+      const res = await dispatch(
+        fetchSubNotes({
+          parentId,
+          page,
+          limit: 3,
+          search: filter.search || undefined,
+          fromDate: filter.from || undefined,
+          toDate: filter.to || undefined,
+        })
+      ).unwrap();
+      if (res?.total !== undefined) {
+        setChildTotals((prev) => ({ ...prev, [parentId]: res.total }));
+      }
+    } catch (err) {
+      console.error("Failed to load sub-notes page:", page, err);
+    } finally {
+      setLoadingSubNotes((prev) => ({ ...prev, [parentId]: false }));
+    }
+  };
+
+  const handleChildFilterChange = async (
+    parentId: number,
+    patch: Partial<{ search: string; from: string; to: string }>
+  ) => {
+    const current = childFilters[parentId] || { search: "", from: "", to: "" };
+    const updated = { ...current, ...patch };
+    setChildFilters((prev) => ({ ...prev, [parentId]: updated }));
+    setChildPages((prev) => ({ ...prev, [parentId]: 1 }));
+
+    setLoadingSubNotes((prev) => ({ ...prev, [parentId]: true }));
+    try {
+      const res = await dispatch(
+        fetchSubNotes({
+          parentId,
+          page: 1,
+          limit: 3,
+          search: updated.search || undefined,
+          fromDate: updated.from || undefined,
+          toDate: updated.to || undefined,
+        })
+      ).unwrap();
+      if (res?.total !== undefined) {
+        setChildTotals((prev) => ({ ...prev, [parentId]: res.total }));
+      }
+    } catch (err) {
+      console.error("Failed to filter sub-notes:", err);
+    } finally {
+      setLoadingSubNotes((prev) => ({ ...prev, [parentId]: false }));
+    }
+  };
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   /** Immediate search text for client-side filtering (Redux `searchQuery` is debounced for API). */
@@ -251,7 +313,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     }
   };
 
-  // Toggle sub-table accordion: fetch child notes on-demand via GET /notes/:id
+  // Toggle sub-table accordion: fetch child notes on-demand via GET /api/notes/:id/sub-notes
   const toggleExpand = async (noteId: number) => {
     const isCurrentlyExpanded = !!expandedNotes[noteId];
     if (isCurrentlyExpanded) {
@@ -267,17 +329,28 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       [noteId]: true,
     }));
 
-    // On-demand fetch child sub-notes if not yet loaded
-    const note = notes.find((n) => n.id === noteId);
-    if (!note?.subNotes || note.subNotes.length === 0) {
-      try {
-        setLoadingSubNotes((prev) => ({ ...prev, [noteId]: true }));
-        await dispatch(fetchNoteById(noteId)).unwrap();
-      } catch (err) {
-        console.error("Failed to load child notes for note:", noteId, err);
-      } finally {
-        setLoadingSubNotes((prev) => ({ ...prev, [noteId]: false }));
+    // Reset child page to 1 when expanding
+    setChildPages((prev) => ({ ...prev, [noteId]: 1 }));
+    const filter = childFilters[noteId] || { search: "", from: "", to: "" };
+    try {
+      setLoadingSubNotes((prev) => ({ ...prev, [noteId]: true }));
+      const res = await dispatch(
+        fetchSubNotes({
+          parentId: noteId,
+          page: 1,
+          limit: 3,
+          search: filter.search || undefined,
+          fromDate: filter.from || undefined,
+          toDate: filter.to || undefined,
+        })
+      ).unwrap();
+      if (res?.total !== undefined) {
+        setChildTotals((prev) => ({ ...prev, [noteId]: Number(res.total) }));
       }
+    } catch (err) {
+      console.error("Failed to load sub-notes on expand:", noteId, err);
+    } finally {
+      setLoadingSubNotes((prev) => ({ ...prev, [noteId]: false }));
     }
   };
 
@@ -913,11 +986,33 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       clearTimeout(autoSaveTimerRef.current);
     }
     setAutoSaveStatus("idle");
+    const closingNote = activeNote;
+    const parentCtx = parentNoteContext;
     setPageMode("list");
     setActiveNote(null);
     setParentNoteContext(null);
     if (shouldReload) {
       loadNotes();
+    }
+    // When returning from edit/view, refresh child notes for parent note if applicable
+    const parentIdToRefresh =
+      closingNote?.parentId ||
+      (closingNote && expandedNotes[closingNote.id] ? closingNote.id : null) ||
+      parentCtx?.id ||
+      null;
+    if (parentIdToRefresh) {
+      setExpandedNotes((prev) => ({ ...prev, [parentIdToRefresh]: true }));
+      setLoadingSubNotes((prev) => ({ ...prev, [parentIdToRefresh]: true }));
+      dispatch(fetchSubNotes({ parentId: parentIdToRefresh, page: 1, limit: 3 }))
+        .unwrap()
+        .then((res) => {
+          if (res?.total !== undefined) {
+            setChildTotals((prev) => ({ ...prev, [parentIdToRefresh]: Number(res.total) }));
+          }
+        })
+        .catch(() => dispatch(fetchNoteById(parentIdToRefresh)).unwrap())
+        .catch((err) => console.error("Failed to refresh child notes on return:", err))
+        .finally(() => setLoadingSubNotes((prev) => ({ ...prev, [parentIdToRefresh]: false })));
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -1960,5 +2055,10 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     dispatch,
     handleSearchChange,
     handleClearSearch,
+    childPages,
+    childTotals,
+    childFilters,
+    handleChildPageChange,
+    handleChildFilterChange,
   };
 };

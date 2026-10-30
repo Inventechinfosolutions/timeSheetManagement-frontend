@@ -115,7 +115,7 @@ export const fetchProjectsList = createAsyncThunk(
   }
 );
 
-// Fetch Note By ID
+// Fetch Note By ID (Note Details API)
 export const fetchNoteById = createAsyncThunk(
   "notes/fetchById",
   async (id: number, { rejectWithValue }) => {
@@ -124,6 +124,38 @@ export const fetchNoteById = createAsyncThunk(
       return response.data as Note;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || "Failed to fetch note details");
+    }
+  }
+);
+
+// Fetch Sub-Notes for a parent note (Dedicated Sub-note API)
+export const fetchSubNotes = createAsyncThunk(
+  "notes/fetchSubNotes",
+  async (
+    params: {
+      parentId: number;
+      page?: number;
+      limit?: number;
+      search?: string;
+      fromDate?: string;
+      toDate?: string;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const searchParams = new URLSearchParams();
+      if (params.page !== undefined) searchParams.append("page", String(params.page));
+      if (params.limit !== undefined) searchParams.append("limit", String(params.limit));
+      if (params.search) searchParams.append("search", params.search);
+      if (params.fromDate) searchParams.append("fromDate", params.fromDate);
+      if (params.toDate) searchParams.append("toDate", params.toDate);
+
+      const queryStr = searchParams.toString();
+      const url = `${API_BASE}/${params.parentId}/sub-notes${queryStr ? `?${queryStr}` : ""}`;
+      const response = await axios.get(url);
+      return { parentId: params.parentId, ...response.data };
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || "Failed to fetch sub-notes");
     }
   }
 );
@@ -524,7 +556,20 @@ const notesSlice = createSlice({
       })
       .addCase(fetchNotes.fulfilled, (state, action) => {
         state.loading = false;
-        state.notes = action.payload?.data || (Array.isArray(action.payload) ? action.payload : []);
+        const newNotes: Note[] = action.payload?.data || (Array.isArray(action.payload) ? action.payload : []);
+        const prevNotesMap = new Map(state.notes.map((n) => [Number(n.id), n]));
+        state.notes = newNotes.map((note) => {
+          const prev = prevNotesMap.get(Number(note.id));
+          if (prev?.subNotes && prev.subNotes.length > 0 && (!note.subNotes || note.subNotes.length === 0)) {
+            return {
+              ...note,
+              subNotes: prev.subNotes,
+              subNotesTotal: (prev as any).subNotesTotal,
+              subNotesPage: (prev as any).subNotesPage,
+            };
+          }
+          return note;
+        });
         state.totalNotesCount = action.payload?.total ?? (Array.isArray(action.payload) ? action.payload.length : 0);
       })
       .addCase(fetchNotes.rejected, (state, action) => {
@@ -545,6 +590,20 @@ const notesSlice = createSlice({
         state.projects = action.payload || [];
       })
 
+      // Sub-Notes API Handler (Server-side paginated child notes)
+      .addCase(fetchSubNotes.fulfilled, (state, action) => {
+        const { parentId, data, total, page } = action.payload;
+        const index = state.notes.findIndex((n) => Number(n.id) === Number(parentId));
+        if (index !== -1) {
+          state.notes[index] = {
+            ...state.notes[index],
+            subNotes: data || [],
+            subNotesTotal: total !== undefined ? Number(total) : (data?.length || 0),
+            subNotesPage: page || 1,
+          };
+        }
+      })
+
       // Note Details
       .addCase(fetchNoteById.fulfilled, (state, action) => {
         state.selectedNote = action.payload;
@@ -554,8 +613,21 @@ const notesSlice = createSlice({
             state.notes[index] = {
               ...state.notes[index],
               ...action.payload,
-              subNotes: action.payload.subNotes || [],
+              subNotes: (action.payload.subNotes && action.payload.subNotes.length > 0)
+                ? action.payload.subNotes
+                : (state.notes[index].subNotes || []),
             };
+          } else if (action.payload.parentId) {
+            const parent = state.notes.find((n) => n.id === action.payload.parentId);
+            if (parent) {
+              if (!parent.subNotes) parent.subNotes = [];
+              const subIdx = parent.subNotes.findIndex((s) => s.id === action.payload.id);
+              if (subIdx !== -1) {
+                parent.subNotes[subIdx] = { ...parent.subNotes[subIdx], ...action.payload };
+              } else {
+                parent.subNotes.push(action.payload);
+              }
+            }
           }
         }
       })
@@ -581,7 +653,13 @@ const notesSlice = createSlice({
       .addCase(updateNote.fulfilled, (state, action) => {
         const index = state.notes.findIndex((n) => n.id === action.payload.id);
         if (index !== -1) {
-          state.notes[index] = { ...state.notes[index], ...action.payload };
+          state.notes[index] = {
+            ...state.notes[index],
+            ...action.payload,
+            subNotes: (action.payload.subNotes && action.payload.subNotes.length > 0)
+              ? action.payload.subNotes
+              : (state.notes[index].subNotes || []),
+          };
         } else {
           state.notes.forEach((n) => {
             if (n.subNotes) {

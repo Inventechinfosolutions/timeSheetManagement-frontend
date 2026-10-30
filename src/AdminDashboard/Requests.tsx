@@ -58,7 +58,7 @@ import {
   LeaveRequestType,
   UserType,
 } from "../enums";
-import { isCeoOrGmUser } from "../utils/roleAccess";
+import { isCeoOrGmUser, isAdminAccess } from "../utils/roleAccess";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { message, Select, Modal } from "antd";
@@ -193,6 +193,17 @@ const Requests = () => {
     employeeName: string,
     req?: any,
   ) => {
+    const isManager = currentUser?.userType === UserType.MANAGER || String(currentUser?.role || "").toUpperCase() === UserType.MANAGER;
+    if (isManager && !isAdminAccess(currentUser)) {
+      const myEmpId = (currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase();
+      const reqEmpId = (req?.employeeId || "").trim().toLowerCase();
+      const reqInternId = ((req as any)?.internId || "").trim().toLowerCase();
+      if (myEmpId && (reqEmpId === myEmpId || reqInternId === myEmpId)) {
+        message.warning("Managers cannot approve or reject their own requests. These are reviewed by GM.");
+        return;
+      }
+    }
+
     setConfirmModal({
       isOpen: true,
       id,
@@ -501,6 +512,17 @@ const Requests = () => {
   };
 
   const filteredRequests = (entities || []).filter((req) => {
+    // If logged-in user is a Manager (not Admin/CEO/GM), exclude their own requests from approval table
+    const isManager = currentUser?.userType === UserType.MANAGER || String(currentUser?.role || "").toUpperCase() === UserType.MANAGER;
+    if (isManager && !isAdminAccess(currentUser)) {
+      const myEmpId = (currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase();
+      const reqEmpId = (req.employeeId || "").trim().toLowerCase();
+      const reqInternId = ((req as any).internId || "").trim().toLowerCase();
+      if (myEmpId && (reqEmpId === myEmpId || reqInternId === myEmpId)) {
+        return false;
+      }
+    }
+
     if (!debouncedSearchTerm) return true;
     const s = debouncedSearchTerm.toLowerCase().trim();
 
@@ -1573,6 +1595,10 @@ const Requests = () => {
                       {/* Checkbox — enabled for Pending, Cancellation Requested, Modification Requested */}
                       {isBulkEligibleStatus && (
                         <td className="py-3 pl-4 pr-2 align-middle text-center">
+                          {!isAdminAccess(currentUser) &&
+                          (currentUser?.userType === UserType.MANAGER || String(currentUser?.role || "").toUpperCase() === UserType.MANAGER) &&
+                          ((currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase() === (req.employeeId || "").trim().toLowerCase() ||
+                           (currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase() === ((req as any).internId || "").trim().toLowerCase()) ? null : (
                           <input
                             type="checkbox"
                             checked={selectedIds.has(req.id)}
@@ -1590,6 +1616,7 @@ const Requests = () => {
                             }}
                             className="w-4 h-4 accent-[#4318FF] cursor-pointer"
                           />
+                          )}
                         </td>
                       )}
                       <td className="py-3 pl-6 pr-2 text-center text-[#475569] text-sm font-semibold align-middle whitespace-nowrap">
@@ -1863,6 +1890,15 @@ const Requests = () => {
                           >
                             <Eye size={18} />
                           </button>
+                          {!isAdminAccess(currentUser) &&
+                          (currentUser?.userType === UserType.MANAGER || String(currentUser?.role || "").toUpperCase() === UserType.MANAGER) &&
+                          ((currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase() === (req.employeeId || "").trim().toLowerCase() ||
+                           (currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase() === ((req as any).internId || "").trim().toLowerCase()) ? (
+                            <span className="px-2 py-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg whitespace-nowrap">
+                              Reviewed by GM
+                            </span>
+                          ) : (
+                            <>
                           {!isReceptionist &&
                             !selectedIds.has(req.id) &&
                             req.status === LeaveRequestStatus.PENDING && (
@@ -1967,6 +2003,8 @@ const Requests = () => {
                                 </button>
                               </>
                             )}
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
