@@ -62,6 +62,16 @@ const ManagerMapping: React.FC = () => {
   const { departments } = useAppSelector(
     (state: RootState) => state.masterDepartments,
   );
+  // CEO and General Manager are roles, not assignable departments.
+  const assignableDepartments = useMemo(
+    () =>
+      departments.filter(
+        (dept) =>
+          dept.departmentName !== "CEO" &&
+          dept.departmentName !== "General Manager",
+      ),
+    [departments],
+  );
   const {
     historyEntities: groupedMappings,
     historyTotalItems,
@@ -364,7 +374,7 @@ const ManagerMapping: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex flex-col gap-2">
-                    {departments.map((dept) => (
+                    {assignableDepartments.map((dept) => (
                       <button
                         key={dept.id}
                         onClick={() =>
@@ -680,7 +690,7 @@ const ManagerMapping: React.FC = () => {
                     >
                       All Departments
                     </button>
-                    {departments.map((dept) => (
+                    {assignableDepartments.map((dept) => (
                       <button
                         key={dept.id}
                         onClick={() => {

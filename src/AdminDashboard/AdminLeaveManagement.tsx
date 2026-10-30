@@ -2777,7 +2777,7 @@ const AdminLeaveManagement = () => {
                           <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
                             Reporting Manager
                           </span>
-                          <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                          <div className="px-4 py-2.5 bg-gray-50 border border-gray-400 rounded-xl text-gray-700 font-bold text-sm">
                             {emailConfig.assignedManagerEmail}
                           </div>
                         </div>
@@ -2786,7 +2786,7 @@ const AdminLeaveManagement = () => {
                         <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
                           HR
                         </span>
-                        <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                        <div className="px-4 py-2.5 bg-gray-50 border border-gray-400 rounded-xl text-gray-700 font-bold text-sm">
                           {emailConfig.hrEmail || "Not configured"}
                         </div>
                       </div>
@@ -2860,7 +2860,7 @@ const AdminLeaveManagement = () => {
                               }}
                               onBlur={() => addCcEmail(ccEmailInput)}
                               placeholder="Add email and press Enter"
-                              className="min-w-[200px] flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
+                              className="min-w-[200px] flex-1 px-3 py-2 border border-gray-400 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
                             />
                             {ccEmailError && (
                               <p className="text-red-500 text-xs mt-1 ml-1 w-full">
@@ -2882,7 +2882,7 @@ const AdminLeaveManagement = () => {
                       Subject <span className="text-red-500">*</span>
                     </label>
                     {isViewMode ? (
-                      <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                      <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border border-gray-400 break-words">
                         {formData.title}
                       </div>
                     ) : (
@@ -2890,7 +2890,7 @@ const AdminLeaveManagement = () => {
                         <input
                           type="text"
                           placeholder="e.g. Annual Vacation"
-                          className={`w-full px-5 py-3 rounded-xl bg-white border ${errors.title ? "border-red-500" : "border-gray-200"
+                          className={`w-full px-5 py-3 rounded-xl bg-white border ${errors.title ? "border-red-500" : "border-gray-400"
                             } text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
                           value={formData.title}
                           onChange={(e) => {
@@ -2916,7 +2916,7 @@ const AdminLeaveManagement = () => {
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Employee
                 </label>
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none flex items-center gap-3">
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border border-gray-400 flex items-center gap-3">
                   <User size={18} className="text-[#4318FF]" />
                   <span>
                     {selectedEmployee.fullName ||
@@ -2963,7 +2963,7 @@ const AdminLeaveManagement = () => {
                       style={{
                         backgroundColor: "#F4F7FE",
                         borderRadius: "16px",
-                        border: "1px solid transparent",
+                        border: "1px solid #9ca3af",
                       }}
                       suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                     >
@@ -2996,7 +2996,7 @@ const AdminLeaveManagement = () => {
                           style={{
                             backgroundColor: "#F4F7FE",
                             borderRadius: "16px",
-                            border: "1px solid transparent",
+                            border: "1px solid #9ca3af",
                           }}
                           suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                         >
@@ -3035,7 +3035,7 @@ const AdminLeaveManagement = () => {
                   From <span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center border border-gray-400">
                     {dayjs(formData.startDate).format("DD-MM-YYYY")}
                   </div>
                 ) : (
@@ -3045,7 +3045,7 @@ const AdminLeaveManagement = () => {
                         inputReadOnly={true}
                         popupClassName="hide-other-months show-weekdays"
                         disabledDate={disabledDate}
-                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
+                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border! border-gray-400! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                         value={
                           formData.startDate ? dayjs(formData.startDate) : null
                         }
@@ -3073,7 +3073,7 @@ const AdminLeaveManagement = () => {
                         }}
                         format="DD-MM-YYYY"
                         placeholder="dd-mm-yyyy"
-                        suffixIcon={null}
+                        suffixIcon={<Calendar size={16} className="text-[#4318FF]" />}
                       />
                     </ConfigProvider>
                     {errors.startDate && (
@@ -3089,7 +3089,7 @@ const AdminLeaveManagement = () => {
                   To <span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center border border-gray-400">
                     {dayjs(formData.endDate).format("DD-MM-YYYY")}
                   </div>
                 ) : (
@@ -3099,7 +3099,7 @@ const AdminLeaveManagement = () => {
                         inputReadOnly={true}
                         popupClassName="hide-other-months show-weekdays"
                         disabledDate={disabledEndDate}
-                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
+                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border! border-gray-400! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                         value={
                           formData.endDate ? dayjs(formData.endDate) : null
                         }
@@ -3112,7 +3112,7 @@ const AdminLeaveManagement = () => {
                         }}
                         format="DD-MM-YYYY"
                         placeholder="dd-mm-yyyy"
-                        suffixIcon={null}
+                        suffixIcon={<Calendar size={16} className="text-[#4318FF]" />}
                       />
                     </ConfigProvider>
                     {errors.endDate && (
@@ -3127,7 +3127,7 @@ const AdminLeaveManagement = () => {
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Duration:
                 </label>
-                <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
+                <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px] border border-gray-400">
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
                       ? (() => {
@@ -3255,7 +3255,7 @@ const AdminLeaveManagement = () => {
                 Reason for Request <span className="text-red-500">*</span>
               </label>
               {isViewMode ? (
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed border border-gray-400">
                   {formData.description || "Reason for Request is not provided."}
                 </div>
               ) : (
@@ -3265,7 +3265,7 @@ const AdminLeaveManagement = () => {
                     placeholder="Please provide details about your request..."
                     className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${errors.description
                         ? "border-red-500"
-                        : "border-transparent"
+                        : "border-gray-400"
                       } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
                     value={formData.description}
                     onChange={(e) => {
@@ -3296,7 +3296,7 @@ const AdminLeaveManagement = () => {
                   file)
                 </p>
               )}
-              <div className="bg-[#F4F7FE] rounded-2xl p-2">
+              <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-gray-400">
                 <CommonMultipleUploader
                   key={isViewMode ? selectedRequestId : uploaderKey}
                   entityType="LEAVE_REQUEST"

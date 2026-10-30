@@ -2630,7 +2630,7 @@ const LeaveManagement = () => {
                           readOnly
                           disabled
                           value={emailConfig.assignedManagerEmail}
-                          className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                          className="w-full px-4 py-3 border border-gray-400 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
                         />
                       </div>
                     )}
@@ -2644,7 +2644,7 @@ const LeaveManagement = () => {
                         disabled
                         value={emailConfig.hrEmail || ""}
                         placeholder="Not configured"
-                        className="w-full px-4 py-3 border border-gray-200 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
+                        className="w-full px-4 py-3 border border-gray-400 rounded-2xl bg-gray-50 text-gray-700 cursor-not-allowed"
                       />
                     </div>
                   </div>
@@ -2716,7 +2716,7 @@ const LeaveManagement = () => {
                             }}
                             onBlur={() => addCcEmail(ccEmailInput)}
                             placeholder="Add email and press Enter"
-                            className="min-w-[200px] flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
+                            className="min-w-[200px] flex-1 px-3 py-2 border border-gray-400 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
                           />
                           {ccEmailError && (
                             <p className="text-red-500 text-xs mt-1 ml-1 w-full">
@@ -2742,7 +2742,7 @@ const LeaveManagement = () => {
                       <input
                         type="text"
                         placeholder="e.g. Annual Vacation"
-                        className={`w-full px-5 py-3 rounded-xl bg-white border ${errors.title ? "border-red-500" : "border-gray-200"
+                        className={`w-full px-5 py-3 rounded-xl bg-white border ${errors.title ? "border-red-500" : "border-gray-400"
                           } text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
                         value={formData.title}
                         onChange={(e) => {
@@ -2797,7 +2797,7 @@ const LeaveManagement = () => {
                       style={{
                         backgroundColor: "#F4F7FE",
                         borderRadius: "16px",
-                        border: "1px solid transparent",
+                        border: "1px solid #9ca3af",
                       }}
                       suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                     >
@@ -2830,7 +2830,7 @@ const LeaveManagement = () => {
                           style={{
                             backgroundColor: "#F4F7FE",
                             borderRadius: "16px",
-                            border: "1px solid transparent",
+                            border: "1px solid #9ca3af",
                           }}
                           suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                         >
@@ -2882,7 +2882,7 @@ const LeaveManagement = () => {
                           popup: "hide-other-months show-weekdays",
                         }}
                         disabledDate={disabledDate}
-                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
+                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border! border-gray-400! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                         value={
                           formData.startDate ? dayjs(formData.startDate) : null
                         }
@@ -2912,7 +2912,7 @@ const LeaveManagement = () => {
                         }}
                         format="DD-MM-YYYY"
                         placeholder="dd-mm-yyyy"
-                        suffixIcon={null}
+                        suffixIcon={<Calendar size={16} className="text-[#4318FF]" />}
                         getPopupContainer={(trigger: any) => trigger.parentNode}
                       />
                     </ConfigProvider>
@@ -2942,7 +2942,7 @@ const LeaveManagement = () => {
                           popup: "hide-other-months show-weekdays",
                         }}
                         disabledDate={disabledEndDate}
-                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
+                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border! border-gray-400! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                         value={
                           formData.endDate ? dayjs(formData.endDate) : null
                         }
@@ -2957,7 +2957,7 @@ const LeaveManagement = () => {
                         }}
                         format="DD-MM-YYYY"
                         placeholder="dd-mm-yyyy"
-                        suffixIcon={null}
+                        suffixIcon={<Calendar size={16} className="text-[#4318FF]" />}
                         getPopupContainer={(trigger: any) => trigger.parentNode}
                       />
                     </ConfigProvider>
@@ -2994,7 +2994,7 @@ const LeaveManagement = () => {
                     Duration:
                   </label>
                 </div>
-                <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
+                <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px] border border-gray-400">
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
                       ? (() => {
@@ -3157,7 +3157,7 @@ const LeaveManagement = () => {
                     placeholder="Please provide details about your request..."
                     className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${errors.description
                       ? "border-red-500"
-                      : "border-transparent"
+                      : "border-gray-400"
                       } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
                     value={formData.description}
                     onChange={(e) => {
@@ -3189,7 +3189,7 @@ const LeaveManagement = () => {
                   file)
                 </p>
               )}
-              <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-blue-50">
+              <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-gray-400">
                 <CommonMultipleUploader
                   key={isViewMode ? selectedRequestId : uploaderKey}
                   entityType="LEAVE_REQUEST"
