@@ -44,7 +44,7 @@ const AdminEmployeeTimesheetList = () => {
     : "/admin-dashboard";
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 20;
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;

@@ -57,6 +57,10 @@ export interface InboxCounts {
 
 interface InboxState {
   items: InboxItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
   unreadCount: number;
   counts: InboxCounts;
   selectedItem: InboxItem | null;
@@ -66,6 +70,10 @@ interface InboxState {
 
 const initialState: InboxState = {
   items: [],
+  total: 0,
+  page: 1,
+  limit: 5,
+  totalPages: 1,
   unreadCount: 0,
   counts: {
     inbox: 0,
@@ -84,11 +92,18 @@ const apiUrl = '/api/inbox';
 export const fetchInbox = createAsyncThunk(
   'inbox/fetchInbox',
   async (
-    params: { isRead?: boolean; search?: string; folder?: InboxFolder | string; page?: number; limit?: number; pageSize?: number; fromDate?: string; toDate?: string } | undefined,
+    params: { isRead?: boolean; isStarred?: boolean; search?: string; folder?: InboxFolder | string; page?: number; limit?: number; pageSize?: number; fromDate?: string; toDate?: string } | undefined,
     { rejectWithValue, signal }
   ) => {
     try {
-      const response = await axios.get(apiUrl, { params, signal });
+      const page = params?.page && Number(params.page) > 0 ? Number(params.page) : 1;
+      const limit = params?.limit && Number(params.limit) > 0 ? Number(params.limit) : (params?.pageSize && Number(params.pageSize) > 0 ? Number(params.pageSize) : 5);
+      const queryParams = {
+        ...params,
+        page,
+        limit,
+      };
+      const response = await axios.get(apiUrl, { params: queryParams, signal });
       return response.data;
     } catch (error: any) {
       if (axios.isCancel(error) || error?.code === 'ERR_CANCELED' || signal.aborted) {
@@ -234,7 +249,22 @@ const inboxSlice = createSlice({
     });
     builder.addCase(fetchInbox.fulfilled, (state, action) => {
       state.loading = false;
-      state.items = action.payload?.data || (Array.isArray(action.payload) ? action.payload : []);
+      if (action.payload && !Array.isArray(action.payload) && Array.isArray(action.payload.data)) {
+        state.items = action.payload.data;
+        state.total = typeof action.payload.total === "number" ? action.payload.total : action.payload.data.length;
+        state.page = typeof action.payload.page === "number" ? action.payload.page : 1;
+        state.limit = typeof action.payload.limit === "number" ? action.payload.limit : 5;
+        state.totalPages = typeof action.payload.totalPages === "number"
+          ? action.payload.totalPages
+          : Math.ceil(state.total / state.limit) || 1;
+      } else {
+        const arr = Array.isArray(action.payload) ? action.payload : [];
+        state.items = arr;
+        state.total = arr.length;
+        state.page = 1;
+        state.limit = 5;
+        state.totalPages = Math.ceil(arr.length / 5) || 1;
+      }
     });
     builder.addCase(fetchInbox.rejected, (state, action) => {
       // Ignore aborted/superseded requests so a newer search keeps loading state clean
@@ -324,6 +354,8 @@ const inboxSlice = createSlice({
       if (state.selectedItem?.inboxId === id) {
         state.selectedItem = null;
       }
+      state.total = Math.max(0, state.total - 1);
+      state.totalPages = Math.ceil(state.total / (state.limit || 5)) || 1;
       if (deletedItem) {
         if (deletedItem.folder === InboxFolder.SENT) {
           state.counts.sent = Math.max(0, state.counts.sent - 1);
