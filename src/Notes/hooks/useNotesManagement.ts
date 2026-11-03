@@ -48,12 +48,14 @@ import {
   attachmentKeysInHtml,
   refreshAttachmentBadges,
 } from "../utils/noteEditorAttachmentHelpers";
+import { restoreNoteScroll, snapshotNoteScroll } from "../utils/noteEditorTableHelpers";
 import {
   justifyImportedContent,
   wrapWideTablesInRoot,
   noteMatchesSearch,
   noteMatchesCreatedDate,
   rewriteInlineDataImagesInHtml,
+  applyInlineImageKeys,
   hydrateInlineImagesInRoot,
   wrapNoteInlineImages,
   NOTE_EDITOR_CHECKPOINT_EVENT,
@@ -501,9 +503,12 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   const runA4Pagination = (reflow = true) => {
     const editor = editorRef.current;
     if (!editor) return;
+    const scrollSnaps = snapshotNoteScroll(editor);
     const landscape =
       editor.classList.contains("is-landscape") || isNoteLandscape(formData);
     paginateToA4Sheets(editor, landscape, reflow);
+    restoreNoteScroll(scrollSnaps);
+    requestAnimationFrame(() => restoreNoteScroll(scrollSnaps));
     setFormData((prev) => ({
       ...prev,
       description: editor.innerHTML,
@@ -545,9 +550,9 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   const hydrateEditorInlineImages = async (root?: HTMLElement | null) => {
     const target = root || editorRef.current;
     if (!target) return;
-    await hydrateInlineImagesInRoot(target, async (key, fileName) => {
+    await hydrateInlineImagesInRoot(target, async (key) => {
       const response = await dispatch(
-        previewNoteAttachment({ key, fileName })
+        previewNoteAttachment({ key })
       ).unwrap();
       const blob = new Blob([response.data], {
         type: response.headers?.["content-type"] || "image/*",
@@ -563,13 +568,13 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     if (!editor) return;
     const next = await persistInlineImagesInHtml(editor.innerHTML);
     if (shouldCancel?.()) return;
-    if (next !== editor.innerHTML) {
-      editor.innerHTML = next;
-      await hydrateEditorInlineImages(editor);
-      if (shouldCancel?.()) return;
+    if (!editorRef.current) return;
+    // Keep the picture the user pasted. Replacing innerHTML with the API url
+    // flashes a broken image.png and jumps the caret back to column 1.
+    applyInlineImageKeys(editorRef.current, next);
+    wrapNoteInlineImages(editorRef.current);
+    if (next !== editorRef.current.innerHTML) {
       setFormData((prev) => ({ ...prev, description: next }));
-    } else {
-      wrapNoteInlineImages(editor);
     }
   };
 
@@ -689,8 +694,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     const withoutBase64 = await persistInlineImagesInHtml(
       richHtml || formData.description || ""
     );
-    if (editorRef.current && withoutBase64 !== editorRef.current.innerHTML) {
-      editorRef.current.innerHTML = withoutBase64;
+    if (editorRef.current) {
+      applyInlineImageKeys(editorRef.current, withoutBase64);
     }
     if (!formData.excelWorkbook) {
       setFormData((prev) => ({ ...prev, description: withoutBase64 }));

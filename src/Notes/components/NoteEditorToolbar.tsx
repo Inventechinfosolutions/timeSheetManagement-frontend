@@ -438,6 +438,9 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">
                 Custom Size
               </span>
+              <p className="text-[10px] text-slate-500 px-1 leading-snug">
+                In a table: adds that many rows &amp; columns. Outside: inserts a new table.
+              </p>
               <div className="flex items-center gap-1.5 px-0.5">
                 <div className="flex items-center gap-1 flex-1">
                   <input

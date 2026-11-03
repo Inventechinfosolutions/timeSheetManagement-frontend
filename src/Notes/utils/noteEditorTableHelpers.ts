@@ -12,6 +12,127 @@ export const getColLabel = (colIdx: number, total: number): string => {
   return "A";
 };
 
+export type NoteScrollSnap = { el: HTMLElement; left: number; top: number };
+
+const isNoteScroller = (el: HTMLElement) =>
+  el.classList.contains("note-table-scroll") ||
+  el.classList.contains("page") ||
+  el.classList.contains("note-editor-x-scroll") ||
+  el.classList.contains("a4-page-workspace");
+
+/** The real page scroller (main), not only the table's sideways box. */
+const scrollsOnItsOwn = (el: HTMLElement) => {
+  const style = getComputedStyle(el);
+  const y = style.overflowY;
+  const x = style.overflowX;
+  const vertical = (y === "auto" || y === "scroll" || y === "overlay") && el.scrollHeight > el.clientHeight + 8;
+  const horizontal = (x === "auto" || x === "scroll" || x === "overlay") && el.scrollWidth > el.clientWidth + 8;
+  return vertical || horizontal;
+};
+
+/** Remember horizontal/vertical scroll of table hosts, pages, and the page scroller before an edit. */
+export const snapshotNoteScroll = (root: ParentNode | null | undefined): NoteScrollSnap[] => {
+  if (!root) return [];
+  const found = new Map<HTMLElement, NoteScrollSnap>();
+  const add = (el: HTMLElement) => {
+    found.set(el, { el, left: el.scrollLeft, top: el.scrollTop });
+  };
+  if (root instanceof HTMLElement) {
+    if (isNoteScroller(root) || scrollsOnItsOwn(root)) add(root);
+    const main = root.closest("main");
+    if (main instanceof HTMLElement) add(main);
+    let parent = root.parentElement;
+    while (parent) {
+      if (isNoteScroller(parent) || scrollsOnItsOwn(parent)) add(parent);
+      parent = parent.parentElement;
+    }
+  }
+  const scrollingElement = document.scrollingElement;
+  if (scrollingElement instanceof HTMLElement && scrollingElement.scrollTop > 0) {
+    add(scrollingElement);
+  }
+  root.querySelectorAll<HTMLElement>(".note-table-scroll, .page, .note-editor-x-scroll").forEach(add);
+  return Array.from(found.values());
+};
+
+/** Put table/page scroll back so typing or paste does not jump to column 1 / row 1. */
+export const restoreNoteScroll = (snaps: NoteScrollSnap[]) => {
+  snaps.forEach(({ el, left, top }) => {
+    if (!el.isConnected) return;
+    if (el.scrollLeft !== left) el.scrollLeft = left;
+    if (el.scrollTop !== top) el.scrollTop = top;
+  });
+};
+
+/** Mark Excel tables as wide and wrap them so extra columns scroll horizontally. */
+export const ensureEditorTableHorizontalScroll = (table: HTMLTableElement | null) => {
+  if (!table || !document.contains(table)) return;
+
+  table.classList.add("note-editor-table", "note-wide-table");
+  // Fill the bordered area (min 100%); grow with content for horizontal scroll
+  table.style.removeProperty("width");
+  table.style.removeProperty("min-width");
+  table.style.removeProperty("max-width");
+  table.style.setProperty("width", "max-content", "important");
+  table.style.setProperty("min-width", "100%", "important");
+  table.style.setProperty("max-width", "none", "important");
+  table.style.setProperty("table-layout", "auto", "important");
+
+  const inserted = table.closest(".note-inserted-table") as HTMLElement | null;
+  if (inserted) {
+    inserted.style.setProperty("display", "block", "important");
+    inserted.style.setProperty("width", "max-content", "important");
+    inserted.style.setProperty("min-width", "100%", "important");
+    inserted.style.setProperty("max-width", "none", "important");
+    inserted.style.setProperty("clear", "both", "important");
+  }
+
+  Array.from(table.querySelectorAll<HTMLElement>("th, td")).forEach((cell) => {
+    if (cell.classList.contains("excel-sl-col")) {
+      cell.style.setProperty("min-width", "44px", "important");
+      cell.style.setProperty("width", "44px", "important");
+      cell.style.setProperty("max-width", "44px", "important");
+      return;
+    }
+    if (
+      cell.classList.contains("excel-attachment-col") ||
+      cell.classList.contains("excel-attachment-cell")
+    ) {
+      cell.style.setProperty("min-width", "160px", "important");
+      cell.style.removeProperty("width");
+      cell.style.removeProperty("max-width");
+      return;
+    }
+    // Min size; share extra space to the right border; grow with content for scroll
+    cell.style.setProperty("min-width", "120px", "important");
+    cell.style.removeProperty("width");
+    cell.style.removeProperty("max-width");
+  });
+
+  if (table.closest(".note-table-scroll")) return;
+
+  const wrap = document.createElement("div");
+  wrap.className = "note-table-scroll";
+  wrap.setAttribute("contenteditable", "false");
+  wrap.setAttribute("tabindex", "-1");
+
+  const inner = document.createElement("div");
+  inner.className = "note-table-scroll-inner";
+  inner.setAttribute("contenteditable", "true");
+
+  const host = table.closest(".note-inserted-table");
+  if (host && host.parentNode) {
+    host.parentNode.insertBefore(wrap, host);
+    wrap.appendChild(inner);
+    inner.appendChild(host);
+    return;
+  }
+
+  table.parentNode?.insertBefore(wrap, table);
+  wrap.appendChild(inner);
+  inner.appendChild(table);
+};
+
 /**
  * Clears visual selection outlines from table cells
  */
@@ -21,7 +142,10 @@ export const clearSelectionVisuals = (
 ) => {
   const target = table || fallbackTarget;
   if (!target) return;
-  target.querySelectorAll(".excel-cell-selected").forEach((el) => {
+  const elements = target.querySelectorAll(
+    ".excel-cell-selected, [style*='60a5fa'], [style*='rgb(96, 165, 250)']"
+  );
+  elements.forEach((el) => {
     el.classList.remove("excel-cell-selected");
     const hEl = el as HTMLElement;
     hEl.style.removeProperty("border-top");
@@ -117,13 +241,19 @@ export const applySelectionVisuals = (
  * Re-sync column headers (A, B, C...) and row numbers (1, 2, 3...)
  */
 export const updateTableHeadersAndSl = (table: HTMLTableElement) => {
-  const firstHeader = table.rows[0]?.cells[0]?.textContent?.trim();
-  let isFirstColSl = firstHeader === "SL";
+  if (!table.rows.length) return;
 
-  // If an Excel table lost its SL column (e.g. first header is "A" or table has attachment col/cells):
-  if (!isFirstColSl && (firstHeader === "A" || table.querySelector(".excel-attachment-cell, .excel-attachment-col"))) {
-    const rows = Array.from(table.rows);
-    rows.forEach((row, idx) => {
+  const firstHeader = table.rows[0]?.cells[0]?.textContent?.trim();
+  let isFirstColSl =
+    Boolean(table.rows[0]?.cells[0]?.classList.contains("excel-sl-col")) ||
+    firstHeader === "SL";
+
+  // Keep SL as the fixed row-index column if it was stripped
+  if (
+    !isFirstColSl &&
+    (firstHeader === "A" || table.querySelector(".excel-attachment-cell, .excel-attachment-col"))
+  ) {
+    Array.from(table.rows).forEach((row, idx) => {
       if (idx === 0) {
         const th = document.createElement("th");
         th.setAttribute("contenteditable", "false");
@@ -143,7 +273,6 @@ export const updateTableHeadersAndSl = (table: HTMLTableElement) => {
     isFirstColSl = true;
   }
 
-  // Update headers
   const headerRow = (table.querySelector("thead tr") as HTMLTableRowElement | null) || table.rows[0];
   if (headerRow) {
     let letterCounter = 0;
@@ -163,11 +292,12 @@ export const updateTableHeadersAndSl = (table: HTMLTableElement) => {
       const letter = String.fromCharCode(65 + (letterCounter % 26));
       letterCounter++;
       th.textContent = letter;
+      th.classList.remove("excel-sl-col");
       th.setAttribute("title", `Column ${letter} (Click to select column)`);
     });
   }
 
-  // Update row numbers in SL column
+  // Renumber SL after a row delete (1, 2, 3…) — column itself stays
   if (isFirstColSl) {
     const tbody = table.querySelector("tbody") || table;
     const dataRows = (Array.from(tbody.querySelectorAll("tr")) as HTMLTableRowElement[]).filter(

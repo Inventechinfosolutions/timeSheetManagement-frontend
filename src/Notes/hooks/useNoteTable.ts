@@ -14,6 +14,9 @@ import {
   clearSelectionVisuals as clearTableSelectionVisuals,
   applySelectionVisuals,
   updateTableHeadersAndSl,
+  ensureEditorTableHorizontalScroll,
+  restoreNoteScroll,
+  snapshotNoteScroll,
 } from "../utils/noteEditorTableHelpers";
 
 interface UseNoteTableParams {
@@ -49,7 +52,61 @@ export const useNoteTable = ({
   const lastActiveCellRef = useRef<HTMLTableCellElement | null>(null);
   const selectedCellsRef = useRef<HTMLTableCellElement[]>([]);
   const selectionKindRef = useRef<"row" | "column" | "cell" | "table" | null>(null);
+  /** Remembers last row/col selection so Del Row/Col still work after toolbar click */
+  const lastSelectedRowRef = useRef<HTMLTableRowElement | null>(null);
+  const lastSelectedColIndexRef = useRef<number>(-1);
+  /** Caret in the note body — survives toolbar / Insert Table popover focus steal */
+  const savedCaretRangeRef = useRef<Range | null>(null);
+  /** DOM node near last click/caret — more reliable than Range after focus steal */
+  const savedInsertAnchorRef = useRef<HTMLElement | null>(null);
+  const savedInsertClientYRef = useRef<number | null>(null);
   const syncExpandHandleRef = useRef<() => void>(() => {});
+
+  const captureEditorCaret = (
+    fromEventTarget?: EventTarget | null,
+    clientY?: number | null
+  ) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    if (typeof clientY === "number") {
+      savedInsertClientYRef.current = clientY;
+    }
+
+    if (fromEventTarget && fromEventTarget instanceof Node && editor.contains(fromEventTarget)) {
+      const t =
+        fromEventTarget.nodeType === Node.ELEMENT_NODE
+          ? (fromEventTarget as HTMLElement)
+          : fromEventTarget.parentElement;
+      if (t && !t.closest("[data-notes-toolbar], .ant-popover, .ant-popover-content")) {
+        savedInsertAnchorRef.current =
+          (t.closest(
+            ".note-table-scroll, .note-inserted-table, td, th, p, h1, h2, h3, h4, li, blockquote, pre, .page"
+          ) as HTMLElement | null) || t;
+      }
+    }
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return;
+    const anchorEl =
+      range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+        ? (range.commonAncestorContainer as HTMLElement)
+        : range.commonAncestorContainer.parentElement;
+    if (anchorEl?.closest?.("[data-notes-toolbar], .ant-popover, .ant-popover-content")) return;
+    try {
+      savedCaretRangeRef.current = range.cloneRange();
+      if (!savedInsertAnchorRef.current || !editor.contains(savedInsertAnchorRef.current)) {
+        savedInsertAnchorRef.current =
+          (anchorEl?.closest(
+            ".note-table-scroll, .note-inserted-table, td, th, p, h1, h2, h3, h4, li, blockquote, pre, .page"
+          ) as HTMLElement | null) || anchorEl;
+      }
+    } catch {
+      /* ignore */
+    }
+  };
 
   // Helper to get active table
   const getTargetTable = (): HTMLTableElement | null => {
@@ -87,7 +144,8 @@ export const useNoteTable = ({
           ) as HTMLTableCellElement | null) ||
           (cell.getAttribute("contenteditable") !== "false" ? cell : null));
     const target = editable || cell;
-    editorRef.current?.focus();
+    const snaps = snapshotNoteScroll(editorRef.current);
+    editorRef.current?.focus({ preventScroll: true });
     try {
       const range = document.createRange();
       const sel = window.getSelection();
@@ -98,6 +156,8 @@ export const useNoteTable = ({
     } catch {
       /* ignore */
     }
+    restoreNoteScroll(snaps);
+    requestAnimationFrame(() => restoreNoteScroll(snaps));
     lastActiveCellRef.current = target;
   };
 
@@ -107,12 +167,19 @@ export const useNoteTable = ({
     const rowCells = Array.from(tr.cells) as HTMLTableCellElement[];
     if (!rowCells.length) return;
     clearSelectionVisuals(table);
-    lastActiveCellRef.current = rowCells[0];
+    // Prefer a data cell as lastActive so Del Col never targets SL by accident
+    lastActiveCellRef.current =
+      (rowCells.find(
+        (c) =>
+          !c.classList.contains("excel-sl-col") &&
+          !c.classList.contains("excel-attachment-cell")
+      ) as HTMLTableCellElement | undefined) || rowCells[0];
     selectedCellsRef.current = rowCells;
+    lastSelectedRowRef.current = tr;
+    lastSelectedColIndexRef.current = -1;
     applySelectionVisuals(rowCells, "row");
     selectionKindRef.current = "row";
     syncExpandHandleRef.current();
-    focusEditableCell(rowCells.find((c) => c.getAttribute("contenteditable") === "true") || rowCells[0]);
   };
 
   const selectTableColumn = (table: HTMLTableElement, colIndex: number) => {
@@ -125,19 +192,18 @@ export const useNoteTable = ({
     clearSelectionVisuals(table);
     lastActiveCellRef.current = colCells[0];
     selectedCellsRef.current = colCells;
+    lastSelectedColIndexRef.current = colIndex;
+    lastSelectedRowRef.current = null;
     applySelectionVisuals(colCells, "column");
     selectionKindRef.current = "column";
     syncExpandHandleRef.current();
-    const editable =
-      colCells.find(
-        (c) => c.tagName === "TD" && c.getAttribute("contenteditable") === "true"
-      ) || colCells[0];
-    focusEditableCell(editable);
   };
 
-  // Track active table cell & multi-cell selection on selection change
+  // Track caret + active table cell on selection change
   useEffect(() => {
     const handleSelectionChange = () => {
+      captureEditorCaret();
+
       // Do not clobber Excel row/column/table selections when caret moves (e.g. toolbar click)
       if (
         selectionKindRef.current === "row" ||
@@ -178,6 +244,17 @@ export const useNoteTable = ({
       document.removeEventListener("selectionchange", handleSelectionChange);
     };
   }, []);
+
+  // Capture caret on pointer down BEFORE toolbar/popover steals focus
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const onPointerDown = (e: PointerEvent) => {
+      captureEditorCaret(e.target, e.clientY);
+    };
+    editor.addEventListener("pointerdown", onPointerDown, true);
+    return () => editor.removeEventListener("pointerdown", onPointerDown, true);
+  }, [editorRef]);
 
   // Click on table header (TH) to select entire column, or click SL cell to select entire row
   useEffect(() => {
@@ -343,36 +420,14 @@ export const useNoteTable = ({
         selectedCellsRef.current.length === 1 &&
         selectedCellsRef.current[0] === cell;
 
-      const isSlHeader = isFirstColSl && cell.tagName === "TH" && cell.cellIndex === 0;
-      const isSlRowNumber = isFirstColSl && cell.tagName === "TD" && cell.cellIndex === 0;
+      const isSlRowNumber =
+        isFirstColSl &&
+        cell.cellIndex === 0 &&
+        cell !== table.rows[0]?.cells[0] &&
+        cell.tagName !== "TH";
 
-      // Click SL header only -> select entire table
-      if (isSlHeader) {
-        e.preventDefault();
-        const alreadySelectedTable =
-          selectionKindRef.current === "table" &&
-          selectedCellsRef.current.some((c) => document.contains(c) && c.closest("table") === table);
-        if (alreadySelectedTable) {
-          clearTableSelection(table);
-          return;
-        }
-        clearSelectionVisuals(table);
-        const allCells: HTMLTableCellElement[] = [];
-        Array.from(table.rows).forEach((row) => {
-          Array.from(row.cells).forEach((c) => {
-            allCells.push(c as HTMLTableCellElement);
-          });
-        });
-        if (allCells.length > 0) {
-          lastActiveCellRef.current = allCells[0];
-          selectedCellsRef.current = allCells;
-          applySelectionVisuals(allCells, "table");
-          selectionKindRef.current = "table";
-          syncExpandHandleRef.current();
-        }
-      }
       // Click row number (1, 2, 3…) -> select that row only
-      else if (isSlRowNumber) {
+      if (isSlRowNumber) {
         e.preventDefault();
         const tr = cell.closest("tr") as HTMLTableRowElement | null;
         const alreadySelectedRow =
@@ -386,8 +441,8 @@ export const useNoteTable = ({
         }
         if (tr) selectTableRow(tr);
       }
-      // Click on TH (A/B/C… header) -> select that column
-      else if (cell.tagName === "TH") {
+      // Click any header (including SL) -> select that column so Del Col works on SL too
+      else if (cell.tagName === "TH" || (table.rows[0] && cell.parentElement === table.rows[0])) {
         e.preventDefault();
         if (alreadySelectedCol) {
           clearTableSelection(table);
@@ -399,15 +454,23 @@ export const useNoteTable = ({
       else {
         if (alreadySelectedCell) {
           clearTableSelection(table);
+          lastSelectedRowRef.current = null;
+          lastSelectedColIndexRef.current = -1;
           return;
         }
         clearSelectionVisuals(table);
         lastActiveCellRef.current = cell;
         selectedCellsRef.current = [cell];
+        lastSelectedRowRef.current = cell.closest("tr");
+        lastSelectedColIndexRef.current = cell.classList.contains("excel-sl-col")
+          ? -1
+          : cell.cellIndex;
         applySelectionVisuals([cell], "cells");
         selectionKindRef.current = "cell";
         syncExpandHandleRef.current();
-        focusEditableCell(cell);
+        // Leave the caret where the user clicked. Forcing it to the start of the
+        // cell makes the table scroll back to the beginning of the row.
+        lastActiveCellRef.current = cell;
       }
     };
 
@@ -445,17 +508,29 @@ export const useNoteTable = ({
             cell.style.setProperty("max-width", "44px", "important");
             return;
           }
-          cell.style.setProperty("width", `${w}px`, "important");
-          cell.style.setProperty("min-width", "0", "important");
-          cell.style.removeProperty("max-width");
+          const px = Math.max(MIN, Math.round(w));
+          cell.style.setProperty("width", `${px}px`, "important");
+          cell.style.setProperty("min-width", `${px}px`, "important");
+          cell.style.setProperty("max-width", `${px}px`, "important");
+          // Shrink/wrap content with the column — do not overflow into the next cell
+          cell.style.setProperty("overflow", "hidden", "important");
+          cell.style.setProperty("white-space", "normal", "important");
+          cell.style.setProperty("overflow-wrap", "anywhere", "important");
+          cell.style.setProperty("word-break", "break-word", "important");
         });
       });
-      table.style.setProperty("width", "100%", "important");
-      table.style.setProperty("max-width", "100%", "important");
+      const total = widths.reduce((sum, w) => sum + Math.max(MIN, Math.round(w)), 0);
+      table.classList.add("note-wide-table");
+      table.style.setProperty("width", `${total}px`, "important");
+      table.style.removeProperty("min-width");
+      table.style.setProperty("max-width", "none", "important");
       table.style.setProperty("table-layout", "fixed", "important");
+      if (!table.closest(".note-table-scroll")) {
+        ensureEditorTableHorizontalScroll(table);
+      }
     };
 
-    /** Resize only selected column; take/give space from neighbors so table stays on page. */
+    /** Grow or shrink only the selected column, out to the right. Neighbors stay put. */
     const setSelectedColWidth = (
       table: HTMLTableElement,
       colIndex: number,
@@ -465,39 +540,17 @@ export const useNoteTable = ({
       const header = table.rows[0]?.cells[colIndex];
       if (!header || isSl(header)) return;
       const widths = startWidths.map((w) => Math.round(w));
-      const desired = Math.max(MIN, Math.round(targetWidth));
-      let delta = desired - widths[colIndex];
-      if (delta === 0) return;
-
-      if (delta > 0) {
-        for (let i = colIndex + 1; i < widths.length && delta > 0; i++) {
-          if (isSl(table.rows[0]?.cells[i])) continue;
-          const take = Math.min(delta, widths[i] - MIN);
-          if (take > 0) {
-            widths[i] -= take;
-            widths[colIndex] += take;
-            delta -= take;
-          }
-        }
-        for (let i = colIndex - 1; i >= 0 && delta > 0; i--) {
-          if (isSl(table.rows[0]?.cells[i])) continue;
-          const take = Math.min(delta, widths[i] - MIN);
-          if (take > 0) {
-            widths[i] -= take;
-            widths[colIndex] += take;
-            delta -= take;
-          }
-        }
-      } else {
-        let give = -delta;
-        widths[colIndex] = Math.max(MIN, widths[colIndex] - give);
-        give = startWidths[colIndex] - widths[colIndex];
-        const next = colIndex + 1;
-        if (next < widths.length && !isSl(table.rows[0]?.cells[next])) {
-          widths[next] += give;
+      widths[colIndex] = Math.max(MIN, Math.round(targetWidth));
+      applyWidths(table, widths);
+      const scroller = table.closest(".note-table-scroll") as HTMLElement | null;
+      const grown = table.rows[0]?.cells[colIndex] as HTMLTableCellElement | undefined;
+      if (scroller && grown) {
+        const right = grown.offsetLeft + grown.offsetWidth;
+        const viewRight = scroller.scrollLeft + scroller.clientWidth;
+        if (right > viewRight - 12) {
+          scroller.scrollLeft = right - scroller.clientWidth + 16;
         }
       }
-      applyWidths(table, widths);
     };
 
     /** + expand only for a selected vertical column (header click) — never for single cell / row */
@@ -646,75 +699,587 @@ export const useNoteTable = ({
     };
   }, [saveUndoSnapshot, handleEditorInputWrapper, editorRef]);
 
-  // Insert standard table with Excel headers: SL, A, B, C...
-  const handleInsertTable = (numRows: number, numCols: number) => {
-    if (!editorRef.current) return;
-    editorRef.current.focus();
+  /** When a table is already selected, grow it by N rows + M columns (do not nest a new table). */
+  const expandExistingTable = (table: HTMLTableElement, addRows: number, addCols: number) => {
+    const headerRow =
+      (table.querySelector("thead tr") as HTMLTableRowElement | null) || table.rows[0];
+    const isFirstColSl =
+      headerRow?.cells[0]?.classList.contains("excel-sl-col") ||
+      headerRow?.cells[0]?.textContent?.trim() === "SL";
+    const tbody = table.querySelector("tbody") || table;
+    let insertAfter: HTMLTableRowElement | null = getSelectedRowTr(table);
 
-    let tableInner = `<table class="note-editor-table" style="width:100%;max-width:100%;table-layout:fixed;display:table;clear:both;"><thead><tr>`;
-    for (let c = 0; c < numCols; c++) {
-      const isSlCol = numCols > 1 && c === 0;
-      const colName = getColLabel(c, numCols);
-      tableInner += `<th contenteditable="false" class="${
-        isSlCol ? "excel-sl-col" : ""
-      }" title="${
-        isSlCol ? "Click to select entire table" : `Column ${colName} (Click to select column)`
-      }">${colName}</th>`;
-    }
-    tableInner += `</tr></thead><tbody>`;
+    const rowsToAdd = Math.max(0, Math.min(50, addRows));
+    const colsToAdd = Math.max(0, Math.min(50, addCols));
 
-    for (let r = 0; r < numRows; r++) {
-      tableInner += `<tr>`;
-      for (let c = 0; c < numCols; c++) {
-        const isSlCol = numCols > 1 && c === 0;
-        if (isSlCol) {
-          tableInner += `<td contenteditable="false" class="excel-sl-col" title="Click to select this row">${
-            r + 1
-          }</td>`;
+    for (let n = 0; n < colsToAdd; n++) {
+      Array.from(table.rows).forEach((row) => {
+        const isHeader = row === headerRow || row.parentElement?.tagName === "THEAD";
+        if (isHeader) {
+          const th = document.createElement("th");
+          th.setAttribute("contenteditable", "false");
+          th.style.setProperty("min-width", "120px", "important");
+          th.textContent = "·";
+          row.appendChild(th);
         } else {
-          tableInner += `<td contenteditable="true">&nbsp;</td>`;
+          const td = document.createElement("td");
+          td.setAttribute("contenteditable", "true");
+          td.style.setProperty("min-width", "120px", "important");
+          td.innerHTML = "&nbsp;";
+          row.appendChild(td);
         }
-      }
-      tableInner += `</tr>`;
+      });
     }
-    tableInner += `</tbody></table>`;
 
-    // Full-width block so table never sits beside pasted text (vertical overlap)
-    const tableHtml = `<p><br></p><div class="note-inserted-table" style="display:block;width:100%;max-width:100%;clear:both;margin:0.5em 0;">${tableInner}</div><p><br></p>`;
+    const colsCount = table.rows[0]?.cells.length || 1;
+    const headerCells = headerRow ? Array.from(headerRow.cells) : [];
+    for (let n = 0; n < rowsToAdd; n++) {
+      const newRow = document.createElement("tr");
+      for (let i = 0; i < colsCount; i++) {
+        const td = document.createElement("td");
+        const isAttachmentCol =
+          headerCells[i]?.classList.contains("excel-attachment-col") ||
+          headerCells[i]?.getAttribute("data-col-type") === "attachment";
+        if (i === 0 && isFirstColSl) {
+          td.setAttribute("contenteditable", "false");
+          td.className = "excel-sl-col";
+          td.setAttribute("title", "Click to select this row");
+          td.textContent = "0";
+        } else if (isAttachmentCol) {
+          td.setAttribute("contenteditable", "false");
+          td.className = "excel-attachment-cell";
+          td.setAttribute("data-col-type", "attachment");
+          td.innerHTML = ROW_ATTACH_BTN_HTML;
+        } else {
+          td.setAttribute("contenteditable", "true");
+          td.style.setProperty("min-width", "120px", "important");
+          td.innerHTML = "&nbsp;";
+        }
+        newRow.appendChild(td);
+      }
+      if (insertAfter?.parentElement) {
+        insertAfter.parentElement.insertBefore(newRow, insertAfter.nextSibling);
+        insertAfter = newRow;
+      } else {
+        tbody.appendChild(newRow);
+        insertAfter = newRow;
+      }
+    }
 
-    document.execCommand("insertHTML", false, tableHtml);
-    handleEditorInputWrapper();
-    setIsTableDropdownOpen(false);
-    message.success(`Inserted ${numRows}×${numCols} table (Excel style)`);
+    updateTableHeadersAndSl(table);
+    ensureEditorTableHorizontalScroll(table);
+    clearTableSelection(table);
+    handleEditorInputWrapper({ skipPagination: true });
   };
 
-  /** Resolve row target from selection (row/cell) or last active cell */
-  const getSelectedRowTr = (table: HTMLTableElement): HTMLTableRowElement | null => {
-    const fromSelection =
-      selectedCellsRef.current.find((c) => document.contains(c) && c.closest("table") === table) ||
-      null;
-    if (fromSelection) {
-      const tr = fromSelection.closest("tr");
-      if (tr && tr.parentElement?.tagName !== "THEAD") return tr as HTMLTableRowElement;
+  /** Expand only when the user is clearly inside / selecting a table — not when caret is below it */
+  const getTableToExpand = (): HTMLTableElement | null => {
+    const editor = editorRef.current;
+    if (!editor) return null;
+
+    if (
+      selectionKindRef.current === "row" ||
+      selectionKindRef.current === "column" ||
+      selectionKindRef.current === "cell" ||
+      selectionKindRef.current === "table"
+    ) {
+      const t = getTargetTable();
+      if (t && editor.contains(t)) return t;
     }
-    const currentCell = lastActiveCellRef.current;
-    if (currentCell && currentCell.closest("table") === table) {
-      const tr = currentCell.closest("tr");
-      if (tr && tr.parentElement?.tagName !== "THEAD") return tr as HTMLTableRowElement;
+
+    const caret = savedCaretRangeRef.current;
+    if (caret && editor.contains(caret.commonAncestorContainer)) {
+      const el =
+        caret.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+          ? (caret.commonAncestorContainer as HTMLElement)
+          : caret.commonAncestorContainer.parentElement;
+      const table = el?.closest("table") as HTMLTableElement | null;
+      if (table && editor.contains(table)) return table;
+    }
+
+    const anchor = savedInsertAnchorRef.current;
+    if (anchor && editor.contains(anchor)) {
+      if (anchor.closest(".note-table-scroll") && !anchor.closest("td, th")) {
+        // Clicked the table chrome / scrollbar area — treat as "after this table", not expand
+        return null;
+      }
+      const table = anchor.closest("table") as HTMLTableElement | null;
+      if (table && editor.contains(table)) return table;
     }
     return null;
   };
 
-  /** Resolve column index from selection (column/cell) or last active cell */
+  // Insert standard table with Excel headers: SL, A, B, C... at the saved caret
+  // If a table row/cell is selected → add that many rows & cols to the existing table instead.
+  const handleInsertTable = (numRows: number, numCols: number) => {
+    const editor = editorRef.current;
+    if (!editor) return;
+    saveUndoSnapshot();
+
+    const existingTable = getTableToExpand();
+    if (existingTable) {
+      expandExistingTable(existingTable, numRows, numCols);
+      setIsTableDropdownOpen(false);
+      message.success(
+        `Added ${numRows} row${numRows === 1 ? "" : "s"} and ${numCols} column${
+          numCols === 1 ? "" : "s"
+        } to the selected table`
+      );
+      return;
+    }
+
+    // Restore caret from before the toolbar/popover stole focus
+    let caret = savedCaretRangeRef.current;
+    if (caret && !editor.contains(caret.commonAncestorContainer)) {
+      caret = null;
+      savedCaretRangeRef.current = null;
+    }
+
+    const snaps = snapshotNoteScroll(editor);
+    editor.focus({ preventScroll: true });
+    const sel = window.getSelection();
+    if (caret && sel) {
+      try {
+        sel.removeAllRanges();
+        sel.addRange(caret);
+      } catch {
+        /* ignore */
+      }
+    }
+    restoreNoteScroll(snaps);
+
+    const liveRange =
+      sel && sel.rangeCount > 0 && editor.contains(sel.getRangeAt(0).commonAncestorContainer)
+        ? sel.getRangeAt(0).cloneRange()
+        : caret;
+
+    const rangeAnchorEl = liveRange
+      ? liveRange.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+        ? (liveRange.commonAncestorContainer as HTMLElement)
+        : liveRange.commonAncestorContainer.parentElement
+      : null;
+
+    const clickAnchor =
+      savedInsertAnchorRef.current && editor.contains(savedInsertAnchorRef.current)
+        ? savedInsertAnchorRef.current
+        : null;
+
+    let page =
+      (clickAnchor?.closest(".page") as HTMLElement | null) ||
+      (rangeAnchorEl?.closest(".page") as HTMLElement | null) ||
+      (editor.querySelector(":scope > .page") as HTMLElement | null);
+
+    if (!page || !editor.contains(page)) {
+      page = document.createElement("div");
+      page.className = "page";
+      page.setAttribute("data-page", "1");
+      editor.appendChild(page);
+    }
+
+    const wrap = document.createElement("div");
+    wrap.className = "note-table-scroll";
+    wrap.setAttribute("contenteditable", "false");
+    wrap.tabIndex = -1;
+
+    const inner = document.createElement("div");
+    inner.className = "note-table-scroll-inner";
+    inner.setAttribute("contenteditable", "true");
+
+    const host = document.createElement("div");
+    host.className = "note-inserted-table";
+    host.setAttribute(
+      "style",
+      "display:block;width:max-content;min-width:100%;max-width:none;clear:both;margin:0.5em 0;"
+    );
+
+    const table = document.createElement("table");
+    table.className = "note-editor-table note-wide-table";
+    table.setAttribute(
+      "style",
+      "width:max-content;min-width:100%;max-width:none;table-layout:auto;display:table;clear:both;"
+    );
+
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    for (let c = 0; c < numCols; c++) {
+      const isSlCol = numCols > 1 && c === 0;
+      const colName = getColLabel(c, numCols);
+      const th = document.createElement("th");
+      th.setAttribute("contenteditable", "false");
+      if (isSlCol) th.className = "excel-sl-col";
+      else th.style.setProperty("min-width", "120px", "important");
+      th.title = isSlCol
+        ? "Click to select entire table"
+        : `Column ${colName} (Click to select column)`;
+      th.textContent = colName;
+      headRow.appendChild(th);
+    }
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    for (let r = 0; r < numRows; r++) {
+      const tr = document.createElement("tr");
+      for (let c = 0; c < numCols; c++) {
+        const isSlCol = numCols > 1 && c === 0;
+        const td = document.createElement("td");
+        if (isSlCol) {
+          td.setAttribute("contenteditable", "false");
+          td.className = "excel-sl-col";
+          td.title = "Click to select this row";
+          td.textContent = String(r + 1);
+        } else {
+          td.setAttribute("contenteditable", "true");
+          td.style.setProperty("min-width", "120px", "important");
+          td.innerHTML = "&nbsp;";
+        }
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+
+    host.appendChild(table);
+    inner.appendChild(host);
+    wrap.appendChild(inner);
+
+    const spacerBefore = document.createElement("p");
+    spacerBefore.innerHTML = "<br>";
+    const spacerAfter = document.createElement("p");
+    spacerAfter.innerHTML = "<br>";
+
+    const placeAfter = (node: Node) => {
+      const parent = node.parentNode;
+      if (!parent) return false;
+      const next = node.nextSibling;
+      parent.insertBefore(spacerBefore, next);
+      parent.insertBefore(wrap, spacerBefore.nextSibling);
+      parent.insertBefore(spacerAfter, wrap.nextSibling);
+      return true;
+    };
+
+    const placeBefore = (node: Node) => {
+      const parent = node.parentNode;
+      if (!parent) return false;
+      parent.insertBefore(spacerBefore, node);
+      parent.insertBefore(wrap, spacerBefore.nextSibling);
+      parent.insertBefore(spacerAfter, wrap.nextSibling);
+      return true;
+    };
+
+    const insertByClickY = () => {
+      const clickY = savedInsertClientYRef.current;
+      if (typeof clickY !== "number") return false;
+      const candidates = Array.from(
+        page.querySelectorAll(
+          ":scope > .note-table-scroll, :scope > .note-inserted-table, :scope > p, :scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > div, :scope > ul, :scope > ol, :scope > blockquote"
+        )
+      ) as HTMLElement[];
+      let best: HTMLElement | null = null;
+      let bestDist = Infinity;
+      for (const el of candidates) {
+        const rect = el.getBoundingClientRect();
+        if (rect.bottom <= clickY + 4) {
+          const dist = clickY - rect.bottom;
+          if (dist < bestDist) {
+            bestDist = dist;
+            best = el;
+          }
+        }
+      }
+      if (!best || bestDist > 160) return false;
+      if (!placeAfter(best)) return false;
+      const next = spacerAfter.nextElementSibling as HTMLElement | null;
+      if (
+        next &&
+        next.tagName === "P" &&
+        !(next.textContent || "").trim() &&
+        !next.querySelector("img, table")
+      ) {
+        next.remove();
+      }
+      return true;
+    };
+
+    const insertAtCaret = () => {
+      // 1) Clicked on / beside an existing table chrome → insert right after that table
+      const scrollFromClick = clickAnchor?.closest?.(
+        ".note-table-scroll, .note-inserted-table"
+      ) as HTMLElement | null;
+      if (scrollFromClick && page.contains(scrollFromClick) && !clickAnchor?.closest?.("td, th")) {
+        const host =
+          (scrollFromClick.classList.contains("note-table-scroll")
+            ? scrollFromClick
+            : scrollFromClick.closest(".note-table-scroll")) || scrollFromClick;
+        if (placeAfter(host)) return;
+      }
+
+      // 2) Empty paragraph at click/caret → table replaces that spot
+      const blockFromClick =
+        (clickAnchor?.closest?.("p, h1, h2, h3, h4, li, blockquote, pre") as HTMLElement | null) ||
+        null;
+      if (
+        blockFromClick &&
+        page.contains(blockFromClick) &&
+        !blockFromClick.closest("table") &&
+        !blockFromClick.classList.contains("page")
+      ) {
+        const empty = !(blockFromClick.textContent || "").trim();
+        if (empty) {
+          if (placeBefore(blockFromClick)) {
+            blockFromClick.remove();
+            return;
+          }
+        }
+      }
+
+      const block =
+        (rangeAnchorEl?.closest("p, h1, h2, h3, h4, li, blockquote, pre") as HTMLElement | null) ||
+        blockFromClick;
+
+      const inTextBlock =
+        Boolean(block) &&
+        page.contains(block!) &&
+        !block!.classList.contains("page") &&
+        block !== page &&
+        !block!.closest("table") &&
+        Boolean((block!.textContent || "").trim());
+
+      // 3) Non-empty text block → split / before / after at caret
+      if (liveRange && inTextBlock && block) {
+        const atStart =
+          liveRange.startOffset === 0 &&
+          (liveRange.startContainer === block ||
+            (liveRange.startContainer.nodeType === Node.TEXT_NODE &&
+              liveRange.startContainer === block.firstChild));
+        const atEnd = (() => {
+          try {
+            const endCheck = document.createRange();
+            endCheck.selectNodeContents(block);
+            endCheck.setStart(liveRange.startContainer, liveRange.startOffset);
+            return !(endCheck.toString() || "").trim();
+          } catch {
+            return false;
+          }
+        })();
+
+        if (atStart) {
+          placeBefore(block);
+          return;
+        }
+        if (atEnd) {
+          placeAfter(block);
+          return;
+        }
+
+        const afterRange = document.createRange();
+        afterRange.selectNodeContents(block);
+        afterRange.setStart(liveRange.startContainer, liveRange.startOffset);
+        const trailing = afterRange.extractContents();
+        const afterBlock = block.cloneNode(false) as HTMLElement;
+        afterBlock.appendChild(trailing);
+        if (!(afterBlock.textContent || "").trim() && !afterBlock.querySelector("img, br, table")) {
+          afterBlock.innerHTML = "<br>";
+        }
+        if (!(block.textContent || "").trim() && !block.querySelector("img, br, table")) {
+          block.innerHTML = "<br>";
+        }
+        placeAfter(block);
+        spacerAfter.after(afterBlock);
+        return;
+      }
+
+      // 4) Empty block at caret
+      if (block && page.contains(block) && !(block.textContent || "").trim() && !block.closest("table")) {
+        if (placeBefore(block)) {
+          block.remove();
+          return;
+        }
+      }
+
+      // 5) Whitespace click under a table (page gap) — use click Y
+      if (
+        !inTextBlock &&
+        (clickAnchor?.classList.contains("page") ||
+          clickAnchor === page ||
+          !clickAnchor ||
+          clickAnchor === editor)
+      ) {
+        if (insertByClickY()) return;
+      }
+
+      // 6) Caret is a child-index into .page
+      if (
+        liveRange &&
+        (liveRange.startContainer === page || liveRange.startContainer === editor)
+      ) {
+        const container = liveRange.startContainer as Node;
+        const ref = container.childNodes[liveRange.startOffset] as ChildNode | undefined;
+        if (ref) {
+          placeBefore(ref);
+          return;
+        }
+        container.appendChild(spacerBefore);
+        container.appendChild(wrap);
+        container.appendChild(spacerAfter);
+        return;
+      }
+
+      if (insertByClickY()) return;
+
+      if (liveRange && page.contains(liveRange.commonAncestorContainer)) {
+        try {
+          const r = liveRange.cloneRange();
+          r.collapse(true);
+          const frag = document.createDocumentFragment();
+          frag.appendChild(spacerBefore);
+          frag.appendChild(wrap);
+          frag.appendChild(spacerAfter);
+          r.insertNode(frag);
+          return;
+        } catch {
+          /* fall through */
+        }
+      }
+
+      const lastScroll = page.querySelector(
+        ":scope > .note-table-scroll:last-of-type, :scope > .note-inserted-table:last-of-type"
+      );
+      if (lastScroll) {
+        placeAfter(lastScroll);
+        return;
+      }
+      page.appendChild(spacerBefore);
+      page.appendChild(wrap);
+      page.appendChild(spacerAfter);
+    };
+
+    insertAtCaret();
+
+    ensureEditorTableHorizontalScroll(table);
+    lastActiveCellRef.current =
+      (table.querySelector(
+        'td[contenteditable="true"]:not(.excel-sl-col)'
+      ) as HTMLTableCellElement | null) || null;
+
+    // Place caret in the paragraph after the new table
+    try {
+      const afterSel = window.getSelection();
+      const afterRange = document.createRange();
+      afterRange.selectNodeContents(spacerAfter);
+      afterRange.collapse(true);
+      afterSel?.removeAllRanges();
+      afterSel?.addRange(afterRange);
+      savedCaretRangeRef.current = afterRange.cloneRange();
+    } catch {
+      /* ignore */
+    }
+
+    restoreNoteScroll(snaps);
+    handleEditorInputWrapper({ skipPagination: true });
+    setIsTableDropdownOpen(false);
+    message.success(`Inserted ${numRows}×${numCols} table (Excel style)`);
+  };
+
+  /** Resolve data-row target — same idea as Del Col: only the selected row */
+  const getSelectedRowTr = (table: HTMLTableElement): HTMLTableRowElement | null => {
+    const headerRow =
+      (table.querySelector("thead tr") as HTMLTableRowElement | null) || table.rows[0] || null;
+    const isDataRow = (tr: HTMLTableRowElement | null): tr is HTMLTableRowElement =>
+      Boolean(
+        tr &&
+          document.contains(tr) &&
+          table.contains(tr) &&
+          tr !== headerRow &&
+          tr.parentElement?.tagName !== "THEAD"
+      );
+
+    // Column selection is for Del Col only
+    if (selectionKindRef.current === "column") return null;
+
+    if (selectionKindRef.current === "row") {
+      const cell = selectedCellsRef.current.find(
+        (c) => document.contains(c) && c.closest("table") === table
+      );
+      const tr = cell?.closest("tr") as HTMLTableRowElement | null;
+      if (isDataRow(tr)) return tr;
+    }
+
+    // Toolbar click may clear visuals — still honor last clicked SL row
+    if (isDataRow(lastSelectedRowRef.current) && table.contains(lastSelectedRowRef.current)) {
+      return lastSelectedRowRef.current;
+    }
+
+    const fromSelection =
+      selectedCellsRef.current.find((c) => {
+        if (!document.contains(c) || c.closest("table") !== table) return false;
+        return isDataRow(c.closest("tr") as HTMLTableRowElement | null);
+      }) || null;
+    if (fromSelection) {
+      return fromSelection.closest("tr") as HTMLTableRowElement;
+    }
+
+    const currentCell = lastActiveCellRef.current;
+    if (currentCell && currentCell.closest("table") === table) {
+      const tr = currentCell.closest("tr") as HTMLTableRowElement | null;
+      if (isDataRow(tr)) return tr;
+    }
+    return null;
+  };
+
+  const removeTableIfEmpty = (table: HTMLTableElement) => {
+    if (table.rows.length > 0 && (table.rows[0]?.cells.length || 0) > 0) return false;
+    const wrapper =
+      (table.closest(".note-table-scroll") as HTMLElement | null) ||
+      (table.closest(".note-inserted-table") as HTMLElement | null) ||
+      table;
+    wrapper.remove();
+    clearTableSelection();
+    lastActiveCellRef.current = null;
+    return true;
+  };
+
+  /** Resolve column index — never from a row selection (row starts on SL and would wipe SL) */
   const getSelectedColIndex = (table: HTMLTableElement): number => {
+    if (selectionKindRef.current === "row" || selectionKindRef.current === "table") {
+      return -1;
+    }
+
+    if (selectionKindRef.current === "column") {
+      const fromSelection =
+        selectedCellsRef.current.find((c) => document.contains(c) && c.closest("table") === table) ||
+        null;
+      if (fromSelection) return fromSelection.cellIndex;
+      if (
+        lastSelectedColIndexRef.current >= 0 &&
+        lastSelectedColIndexRef.current < (table.rows[0]?.cells.length || 0)
+      ) {
+        return lastSelectedColIndexRef.current;
+      }
+      return -1;
+    }
+
     const fromSelection =
       selectedCellsRef.current.find((c) => document.contains(c) && c.closest("table") === table) ||
       null;
-    if (fromSelection) return fromSelection.cellIndex;
+    if (fromSelection && !fromSelection.classList.contains("excel-sl-col")) {
+      return fromSelection.cellIndex;
+    }
     const currentCell = lastActiveCellRef.current;
-    if (currentCell && currentCell.closest("table") === table) return currentCell.cellIndex;
-    const firstRow = table.rows[0];
-    return firstRow && firstRow.cells.length > 0 ? firstRow.cells.length - 1 : -1;
+    if (
+      currentCell &&
+      currentCell.closest("table") === table &&
+      !currentCell.classList.contains("excel-sl-col")
+    ) {
+      return currentCell.cellIndex;
+    }
+    if (
+      lastSelectedColIndexRef.current >= 0 &&
+      lastSelectedColIndexRef.current < (table.rows[0]?.cells.length || 0)
+    ) {
+      return lastSelectedColIndexRef.current;
+    }
+    return -1;
   };
 
   // Table Row & Column Manipulation Actions (Exact Excel/Word: Above, Below, Before, After)
@@ -769,8 +1334,17 @@ export const useNoteTable = ({
     }
 
     updateTableHeadersAndSl(table);
-    selectTableRow(newRow);
-    handleEditorInputWrapper();
+    ensureEditorTableHorizontalScroll(table);
+    clearTableSelection(table);
+    const targetCell =
+      (newRow.querySelector(
+        'td[contenteditable="true"]:not(.excel-sl-col):not(.excel-attachment-cell)'
+      ) as HTMLTableCellElement | null) ||
+      newRow.cells[1] ||
+      newRow.cells[0];
+    focusEditableCell(targetCell);
+    // Structural edits must not reflow A4 (that was cloning headers and freezing the page)
+    handleEditorInputWrapper({ skipPagination: true });
     message.success(position === "above" ? "Row inserted above" : "Row inserted below");
   };
 
@@ -778,30 +1352,44 @@ export const useNoteTable = ({
     saveUndoSnapshot();
     const table = getTargetTable();
     if (!table) {
-      message.warning("Select a row (click SL number) first to delete it");
+      message.warning("Select a row (click its number) first, then Del Row");
       return;
     }
-    const headerRow = (table.querySelector("thead tr") as HTMLTableRowElement | null) || table.rows[0];
+
+    // Same as Del Col: remove only the selected unit — this one data row
+    const headerRow =
+      (table.querySelector("thead tr") as HTMLTableRowElement | null) || table.rows[0];
     const tr = getSelectedRowTr(table);
-
-    if (tr && tr !== headerRow) {
-      const fallback =
-        (tr.nextElementSibling as HTMLTableRowElement | null) ||
-        (tr.previousElementSibling as HTMLTableRowElement | null);
-      tr.remove();
-      updateTableHeadersAndSl(table);
-      if (fallback && fallback !== headerRow && document.contains(fallback)) {
-        selectTableRow(fallback);
-      } else {
-        clearTableSelection(table);
-        lastActiveCellRef.current = null;
-      }
-      handleEditorInputWrapper();
-      message.success("Selected row deleted");
+    if (!tr || !table.contains(tr) || tr === headerRow) {
+      message.warning("Select a row first (click 1 / 2 / 3…), then Del Row");
       return;
     }
 
-    message.warning("Select a data row first (click its SL number), then Del Row");
+    const fallback =
+      (tr.nextElementSibling as HTMLTableRowElement | null) ||
+      (tr.previousElementSibling as HTMLTableRowElement | null);
+
+    tr.remove();
+    lastSelectedRowRef.current = null;
+    // Keep SL column; only renumber remaining rows
+    updateTableHeadersAndSl(table);
+    ensureEditorTableHorizontalScroll(table);
+
+    if (fallback && fallback !== headerRow && document.contains(fallback)) {
+      clearTableSelection(table);
+      const cell =
+        (fallback.querySelector(
+          'td[contenteditable="true"]:not(.excel-sl-col):not(.excel-attachment-cell)'
+        ) as HTMLTableCellElement | null) ||
+        fallback.cells[1] ||
+        fallback.cells[0];
+      focusEditableCell(cell);
+    } else {
+      clearTableSelection(table);
+      lastActiveCellRef.current = null;
+    }
+    handleEditorInputWrapper({ skipPagination: true });
+    message.success("Selected row deleted");
   };
 
   const handleInsertColumn = (position: "before" | "after" = "after") => {
@@ -811,10 +1399,11 @@ export const useNoteTable = ({
       message.warning("Click inside a table first to add a column");
       return;
     }
-    const targetIndex = getSelectedColIndex(table);
+    const rawColIndex = getSelectedColIndex(table);
+    const totalCols = table.rows[0]?.cells.length || 0;
+    const targetIndex = rawColIndex >= 0 ? rawColIndex : Math.max(0, totalCols - 1);
 
     const rows = Array.from(table.rows);
-    const totalCols = rows[0]?.cells.length || 0;
     const insertIndex = position === "before" ? Math.max(0, targetIndex) : targetIndex + 1;
     const isFirstColSl = table.rows[0]?.cells[0]?.textContent?.trim() === "SL";
 
@@ -822,6 +1411,7 @@ export const useNoteTable = ({
       if (rIdx === 0 && row.parentElement?.tagName === "THEAD") {
         const th = document.createElement("th");
         th.setAttribute("contenteditable", "false");
+        th.style.setProperty("min-width", "120px", "important");
         const nextLetter = isFirstColSl
           ? String.fromCharCode(65 + ((totalCols - 1) % 26))
           : String.fromCharCode(65 + (totalCols % 26));
@@ -835,6 +1425,7 @@ export const useNoteTable = ({
       } else {
         const td = document.createElement("td");
         td.setAttribute("contenteditable", "true");
+        td.style.setProperty("min-width", "120px", "important");
         td.innerHTML = "&nbsp;";
         if (insertIndex < row.cells.length) {
           row.insertBefore(td, row.cells[insertIndex]);
@@ -845,8 +1436,9 @@ export const useNoteTable = ({
     });
 
     updateTableHeadersAndSl(table);
+    ensureEditorTableHorizontalScroll(table);
     selectTableColumn(table, Math.min(insertIndex, (table.rows[0]?.cells.length || 1) - 1));
-    handleEditorInputWrapper();
+    handleEditorInputWrapper({ skipPagination: true });
     message.success(position === "before" ? "Column inserted before" : "Column inserted after");
   };
 
@@ -854,19 +1446,27 @@ export const useNoteTable = ({
     saveUndoSnapshot();
     const table = getTargetTable();
     if (!table) {
-      message.warning("Select a column (click header) first to delete it");
+      message.warning("Select a column first to delete it");
       return;
     }
-    const isFirstColSl = table.rows[0]?.cells[0]?.textContent?.trim() === "SL";
-    const targetIndex = getSelectedColIndex(table);
 
+    // Row selected → delete that row (same as Del Row), never the SL column
+    if (selectionKindRef.current === "row") {
+      handleDeleteRow();
+      return;
+    }
+
+    const targetIndex = getSelectedColIndex(table);
     if (targetIndex < 0) {
       message.warning("Select a column first (click A/B/C… header), then Del Col");
       return;
     }
 
+    const firstCell = table.rows[0]?.cells[0];
+    const isFirstColSl =
+      firstCell?.classList.contains("excel-sl-col") || firstCell?.textContent?.trim() === "SL";
     if (isFirstColSl && targetIndex === 0) {
-      message.warning("The serial number (SL) column cannot be deleted");
+      message.warning("SL column stays — select A/B/C… to delete a data column");
       return;
     }
 
@@ -876,18 +1476,28 @@ export const useNoteTable = ({
         row.deleteCell(targetIndex);
       }
     });
+    lastSelectedColIndexRef.current = -1;
+
+    if (removeTableIfEmpty(table)) {
+      handleEditorInputWrapper({ skipPagination: true });
+      message.success("Column deleted");
+      return;
+    }
+
     updateTableHeadersAndSl(table);
-    const nextCol = Math.min(
-      targetIndex,
-      (table.rows[0]?.cells.length || 1) - 1
-    );
-    if (nextCol >= 0 && !(isFirstColSl && nextCol === 0 && table.rows[0]?.cells.length === 1)) {
-      selectTableColumn(table, nextCol === 0 && isFirstColSl ? 1 : nextCol);
+    ensureEditorTableHorizontalScroll(table);
+    const remaining = table.rows[0]?.cells.length || 0;
+    if (remaining > 0) {
+      const nextCol = Math.min(targetIndex, remaining - 1);
+      selectTableColumn(
+        table,
+        isFirstColSl && nextCol === 0 && remaining > 1 ? 1 : nextCol
+      );
     } else {
       clearTableSelection(table);
       lastActiveCellRef.current = null;
     }
-    handleEditorInputWrapper();
+    handleEditorInputWrapper({ skipPagination: true });
     message.success("Selected column deleted");
   };
 
@@ -931,8 +1541,9 @@ export const useNoteTable = ({
     });
 
     updateTableHeadersAndSl(table);
+    ensureEditorTableHorizontalScroll(table);
     clearSelectionVisuals(table);
-    handleEditorInputWrapper();
+    handleEditorInputWrapper({ skipPagination: true });
     setIsTableDropdownOpen(false);
     message.success("Attachment column added to table");
   };
@@ -1084,9 +1695,14 @@ export const useNoteTable = ({
     handleEditorInputWrapper({ skipPagination: true });
   };
 
+  const openTableDropdown = (open: boolean) => {
+    if (open) captureEditorCaret();
+    setIsTableDropdownOpen(open);
+  };
+
   return {
     isTableDropdownOpen,
-    setIsTableDropdownOpen,
+    setIsTableDropdownOpen: openTableDropdown,
     hoverGrid,
     setHoverGrid,
     customRows,
