@@ -132,6 +132,8 @@ const MyTimesheet = ({
     currentEmployeeId &&
     currentEmployeeId === (currentUser?.employeeId || currentUser?.loginId)
   );
+  // Locked days and approved-leave days: manager may edit them only for someone else (their team), not their own sheet.
+  const canOverrideLocks = isAdmin || (isManager && !isManagerView);
 
   const effectiveReadOnly = readOnly || isAdminView;
 
@@ -462,16 +464,15 @@ const MyTimesheet = ({
     const isLockedDay =
       isLockedAttendance(recordForDay) || isLockedAttendance(localForDay);
     if (
-      !isAdmin &&
-      !isManager &&
+      !canOverrideLocks &&
       isLockedDay &&
       !approvedDates.includes(dateStr)
     ) {
       return true;
     }
 
-    // 1. Month Lock (Skip for Admin/Manager)
-    if (!isAdmin && !isManager && !isEditableMonth(d)) return true;
+    // Past months stay locked on a manager's own sheet. A manager can still edit past months for a mapped employee.
+    if (!canOverrideLocks && !isEditableMonth(d)) return true;
 
     // 2. Manual Blockers
     const isManualBlocked = blockers.some((b) => {
@@ -485,7 +486,7 @@ const MyTimesheet = ({
 
     // 3. Restricted Activity (Mixed Combinations / Leave / WFH)
     // If the record exists and has non-office activity, it's blocked for editing
-    if (!isAdmin && !isManager) {
+    if (!canOverrideLocks) {
       const dateStr = dayjs(d).format("YYYY-MM-DD");
       const entry = records.find((r) => {
         const rDate = new Date(r.workingDate);
@@ -540,15 +541,14 @@ const MyTimesheet = ({
       return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
     });
     if (
-      !isAdmin &&
-      !isManager &&
+      !canOverrideLocks &&
       isLockedAttendance(recordForDay) &&
       !approvedDates.includes(dateStr)
     ) {
       return "Date is Locked. Raise an Access Request to update it.";
     }
 
-    if (!isAdmin && !isManager && !isEditableMonth(d)) return "Month is Locked";
+    if (!canOverrideLocks && !isEditableMonth(d)) return "Month is Locked";
 
     // 2. Manual Blocker
     const blocker = getBlocker(date);
@@ -558,7 +558,7 @@ const MyTimesheet = ({
     }
 
     // 3. Restricted Activity
-    if (!isAdmin && !isManager) {
+    if (!canOverrideLocks) {
       const dateStr = dayjs(d).format("YYYY-MM-DD");
       const entry = records.find((r) => {
         const rDate = new Date(r.workingDate);
@@ -620,8 +620,7 @@ const MyTimesheet = ({
     const hoursEntry = localEntries[entryIndex];
     const hoursDateStr = dayjs(hoursEntry.fullDate).format("YYYY-MM-DD");
     if (
-      !isAdmin &&
-      !isManager &&
+      !canOverrideLocks &&
       isLockedAttendance(hoursEntry) &&
       !approvedDates.includes(hoursDateStr)
     ) {
@@ -911,8 +910,7 @@ const MyTimesheet = ({
     localEntries.forEach((entry, idx) => {
       if (isDateBlocked(entry.fullDate)) return;
       if (
-        !isAdmin &&
-        !isManager &&
+        !canOverrideLocks &&
         isLockedAttendance(entry) &&
         !approvedDates.includes(dayjs(entry.fullDate).format("YYYY-MM-DD"))
       ) {
@@ -1073,8 +1071,8 @@ const MyTimesheet = ({
                 ? null
                 : entry.secondHalf,
           workLocation: entry.workLocation,
-          // Explicitly set sourceRequestId to null for Admin/Manager to break leave link on manual save
-          ...(isAdmin || isManager ? { sourceRequestId: null } : {}),
+          // Break the approved-leave link only when this user may edit that employee's leave days
+          ...(canOverrideLocks ? { sourceRequestId: null } : {}),
         } as any);
       }
     });
@@ -2275,8 +2273,7 @@ const MyTimesheet = ({
 
             const isBlocked = isDateBlocked(day.fullDate);
             const isEmployeeLockedDay =
-              !isAdmin &&
-              !isManager &&
+              !canOverrideLocks &&
               isLockedAttendance(day) &&
               !approvedDates.includes(calendarDateStr);
 
@@ -2308,8 +2305,7 @@ const MyTimesheet = ({
             // - Leave days are editable only for admins and managers
             const isEditable =
               (isAdmin || isManager ? !isAdminView : !readOnly) &&
-              (isAdmin ||
-                isManager ||
+              (canOverrideLocks ||
                 isCurrentOrNextMonth ||
                 isEditableMonth(day.fullDate) ||
                 day.status === AttendanceStatus.ABSENT) &&
@@ -2530,13 +2526,18 @@ const MyTimesheet = ({
                 className={`relative flex flex-col justify-between p-1 rounded-xl md:rounded-2xl border transition-all duration-300 cursor-pointer min-h-[78px] md:min-h-[88px] group 
                             ${borderClass} ${shadowClass} ${highlightClass} ${day.isToday ? bgClass : "bg-white"} ${
                               isBlocked
-                                ? isAdmin || isManager
+                                ? (isAdmin || isManager) && getBlocker(day.fullDate)
                                   ? "cursor-pointer"
                                   : "cursor-not-allowed"
                                 : "hover:-translate-y-1 hover:shadow-lg"
                             }`}
                 onClick={() => {
-                  if (isBlocked && (isAdmin || isManager) && onBlockedClick) {
+                  if (
+                    isBlocked &&
+                    (isAdmin || isManager) &&
+                    getBlocker(day.fullDate) &&
+                    onBlockedClick
+                  ) {
                     onBlockedClick();
                   }
                 }}
@@ -2579,10 +2580,9 @@ const MyTimesheet = ({
                   >
                     {day.date}
                   </div>
-                  {((displayStatus === AttendanceStatus.LOCKED && !canRaiseOnBehalf) ||
+                  {((displayStatus === AttendanceStatus.LOCKED && !canOverrideLocks) ||
                     isBlocked ||
-                    (!isAdmin &&
-                      !isManager &&
+                    (!canOverrideLocks &&
                       !isCurrentOrNextMonth &&
                       !isEditableMonth(day.fullDate))) &&
                     displayStatus !== AttendanceStatus.ABSENT && (

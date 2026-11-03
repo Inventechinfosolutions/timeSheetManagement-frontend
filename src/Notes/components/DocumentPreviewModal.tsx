@@ -127,11 +127,31 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
               className="w-full h-[76vh] rounded-lg border border-slate-200 bg-white"
             />
           ) : isImage ? (
-            <img
-              src={url}
-              alt={title || "Preview"}
-              className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg shadow-2xs"
-            />
+            <div className="relative w-full h-full flex items-center justify-center">
+              <img
+                src={url}
+                alt={title || "Preview"}
+                className="max-h-full max-w-full w-auto h-auto object-contain rounded-lg shadow-2xs"
+                onError={(e) => {
+                  const el = e.currentTarget;
+                  el.style.display = "none";
+                  const fallback = el.parentElement?.querySelector(
+                    "[data-image-fallback]"
+                  ) as HTMLElement | null;
+                  if (fallback) fallback.hidden = false;
+                }}
+              />
+              <div
+                data-image-fallback
+                hidden
+                className="flex flex-col items-center justify-center gap-2 text-slate-500 text-sm p-8"
+              >
+                <span>Screenshot could not be loaded.</span>
+                <span className="text-xs text-slate-400">
+                  Try saving the note, then open it again.
+                </span>
+              </div>
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-sm max-w-md w-full my-10">
               <div

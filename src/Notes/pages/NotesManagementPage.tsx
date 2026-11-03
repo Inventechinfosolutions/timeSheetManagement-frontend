@@ -40,6 +40,8 @@ export const NotesManagementPage: React.FC = () => {
     showSaveToast,
     previewImageModal,
     setPreviewImageModal,
+    handlePreviewInlineImage,
+    handleDeleteInlineImage,
     excelViewerModal,
     setExcelViewerModal,
     formData,
@@ -92,6 +94,11 @@ export const NotesManagementPage: React.FC = () => {
     handleSearchChange,
     handleClearSearch,
     setCurrentPage,
+    childPages,
+    childTotals,
+    childFilters,
+    handleChildPageChange,
+    handleChildFilterChange,
   } = useNotesManagement();
 
   // Notify layout when user is inside the Note Workspace (create, edit, view) vs List mode
@@ -141,9 +148,8 @@ export const NotesManagementPage: React.FC = () => {
           onDeleteServerAttachment={handleDeleteAttachment}
           onPreviewAttachment={handlePreviewAttachment}
           onDownloadAttachment={handleDownloadAttachment}
-          onPreviewImage={(url, title) =>
-            setPreviewImageModal({ open: true, url, title: title || "Screenshot" })
-          }
+          onPreviewImage={handlePreviewInlineImage}
+          onDeleteInlineImage={handleDeleteInlineImage}
           onPersistInlineImages={persistInlineImagesInEditor}
           onHydrateInlineImages={hydrateEditorInlineImages}
           onSubmit={handleSubmitForm}
@@ -164,9 +170,7 @@ export const NotesManagementPage: React.FC = () => {
           onBack={handleBackToList}
           onPreviewAttachment={handlePreviewAttachment}
           onDownloadAttachment={handleDownloadAttachment}
-          onPreviewImage={(url, title) =>
-            setPreviewImageModal({ open: true, url, title: title || "Screenshot" })
-          }
+          onPreviewImage={handlePreviewInlineImage}
           onHydrateInlineImages={hydrateEditorInlineImages}
           onTogglePin={handleTogglePin}
           onToggleArchive={handleToggleArchive}
@@ -209,6 +213,11 @@ export const NotesManagementPage: React.FC = () => {
             loadingSubNotes={loadingSubNotes}
             currentUser={currentUser}
             dragDrop={dragDrop}
+            childPages={childPages}
+            childTotals={childTotals}
+            childFilters={childFilters}
+            onChildPageChange={handleChildPageChange}
+            onChildFilterChange={handleChildFilterChange}
             onToggleExpand={toggleExpand}
             onStartView={handleStartView}
             onStartEdit={handleStartEdit}

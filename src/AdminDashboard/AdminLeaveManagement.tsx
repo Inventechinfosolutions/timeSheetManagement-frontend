@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { useDebounce } from "../hooks/useDebounce";
@@ -39,6 +39,7 @@ import {
 import { getEntities } from "../reducers/employeeDetails.reducer";
 import { fetchAttendanceByDateRange } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
+import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import {
   LeaveRequestStatus,
   AttendanceStatus,
@@ -135,9 +136,22 @@ const AdminLeaveManagement = () => {
     any[]
   >([]);
 
+  const { departments = [] } = useAppSelector(
+    (state: any) => state.masterDepartments || {},
+  );
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("All Departments");
+  const [isDepartmentDropdownOpen, setIsDepartmentDropdownOpen] = useState(false);
+  const departmentDropdownRef = useRef<HTMLDivElement>(null);
+  const [deptSearchTerm, setDeptSearchTerm] = useState("");
+
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [isEmployeeDropdownOpen, setIsEmployeeDropdownOpen] = useState(false);
   const employeeDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch departments on mount
+  useEffect(() => {
+    dispatch(fetchDepartments());
+  }, [dispatch]);
 
   // Configure AntD message position to be below the header
   useEffect(() => {
@@ -458,11 +472,41 @@ const AdminLeaveManagement = () => {
   };
 
   // Reset state when search term changes
+  const filteredDepartments = useMemo(() => {
+    const list: string[] = departments
+      .map((d: any) => d.departmentName || d)
+      .filter(Boolean);
+    if (!deptSearchTerm.trim()) return list;
+    return list.filter((name: string) =>
+      name.toLowerCase().includes(deptSearchTerm.trim().toLowerCase()),
+    );
+  }, [departments, deptSearchTerm]);
+
+  const handleSelectDepartment = (deptName: string) => {
+    setSelectedDepartment(deptName);
+    setIsDepartmentDropdownOpen(false);
+    setDeptSearchTerm("");
+    if (
+      selectedEmployee &&
+      deptName !== "All Departments" &&
+      selectedEmployee.department !== deptName
+    ) {
+      setSelectedEmployee(null);
+      dispatch(clearRequests());
+      setDateRangeAttendanceRecords([]);
+    }
+  };
+
+  const handleClearDepartment = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleSelectDepartment("All Departments");
+  };
+
   useEffect(() => {
     setEmpPage(1);
     setHasMore(true);
     setDisplayedEmployees([]);
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, selectedDepartment]);
 
   // Fetch employees and update local state
   useEffect(() => {
@@ -472,6 +516,7 @@ const AdminLeaveManagement = () => {
     dispatch(
       getEntities({
         search: debouncedSearchTerm,
+        department: selectedDepartment !== "All Departments" ? selectedDepartment : undefined,
         page: empPage,
         limit: 20,
         includeSelf: true,
@@ -510,7 +555,7 @@ const AdminLeaveManagement = () => {
         }
       }
     });
-  }, [dispatch, debouncedSearchTerm, empPage, isCeo]);
+  }, [dispatch, debouncedSearchTerm, empPage, isCeo, selectedDepartment]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, clientHeight, scrollHeight } = e.currentTarget;
@@ -531,6 +576,13 @@ const AdminLeaveManagement = () => {
         setIsEmployeeDropdownOpen(false);
         setSearchTerm(""); // Clear search when closing via click outside
         flushDebouncedSearchTerm("");
+      }
+      if (
+        departmentDropdownRef.current &&
+        !departmentDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDepartmentDropdownOpen(false);
+        setDeptSearchTerm("");
       }
     };
 
@@ -1784,11 +1836,135 @@ const AdminLeaveManagement = () => {
           </div>
 
           {!isReceptionist && (
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
-              <div
-                className="relative w-full sm:w-[320px] md:w-[380px] lg:w-[420px] shrink-0"
-                ref={employeeDropdownRef}
-              >
+            <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 w-full">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
+                {/* Department Dropdown */}
+                <div
+                  className="relative w-full sm:w-[220px] md:w-[260px] shrink-0"
+                  ref={departmentDropdownRef}
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setIsDepartmentDropdownOpen(!isDepartmentDropdownOpen)
+                    }
+                    className={`w-full px-4 py-2.5 rounded-xl bg-white border ${
+                      selectedDepartment !== "All Departments"
+                        ? "border-[#4318FF]/40 ring-2 ring-[#4318FF]/10"
+                        : "border-[#E9EDF7]"
+                    } hover:border-[#A3AED0] focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-semibold text-sm text-[#2B3674] flex items-center justify-between shadow-sm cursor-pointer`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Building2 size={16} className="text-[#4318FF] shrink-0" />
+                      <span className="truncate">
+                        {selectedDepartment === "All Departments"
+                          ? "All Departments"
+                          : selectedDepartment}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {selectedDepartment !== "All Departments" ? (
+                        <span
+                          role="button"
+                          tabIndex={0}
+                          onClick={handleClearDepartment}
+                          className="p-1 rounded-full hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+                          title="Clear department filter"
+                        >
+                          <X size={15} />
+                        </span>
+                      ) : (
+                        <ChevronDown
+                          size={16}
+                          className={`text-gray-400 transition-transform cursor-pointer ${
+                            isDepartmentDropdownOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      )}
+                    </div>
+                  </button>
+
+                  {isDepartmentDropdownOpen && (
+                    <div className="absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-xl border border-[#E9EDF7] max-h-60 overflow-y-auto py-1">
+                      {departments.length > 5 && (
+                        <div
+                          className="sticky top-0 bg-white p-2 border-b border-gray-100 z-10"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <SearchBox
+                            placeholder="Search department..."
+                            value={deptSearchTerm}
+                            onChange={(e) => setDeptSearchTerm(e.target.value)}
+                            onClear={() => setDeptSearchTerm("")}
+                            autoFocus
+                            inputSize="sm"
+                            containerClassName="w-full"
+                          />
+                        </div>
+                      )}
+
+                      {/* All Departments Option */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectDepartment("All Departments")}
+                        className={`w-full px-4 py-2.5 text-left hover:bg-[#F4F7FE] transition-colors flex items-center justify-between gap-2 text-sm first:rounded-t-2xl ${
+                          selectedDepartment === "All Departments"
+                            ? "bg-[#F4F7FE] font-bold text-[#4318FF]"
+                            : "text-[#2B3674]"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Building2
+                            size={16}
+                            className={
+                              selectedDepartment === "All Departments"
+                                ? "text-[#4318FF]"
+                                : "text-gray-400"
+                            }
+                          />
+                          <span className="truncate">All Departments</span>
+                        </div>
+                        {selectedDepartment === "All Departments" && (
+                          <span className="w-2 h-2 rounded-full bg-[#4318FF] shrink-0" />
+                        )}
+                      </button>
+
+                      {/* Filtered Departments from API */}
+                      {filteredDepartments.map((deptName: string) => {
+                        const isSelected = selectedDepartment === deptName;
+                        return (
+                          <button
+                            key={deptName}
+                            type="button"
+                            onClick={() => handleSelectDepartment(deptName)}
+                            className={`w-full px-4 py-2.5 text-left hover:bg-[#F4F7FE] transition-colors flex items-center justify-between gap-2 text-sm last:rounded-b-2xl ${
+                              isSelected
+                                ? "bg-[#F4F7FE] font-bold text-[#4318FF]"
+                                : "text-[#2B3674]"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Building2
+                                size={16}
+                                className={isSelected ? "text-[#4318FF]" : "text-gray-400"}
+                              />
+                              <span className="truncate">{deptName}</span>
+                            </div>
+                            {isSelected && (
+                              <span className="w-2 h-2 rounded-full bg-[#4318FF] shrink-0" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Employee Dropdown */}
+                <div
+                  className="relative w-full sm:w-[280px] md:w-[320px] lg:w-[360px] shrink-0"
+                  ref={employeeDropdownRef}
+                >
                 <button
                   onClick={() =>
                     setIsEmployeeDropdownOpen(!isEmployeeDropdownOpen)
@@ -1946,7 +2122,9 @@ const AdminLeaveManagement = () => {
                 )}
               </div>
 
-              <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0 self-end xl:self-auto">
                 {applyOptions.map((option, idx) => (
                   <button
                     key={idx}
@@ -2777,7 +2955,7 @@ const AdminLeaveManagement = () => {
                           <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
                             Reporting Manager
                           </span>
-                          <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                          <div className="px-4 py-2.5 bg-gray-50 border border-gray-400 rounded-xl text-gray-700 font-bold text-sm">
                             {emailConfig.assignedManagerEmail}
                           </div>
                         </div>
@@ -2786,7 +2964,7 @@ const AdminLeaveManagement = () => {
                         <span className="text-xs font-medium text-gray-600 block mb-1 uppercase tracking-wide">
                           HR
                         </span>
-                        <div className="px-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-700 font-bold text-sm">
+                        <div className="px-4 py-2.5 bg-gray-50 border border-gray-400 rounded-xl text-gray-700 font-bold text-sm">
                           {emailConfig.hrEmail || "Not configured"}
                         </div>
                       </div>
@@ -2860,7 +3038,7 @@ const AdminLeaveManagement = () => {
                               }}
                               onBlur={() => addCcEmail(ccEmailInput)}
                               placeholder="Add email and press Enter"
-                              className="min-w-[200px] flex-1 px-3 py-2 border border-gray-200 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
+                              className="min-w-[200px] flex-1 px-3 py-2 border border-gray-400 rounded-xl bg-white text-gray-700 text-sm placeholder-gray-400 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none"
                             />
                             {ccEmailError && (
                               <p className="text-red-500 text-xs mt-1 ml-1 w-full">
@@ -2882,7 +3060,7 @@ const AdminLeaveManagement = () => {
                       Subject <span className="text-red-500">*</span>
                     </label>
                     {isViewMode ? (
-                      <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none break-words">
+                      <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border border-gray-400 break-words">
                         {formData.title}
                       </div>
                     ) : (
@@ -2890,7 +3068,7 @@ const AdminLeaveManagement = () => {
                         <input
                           type="text"
                           placeholder="e.g. Annual Vacation"
-                          className={`w-full px-5 py-3 rounded-xl bg-white border ${errors.title ? "border-red-500" : "border-gray-200"
+                          className={`w-full px-5 py-3 rounded-xl bg-white border ${errors.title ? "border-red-500" : "border-gray-400"
                             } text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-bold text-[#2B3674] placeholder:font-medium placeholder:text-gray-400`}
                           value={formData.title}
                           onChange={(e) => {
@@ -2916,7 +3094,7 @@ const AdminLeaveManagement = () => {
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Employee
                 </label>
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border-none flex items-center gap-3">
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] border border-gray-400 flex items-center gap-3">
                   <User size={18} className="text-[#4318FF]" />
                   <span>
                     {selectedEmployee.fullName ||
@@ -2963,7 +3141,7 @@ const AdminLeaveManagement = () => {
                       style={{
                         backgroundColor: "#F4F7FE",
                         borderRadius: "16px",
-                        border: "1px solid transparent",
+                        border: "1px solid #9ca3af",
                       }}
                       suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                     >
@@ -2996,7 +3174,7 @@ const AdminLeaveManagement = () => {
                           style={{
                             backgroundColor: "#F4F7FE",
                             borderRadius: "16px",
-                            border: "1px solid transparent",
+                            border: "1px solid #9ca3af",
                           }}
                           suffixIcon={<ChevronDown className="text-[#4318FF]" />}
                         >
@@ -3035,7 +3213,7 @@ const AdminLeaveManagement = () => {
                   From <span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center border border-gray-400">
                     {dayjs(formData.startDate).format("DD-MM-YYYY")}
                   </div>
                 ) : (
@@ -3045,7 +3223,7 @@ const AdminLeaveManagement = () => {
                         inputReadOnly={true}
                         popupClassName="hide-other-months show-weekdays"
                         disabledDate={disabledDate}
-                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
+                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border! border-gray-400! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                         value={
                           formData.startDate ? dayjs(formData.startDate) : null
                         }
@@ -3073,7 +3251,7 @@ const AdminLeaveManagement = () => {
                         }}
                         format="DD-MM-YYYY"
                         placeholder="dd-mm-yyyy"
-                        suffixIcon={null}
+                        suffixIcon={<Calendar size={16} className="text-[#4318FF]" />}
                       />
                     </ConfigProvider>
                     {errors.startDate && (
@@ -3089,7 +3267,7 @@ const AdminLeaveManagement = () => {
                   To <span className="text-red-500">*</span>
                 </label>
                 {isViewMode ? (
-                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center">
+                  <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-bold text-[#2B3674] text-center border border-gray-400">
                     {dayjs(formData.endDate).format("DD-MM-YYYY")}
                   </div>
                 ) : (
@@ -3099,7 +3277,7 @@ const AdminLeaveManagement = () => {
                         inputReadOnly={true}
                         popupClassName="hide-other-months show-weekdays"
                         disabledDate={disabledEndDate}
-                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border-none! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
+                        className={`w-full px-5! py-3! rounded-[20px]! bg-[#F4F7FE]! border! border-gray-400! focus:bg-white! focus:border-[#4318FF]! transition-all font-bold! text-[#2B3674]! shadow-none`}
                         value={
                           formData.endDate ? dayjs(formData.endDate) : null
                         }
@@ -3112,7 +3290,7 @@ const AdminLeaveManagement = () => {
                         }}
                         format="DD-MM-YYYY"
                         placeholder="dd-mm-yyyy"
-                        suffixIcon={null}
+                        suffixIcon={<Calendar size={16} className="text-[#4318FF]" />}
                       />
                     </ConfigProvider>
                     {errors.endDate && (
@@ -3127,7 +3305,7 @@ const AdminLeaveManagement = () => {
                 <label className="text-sm font-bold text-[#2B3674] ml-1">
                   Duration:
                 </label>
-                <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px]">
+                <div className="px-4 py-3 rounded-2xl bg-[#F4F7FE] font-bold text-[#4318FF] inline-flex items-center gap-2 min-h-[48px] border border-gray-400">
                   <span className="bg-white px-3 py-1.5 rounded-lg shadow-sm border border-blue-100">
                     {formData.startDate && formData.endDate
                       ? (() => {
@@ -3255,7 +3433,7 @@ const AdminLeaveManagement = () => {
                 Reason for Request <span className="text-red-500">*</span>
               </label>
               {isViewMode ? (
-                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed">
+                <div className="w-full px-5 py-3 rounded-[20px] bg-[#F4F7FE] font-medium text-[#2B3674] min-h-[60px] whitespace-pre-wrap break-words leading-relaxed border border-gray-400">
                   {formData.description || "Reason for Request is not provided."}
                 </div>
               ) : (
@@ -3265,7 +3443,7 @@ const AdminLeaveManagement = () => {
                     placeholder="Please provide details about your request..."
                     className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${errors.description
                         ? "border-red-500"
-                        : "border-transparent"
+                        : "border-gray-400"
                       } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
                     value={formData.description}
                     onChange={(e) => {
@@ -3296,7 +3474,7 @@ const AdminLeaveManagement = () => {
                   file)
                 </p>
               )}
-              <div className="bg-[#F4F7FE] rounded-2xl p-2">
+              <div className="bg-[#F4F7FE] rounded-2xl p-2 border border-gray-400">
                 <CommonMultipleUploader
                   key={isViewMode ? selectedRequestId : uploaderKey}
                   entityType="LEAVE_REQUEST"
