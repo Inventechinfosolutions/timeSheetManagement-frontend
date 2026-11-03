@@ -27,7 +27,8 @@ interface UseNoteTableParams {
   handleEditorInputWrapper: (opts?: { skipPagination?: boolean }) => void;
   onPreviewAttachment: (item: NoteDocumentItem) => void;
   onDownloadAttachment: (item: NoteDocumentItem) => void;
-  onPreviewImage?: (url: string, title?: string) => void;
+  onPreviewImage?: (url: string, title?: string, fileKey?: string | null) => void;
+  onDeleteInlineImage?: (fileKey: string) => Promise<void>;
 }
 
 export const useNoteTable = ({
@@ -39,6 +40,7 @@ export const useNoteTable = ({
   onPreviewAttachment,
   onDownloadAttachment,
   onPreviewImage,
+  onDeleteInlineImage,
 }: UseNoteTableParams) => {
   const dispatch = useAppDispatch();
   const rowAttachmentInputRef = useRef<HTMLInputElement>(null);
@@ -265,29 +267,51 @@ export const useNoteTable = ({
       const target = e.target as HTMLElement | null;
       if (!target) return;
 
-      // Remove pasted screenshot via X control
+      // Remove pasted screenshot via X → DELETE /notes/attachments/:key
       const removeImgBtn = target.closest<HTMLElement>("[data-image-action='remove']");
       if (removeImgBtn && editor.contains(removeImgBtn)) {
         e.preventDefault();
         e.stopPropagation();
         const wrap = removeImgBtn.closest<HTMLElement>(".note-inline-image");
-        saveUndoSnapshot();
-        if (wrap) wrap.remove();
-        else removeImgBtn.parentElement?.remove();
-        handleEditorInputWrapper();
+        const img = wrap?.querySelector("img") as HTMLImageElement | null;
+        const fileKey =
+          img?.getAttribute("data-inline-file-key") ||
+          (img &&
+            /\/attachments\/([^/?#]+)\/(?:view|download)/i.exec(img.getAttribute("src") || "")?.[1]) ||
+          null;
+        const removeFromDom = () => {
+          saveUndoSnapshot();
+          if (wrap) wrap.remove();
+          else removeImgBtn.parentElement?.remove();
+          handleEditorInputWrapper();
+        };
+        if (fileKey && onDeleteInlineImage) {
+          void onDeleteInlineImage(fileKey)
+            .then(removeFromDom)
+            .catch(() => {
+              /* keep image if API delete failed */
+            });
+        } else {
+          removeFromDom();
+        }
         return;
       }
 
-      // Click pasted / inline screenshot → open full-size preview
+      // Click pasted / inline screenshot → open full-size preview (auth-fetch when keyed)
       if (target.tagName === "IMG" && onPreviewImage) {
         const img = target as HTMLImageElement;
         const src = img.currentSrc || img.src;
         if (src) {
           e.preventDefault();
           e.stopPropagation();
+          const fileKey =
+            img.getAttribute("data-inline-file-key") ||
+            /\/attachments\/([^/?#]+)\/(?:view|download)/i.exec(src)?.[1] ||
+            null;
           onPreviewImage(
             src,
-            img.getAttribute("alt") || img.getAttribute("title") || "Screenshot"
+            img.getAttribute("alt") || img.getAttribute("title") || "Screenshot",
+            fileKey
           );
           return;
         }
@@ -478,7 +502,7 @@ export const useNoteTable = ({
     return () => {
       editor.removeEventListener("click", handleTableClick);
     };
-  }, [editorRef, onDownloadAttachment, onPreviewAttachment, onPreviewImage]);
+  }, [editorRef, onDownloadAttachment, onPreviewAttachment, onPreviewImage, onDeleteInlineImage]);
 
   useEffect(() => {
     const handle = document.createElement("button");

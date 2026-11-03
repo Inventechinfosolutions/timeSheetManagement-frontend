@@ -65,18 +65,82 @@ export const restoreNoteScroll = (snaps: NoteScrollSnap[]) => {
 };
 
 /** Mark Excel tables as wide and wrap them so extra columns scroll horizontally. */
+/** Capture current rendered column widths (px). */
+export const snapshotTableColumnWidths = (table: HTMLTableElement): number[] =>
+  Array.from(table.rows[0]?.cells || []).map((c) =>
+    Math.max(48, Math.round((c as HTMLTableCellElement).getBoundingClientRect().width))
+  );
+
+/**
+ * Lock column widths so paste/typing content wraps inside the cell
+ * instead of stretching the column. Manual + drag resize still updates these.
+ */
+export const applyLockedTableColumnWidths = (
+  table: HTMLTableElement,
+  widths: number[]
+) => {
+  if (!widths.length) return;
+  Array.from(table.rows).forEach((row) => {
+    widths.forEach((w, i) => {
+      const cell = row.cells[i] as HTMLTableCellElement | undefined;
+      if (!cell) return;
+      if (cell.classList.contains("excel-sl-col")) {
+        cell.style.setProperty("width", "44px", "important");
+        cell.style.setProperty("min-width", "44px", "important");
+        cell.style.setProperty("max-width", "44px", "important");
+        return;
+      }
+      const px = Math.max(48, Math.round(w));
+      cell.style.setProperty("width", `${px}px`, "important");
+      cell.style.setProperty("min-width", `${px}px`, "important");
+      cell.style.setProperty("max-width", `${px}px`, "important");
+      cell.style.setProperty("overflow", "hidden", "important");
+      cell.style.setProperty("white-space", "normal", "important");
+      cell.style.setProperty("overflow-wrap", "anywhere", "important");
+      cell.style.setProperty("word-break", "break-word", "important");
+    });
+  });
+  const total = widths.reduce((sum, w) => sum + Math.max(48, Math.round(w)), 0);
+  table.classList.add("note-editor-table", "note-wide-table");
+  table.style.setProperty("width", `${total}px`, "important");
+  table.style.setProperty("min-width", "100%", "important");
+  table.style.setProperty("max-width", "none", "important");
+  table.style.setProperty("table-layout", "fixed", "important");
+};
+
+/** Freeze whatever widths the table has right now (call before/after paste). */
+export const lockCurrentTableColumnWidths = (table: HTMLTableElement | null) => {
+  if (!table || !document.contains(table)) return;
+  applyLockedTableColumnWidths(table, snapshotTableColumnWidths(table));
+};
+
 export const ensureEditorTableHorizontalScroll = (table: HTMLTableElement | null) => {
   if (!table || !document.contains(table)) return;
 
   table.classList.add("note-editor-table", "note-wide-table");
-  // Fill the bordered area (min 100%); grow with content for horizontal scroll
-  table.style.removeProperty("width");
-  table.style.removeProperty("min-width");
-  table.style.removeProperty("max-width");
-  table.style.setProperty("width", "max-content", "important");
-  table.style.setProperty("min-width", "100%", "important");
-  table.style.setProperty("max-width", "none", "important");
-  table.style.setProperty("table-layout", "auto", "important");
+
+  // If columns were locked (paste) or manually resized, keep fixed layout
+  const header = table.rows[0];
+  const hasLockedCols = header
+    ? Array.from(header.cells).some(
+        (c) =>
+          !c.classList.contains("excel-sl-col") &&
+          Boolean((c as HTMLTableCellElement).style.maxWidth)
+      )
+    : false;
+
+  if (hasLockedCols) {
+    const widths = snapshotTableColumnWidths(table);
+    applyLockedTableColumnWidths(table, widths);
+  } else {
+    table.style.removeProperty("width");
+    table.style.removeProperty("min-width");
+    table.style.removeProperty("max-width");
+    table.style.setProperty("width", "max-content", "important");
+    table.style.setProperty("min-width", "100%", "important");
+    table.style.setProperty("max-width", "none", "important");
+    table.style.setProperty("table-layout", "auto", "important");
+  }
 
   const inserted = table.closest(".note-inserted-table") as HTMLElement | null;
   if (inserted) {
@@ -99,11 +163,14 @@ export const ensureEditorTableHorizontalScroll = (table: HTMLTableElement | null
       cell.classList.contains("excel-attachment-cell")
     ) {
       cell.style.setProperty("min-width", "160px", "important");
-      cell.style.removeProperty("width");
-      cell.style.removeProperty("max-width");
+      if (!cell.style.maxWidth) {
+        cell.style.removeProperty("width");
+        cell.style.removeProperty("max-width");
+      }
       return;
     }
-    // Min size; share extra space to the right border; grow with content for scroll
+    // Preserve locked / manually resized columns — paste must not clear them
+    if (cell.style.maxWidth) return;
     cell.style.setProperty("min-width", "120px", "important");
     cell.style.removeProperty("width");
     cell.style.removeProperty("max-width");

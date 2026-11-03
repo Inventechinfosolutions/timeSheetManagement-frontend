@@ -572,6 +572,9 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     // Keep the picture the user pasted. Replacing innerHTML with the API url
     // flashes a broken image.png and jumps the caret back to column 1.
     applyInlineImageKeys(editorRef.current, next);
+    // Refresh keyed images with authorized blobs so preview/view stay valid
+    await hydrateEditorInlineImages(editorRef.current);
+    if (shouldCancel?.()) return;
     wrapNoteInlineImages(editorRef.current);
     if (next !== editorRef.current.innerHTML) {
       setFormData((prev) => ({ ...prev, description: next }));
@@ -733,9 +736,33 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       clearTimeout(paginateTimerRef.current);
       paginateTimerRef.current = null;
     }
-    // Undo/redo restores exact HTML — re-paginating would wipe the undo result
+    // Skip while typing/pasting — full A4 reflow jumps the caret to another page.
+    // Overflow pagination runs on blur / save / orientation change instead.
     if (opts?.skipPagination) return;
-    paginateTimerRef.current = setTimeout(() => runA4Pagination(false), 400);
+    // Soft overflow-only pass (reflow=false). Keep scroll + selection so we stay on the same page.
+    paginateTimerRef.current = setTimeout(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const sel = window.getSelection();
+      let savedRange: Range | null = null;
+      try {
+        if (sel && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+          savedRange = sel.getRangeAt(0).cloneRange();
+        }
+      } catch {
+        savedRange = null;
+      }
+      runA4Pagination(false);
+      if (savedRange) {
+        try {
+          const live = window.getSelection();
+          live?.removeAllRanges();
+          live?.addRange(savedRange);
+        } catch {
+          /* node may have moved during overflow split */
+        }
+      }
+    }, 800);
   };
 
   const handleInsertLink = () => {
@@ -1724,6 +1751,89 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     }
   };
 
+  /**
+   * Preview pasted screenshot via GET /notes/attachments/:key/view (auth).
+   * Falls back to blob/data only when the image is not uploaded yet.
+   */
+  const handlePreviewInlineImage = async (
+    url: string,
+    title?: string,
+    fileKey?: string | null
+  ) => {
+    const displayName = title || "Screenshot";
+    const keyFromUrl = /\/attachments\/([^/?#]+)\/(?:view|download)/i.exec(url)?.[1];
+    const key = fileKey || (keyFromUrl ? decodeURIComponent(keyFromUrl) : null);
+
+    const openWithBlob = (blob: Blob, mime?: string) => {
+      const blobUrl = window.URL.createObjectURL(blob);
+      setPreviewImageModal({
+        open: true,
+        url: blobUrl,
+        title: displayName,
+        mimeType: mime || blob.type || "image/*",
+      });
+    };
+
+    if (key) {
+      const hide = message.loading("Opening screenshot...", 0);
+      try {
+        const response = await dispatch(
+          previewNoteAttachment({ key, fileName: displayName })
+        ).unwrap();
+        hide();
+        const contentType = response.headers?.["content-type"] || "image/*";
+        if (contentType.includes("json") || contentType.includes("text/html")) {
+          throw new Error("Screenshot file was not returned");
+        }
+        openWithBlob(new Blob([response.data], { type: contentType }), contentType);
+        return;
+      } catch (err: any) {
+        hide();
+        message.error(err || "Failed to open screenshot");
+        return;
+      }
+    }
+
+    // Not uploaded yet — show local paste
+    if (url.startsWith("data:") || url.startsWith("blob:")) {
+      if (url.startsWith("data:")) {
+        setPreviewImageModal({
+          open: true,
+          url,
+          title: displayName,
+          mimeType: url.slice(5, url.indexOf(";")) || "image/*",
+        });
+        return;
+      }
+      try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        openWithBlob(blob, blob.type || "image/*");
+      } catch {
+        message.error("Screenshot is still uploading — try again in a moment");
+      }
+      return;
+    }
+
+    message.error("Screenshot key is missing — save the note and try again");
+  };
+
+  /**
+   * Delete pasted screenshot from storage via DELETE /notes/attachments/:key
+   */
+  const handleDeleteInlineImage = async (fileKey: string) => {
+    if (!fileKey) return;
+    try {
+      await dispatch(
+        deleteNoteAttachment({ noteId: activeNote?.id, key: fileKey })
+      ).unwrap();
+      message.success("Screenshot deleted");
+    } catch (err: any) {
+      message.error(err || "Failed to delete screenshot");
+      throw err;
+    }
+  };
+
   // Preview Attachment — keep Excel inside the app (modal), same as PDF/images
   const handlePreviewAttachment = async (item: NoteDocumentItem) => {
     const displayName = item.name || item.fileName || "document";
@@ -2043,6 +2153,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     handleSubmitForm,
     handleDeleteNote,
     handleDeleteAttachment,
+    handlePreviewInlineImage,
+    handleDeleteInlineImage,
     handlePreviewAttachment,
     handleDownloadAttachment,
     dragDrop,

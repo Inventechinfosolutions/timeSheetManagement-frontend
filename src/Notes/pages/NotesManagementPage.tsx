@@ -40,6 +40,8 @@ export const NotesManagementPage: React.FC = () => {
     showSaveToast,
     previewImageModal,
     setPreviewImageModal,
+    handlePreviewInlineImage,
+    handleDeleteInlineImage,
     excelViewerModal,
     setExcelViewerModal,
     formData,
@@ -146,9 +148,8 @@ export const NotesManagementPage: React.FC = () => {
           onDeleteServerAttachment={handleDeleteAttachment}
           onPreviewAttachment={handlePreviewAttachment}
           onDownloadAttachment={handleDownloadAttachment}
-          onPreviewImage={(url, title) =>
-            setPreviewImageModal({ open: true, url, title: title || "Screenshot" })
-          }
+          onPreviewImage={handlePreviewInlineImage}
+          onDeleteInlineImage={handleDeleteInlineImage}
           onPersistInlineImages={persistInlineImagesInEditor}
           onHydrateInlineImages={hydrateEditorInlineImages}
           onSubmit={handleSubmitForm}
@@ -169,9 +170,7 @@ export const NotesManagementPage: React.FC = () => {
           onBack={handleBackToList}
           onPreviewAttachment={handlePreviewAttachment}
           onDownloadAttachment={handleDownloadAttachment}
-          onPreviewImage={(url, title) =>
-            setPreviewImageModal({ open: true, url, title: title || "Screenshot" })
-          }
+          onPreviewImage={handlePreviewInlineImage}
           onHydrateInlineImages={hydrateEditorInlineImages}
           onTogglePin={handleTogglePin}
           onToggleArchive={handleToggleArchive}

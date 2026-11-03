@@ -61,8 +61,11 @@ import { useNoteTable } from "../hooks";
 import {
   applyToolbarCommandToCells,
   getSelectedTableCells,
+  lockCurrentTableColumnWidths,
   restoreNoteScroll,
   snapshotNoteScroll,
+  snapshotTableColumnWidths,
+  applyLockedTableColumnWidths,
   type NoteScrollSnap,
 } from "../utils/noteEditorTableHelpers";
 
@@ -95,8 +98,10 @@ interface NoteEditorProps {
   onDeleteServerAttachment: (noteId: number, key?: string) => void;
   onPreviewAttachment: (item: NoteDocumentItem) => void;
   onDownloadAttachment: (item: NoteDocumentItem) => void;
-  /** Open full-size preview for inline/pasted screenshots */
-  onPreviewImage?: (url: string, title?: string) => void;
+  /** Open full-size preview for inline/pasted screenshots (GET attachments/:key/view) */
+  onPreviewImage?: (url: string, title?: string, fileKey?: string | null) => void;
+  /** Delete pasted screenshot from storage (DELETE attachments/:key) */
+  onDeleteInlineImage?: (fileKey: string) => Promise<void>;
   /** Upload data:image blobs out of the editor after paste. `shouldCancel` aborts write-back if user undid. */
   onPersistInlineImages?: (shouldCancel?: () => boolean) => Promise<void>;
   /** Resolve keyed inline images to blob URLs when the editor mounts HTML */
@@ -136,6 +141,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   onPreviewAttachment,
   onDownloadAttachment,
   onPreviewImage,
+  onDeleteInlineImage,
   onPersistInlineImages,
   onHydrateInlineImages,
   onSubmit,
@@ -171,9 +177,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
   // Keep the latest callbacks without re-running the editor listeners.
   // Those callbacks are new every parent render; re-binding here jumps the caret.
   const onPreviewImageRef = useRef(onPreviewImage);
+  const onDeleteInlineImageRef = useRef(onDeleteInlineImage);
   const onPersistInlineImagesRef = useRef(onPersistInlineImages);
   const onHydrateInlineImagesRef = useRef(onHydrateInlineImages);
   onPreviewImageRef.current = onPreviewImage;
+  onDeleteInlineImageRef.current = onDeleteInlineImage;
   onPersistInlineImagesRef.current = onPersistInlineImages;
   onHydrateInlineImagesRef.current = onHydrateInlineImages;
 
@@ -251,10 +259,19 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     pushUndoHtml(editorRef.current.innerHTML);
   };
 
-  const handleEditorInputWrapper = (opts?: { skipPagination?: boolean }) => {
+  const handleEditorInputWrapper = (opts?: { skipPagination?: boolean } | Event) => {
     if (isHistoryNavigatingRef.current) return;
     if (editorRef.current) wrapNoteInlineImages(editorRef.current);
-    const skipPagination = Boolean(opts?.skipPagination);
+    // onInput passes a native/React event — never treat that as { skipPagination }
+    const isOptsObject =
+      opts != null &&
+      typeof opts === "object" &&
+      "skipPagination" in (opts as object) &&
+      !("target" in (opts as object) && "type" in (opts as object));
+    // Default: skip A4 reflow while typing/pasting so the caret does not jump pages
+    const skipPagination = isOptsObject
+      ? Boolean((opts as { skipPagination?: boolean }).skipPagination)
+      : true;
     onEditorInput(skipPagination ? { skipPagination: true } : undefined);
     setHasContent(checkHasContent());
     if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
@@ -519,6 +536,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       }
       if ((!html || !html.trim()) && !plain.trim() && imageFiles.length > 0) {
         e.preventDefault();
+        const pasteTable = activeCell?.closest("table") as HTMLTableElement | null;
+        const lockedWidths = pasteTable ? snapshotTableColumnWidths(pasteTable) : null;
         const imgs = imageFiles
           .map((file) => {
             const url = URL.createObjectURL(file);
@@ -537,15 +556,22 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
           if (!editorRef.current || isHistoryNavigatingRef.current) return;
           const landscape = editorRef.current.classList.contains("is-landscape");
           if (!pastedCell) {
+            // Stay on the page where the user pasted — no full reflow to page 1
             absorbOrphansIntoPages(editorRef.current, landscape, cursorPage);
-            paginateToA4Sheets(editorRef.current, landscape, true);
-            removeEmptyPages(editorRef.current);
           }
           wrapNoteInlineImages(editorRef.current);
+          const table =
+            pasteTable ||
+            (pastedCell?.closest("table") as HTMLTableElement | null);
+          if (table && lockedWidths) {
+            applyLockedTableColumnWidths(table, lockedWidths);
+          } else if (table && pastedCell) {
+            lockCurrentTableColumnWidths(table);
+          }
           placeCaretAfter(pastedNode);
           keepScroll();
           holdColumnScroll(pastedCell, columnLeft, columnTop);
-          handleEditorInputWrapper(pastedCell ? { skipPagination: true } : undefined);
+          handleEditorInputWrapper({ skipPagination: true });
           const persistInlineImages = onPersistInlineImagesRef.current;
           if (persistInlineImages) {
             try {
@@ -573,6 +599,9 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       // Table cell paste: insert only into this cell (no nested tables / page HTML)
       if (activeCell) {
         e.preventDefault();
+        // Freeze column widths BEFORE paste so content wraps — does not stretch the column
+        const pasteTable = activeCell.closest("table") as HTMLTableElement | null;
+        const lockedWidths = pasteTable ? snapshotTableColumnWidths(pasteTable) : null;
         const cellHtml = cellSafePasteHtml(html || "", plain);
         const pastedNode = cellHtml
           ? insertHtmlAtCaret(cellHtml)
@@ -589,6 +618,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         requestAnimationFrame(() => {
           if (!editorRef.current || isHistoryNavigatingRef.current) return;
           wrapNoteInlineImages(editorRef.current);
+          if (pasteTable && lockedWidths) {
+            applyLockedTableColumnWidths(pasteTable, lockedWidths);
+          } else if (pasteTable) {
+            lockCurrentTableColumnWidths(pasteTable);
+          }
           placeCaretAfter(pastedNode);
           keepScroll();
           holdColumnScroll(activeCell, columnLeft, columnTop);
@@ -620,13 +654,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       requestAnimationFrame(async () => {
         if (!editorRef.current || isHistoryNavigatingRef.current) return;
         const landscape = editorRef.current.classList.contains("is-landscape");
-        // Pull any loose nodes back into sheets
+        // Keep paste on the current page — do NOT full-reflow (that dumps all sheets into page 1)
         absorbOrphansIntoPages(editorRef.current, landscape, cursorPage);
         wrapWideTablesInRoot(editorRef.current);
         wrapNoteInlineImages(editorRef.current);
-        // Reflow across A4 sheets starting firmly from Page 1 (reflow = true)
-        paginateToA4Sheets(editorRef.current, landscape, true);
-        removeEmptyPages(editorRef.current);
         // If caret got stuck on/inside a screenshot wrap, move it past the ×
         const selAfter = window.getSelection();
         const n = selAfter?.anchorNode;
@@ -640,7 +671,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
           placeCaretAfterInlineWidget(el.previousElementSibling);
         }
         keepScroll();
-        handleEditorInputWrapper();
+        // skipPagination: avoid delayed reflow jump to another page while typing/pasting
+        handleEditorInputWrapper({ skipPagination: true });
         const persistInlineImages = onPersistInlineImagesRef.current;
         if (persistInlineImages) {
           try {
@@ -679,19 +711,36 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
         e.preventDefault();
         e.stopPropagation();
         const wrap = removeBtn.closest<HTMLElement>(".note-inline-image");
-        pushUndoHtml(editor.innerHTML);
+        const img = wrap?.querySelector("img") as HTMLImageElement | null;
+        const fileKey =
+          img?.getAttribute("data-inline-file-key") ||
+          (img && /\/attachments\/([^/?#]+)\/(?:view|download)/i.exec(img.getAttribute("src") || "")?.[1]) ||
+          null;
         const parent = wrap?.parentNode || removeBtn.parentElement;
         const afterRef = wrap?.nextSibling || removeBtn.nextSibling;
-        if (wrap) wrap.remove();
-        else removeBtn.parentElement?.remove();
-        // Keep typing after where the screenshot was
-        if (parent) {
-          const anchor =
-            (afterRef && parent.contains(afterRef) ? afterRef : null) ||
-            (parent.lastChild as Node | null);
-          placeCaretAfterInlineWidget(anchor);
+        const removeFromDom = () => {
+          pushUndoHtml(editor.innerHTML);
+          if (wrap) wrap.remove();
+          else removeBtn.parentElement?.remove();
+          if (parent) {
+            const anchor =
+              (afterRef && parent.contains(afterRef) ? afterRef : null) ||
+              (parent.lastChild as Node | null);
+            placeCaretAfterInlineWidget(anchor);
+          }
+          handleEditorInputWrapper();
+        };
+        // DELETE /notes/attachments/:key when uploaded; otherwise just remove from DOM
+        if (fileKey && onDeleteInlineImageRef.current) {
+          void onDeleteInlineImageRef
+            .current(fileKey)
+            .then(removeFromDom)
+            .catch(() => {
+              /* API error already toasted — keep image */
+            });
+        } else {
+          removeFromDom();
         }
-        handleEditorInputWrapper();
         return;
       }
 
@@ -711,7 +760,15 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
       if (!src || !previewImage) return;
       e.preventDefault();
       e.stopPropagation();
-      previewImage(src, img.getAttribute("alt") || img.getAttribute("title") || "Screenshot");
+      const fileKey =
+        img.getAttribute("data-inline-file-key") ||
+        /\/attachments\/([^/?#]+)\/(?:view|download)/i.exec(src)?.[1] ||
+        null;
+      previewImage(
+        src,
+        img.getAttribute("alt") || img.getAttribute("title") || "Screenshot",
+        fileKey
+      );
     };
 
     const onEditorMouseDown = (e: MouseEvent) => {
@@ -853,8 +910,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     return () => io.disconnect();
   }, []);
 
-  const previewImageStable = useCallback((url: string, title?: string) => {
-    onPreviewImageRef.current?.(url, title);
+  const previewImageStable = useCallback((url: string, title?: string, fileKey?: string | null) => {
+    onPreviewImageRef.current?.(url, title, fileKey);
   }, []);
 
   const {
@@ -887,6 +944,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
     onPreviewAttachment,
     onDownloadAttachment,
     onPreviewImage: previewImageStable,
+    onDeleteInlineImage: onDeleteInlineImage
+      ? async (fileKey: string) => {
+          await onDeleteInlineImageRef.current?.(fileKey);
+        }
+      : undefined,
   });
 
   const runToolbarCommand = (command: string, value?: string) => {
@@ -2230,7 +2292,14 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                     <div
                       ref={editorRef}
                       contentEditable
-                          onInput={handleEditorInputWrapper}
+                          onInput={() => {
+                            isTypingSessionRef.current = true;
+                            handleEditorInputWrapper({ skipPagination: true });
+                          }}
+                          onBlur={() => {
+                            // Soft overflow split only after the user leaves the field
+                            handleEditorInputWrapper({ skipPagination: false });
+                          }}
                           onKeyDown={(e) => {
                             // Enter = next line on the same page (never split into a new A4 sheet)
                             if (e.key !== "Enter" || e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) {
@@ -2254,7 +2323,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                             ) {
                               e.preventDefault();
                               document.execCommand("insertHTML", false, "<br>");
-                              handleEditorInputWrapper();
+                              handleEditorInputWrapper({ skipPagination: true });
                               return;
                             }
 
@@ -2282,14 +2351,14 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({
                               range.collapse(true);
                               sel.removeAllRanges();
                               sel.addRange(range);
-                              handleEditorInputWrapper();
+                              handleEditorInputWrapper({ skipPagination: true });
                               return;
                             }
 
                             if (block === page || block?.classList.contains("page")) {
                               e.preventDefault();
                               document.execCommand("insertHTML", false, "<p><br></p>");
-                              handleEditorInputWrapper();
+                              handleEditorInputWrapper({ skipPagination: true });
                             }
                           }}
                       data-placeholder="Write your notes, key updates, documentation, or action items here..."

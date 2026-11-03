@@ -668,7 +668,7 @@ input[type="password"]::-webkit-password-reveal-button {
   vertical-align: top !important;
 }
 
-/* Wide / editor tables: grow with content by default; clipped so cells never overlap */
+/* Wide / editor tables: wrap so content reflows when the column is widened/narrowed */
 .notes-rich-editor .page .note-table-scroll th,
 .notes-rich-editor .page .note-table-scroll td,
 .notes-content-view .page .note-table-scroll th,
@@ -677,21 +677,11 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-rich-editor .page table.note-wide-table td,
 .notes-content-view .page table.note-wide-table th,
 .notes-content-view .page table.note-wide-table td {
-  overflow: hidden !important;
-}
-
-/* Unresized cells stay on one line; resized cells (inline max-width) wrap instead */
-.notes-rich-editor .page .note-table-scroll th:not([style*="max-width"]),
-.notes-rich-editor .page .note-table-scroll td:not([style*="max-width"]),
-.notes-content-view .page .note-table-scroll th:not([style*="max-width"]),
-.notes-content-view .page .note-table-scroll td:not([style*="max-width"]),
-.notes-rich-editor .page table.note-wide-table th:not([style*="max-width"]),
-.notes-rich-editor .page table.note-wide-table td:not([style*="max-width"]),
-.notes-content-view .page table.note-wide-table th:not([style*="max-width"]),
-.notes-content-view .page table.note-wide-table td:not([style*="max-width"]) {
-  white-space: nowrap !important;
-  overflow-wrap: normal !important;
-  word-break: normal !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+  word-break: break-word !important;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
 }
 
 .notes-rich-editor .page:empty::before {
@@ -717,8 +707,7 @@ input[type="password"]::-webkit-password-reveal-button {
   vertical-align: middle;
   max-width: min(100%, 280px);
   line-height: 0;
-  /* Extra right margin so the caret sits clearly AFTER the × remove control */
-  margin: 2px 14px 2px 0;
+  margin: 2px 4px 2px 0;
 }
 
 .notes-rich-editor .page .note-inline-image img,
@@ -1038,11 +1027,12 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-rich-editor table.note-wide-table td,
 .notes-content-view table.note-wide-table th,
 .notes-content-view table.note-wide-table td {
-  /* Default: grow with content for horizontal scroll; never paint over neighbors */
-  white-space: nowrap;
-  overflow: hidden;
-  overflow-wrap: normal;
-  word-break: normal;
+  /* Wrap to column width — extending/shrinking the column reflows the text */
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  overflow-x: hidden;
+  overflow-y: visible;
   min-width: 120px;
   width: auto;
   max-width: none;
@@ -1051,7 +1041,7 @@ input[type="password"]::-webkit-password-reveal-button {
   vertical-align: top;
 }
 
-/* When a column was resized (inline max-width), wrap/shrink content inside the cell */
+/* Resized columns: stay inside the set width and reflow when dragged wider/narrower */
 .notes-rich-editor .note-table-scroll th[style*="max-width"],
 .notes-rich-editor .note-table-scroll td[style*="max-width"],
 .notes-content-view .note-table-scroll th[style*="max-width"],
@@ -1063,7 +1053,8 @@ input[type="password"]::-webkit-password-reveal-button {
   white-space: normal !important;
   overflow-wrap: anywhere !important;
   word-break: break-word !important;
-  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
 }
 
 .notes-rich-editor .note-table-scroll td img,

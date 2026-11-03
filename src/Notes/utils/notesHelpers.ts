@@ -2144,13 +2144,10 @@ export const rewriteInlineDataImagesInHtml = async (
         const key = await upload(file);
         if (!key) continue;
         img.setAttribute(INLINE_FILE_KEY_ATTR, key);
+        // Keep a placeholder src in saved HTML; live editor keeps its blob until hydrate.
+        // Do NOT revokeObjectURL here — the editor <img> still uses that blob.
         img.setAttribute("src", toPreviewUrl(key));
         changed = true;
-        try {
-          URL.revokeObjectURL(src);
-        } catch {
-          /* ignore */
-        }
       } catch {
         /* leave blob src — save may still fail if not uploaded */
       }
@@ -2188,15 +2185,24 @@ export const hydrateInlineImagesInRoot = async (
       const key = getInlineImageFileKey(img);
       if (!key) return;
       const src = img.getAttribute("src") || "";
-      if (src.startsWith("blob:") || src.startsWith("data:")) return;
+      // data: embeds are self-contained — leave them
+      if (src.startsWith("data:")) return;
       try {
         const blobUrl = await fetchBlobUrl(key, img.getAttribute("alt") || undefined);
         if (blobUrl) {
           img.setAttribute(INLINE_FILE_KEY_ATTR, key);
+          // Replace revoked blob / unauth API view URL with a fresh authorized blob
+          if (src.startsWith("blob:") && src !== blobUrl) {
+            try {
+              URL.revokeObjectURL(src);
+            } catch {
+              /* ignore */
+            }
+          }
           img.src = blobUrl;
         }
       } catch {
-        // leave preview URL — may still work if cookies auth the view route
+        // leave current src
       }
     })
   );
