@@ -25,6 +25,7 @@ import {
   AppraisalFilterAll,
   QuaterlyEnum,
   QuarterlyReviewStatus,
+  ReviewPeriod,
 } from "../../enums/appraisal.enums";
 import CreateReviewAssignmentModal from "./CreateReviewAssignmentModal";
 import AssignQuarterlyReviewModal from "./AssignQuarterlyReviewModal";
@@ -371,8 +372,11 @@ export const ManagerQuarterlyReview: React.FC = () => {
     setTableLoading(true);
     const selectedYear =
       financialYear && financialYear !== AppraisalFilterAll.ALL ? financialYear : undefined;
+    const isYearlyFilter = quarter === ReviewPeriod.YEARLY;
     const selectedQuarter =
-      quarter && quarter !== AppraisalFilterAll.ALL ? (quarter as QuaterlyEnum) : undefined;
+      !isYearlyFilter && quarter && quarter !== AppraisalFilterAll.ALL
+        ? (quarter as QuaterlyEnum)
+        : undefined;
     const selectedStatus =
       !statusFilter || statusFilter === AppraisalFilterAll.ALL
         ? undefined
@@ -388,6 +392,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
       limit: QUARTERLY_REVIEW_TABLE_PAGE_SIZE,
       financialYear: selectedYear,
       quarter: selectedQuarter,
+      reviewPeriod: isYearlyFilter ? ReviewPeriod.YEARLY : undefined,
       status: selectedStatus,
     };
     const searchText = debouncedSearch.trim();
@@ -453,6 +458,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
       seen.add(item.quaterLabel);
       options.push({ value: item.quaterLabel, label: item.quaterLabel });
     });
+    options.push({ value: ReviewPeriod.YEARLY, label: "Yearly" });
     return options;
   })();
 

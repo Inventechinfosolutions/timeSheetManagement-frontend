@@ -28,6 +28,8 @@ export const AppraisalCopy = {
   closeAction: "Close",
   selectMappedEmployee: "Select a mapped employee before assigning.",
   invalidQuarter: "Select a quarter before assigning.",
+  selectReviewPeriod: "Select quarterly or yearly before assigning.",
+  allQuarters: "Yearly (Q1, Q2, Q3, Q4)",
   selectFinancialYear: "Select a financial year before assigning.",
   selectDates: "Select the from date and deadline before assigning.",
   deadlineAfterAssigned: "Deadline must be after the assigned date.",

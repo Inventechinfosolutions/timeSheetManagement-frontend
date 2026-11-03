@@ -8,7 +8,7 @@ import {
   toPerformanceAssignment,
 } from "../reducers/appraisal.reducer";
 import { useAppSelector } from "../../hooks";
-import { AppraisalFilterAll } from "../enums/appraisal.enums";
+import { AppraisalFilterAll, ReviewPeriod } from "../enums/appraisal.enums";
 import { loadAppraisalPeriod } from "../utils/appraisalHelpers";
 
 export interface UseEmployeeAppraisalReturn {
@@ -77,11 +77,15 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
       if (!employeeId) setAssignments([]);
       return;
     }
+    const isYearlyFilter = quarter === ReviewPeriod.YEARLY;
     const selectedQuarter =
-      quarter && quarter !== AppraisalFilterAll.ALL ? quarter : undefined;
+      !isYearlyFilter && quarter && quarter !== AppraisalFilterAll.ALL
+        ? quarter
+        : undefined;
     void AppraisalApi.getEmployeeReviews(employeeId, {
       financialYear: financialYear || undefined,
       quarter: selectedQuarter,
+      reviewPeriod: isYearlyFilter ? ReviewPeriod.YEARLY : undefined,
       status: statusFilter || undefined,
       page: currentPage,
       limit: pageSize,
@@ -199,6 +203,7 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
       seen.add(item.quaterLabel);
       options.push({ value: item.quaterLabel, label: item.quaterLabel });
     });
+    options.push({ value: ReviewPeriod.YEARLY, label: "Yearly" });
     return options;
   }, [masterYears, masterQuarters]);
 

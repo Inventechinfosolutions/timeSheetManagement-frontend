@@ -34,7 +34,7 @@ import { AppraisalApi, formatAppraisalDisplayDate, readApiError, RevealedRating 
 import { Dropdown } from "../../../components/ui";
 import { DatePicker as AntDatePicker, ConfigProvider, message } from "antd";
 import dayjs from "dayjs";
-import { getRatingTierConfig } from "../../utils/appraisalHelpers";
+import { getRatingTierConfig, formatQuarterDisplay } from "../../utils/appraisalHelpers";
 import { ENVIRONMENT_SCORES } from "../../constants/appraisal.constants";
 import { renderAnimatedEmojiIcon } from "../employee/steps/CompanyEnvironmentStep";
 import "./EvaluationPanel.css";
@@ -1341,7 +1341,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     void AppraisalApi.getManagerReviewList(record.id)
       .then((result) => {
         const match = (result.data || []).find(
-          (item) => item.quarter === record.quarter && item.financialYear === record.financialYear,
+          (item) => formatQuarterDisplay(item.quarter) === formatQuarterDisplay(record.quarter) && item.financialYear === record.financialYear,
         );
         if (!match) {
           return;
@@ -1455,7 +1455,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 <span>{isViewMode ? "Assigned" : "Evaluating"}</span>
                 <span className="font-bold text-[#2B3674]">{record.name}</span>
                 <span className="inline-flex items-center justify-center rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1 text-xs font-extrabold text-[#1D4ED8]">
-                  {record.quarter}
+                  {formatQuarterDisplay(record.quarter)}
                 </span>
                 <span className="inline-flex items-center justify-center rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1 text-xs font-extrabold text-[#1D4ED8]">
                   {record.financialYear}
@@ -1586,7 +1586,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     Assigned Quarter
                   </span>
                   <div className="rounded-xl border border-[#E2E8F0] bg-gray-50/80 px-3 py-2.5 text-sm font-normal text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
-                    {record.quarter} · {record.financialYear}
+                    {formatQuarterDisplay(record.quarter)} · {record.financialYear}
                   </div>
                 </div>
                 <div>
@@ -2508,8 +2508,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-blue-600 font-bold">
                           {record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS
-                            ? `${record.quarter} Evaluation Draft Saved`
-                            : `${record.quarter} Evaluation Ready`}
+                            ? `${formatQuarterDisplay(record.quarter)} Evaluation Draft Saved`
+                            : `${formatQuarterDisplay(record.quarter)} Evaluation Ready`}
                         </span>
                       </div>
                       <h3 className="text-lg sm:text-xl font-bold text-[#2B3674] mt-1">

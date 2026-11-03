@@ -40,6 +40,12 @@ export enum QuaterlyEnum {
   Q2 = "Q2",
   Q3 = "Q3",
   Q4 = "Q4",
+  YEARLY = "YEARLY",
+}
+
+export enum ReviewPeriod {
+  QUARTERLY = "QUARTERLY",
+  YEARLY = "YEARLY",
 }
 
 export enum AssignmentKind {
@@ -65,6 +71,7 @@ export enum AssignButtonState {
 
 export enum AssignFormField {
   EMPLOYEES = "employees",
+  REVIEW_PERIOD = "reviewPeriod",
   FINANCIAL_YEAR = "financialYear",
   QUARTER = "quarter",
   DEADLINE = "deadline",

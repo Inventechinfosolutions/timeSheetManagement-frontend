@@ -16,8 +16,10 @@ import {
   PerformanceWritePayload,
   QuarterlyReviewAssignment,
   ReviewFormData,
+  YearlyQuarterReviews,
 } from "../types/appraisal.types";
 import { AppraisalApi } from "../reducers/appraisal.reducer";
+import { ReviewPeriod } from "../enums/appraisal.enums";
 
 // 
 // ERROR PARSER
@@ -85,18 +87,25 @@ export const formatAppraisalDisplayDate = (value: string | Date | null | undefin
 export const getQuarterPeriod = (
   quarter?: string,
   financialYear?: string,
+  reviewPeriod?: string,
 ): { start: string; end: string } => {
   const fromYearMatch = (financialYear || "").match(/^(\d{4})/);
   const fromYear = fromYearMatch ? parseInt(fromYearMatch[1], 10) : new Date().getFullYear();
   const toYear = fromYear + 1;
 
+  if (reviewPeriod === ReviewPeriod.YEARLY || quarter === "YEARLY") {
+    return { start: `01-04-${fromYear}`, end: `31-03-${toYear}` };
+  }
   if (quarter === "Q1") {
     return { start: `01-04-${fromYear}`, end: `30-06-${fromYear}` };
-  } else if (quarter === "Q2") {
+  }
+  if (quarter === "Q2") {
     return { start: `01-07-${fromYear}`, end: `30-09-${fromYear}` };
-  } else if (quarter === "Q3") {
+  }
+  if (quarter === "Q3") {
     return { start: `01-10-${fromYear}`, end: `31-12-${fromYear}` };
-  } else if (quarter === "Q4") {
+  }
+  if (quarter === "Q4") {
     return { start: `01-01-${toYear}`, end: `31-03-${toYear}` };
   }
   return { start: "", end: "" };
@@ -422,6 +431,39 @@ export const changedProjectFields = (
 // 
 // RECORD & ASSIGNMENT MAPPERS
 // 
+export const formatQuarterDisplay = (quarter: any): string => {
+  if (!quarter) return "";
+  if (typeof quarter === "string") return quarter;
+  if (Array.isArray(quarter)) return quarter.join(", ");
+  if (typeof quarter === "object") {
+    const keys = ["Q1", "Q2", "Q3", "Q4"];
+    const matched = keys.filter((k) => k in quarter);
+    if (matched.length) {
+      return matched.join(", ");
+    }
+    const vals = Object.values(quarter).filter((v) => typeof v === "string" || typeof v === "number");
+    return vals.length ? vals.join(", ") : Object.keys(quarter).join(", ");
+  }
+  return String(quarter);
+};
+
+export const isYearlyReview = (record?: {
+  quarter?: any;
+  reviewPeriod?: string;
+}): boolean =>
+  record?.reviewPeriod === ReviewPeriod.YEARLY ||
+  record?.quarter === "YEARLY" ||
+  (typeof record?.quarter === "object" && record?.quarter !== null) ||
+  String(record?.quarter || "").toUpperCase().includes("Q1, Q2");
+
+export const yearlyQuarterLabels = (
+  reviews?: YearlyQuarterReviews | null,
+): Array<{ quarter: string; assigned: boolean }> =>
+  (["Q1", "Q2", "Q3", "Q4"] as const).map((quarter) => ({
+    quarter,
+    assigned: Boolean(reviews?.[quarter]?.id),
+  }));
+
 export const toManagerReviewRecord = (
   review: ManagerReviewApiRecord | EmployeeReviewDetail,
 ): ManagerQuarterlyReviewRecord => ({
@@ -429,7 +471,9 @@ export const toManagerReviewRecord = (
   id: review.employeeId,
   role: review.designation || "",
   department: review.department || "",
-  quarter: review.quarter,
+  quarter: formatQuarterDisplay(review.quarter),
+  reviewPeriod: review.reviewPeriod,
+  yearlyQuarterReviews: review.yearlyQuarterReviews,
   financialYear: review.financialYear,
   fromDate: formatAppraisalDisplayDate(review.assignedDate),
   toDate: formatAppraisalDisplayDate(review.deadlineDate),
@@ -499,7 +543,9 @@ export const toPerformanceAssignment = (
     employeeId: row.employeeId || "",
     employeeName: row.employeeName || row.employeeId || "",
     designation: row.designation || "",
-    quarter: row.quarter || "",
+    quarter: formatQuarterDisplay(row.quarter),
+    reviewPeriod: row.reviewPeriod,
+    yearlyQuarterReviews: row.yearlyQuarterReviews,
     financialYear: row.financialYear || "",
     assignedBy: row.assignedBy || "",
     assignedDate: formatAppraisalDisplayDate(row.assignedDate),
@@ -528,7 +574,9 @@ export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyRev
     employeeId: review.employeeId,
     employeeName: review.employeeName || review.employeeId,
     designation: review.designation || "",
-    quarter: review.performanceDetails?.quarter || review.quarter,
+    quarter: formatQuarterDisplay(review.performanceDetails?.quarter || review.quarter),
+    reviewPeriod: review.reviewPeriod || review.performanceDetails?.reviewPeriod,
+    yearlyQuarterReviews: review.yearlyQuarterReviews || review.performanceDetails?.yearlyQuarterReviews,
     financialYear: review.performanceDetails?.financialYear || review.financialYear,
     assignedBy:
       String((review as any).assignedBy || review.assignerId || "").toUpperCase() === "ADMIN" ||

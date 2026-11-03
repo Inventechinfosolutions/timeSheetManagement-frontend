@@ -738,6 +738,61 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
   transform: none !important;
 }
 
+.assign-yearly-quarters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-height: 42px;
+  pointer-events: none;
+  cursor: default;
+  user-select: none;
+}
+
+.assign-yearly-quarters.assign-input-control,
+.assign-yearly-quarters.assign-input-control:hover,
+.assign-yearly-quarters.assign-input-control:focus,
+.assign-yearly-quarters.assign-input-control:focus-within {
+  transform: none !important;
+  box-shadow: none !important;
+  background: #F8FAFC !important;
+  cursor: default !important;
+}
+
+.assign-yearly-quarters .qr-quarter-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.75rem;
+  padding: 0.22rem 0.7rem;
+  border-radius: 9999px;
+}
+
+.assign-yearly-quarters .qr-quarter-q1 {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+
+.assign-yearly-quarters .qr-quarter-q2 {
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+}
+
+.assign-yearly-quarters .qr-quarter-q3 {
+  background: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.assign-yearly-quarters .qr-quarter-q4 {
+  background: #FAF5FF;
+  color: #7E22CE;
+  border: 1px solid #E9D5FF;
+}
+
 /* Input Controls Base Animation & Hover Effect */
 .assign-input-control {
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;

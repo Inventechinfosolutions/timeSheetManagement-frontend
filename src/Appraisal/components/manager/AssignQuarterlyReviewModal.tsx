@@ -10,7 +10,7 @@ import {
   readApiError,
 } from "../../reducers/appraisal.reducer";
 import { AppraisalCopy } from "../../constants/appraisal.constants";
-import { AssignButtonState, AssignFormField, AssignmentKind, QuaterlyEnum } from "../../enums/appraisal.enums";
+import { AssignButtonState, AssignFormField, AssignmentKind, QuaterlyEnum, ReviewPeriod } from "../../enums/appraisal.enums";
 import {
   Modal,
   Button,
@@ -67,6 +67,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const managerId = currentUser?.employeeId || currentUser?.loginId || "";
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("");
+  const [reviewPeriod, setReviewPeriod] = useState<ReviewPeriod>(ReviewPeriod.QUARTERLY);
   const [selectedQuarter, setSelectedQuarter] = useState<string>("");
   const [masterYears, setMasterYears] = useState<MasterFinancialYearOption[]>([]);
   const [masterQuarters, setMasterQuarters] = useState<MasterQuarterRecord[]>([]);
@@ -105,6 +106,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       setSubmitSummary(null);
       setAssignmentNoticeCount(0);
       setSelectedFinancialYear("");
+      setReviewPeriod(ReviewPeriod.QUARTERLY);
       setSelectedQuarter("");
       setFromDate(todayDisplayDate());
       setMasterQuarters([]);
@@ -228,6 +230,8 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       .finally(() => setQuartersLoading(false));
   };
 
+  const isYearly = reviewPeriod === ReviewPeriod.YEARLY;
+
   const quarterOptions = useMemo(() => {
     if (!selectedFinancialYear) return [];
     return masterQuarters
@@ -257,7 +261,17 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     loadQuartersForYear(value);
   };
 
+  const handleReviewPeriodChange = (value: string) => {
+    const nextPeriod = value === ReviewPeriod.YEARLY ? ReviewPeriod.YEARLY : ReviewPeriod.QUARTERLY;
+    periodTouched.current = true;
+    setReviewPeriod(nextPeriod);
+    setSelectedQuarter("");
+    clearFieldError(AssignFormField.REVIEW_PERIOD);
+    clearFieldError(AssignFormField.QUARTER);
+  };
+
   const handleQuarterChange = (quarter: string) => {
+    if (reviewPeriod === ReviewPeriod.YEARLY) return;
     periodTouched.current = true;
     setSelectedQuarter(quarter);
     clearFieldError(AssignFormField.QUARTER);
@@ -271,6 +285,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     setSelectedEmployees([]);
     setSubmitSummary(null);
     setSelectedFinancialYear("");
+    setReviewPeriod(ReviewPeriod.QUARTERLY);
     setSelectedQuarter("");
     setFromDate(todayDisplayDate());
     setMasterQuarters([]);
@@ -336,7 +351,11 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       showFieldError(AssignFormField.FINANCIAL_YEAR, AppraisalCopy.selectFinancialYear);
       return;
     }
-    if (!quarter) {
+    if (!reviewPeriod) {
+      showFieldError(AssignFormField.REVIEW_PERIOD, AppraisalCopy.selectReviewPeriod);
+      return;
+    }
+    if (!isYearly && !quarter) {
       showFieldError(AssignFormField.QUARTER, AppraisalCopy.invalidQuarter);
       return;
     }
@@ -366,7 +385,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
         };
       }),
       financialYear: selectedFinancialYear,
-      quarter: selectedQuarter,
+      quarter: isYearly ? "Q1, Q2, Q3, Q4" : selectedQuarter,
       fromDate,
       toDate,
       description,
@@ -383,7 +402,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       ? "Admin"
       : (managerId || currentUser?.loginId || "MANAGER");
     const assignedBy = isAdmin ? "ADMIN" : "MANAGER";
-    if (!quarter || !assignerId) return;
+    if ((!isYearly && !quarter) || !assignerId) return;
 
     setAssignError("");
     setButtonState(AssignButtonState.ANIMATING);
@@ -393,7 +412,8 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       submitSummary.people.map((person) =>
         AppraisalApi.createReview({
           employeeId: person.employeeId,
-          quarter,
+          ...(isYearly ? {} : { quarter }),
+          reviewPeriod,
           financialYear: selectedFinancialYear,
           assignedDate: toIsoDate(fromDate),
           deadlineDate: toIsoDate(toDate),
@@ -661,6 +681,31 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             ) : null}
           </div>
 
+          <div className="assign-modal-form-section">
+            <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
+              REVIEW PERIOD <span className="text-red-500">*</span>
+            </label>
+            <Dropdown
+              placeholder="Select quarterly or yearly"
+              allowClear={false}
+              defaultValue={ReviewPeriod.QUARTERLY}
+              options={[
+                { value: ReviewPeriod.QUARTERLY, label: "Quarterly" },
+                { value: ReviewPeriod.YEARLY, label: "Yearly" },
+              ]}
+              value={reviewPeriod}
+              onChange={handleReviewPeriodChange}
+              className="w-full"
+              buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.REVIEW_PERIOD
+                  ? "is-error !border-red-500"
+                  : "border-blue-200/70"
+                }`}
+            />
+            {errorField === AssignFormField.REVIEW_PERIOD ? (
+              <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+            ) : null}
+          </div>
+
           {/* FINANCIAL YEAR & QUARTER (2-Column Grid) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* FINANCIAL YEAR * */}
@@ -696,21 +741,35 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
                 QUARTER <span className="text-red-500">*</span>
               </label>
-              <Dropdown
-                placeholder="Select quarter"
-                allowClear={false}
-                defaultValue=""
-                options={quarterOptions}
-                value={selectedQuarter}
-                onChange={handleQuarterChange}
-                disabled={!selectedFinancialYear}
-                loading={quartersLoading && quarterOptions.length === 0}
-                className="w-full"
-                buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.QUARTER
-                    ? "is-error !border-red-500"
-                    : "border-blue-200/70"
-                  }`}
-              />
+              {isYearly ? (
+                <div
+                  className="assign-yearly-quarters assign-input-control w-full justify-start bg-[#F8FAFC] border border-blue-200/70 rounded-xl px-3.5 py-2.5"
+                  aria-disabled="true"
+                  title="Yearly includes all quarters. Quarter cannot be changed."
+                >
+                  {(["Q1", "Q2", "Q3", "Q4"] as const).map((quarter) => (
+                    <span key={quarter} className={`qr-quarter-pill qr-quarter-${quarter.toLowerCase()}`}>
+                      {quarter}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <Dropdown
+                  placeholder="Select quarter"
+                  allowClear={false}
+                  defaultValue=""
+                  options={quarterOptions}
+                  value={selectedQuarter}
+                  onChange={handleQuarterChange}
+                  disabled={!selectedFinancialYear}
+                  loading={quartersLoading && quarterOptions.length === 0}
+                  className="w-full"
+                  buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.QUARTER
+                      ? "is-error !border-red-500"
+                      : "border-blue-200/70"
+                    }`}
+                />
+              )}
               {errorField === AssignFormField.QUARTER ? (
                 <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
               ) : null}

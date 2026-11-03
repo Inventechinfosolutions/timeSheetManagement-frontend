@@ -3,6 +3,7 @@ import {
   QuaterlyEnum,
   QuarterlyReviewStatus,
   RatingVisibilityStatus,
+  ReviewPeriod,
 } from "../enums/appraisal.enums";
 
 export type AssignmentType = "individual" | "all";
@@ -38,12 +39,65 @@ export type ReviewStatus = "not_started" | "assigned" | "draft" | "in_progress" 
 
 export type ReviewAssignmentStatus = "NOT_STARTED" | "ASSIGNED" | "IN_PROGRESS" | "EVALUATION_IN_PROGRESS" | "SUBMITTED" | "UNDER_REVIEW" | "COMPLETED";
 
+export interface YearlyQuarterPerformanceSnapshot {
+  id?: number | null;
+  status?: string | null;
+  submittedAt?: string | null;
+  stepOverview?: unknown;
+  stepAchievements?: unknown;
+  stepTeamwork?: unknown;
+  stepLearning?: unknown;
+  stepEnvironment?: unknown;
+  stepFinalReview?: unknown;
+}
+
+export interface YearlyQuarterReviewSnapshot {
+  id?: number | null;
+  quarter?: string;
+  reviewPeriod?: string;
+  status?: string | null;
+  assignedDate?: string | null;
+  deadlineDate?: string | null;
+  submittedDate?: string | null;
+  reviewedDate?: string | null;
+  productivity?: number | null;
+  qualityOfWork?: number | null;
+  technicalJobSkills?: number | null;
+  ownershipResponsibility?: number | null;
+  communication?: number | null;
+  teamCollaboration?: number | null;
+  innovationProblemSolving?: number | null;
+  finalRating?: number | null;
+  overallPerformanceRating?: number | null;
+  ratingDescription?: string | null;
+  performanceStrengths?: string | null;
+  areasOfImprovement?: string | null;
+  managerComment?: string | null;
+  goalsForNextReviewPeriod?: string | null;
+  careerGrowthRecommendation?: string | null;
+  reviewOutcome?: string | null;
+  performanceAction?: string | null;
+  managerConfirmation?: boolean;
+  description?: string | null;
+  performanceId?: number | null;
+  performance?: YearlyQuarterPerformanceSnapshot | null;
+}
+
+export interface YearlyQuarterReviews {
+  Q1?: YearlyQuarterReviewSnapshot | null;
+  Q2?: YearlyQuarterReviewSnapshot | null;
+  Q3?: YearlyQuarterReviewSnapshot | null;
+  Q4?: YearlyQuarterReviewSnapshot | null;
+}
+
 export interface ManagerQuarterlyReviewRecord {
   name: string;
   id: string;
   role: string;
   department?: string;
   quarter: string;
+  reviewPeriod?: ReviewPeriod | string;
+  yearlyQuarterReviews?: YearlyQuarterReviews | null;
   financialYear: string;
   fromDate: string;
   toDate: string;
@@ -96,6 +150,8 @@ export interface QuarterlyReviewAssignment {
   employeeName: string;
   designation: string;
   quarter: string;
+  reviewPeriod?: ReviewPeriod | string;
+  yearlyQuarterReviews?: YearlyQuarterReviews | null;
   financialYear: string;
   assignedBy: string;
   assignedDate: string;
@@ -393,6 +449,8 @@ export interface ManagerReviewApiRecord {
   designation: string | null;
   department?: string | null;
   quarter: QuaterlyEnum;
+  reviewPeriod?: ReviewPeriod | string;
+  yearlyQuarterReviews?: YearlyQuarterReviews | null;
   financialYear: string;
   assignedDate: string | null;
   deadlineDate: string | null;
@@ -433,7 +491,8 @@ export interface ManagerDashboardResponse {
 
 export interface CreateQuarterlyReviewPayload {
   employeeId: string;
-  quarter: QuaterlyEnum;
+  quarter?: QuaterlyEnum;
+  reviewPeriod?: ReviewPeriod;
   financialYear: string;
   assignedDate?: string;
   deadlineDate?: string;
@@ -492,6 +551,7 @@ export interface QuarterlyReviewListQuery {
   limit: number;
   financialYear?: string;
   quarter?: QuaterlyEnum;
+  reviewPeriod?: ReviewPeriod;
   status?: QuarterlyReviewStatus;
   role?: string;
 }
@@ -536,6 +596,8 @@ export interface EmployeePerformanceDetail {
   deadlineDate?: string | null;
   description?: string | null;
   reviewId?: number | null;
+  reviewPeriod?: ReviewPeriod | string;
+  yearlyQuarterReviews?: YearlyQuarterReviews | null;
   canRequestEdit?: boolean;
   remainingRequestHours?: number;
   canEdit?: boolean;
@@ -554,6 +616,8 @@ export interface EmployeeReviewDetail {
   designation: string | null;
   department?: string | null;
   quarter: QuaterlyEnum;
+  reviewPeriod?: ReviewPeriod | string;
+  yearlyQuarterReviews?: YearlyQuarterReviews | null;
   financialYear: string;
   assignedDate: string | null;
   deadlineDate: string | null;

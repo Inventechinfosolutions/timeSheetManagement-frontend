@@ -427,6 +427,24 @@
   border: 1px solid #E9D5FF !important;
 }
 
+.qr-quarter-yearly {
+  background: #EEF2FF !important;
+  color: #3730A3 !important;
+  border: 1px solid #C7D2FE !important;
+}
+
+.qr-yearly-quarters {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+}
+
+.qr-quarter-pill.is-empty {
+  opacity: 0.45;
+}
+
 .qr-assigned-by-pill {
   background: #EFF6FF !important;
   color: #1D4ED8 !important;

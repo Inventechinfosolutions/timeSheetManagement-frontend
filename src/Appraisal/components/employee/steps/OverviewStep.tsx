@@ -5,7 +5,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { AppraisalApi } from "../../../reducers/appraisal.reducer";
-import { formatAppraisalDisplayDate } from "../../../utils/appraisalHelpers";
+import { formatAppraisalDisplayDate, getQuarterPeriod, isYearlyReview } from "../../../utils/appraisalHelpers";
 import "../AppraisalDashboard.css";
 
 interface OverviewFieldConfig {
@@ -70,24 +70,9 @@ export const OverviewStep: React.FC<StepProps> = ({
     let isMounted = true;
     const fromYearMatch = financialYear.match(/^(\d{4})/);
     const fromYear = fromYearMatch ? parseInt(fromYearMatch[1], 10) : new Date().getFullYear();
-    const toYear = fromYear + 1;
-
-    // Standard Indian FY quarter date fallbacks
-    let defaultStart = "";
-    let defaultEnd = "";
-    if (quarter === "Q1") {
-      defaultStart = `01-04-${fromYear}`;
-      defaultEnd = `30-06-${fromYear}`;
-    } else if (quarter === "Q2") {
-      defaultStart = `01-07-${fromYear}`;
-      defaultEnd = `30-09-${fromYear}`;
-    } else if (quarter === "Q3") {
-      defaultStart = `01-10-${fromYear}`;
-      defaultEnd = `31-12-${fromYear}`;
-    } else if (quarter === "Q4") {
-      defaultStart = `01-01-${toYear}`;
-      defaultEnd = `31-03-${toYear}`;
-    }
+    const defaults = getQuarterPeriod(quarter, financialYear, assignment?.reviewPeriod);
+    const defaultStart = defaults.start;
+    const defaultEnd = defaults.end;
 
     if (!formData.reviewPeriodStart && defaultStart) {
       setStartDate(defaultStart);
@@ -96,6 +81,11 @@ export const OverviewStep: React.FC<StepProps> = ({
     if (!formData.reviewPeriodEnd && defaultEnd) {
       setEndDate(defaultEnd);
       onChange("reviewPeriodEnd", defaultEnd);
+    }
+
+    if (isYearlyReview(assignment)) {
+      setPeriodLoading(false);
+      return;
     }
 
     // Fetch master quarters from backend API
@@ -123,7 +113,7 @@ export const OverviewStep: React.FC<StepProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [quarter, financialYear]);
+  }, [quarter, financialYear, assignment?.reviewPeriod]);
 
   // Unified field change handler
   const handleFieldChange = (key: string, val: string) => {

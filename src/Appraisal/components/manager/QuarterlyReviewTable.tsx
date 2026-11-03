@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { Star, Pencil, Eye, ShieldCheck, UserCheck, Check, X, CheckCircle, XCircle, Calendar, Clock, AlertCircle, Lock, RotateCcw } from "lucide-react";
 import { ManagerQuarterlyReviewRecord } from "../../types/appraisal.types";
+import { isYearlyReview, yearlyQuarterLabels, formatQuarterDisplay } from "../../utils/appraisalHelpers";
 import { DatePicker, Pagination } from "../../../components/ui";
 import { useAppSelector } from "../../../hooks";
 import { AppraisalApi, readApiError } from "../../reducers/appraisal.reducer";
@@ -187,14 +188,29 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
     );
   };
 
-  const renderQuarterBadge = (quarter: string) => {
-    const q = (quarter || "").trim().toUpperCase();
+  const renderQuarterBadge = (record: ManagerQuarterlyReviewRecord) => {
+    if (isYearlyReview(record)) {
+      return (
+        <div className="qr-yearly-quarters">
+          <span className="qr-quarter-pill qr-quarter-yearly">Yearly</span>
+          {yearlyQuarterLabels(record.yearlyQuarterReviews).map((item) => (
+            <span
+              key={item.quarter}
+              className={`qr-quarter-pill qr-quarter-${item.quarter.toLowerCase()} ${item.assigned ? "" : "is-empty"}`}
+            >
+              {item.quarter}
+            </span>
+          ))}
+        </div>
+      );
+    }
+    const q = formatQuarterDisplay(record.quarter).trim().toUpperCase();
     let qClass = "qr-quarter-q1";
     if (q === "Q2") qClass = "qr-quarter-q2";
     else if (q === "Q3") qClass = "qr-quarter-q3";
     else if (q === "Q4") qClass = "qr-quarter-q4";
 
-    return <span className={`qr-quarter-pill ${qClass}`}>{quarter}</span>;
+    return <span className={`qr-quarter-pill ${qClass}`}>{formatQuarterDisplay(record.quarter)}</span>;
   };
 
   const renderRating = (rating: string) => {
@@ -542,7 +558,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   </td>
 
                   {/* 4. Quarter with Dedicated Color */}
-                  <td className="text-center">{renderQuarterBadge(record.quarter)}</td>
+                  <td className="text-center">{renderQuarterBadge(record)}</td>
 
                   {/* 5. Financial Year */}
                   <td className="text-center">
@@ -629,7 +645,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   <h3 className="text-base font-bold text-slate-900">Reject Edit Request</h3>
                   <p className="text-xs text-slate-500">
                     {decisionRecord.name} • {decisionRecord.id} •{" "}
-                    {decisionRecord.quarter} {decisionRecord.financialYear}
+                    {formatQuarterDisplay(decisionRecord.quarter)} {decisionRecord.financialYear}
                   </p>
                 </div>
               </div>
@@ -729,7 +745,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Approve Edit Request</h3>
                   <p className="text-xs text-slate-500">
-                    {accessPreviewRecord.name} • {accessPreviewRecord.id} • {accessPreviewRecord.quarter}{" "}
+                    {accessPreviewRecord.name} • {accessPreviewRecord.id} • {formatQuarterDisplay(accessPreviewRecord.quarter)}{" "}
                     {accessPreviewRecord.financialYear}
                   </p>
                 </div>
@@ -835,7 +851,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-slate-500 font-medium">Review Period</span>
                   <span className="font-semibold text-slate-700">
-                    {reassignRecord.quarter} • FY {reassignRecord.financialYear}
+                    {formatQuarterDisplay(reassignRecord.quarter)} • FY {reassignRecord.financialYear}
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs">

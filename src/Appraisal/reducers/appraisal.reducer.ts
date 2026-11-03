@@ -56,6 +56,7 @@ export const AppraisalApi = {
     filters?: {
       financialYear?: string;
       quarter?: string;
+      reviewPeriod?: string;
       status?: string;
       page?: number;
       limit?: number;
@@ -86,6 +87,7 @@ export const AppraisalApi = {
           employeeId,
           ...(filters?.financialYear ? { financialYear: filters.financialYear } : {}),
           ...(filters?.quarter ? { quarter: filters.quarter } : {}),
+          ...(filters?.reviewPeriod ? { reviewPeriod: filters.reviewPeriod } : {}),
           ...(filters?.status ? { status: filters.status } : {}),
           ...(filters?.page ? { page: filters.page } : {}),
           ...(filters?.limit ? { limit: filters.limit } : {}),

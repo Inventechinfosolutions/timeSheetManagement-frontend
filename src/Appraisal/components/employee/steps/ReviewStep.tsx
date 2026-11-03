@@ -152,7 +152,11 @@ export const ReviewStep: React.FC<StepProps> = ({
   const [animatingStar, setAnimatingStar] = useState<number | null>(null);
   const [shatteringStars, setShatteringStars] = useState<number[]>([]);
 
-  const fallbackPeriod = getQuarterPeriod(assignment?.quarter, assignment?.financialYear);
+  const fallbackPeriod = getQuarterPeriod(
+    assignment?.quarter,
+    assignment?.financialYear,
+    assignment?.reviewPeriod,
+  );
   const reviewPeriodStart = formData.reviewPeriodStart || fallbackPeriod.start || "—";
   const reviewPeriodEnd = formData.reviewPeriodEnd || fallbackPeriod.end || "—";
 

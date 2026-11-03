@@ -262,6 +262,24 @@ body.modal-open-active .sidebar-footer {
   border: 1px solid #E9D5FF;
 }
 
+.qr-quarter-yearly {
+  background: #EEF2FF;
+  color: #3730A3;
+  border: 1px solid #C7D2FE;
+}
+
+.qr-yearly-quarters {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.28rem;
+}
+
+.qr-quarter-pill.is-empty {
+  opacity: 0.45;
+}
+
 /* Financial Year pill */
 .qr-fy-pill {
   display: inline-flex;

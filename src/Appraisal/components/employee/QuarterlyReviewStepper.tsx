@@ -36,7 +36,7 @@ import {
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
 import { AppraisalApi, readApiError, toReviewFormData, toStepPatch, toProjectWriteBody, changedProjectFields } from "../../reducers/appraisal.reducer";
 import { readProjectList } from "../../utils/appraisalHelpers";
-import { EmployeePerformanceStatus, QuaterlyEnum, QuarterlyReviewStatus } from "../../enums/appraisal.enums";
+import { EmployeePerformanceStatus, QuaterlyEnum, QuarterlyReviewStatus, ReviewPeriod } from "../../enums/appraisal.enums";
 import { message } from "antd";
 import OverviewStep from "./steps/OverviewStep";
 import AchievementsStep from "./steps/AchievementsStep";
@@ -222,14 +222,31 @@ const stepSavedMessage = (stepId: number) => {
   return `${label} saved successfully`;
 };
 
-const quarterValue = (value: string): QuaterlyEnum | null => {
+const quarterValue = (value?: any, reviewPeriod?: string): QuaterlyEnum | null => {
+  if (reviewPeriod === ReviewPeriod.YEARLY) {
+    return QuaterlyEnum.YEARLY;
+  }
+  if (!value) return null;
+  if (typeof value === "object") {
+    return QuaterlyEnum.YEARLY;
+  }
+  const str = String(value).trim().toUpperCase();
   if (
-    value === QuaterlyEnum.Q1 ||
-    value === QuaterlyEnum.Q2 ||
-    value === QuaterlyEnum.Q3 ||
-    value === QuaterlyEnum.Q4
+    str === QuaterlyEnum.Q1 ||
+    str === QuaterlyEnum.Q2 ||
+    str === QuaterlyEnum.Q3 ||
+    str === QuaterlyEnum.Q4 ||
+    str === QuaterlyEnum.YEARLY
   ) {
-    return value;
+    return str as QuaterlyEnum;
+  }
+  if (
+    str.includes("YEARLY") ||
+    str.includes("Q1, Q2") ||
+    str.includes("Q1,Q2") ||
+    str.includes("Q1 - Q4")
+  ) {
+    return QuaterlyEnum.YEARLY;
   }
   return null;
 };
@@ -688,7 +705,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (performanceIdRef.current) {
       return performanceIdRef.current;
     }
-    const quarter = quarterValue(assignment.quarter);
+    const quarter = quarterValue(assignment.quarter, assignment.reviewPeriod);
     if (!assignment.employeeId || !quarter || !assignment.financialYear) {
       throw new Error("This quarter is missing an employee, quarter, or financial year.");
     }
@@ -795,7 +812,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     targetStatus?: EmployeePerformanceStatus | string,
     stepNumber?: number,
   ): Promise<boolean> => {
-    const quarter = quarterValue(assignment.quarter);
+    const quarter = quarterValue(assignment.quarter, assignment.reviewPeriod);
     if (!assignment.employeeId || !quarter || !assignment.financialYear) {
       setSaveError("This quarter is missing an employee, quarter, or financial year.");
       return false;
@@ -1013,11 +1030,11 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     updatedProjects: PerformanceProject[],
   ): Promise<boolean> => {
     let existingId = performanceIdRef.current || assignment.performanceId;
-    if (!existingId && assignment.employeeId && quarterValue(assignment.quarter) && assignment.financialYear) {
+    if (!existingId && assignment.employeeId && quarterValue(assignment.quarter, assignment.reviewPeriod) && assignment.financialYear) {
       try {
         const found = await AppraisalApi.getEmployeePerformance(
           assignment.employeeId,
-          quarterValue(assignment.quarter)!,
+          quarterValue(assignment.quarter, assignment.reviewPeriod)!,
           assignment.financialYear,
         );
         if (found?.id) {
@@ -1240,7 +1257,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (!saved) {
       return;
     }
-    const quarter = quarterValue(assignment.quarter);
+    const quarter = quarterValue(assignment.quarter, assignment.reviewPeriod);
     const performanceId = performanceIdRef.current;
     if (!quarter || !performanceId) {
       return;

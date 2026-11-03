@@ -34,6 +34,7 @@ import {
 } from "../../types/appraisal.types";
 import { useEmployeeAppraisal } from "../../hooks/useEmployeeAppraisal";
 import { AppraisalFilterAll } from "../../enums/appraisal.enums";
+import { isYearlyReview, yearlyQuarterLabels, formatQuarterDisplay } from "../../utils/appraisalHelpers";
 import { AppraisalApi, formatAppraisalDisplayDate, isResubmittedStatus, readApiError, toReviewFormData } from "../../reducers/appraisal.reducer";
 import QuarterlyReviewStepper from "./QuarterlyReviewStepper";
 import EvaluationPanel from "../manager/EvaluationPanel";
@@ -62,14 +63,32 @@ export const EmptyReviewIllustration: React.FC = () => {
   );
 };
 
-const renderQuarterBadge = (quarter: string) => {
-  const q = (quarter || "").trim().toUpperCase();
+const renderQuarterBadge = (assignmentOrQuarter: QuarterlyReviewAssignment | string) => {
+  const assignment = typeof assignmentOrQuarter === "string"
+    ? { quarter: assignmentOrQuarter }
+    : assignmentOrQuarter;
+  if (isYearlyReview(assignment)) {
+    return (
+      <div className="qr-yearly-quarters">
+        <span className="qr-quarter-pill qr-quarter-yearly">Yearly</span>
+        {yearlyQuarterLabels(assignment.yearlyQuarterReviews).map((item) => (
+          <span
+            key={item.quarter}
+            className={`qr-quarter-pill qr-quarter-${item.quarter.toLowerCase()} ${item.assigned ? "" : "is-empty"}`}
+          >
+            {item.quarter}
+          </span>
+        ))}
+      </div>
+    );
+  }
+  const q = formatQuarterDisplay(assignment.quarter).trim().toUpperCase();
   let qClass = "qr-quarter-q1";
   if (q === "Q2") qClass = "qr-quarter-q2";
   else if (q === "Q3") qClass = "qr-quarter-q3";
   else if (q === "Q4") qClass = "qr-quarter-q4";
 
-  return <span className={`qr-quarter-pill ${qClass}`}>{quarter}</span>;
+  return <span className={`qr-quarter-pill ${qClass}`}>{formatQuarterDisplay(assignment.quarter)}</span>;
 };
 
 const renderStatusBadge = (status: string) => {
@@ -324,7 +343,7 @@ interface DeadlineHeaderCardProps {
   } | null;
   onOpenEdit: (assignment: QuarterlyReviewAssignment) => void;
   onOpenView: (assignment: QuarterlyReviewAssignment) => void;
-  renderQuarterBadge: (quarter: string) => React.ReactNode;
+  renderQuarterBadge: (assignmentOrQuarter: QuarterlyReviewAssignment | string) => React.ReactNode;
 }
 
 const DeadlineHeaderCard: React.FC<DeadlineHeaderCardProps> = ({
@@ -431,7 +450,7 @@ const DeadlineHeaderCard: React.FC<DeadlineHeaderCardProps> = ({
             <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug">
               Deadline
             </span>
-            {deadlineInfo && renderQuarterBadge(deadlineInfo.assignment.quarter)}
+            {deadlineInfo && renderQuarterBadge(deadlineInfo.assignment)}
           </div>
 
           {deadlineInfo ? (
@@ -874,7 +893,8 @@ export const AppraisalDashboard: React.FC = () => {
       assignment.quarter === "Q1" ||
       assignment.quarter === "Q2" ||
       assignment.quarter === "Q3" ||
-      assignment.quarter === "Q4"
+      assignment.quarter === "Q4" ||
+      assignment.quarter === "YEARLY"
     ) ? (assignment.quarter as any) : undefined;
     if (assignment.employeeId && q && assignment.financialYear) {
       try {
@@ -1481,7 +1501,7 @@ export const AppraisalDashboard: React.FC = () => {
                                   {index + 1}
                                 </td>
                                 {/* 1. Quarter with Dedicated Color */}
-                                <td>{renderQuarterBadge(assignment.quarter)}</td>
+                                <td>{renderQuarterBadge(assignment)}</td>
 
                                 {/* 2. Financial Year */}
                                 <td>
@@ -1658,7 +1678,7 @@ export const AppraisalDashboard: React.FC = () => {
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            {renderQuarterBadge(assignment.quarter)}
+                            {renderQuarterBadge(assignment)}
                             <span className="qr-fy-pill">
                               {assignment.financialYear}
                             </span>
@@ -1855,7 +1875,7 @@ export const AppraisalDashboard: React.FC = () => {
                     Authenticate Rating Access
                   </h3>
                   <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
-                    Enter your login password to see the final rating and average for {ratingTarget.quarter}.
+                    Enter your login password to see the final rating and average for {formatQuarterDisplay(ratingTarget.quarter)}.
                   </p>
                 </div>
                 <div>
