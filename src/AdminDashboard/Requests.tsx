@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
+import axios from "axios";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
@@ -77,6 +78,37 @@ const Requests = () => {
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const ceoRequestRole = isCeoOrGmUser(currentUser) ? "MANAGER" : undefined;
+  const isPlainManager =
+    !isAdminAccess(currentUser) &&
+    (currentUser?.userType === UserType.MANAGER ||
+      String(currentUser?.role || "").toUpperCase() === UserType.MANAGER);
+  const [canSelfApprove, setCanSelfApprove] = useState(false);
+
+  useEffect(() => {
+    if (!isPlainManager) return;
+    let cancelled = false;
+    axios
+      .get("/api/leave-manager/self-approval")
+      .then((res) => {
+        if (!cancelled) setCanSelfApprove(Boolean(res.data?.allowed));
+      })
+      .catch(() => {
+        if (!cancelled) setCanSelfApprove(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isPlainManager]);
+
+  /** Manager's own request that only the GM may review (department leave approval = MANUAL). */
+  const isOwnBlockedRequest = (req?: any) => {
+    if (!isPlainManager || canSelfApprove) return false;
+    const myEmpId = (currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase();
+    if (!myEmpId) return false;
+    const reqEmpId = (req?.employeeId || "").trim().toLowerCase();
+    const reqInternId = (req?.internId || "").trim().toLowerCase();
+    return reqEmpId === myEmpId || reqInternId === myEmpId;
+  };
 
   // Configure AntD message position to be below the header
   useEffect(() => {
@@ -193,15 +225,9 @@ const Requests = () => {
     employeeName: string,
     req?: any,
   ) => {
-    const isManager = currentUser?.userType === UserType.MANAGER || String(currentUser?.role || "").toUpperCase() === UserType.MANAGER;
-    if (isManager && !isAdminAccess(currentUser)) {
-      const myEmpId = (currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase();
-      const reqEmpId = (req?.employeeId || "").trim().toLowerCase();
-      const reqInternId = ((req as any)?.internId || "").trim().toLowerCase();
-      if (myEmpId && (reqEmpId === myEmpId || reqInternId === myEmpId)) {
-        message.warning("Managers cannot approve or reject their own requests. These are reviewed by GM.");
-        return;
-      }
+    if (isOwnBlockedRequest(req)) {
+      message.warning("Managers cannot approve or reject their own requests. These are reviewed by GM.");
+      return;
     }
 
     setConfirmModal({
@@ -512,16 +538,8 @@ const Requests = () => {
   };
 
   const filteredRequests = (entities || []).filter((req) => {
-    // If logged-in user is a Manager (not Admin/CEO/GM), exclude their own requests from approval table
-    const isManager = currentUser?.userType === UserType.MANAGER || String(currentUser?.role || "").toUpperCase() === UserType.MANAGER;
-    if (isManager && !isAdminAccess(currentUser)) {
-      const myEmpId = (currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase();
-      const reqEmpId = (req.employeeId || "").trim().toLowerCase();
-      const reqInternId = ((req as any).internId || "").trim().toLowerCase();
-      if (myEmpId && (reqEmpId === myEmpId || reqInternId === myEmpId)) {
-        return false;
-      }
-    }
+    // Manager's own requests stay out of the approval table unless the department allows self-approval
+    if (isOwnBlockedRequest(req)) return false;
 
     if (!debouncedSearchTerm) return true;
     const s = debouncedSearchTerm.toLowerCase().trim();
@@ -1595,10 +1613,7 @@ const Requests = () => {
                       {/* Checkbox — enabled for Pending, Cancellation Requested, Modification Requested */}
                       {isBulkEligibleStatus && (
                         <td className="py-3 pl-4 pr-2 align-middle text-center">
-                          {!isAdminAccess(currentUser) &&
-                          (currentUser?.userType === UserType.MANAGER || String(currentUser?.role || "").toUpperCase() === UserType.MANAGER) &&
-                          ((currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase() === (req.employeeId || "").trim().toLowerCase() ||
-                           (currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase() === ((req as any).internId || "").trim().toLowerCase()) ? null : (
+                          {isOwnBlockedRequest(req) ? null : (
                           <input
                             type="checkbox"
                             checked={selectedIds.has(req.id)}
@@ -1890,10 +1905,7 @@ const Requests = () => {
                           >
                             <Eye size={18} />
                           </button>
-                          {!isAdminAccess(currentUser) &&
-                          (currentUser?.userType === UserType.MANAGER || String(currentUser?.role || "").toUpperCase() === UserType.MANAGER) &&
-                          ((currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase() === (req.employeeId || "").trim().toLowerCase() ||
-                           (currentUser?.employeeId || currentUser?.loginId || "").trim().toLowerCase() === ((req as any).internId || "").trim().toLowerCase()) ? (
+                          {isOwnBlockedRequest(req) ? (
                             <span className="px-2 py-1 text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg whitespace-nowrap">
                               Reviewed by GM
                             </span>

@@ -16,9 +16,11 @@ import {
   fetchLeaveDepartments,
   fetchLeaveManagerEmployees,
   saveLeaveEntries,
+  updateLeaveApproval,
   updateLeaveCalculationType,
 } from "../reducers/leaveManager.reducer";
 import {
+  LeaveApprovalType,
   LeaveCalculationType,
   LeaveDepartment,
   LeaveManagerEmployee,
@@ -83,6 +85,7 @@ const LeaveCalculationManagement = () => {
   const [inputs, setInputs] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [updatingApprovalId, setUpdatingApprovalId] = useState<number | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
 
   const yearOptions = [currentYear, currentYear - 1, currentYear - 2];
@@ -135,6 +138,33 @@ const LeaveCalculationManagement = () => {
           setToast({ message: String(err || "Failed to update"), type: "error" });
         } finally {
           setUpdatingId(null);
+        }
+      },
+    });
+  };
+
+  const handleApprovalChange = (dept: LeaveDepartment, next: LeaveApprovalType) => {
+    Modal.confirm({
+      title: `Set manager leave approval for ${dept.departmentName} to ${next === "AUTO" ? "Auto" : "Manual"}?`,
+      content:
+        next === "AUTO"
+          ? "The manager of this department can approve or reject his own requests. The General Manager can also review them."
+          : "Only the General Manager approves requests raised by this department's manager.",
+      okText: "Yes, change",
+      cancelText: "Cancel",
+      centered: true,
+      onOk: async () => {
+        setUpdatingApprovalId(dept.id);
+        try {
+          await dispatch(updateLeaveApproval({ id: dept.id, leaveApproval: next })).unwrap();
+          setToast({
+            message: `${dept.departmentName}: ${next === "AUTO" ? "manager can self-approve" : "GM approves manager requests"}`,
+            type: "success",
+          });
+        } catch (err: any) {
+          setToast({ message: String(err || "Failed to update"), type: "error" });
+        } finally {
+          setUpdatingApprovalId(null);
         }
       },
     });
@@ -278,20 +308,21 @@ const LeaveCalculationManagement = () => {
                   <th className="px-5 py-3 font-semibold">Employees</th>
                   <th className="px-5 py-3 font-semibold">Leave Calculation</th>
                   <th className="px-5 py-3 font-semibold">Entries ({year})</th>
+                  <th className="px-5 py-3 font-semibold">Manager Leave Approval</th>
                   <th className="px-5 py-3 font-semibold text-right">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {departmentsLoading && departments.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-10 text-center text-[#A3AED0]">
+                    <td colSpan={6} className="px-5 py-10 text-center text-[#A3AED0]">
                       <Loader2 className="inline animate-spin mr-2" size={16} />
                       Loading departments…
                     </td>
                   </tr>
                 ) : departments.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-5 py-10 text-center text-[#A3AED0]">
+                    <td colSpan={6} className="px-5 py-10 text-center text-[#A3AED0]">
                       No departments found
                     </td>
                   </tr>
@@ -341,6 +372,23 @@ const LeaveCalculationManagement = () => {
                           ) : (
                             <span className="text-xs text-[#A3AED0]">—</span>
                           )}
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-2">
+                            <TypeToggle
+                              value={dept.leaveApproval || "MANUAL"}
+                              disabled={updatingApprovalId === dept.id}
+                              onChange={(next) => handleApprovalChange(dept, next)}
+                            />
+                            {updatingApprovalId === dept.id && (
+                              <Loader2 size={14} className="animate-spin text-[#A3AED0]" />
+                            )}
+                          </div>
+                          <div className="mt-1 text-[10px] text-[#A3AED0]">
+                            {dept.leaveApproval === "AUTO"
+                              ? "Manager self-approves · GM can review"
+                              : "GM approves manager requests"}
+                          </div>
                         </td>
                         <td className="px-5 py-3 text-right">
                           {manual ? (
