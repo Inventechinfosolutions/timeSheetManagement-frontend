@@ -433,7 +433,10 @@ export const changedProjectFields = (
 // 
 export const formatQuarterDisplay = (quarter: any): string => {
   if (!quarter) return "";
-  if (typeof quarter === "string") return quarter;
+  if (typeof quarter === "string") {
+    if (quarter.toUpperCase() === "YEARLY") return "Yearly (Q1 - Q4)";
+    return quarter;
+  }
   if (Array.isArray(quarter)) return quarter.join(", ");
   if (typeof quarter === "object") {
     const keys = ["Q1", "Q2", "Q3", "Q4"];
@@ -444,25 +447,36 @@ export const formatQuarterDisplay = (quarter: any): string => {
     const vals = Object.values(quarter).filter((v) => typeof v === "string" || typeof v === "number");
     return vals.length ? vals.join(", ") : Object.keys(quarter).join(", ");
   }
-  return String(quarter);
+  const str = String(quarter);
+  if (str.toUpperCase() === "YEARLY") return "Yearly (Q1 - Q4)";
+  return str;
 };
 
 export const isYearlyReview = (record?: {
   quarter?: any;
   reviewPeriod?: string;
-}): boolean =>
-  record?.reviewPeriod === ReviewPeriod.YEARLY ||
-  record?.quarter === "YEARLY" ||
-  (typeof record?.quarter === "object" && record?.quarter !== null) ||
-  String(record?.quarter || "").toUpperCase().includes("Q1, Q2");
+}): boolean => {
+  const period = String(record?.reviewPeriod || "").toUpperCase();
+  const qStr = String(record?.quarter || "").toUpperCase();
+  return (
+    period === ReviewPeriod.YEARLY ||
+    period === "YEARLY" ||
+    qStr === "YEARLY" ||
+    (typeof record?.quarter === "object" && record?.quarter !== null) ||
+    qStr.includes("Q1, Q2") ||
+    qStr.includes("YEARLY")
+  );
+};
 
 export const yearlyQuarterLabels = (
   reviews?: YearlyQuarterReviews | null,
-): Array<{ quarter: string; assigned: boolean }> =>
-  (["Q1", "Q2", "Q3", "Q4"] as const).map((quarter) => ({
+): Array<{ quarter: string; assigned: boolean }> => {
+  const hasReviews = Boolean(reviews && Object.keys(reviews).length > 0);
+  return (["Q1", "Q2", "Q3", "Q4"] as const).map((quarter) => ({
     quarter,
-    assigned: Boolean(reviews?.[quarter]?.id),
+    assigned: hasReviews ? Boolean(reviews?.[quarter]?.id) : true,
   }));
+};
 
 export const toManagerReviewRecord = (
   review: ManagerReviewApiRecord | EmployeeReviewDetail,

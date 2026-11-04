@@ -69,26 +69,49 @@ const renderQuarterBadge = (assignmentOrQuarter: QuarterlyReviewAssignment | str
     : assignmentOrQuarter;
   if (isYearlyReview(assignment)) {
     return (
-      <div className="qr-yearly-quarters">
-        <span className="qr-quarter-pill qr-quarter-yearly">Yearly</span>
-        {yearlyQuarterLabels(assignment.yearlyQuarterReviews).map((item) => (
-          <span
-            key={item.quarter}
-            className={`qr-quarter-pill qr-quarter-${item.quarter.toLowerCase()} ${item.assigned ? "" : "is-empty"}`}
-          >
-            {item.quarter}
-          </span>
-        ))}
+      <div className="qr-yearly-capsule" title="Yearly Review (Q1 - Q4)">
+        <span className="qr-yearly-capsule-tag">Yearly</span>
+        <span className="qr-yearly-capsule-divider" />
+        <div className="qr-yearly-capsule-quarters">
+          {yearlyQuarterLabels(assignment.yearlyQuarterReviews).map((item) => (
+            <span
+              key={item.quarter}
+              className={`qr-capsule-q qr-quarter-${item.quarter.toLowerCase()} ${item.assigned ? "" : "is-empty"}`}
+              title={`${item.quarter}${item.assigned ? "" : " (Pending)"}`}
+            >
+              {item.quarter}
+            </span>
+          ))}
+        </div>
       </div>
     );
   }
-  const q = formatQuarterDisplay(assignment.quarter).trim().toUpperCase();
+  const qRaw = formatQuarterDisplay(assignment.quarter).trim();
+  if (qRaw.includes(",")) {
+    const parts = qRaw.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
+    return (
+      <div className="qr-yearly-capsule">
+        <div className="qr-yearly-capsule-quarters">
+          {parts.map((p) => {
+            const qClass =
+              p === "Q2" ? "qr-quarter-q2" : p === "Q3" ? "qr-quarter-q3" : p === "Q4" ? "qr-quarter-q4" : "qr-quarter-q1";
+            return (
+              <span key={p} className={`qr-capsule-q ${qClass}`}>
+                {p}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+  const q = qRaw.toUpperCase();
   let qClass = "qr-quarter-q1";
   if (q === "Q2") qClass = "qr-quarter-q2";
   else if (q === "Q3") qClass = "qr-quarter-q3";
   else if (q === "Q4") qClass = "qr-quarter-q4";
 
-  return <span className={`qr-quarter-pill ${qClass}`}>{formatQuarterDisplay(assignment.quarter)}</span>;
+  return <span className={`qr-quarter-pill ${qClass}`}>{qRaw}</span>;
 };
 
 const renderStatusBadge = (status: string) => {
@@ -1479,7 +1502,7 @@ export const AppraisalDashboard: React.FC = () => {
                         <thead>
                           <tr>
                             <th className="text-center min-w-[70px]">Sl No</th>
-                            <th className="text-left min-w-[110px]">Quarter</th>
+                            <th className="text-left min-w-[170px]">Quarter</th>
                             <th className="text-left min-w-[150px]">Financial Year</th>
                             <th className="text-center min-w-[130px]">Assigned By</th>
                             <th className="text-center min-w-[140px]">Assigned Date</th>

@@ -191,26 +191,49 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   const renderQuarterBadge = (record: ManagerQuarterlyReviewRecord) => {
     if (isYearlyReview(record)) {
       return (
-        <div className="qr-yearly-quarters">
-          <span className="qr-quarter-pill qr-quarter-yearly">Yearly</span>
-          {yearlyQuarterLabels(record.yearlyQuarterReviews).map((item) => (
-            <span
-              key={item.quarter}
-              className={`qr-quarter-pill qr-quarter-${item.quarter.toLowerCase()} ${item.assigned ? "" : "is-empty"}`}
-            >
-              {item.quarter}
-            </span>
-          ))}
+        <div className="qr-yearly-capsule" title="Yearly Review (Q1 - Q4)">
+          <span className="qr-yearly-capsule-tag">Yearly</span>
+          <span className="qr-yearly-capsule-divider" />
+          <div className="qr-yearly-capsule-quarters">
+            {yearlyQuarterLabels(record.yearlyQuarterReviews).map((item) => (
+              <span
+                key={item.quarter}
+                className={`qr-capsule-q qr-quarter-${item.quarter.toLowerCase()} ${item.assigned ? "" : "is-empty"}`}
+                title={`${item.quarter}${item.assigned ? "" : " (Pending)"}`}
+              >
+                {item.quarter}
+              </span>
+            ))}
+          </div>
         </div>
       );
     }
-    const q = formatQuarterDisplay(record.quarter).trim().toUpperCase();
+    const qRaw = formatQuarterDisplay(record.quarter).trim();
+    if (qRaw.includes(",")) {
+      const parts = qRaw.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
+      return (
+        <div className="qr-yearly-capsule">
+          <div className="qr-yearly-capsule-quarters">
+            {parts.map((p) => {
+              const qClass =
+                p === "Q2" ? "qr-quarter-q2" : p === "Q3" ? "qr-quarter-q3" : p === "Q4" ? "qr-quarter-q4" : "qr-quarter-q1";
+              return (
+                <span key={p} className={`qr-capsule-q ${qClass}`}>
+                  {p}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+    const q = qRaw.toUpperCase();
     let qClass = "qr-quarter-q1";
     if (q === "Q2") qClass = "qr-quarter-q2";
     else if (q === "Q3") qClass = "qr-quarter-q3";
     else if (q === "Q4") qClass = "qr-quarter-q4";
 
-    return <span className={`qr-quarter-pill ${qClass}`}>{formatQuarterDisplay(record.quarter)}</span>;
+    return <span className={`qr-quarter-pill ${qClass}`}>{qRaw}</span>;
   };
 
   const renderRating = (rating: string) => {
@@ -494,7 +517,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               <th className="text-left min-w-[120px]">Employee ID</th>
               <th className="text-left min-w-[160px]">Designation</th>
               <th className="text-left min-w-[140px]">Department</th>
-              <th className="text-center min-w-[90px]">Quarter</th>
+              <th className="text-center min-w-[170px]">Quarter</th>
               <th className="text-center min-w-[125px]">Financial Year</th>
               <th className="text-center min-w-[120px]">Assigned Date</th>
               <th className="text-center min-w-[105px]">Deadline</th>
