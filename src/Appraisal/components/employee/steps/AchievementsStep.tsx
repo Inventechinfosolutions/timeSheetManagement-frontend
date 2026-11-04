@@ -147,7 +147,7 @@ const AppraisalSelectWithOther: React.FC<AppraisalSelectWithOtherProps> = ({
         ) : (
           <span
             className={`flex-1 min-w-0 text-left truncate ${
-              !value ? "text-slate-400 font-normal text-sm" : "text-[#0F172A] text-sm font-normal"
+              !value ? "text-[#475569] font-normal text-sm" : "text-[#0F172A] text-sm font-normal"
             }`}
           >
             {value || placeholder}
@@ -901,15 +901,12 @@ export const AchievementsStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div id="field-projects" className="flex items-start justify-between gap-3 border-b border-[#E2E8F0] pb-4 scroll-mt-24">
+      <div id="field-projects" className="flex items-start justify-between gap-3 border-b border-[#64748B] pb-4 scroll-mt-24">
         <div>
           <h3 className="text-lg font-bold text-[#0F172A]">
             <span className="eval-title-anim">Step 2: Key Achievements & Projects</span>
             <span className="eval-title-accent-line" />
           </h3>
-          <p className="text-xs text-[#64748B] mt-1 eval-subtitle-anim">
-            Detail your project deliverables, project role, key responsibilities, challenges, and solutions.
-          </p>
         </div>
         {!readOnly && (
           <button
@@ -1194,7 +1191,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
             {/* Selected Tags */}
             <div className="flex flex-wrap items-center gap-1.5">
               {technologiesUsed.length === 0 ? (
-                <span className="text-xs text-[#94A3B8] italic">No technologies selected yet. Click from suggested or type below:</span>
+                <span className="text-xs text-[#475569] italic">No technologies selected yet. Click from suggested or type below:</span>
               ) : (
                 technologiesUsed.map((tech) => (
                   <span
@@ -1311,7 +1308,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 </span>
               </button>
             )}
-            <span className="text-[11px] text-[#64748B] font-medium">
+            <span className="text-[11px] text-[#334155] font-medium">
               PDF, Word, Excel, or Image
             </span>
             {uploadError && (
@@ -1326,7 +1323,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 type="button"
                 onClick={handleCancelEdit}
                 disabled={savingProject}
-                className="px-3.5 py-2 text-xs font-bold text-[#64748B] hover:text-[#0F172A] bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3.5 py-2 text-xs font-bold text-[#334155] hover:text-[#0F172A] bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -1361,7 +1358,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
         {projects.length > 0 && (
           <div ref={accordionContainerRef} className="space-y-2 pt-2">
             <div className="flex items-center justify-between px-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#334155]">
                 Added Projects ({projects.length})
               </span>
             </div>
@@ -1460,7 +1457,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                         )}
 
                         {/* Accordion Chevron */}
-                        <div className="p-1 rounded-lg text-[#64748B] group-hover:text-[#2563EB] transition-colors">
+                        <div className="p-1 rounded-lg text-[#334155] group-hover:text-[#2563EB] transition-colors">
                           <ChevronDown
                             className={`w-4 h-4 transition-transform duration-200 ease-in-out ${
                               isExpanded ? "rotate-180 text-[#2563EB]" : ""
@@ -1706,7 +1703,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
               type="button"
               disabled={isDeletingProject}
               onClick={handleCancelDelete}
-              className="absolute top-3.5 right-3.5 text-slate-400 hover:text-slate-700 w-7 h-7 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-40"
+              className="absolute top-3.5 right-3.5 text-[#475569] hover:text-slate-700 w-7 h-7 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-40"
               title="Close"
             >
               <X className="w-4 h-4" />
@@ -1733,7 +1730,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 <Trash2 className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block leading-none mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#475569] block leading-none mb-1">
                   Project to be deleted
                 </span>
                 <p className="text-xs sm:text-sm font-bold text-slate-800 truncate" title={projectToDelete.name}>

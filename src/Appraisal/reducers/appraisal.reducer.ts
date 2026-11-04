@@ -279,9 +279,12 @@ export const AppraisalApi = {
     const response = await axios.get<AnnualSummaryRecord>(
       `/api/annual-appraisal/${encodeURIComponent(employeeId)}/${encodeURIComponent(financialYear)}`,
       {
+        params: { _ts: Date.now() },
         headers: {
           "x-appraisal-password": password,
-          "Cache-Control": "no-store",
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+          Pragma: "no-cache",
+          Expires: "0",
         },
         skipGlobalLoader: true,
       },
@@ -293,10 +296,16 @@ export const AppraisalApi = {
     const response = await axios.get<RevealedRating>(
       `${QUARTERLY_REVIEW_URL}/${reviewId}/reveal-rating`,
       {
-        params: { employeeId },
+        params: {
+          employeeId,
+          // Cache-buster: never serve a previous reveal without a fresh password check.
+          _ts: Date.now(),
+        },
         headers: {
           "x-appraisal-password": password,
-          "Cache-Control": "no-store",
+          "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+          Pragma: "no-cache",
+          Expires: "0",
         },
         skipGlobalLoader: true,
       },

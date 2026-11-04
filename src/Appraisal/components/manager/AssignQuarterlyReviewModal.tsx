@@ -268,6 +268,10 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     setSelectedQuarter("");
     clearFieldError(AssignFormField.REVIEW_PERIOD);
     clearFieldError(AssignFormField.QUARTER);
+    // Same for Quarterly and Yearly: assign date = today, manager picks deadline
+    setFromDate(todayDisplayDate());
+    setToDate("");
+    clearFieldError(AssignFormField.DEADLINE);
   };
 
   const handleQuarterChange = (quarter: string) => {
@@ -398,9 +402,13 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     const quarter = (Object.values(QuaterlyEnum) as string[]).includes(selectedQuarter)
       ? (selectedQuarter as QuaterlyEnum)
       : undefined;
-    const assignerId = isAdmin
-      ? "Admin"
-      : (managerId || currentUser?.loginId || "MANAGER");
+    // Always store the real person id so Assigned By shows their name (not "Admin").
+    const assignerId =
+      managerId ||
+      currentUser?.employeeId ||
+      currentUser?.loginId ||
+      currentUser?.aliasLoginName ||
+      "MANAGER";
     const assignedBy = isAdmin ? "ADMIN" : "MANAGER";
     if ((!isYearly && !quarter) || !assignerId) return;
 
@@ -776,7 +784,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             </div>
           </div>
 
-          {/* ASSIGNED DATE (today) & TO (DEADLINE) */}
+          {/* Same for Quarterly + Yearly: assigned date + deadline picker (FY comes from dropdown) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div className="assign-modal-form-section">
               <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
@@ -787,7 +795,6 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               </div>
             </div>
 
-            {/* TO (DEADLINE) * */}
             <div className="assign-modal-form-section">
               <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
                 TO (DEADLINE) <span className="text-red-500">*</span>
@@ -813,37 +820,37 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
                     classNames={{
                       popup: "hide-other-months show-weekdays assign-ant-datepicker-popup",
                     }}
-                  disabledDate={(currentDate) => {
-                    if (!fromDate || !currentDate) return false;
-                    const assignedMoment = dayjs(fromDate, "DD-MM-YYYY");
-                    return currentDate.isSame(assignedMoment, "day") || currentDate.isBefore(assignedMoment, "day");
-                  }}
-                  value={toDate ? dayjs(toDate, "DD-MM-YYYY") : null}
-                  onChange={(date) => {
-                    const formatted = date ? date.format("DD-MM-YYYY") : "";
-                    setToDate(formatted);
-                    const deadlineIso = toIsoDate(formatted);
-                    const assignedIso = toIsoDate(fromDate);
-                    if (deadlineIso && assignedIso && deadlineIso <= assignedIso) {
-                      showFieldError(AssignFormField.DEADLINE, AppraisalCopy.deadlineAfterAssigned);
-                      return;
-                    }
-                    clearFieldError(AssignFormField.DEADLINE);
-                  }}
-                  format="DD-MM-YYYY"
-                  placeholder="dd-mm-yyyy"
-                  className={`w-full! h-[42px]! px-3.5! py-2! rounded-xl! bg-white! border! border-blue-200/70! hover:border-[#2563EB]! focus:border-[#2563EB]! transition-all text-sm! font-medium! text-[#0F172A]! shadow-none ${
-                    errorField === AssignFormField.DEADLINE ? "is-error !border-red-500" : ""
-                  }`}
-                  getPopupContainer={() => document.body}
-                />
-              </ConfigProvider>
+                    disabledDate={(currentDate) => {
+                      if (!fromDate || !currentDate) return false;
+                      const assignedMoment = dayjs(fromDate, "DD-MM-YYYY");
+                      return currentDate.isSame(assignedMoment, "day") || currentDate.isBefore(assignedMoment, "day");
+                    }}
+                    value={toDate ? dayjs(toDate, "DD-MM-YYYY") : null}
+                    onChange={(date) => {
+                      const formatted = date ? date.format("DD-MM-YYYY") : "";
+                      setToDate(formatted);
+                      const deadlineIso = toIsoDate(formatted);
+                      const assignedIso = toIsoDate(fromDate);
+                      if (deadlineIso && assignedIso && deadlineIso <= assignedIso) {
+                        showFieldError(AssignFormField.DEADLINE, AppraisalCopy.deadlineAfterAssigned);
+                        return;
+                      }
+                      clearFieldError(AssignFormField.DEADLINE);
+                    }}
+                    format="DD-MM-YYYY"
+                    placeholder="dd-mm-yyyy"
+                    className={`w-full! h-[42px]! px-3.5! py-2! rounded-xl! bg-white! border! border-blue-200/70! hover:border-[#2563EB]! focus:border-[#2563EB]! transition-all text-sm! font-medium! text-[#0F172A]! shadow-none ${
+                      errorField === AssignFormField.DEADLINE ? "is-error !border-red-500" : ""
+                    }`}
+                    getPopupContainer={() => document.body}
+                  />
+                </ConfigProvider>
+              </div>
             </div>
             {errorField === AssignFormField.DEADLINE ? (
               <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
             ) : null}
           </div>
-        </div>
 
           {/* DESCRIPTION * */}
           <div className="assign-modal-form-section">

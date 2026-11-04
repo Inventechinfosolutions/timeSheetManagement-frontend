@@ -250,15 +250,12 @@ export const TeamContributionStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-6">
       {/* Step Header */}
-      <div className="border-b border-[#E2E8F0] pb-4">
+      <div className="border-b border-[#64748B] pb-4">
         <h3 className="text-lg font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 3: Teamwork & Collaboration</span>{" "}
           <span className="text-red-500">*</span>
           <span className="eval-title-accent-line" />
         </h3>
-        <p className="text-xs text-[#64748B] mt-1 eval-subtitle-anim">
-          Rate your teamwork dimensions and detail your team collaboration, cross-team contributions, and knowledge sharing.
-        </p>
       </div>
 
       {/* 1. TOP SECTION: Evaluated Teamwork Dimensions (6 Dimensions, Rating 1-5) */}

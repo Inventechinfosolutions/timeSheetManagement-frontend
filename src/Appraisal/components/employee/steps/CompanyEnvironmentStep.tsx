@@ -518,7 +518,7 @@ const EnvironmentRatingCard: React.FC<EnvironmentRatingCardProps> = ({
       className={`p-3 sm:py-3.5 sm:px-4 rounded-2xl border-[1.5px] transition-all duration-300 bg-white flex flex-col justify-between gap-3 shadow-2xs ${
         error
           ? "border-red-400 bg-red-50/20 ring-2 ring-red-100"
-          : "border-[#E2E8F0] hover:border-[#CBD5E1]"
+          : "border-[#64748B] hover:border-[#64748B]"
       }`}
     >
       {/* Top: Check Icon, Full Title, and Qualitative Badge */}
@@ -570,7 +570,7 @@ const EnvironmentRatingCard: React.FC<EnvironmentRatingCardProps> = ({
             {value}.0
           </span>
         ) : (
-          <span className="text-[10px] font-medium text-slate-400">1–5</span>
+          <span className="text-[10px] font-medium text-[#475569]">1–5</span>
         )}
       </div>
 
@@ -667,14 +667,11 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-6">
       {/* Step Header */}
-      <div className="border-b border-[#E2E8F0] pb-3">
+      <div className="border-b border-[#64748B] pb-3">
         <h3 className="text-base sm:text-lg font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 5: Company &amp; Work Environment</span>
           <span className="eval-title-accent-line" />
         </h3>
-        <p className="text-xs text-[#64748B] mt-1 eval-subtitle-anim">
-          Rate your experience across key workplace culture, collaboration, and environment factors.
-        </p>
       </div>
 
       {/* 1. Rating Fields: 3 Cards Side-by-Side in Responsive Grid */}
@@ -748,7 +745,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
             readOnly={readOnly}
             onChange={(e) => handleTextChange("workCultureFeedback", e.target.value)}
             placeholder="Share your thoughts on the workplace culture, core values, and overall atmosphere..."
-            className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${
+            className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-[#475569] eval-placeholder-sm ${
               readOnly ? "eval-textarea-readonly" : ""
             } ${errors?.workCultureFeedback ? "eval-input-error" : ""}`}
           />
@@ -779,7 +776,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
             readOnly={readOnly}
             onChange={(e) => handleTextChange("workLifeBalance", e.target.value)}
             placeholder="Share how well your workload, schedule, and personal commitments are balanced..."
-            className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${
+            className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-[#475569] eval-placeholder-sm ${
               readOnly ? "eval-textarea-readonly" : ""
             } ${errors?.workLifeBalance ? "eval-input-error" : ""}`}
           />
@@ -812,7 +809,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
               handleTextChange("challengesAffectingProductivity", e.target.value)
             }
             placeholder="Describe any obstacles, bottlenecks, or challenges affecting your productivity..."
-            className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${
+            className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-[#475569] eval-placeholder-sm ${
               readOnly ? "eval-textarea-readonly" : ""
             } ${errors?.challengesAffectingProductivity ? "eval-input-error" : ""}`}
           />
@@ -845,7 +842,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
               handleTextChange("suggestionsForImprovement", e.target.value)
             }
             placeholder="Suggest ideas for tools, processes, training, or workplace improvement..."
-            className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-slate-400 eval-placeholder-sm ${
+            className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-[#475569] eval-placeholder-sm ${
               readOnly ? "eval-textarea-readonly" : ""
             } ${errors?.suggestionsForImprovement ? "eval-input-error" : ""}`}
           />
@@ -864,11 +861,11 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
         className={`p-2.5 sm:px-4 sm:py-2 rounded-xl border-[1.5px] transition-all duration-300 bg-white space-y-1 shadow-2xs scroll-mt-24 ${
           errors?.rateCompanyEnvironment
             ? "border-red-400 bg-red-50/20 ring-2 ring-red-100"
-            : "border-[#E2E8F0] hover:border-[#CBD5E1]"
+            : "border-[#64748B] hover:border-[#64748B]"
         }`}
       >
         <div className="flex items-center justify-between">
-          <label className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B]">
+          <label className="block text-[11px] font-extrabold uppercase tracking-wider text-[#334155]">
             Rate the Company Environment <span className="text-red-500">*</span>
           </label>
           {selectedRating > 0 ? (
@@ -877,7 +874,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
               Selected: {RATING_OPTIONS.find((r) => r.id === selectedRating)?.label} ({selectedRating}/5)
             </span>
           ) : (
-            <span className="text-[11px] font-semibold text-[#64748B]">
+            <span className="text-[11px] font-semibold text-[#334155]">
               Select 1 to 5
             </span>
           )}
@@ -905,7 +902,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
                     ? "bg-white border-blue-300 shadow-xs -translate-y-0.5"
                     : errors?.rateCompanyEnvironment
                     ? "bg-white/80 border-red-300 hover:border-red-400"
-                    : "bg-white/60 border-[#E2E8F0] hover:border-[#CBD5E1]"
+                    : "bg-white/60 border-[#64748B] hover:border-[#64748B]"
                 } ${readOnly ? "cursor-default" : ""}`}
               >
                 {/* Selected Checkmark Badge on Top Right */}
@@ -933,7 +930,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
                   className={`mt-0.5 text-[10px] sm:text-[11px] font-bold transition-all tracking-tight whitespace-nowrap text-center ${
                     isSelected
                       ? "text-[#2563EB] font-extrabold scale-105"
-                      : "text-[#64748B] group-hover:text-[#0F172A]"
+                      : "text-[#334155] group-hover:text-[#0F172A]"
                   }`}
                 >
                   {item.label}

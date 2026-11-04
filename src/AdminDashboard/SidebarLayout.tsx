@@ -100,7 +100,7 @@ const SidebarLayout = ({
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Request Management", icon: Calendar },
       { name: "Leave Management", icon: CalendarCheck },
-      { name: "Appraisal", icon: ClipboardCheck },
+      { name: "Quarterly Review", icon: ClipboardCheck },
       { name: "Access Ticket", icon: Unlock },
       { name: "Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
@@ -158,10 +158,10 @@ const SidebarLayout = ({
       case "leave-calculation":
         return "Leave Management";
       case "quarterly-review":
-      case "my-quarterly-review":
       case "appraisal":
       case "my-appraisal":
-        return "Appraisal";
+      case "my-quarterly-review":
+        return "Quarterly Review";
       case "edit-access":
         return "Access Ticket";
 

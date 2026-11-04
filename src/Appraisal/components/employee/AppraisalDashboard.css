@@ -213,7 +213,7 @@
    ========================================================================== */
 .eval-input-field {
   width: 100%;
-  border: 1.5px solid #E2E8F0;
+  border: 1.5px solid #64748B;
   border-radius: 0.5rem;
   padding: 0.75rem 1rem;
   font-size: 0.875rem;
@@ -223,9 +223,14 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+.eval-input-field::placeholder {
+  color: #475569;
+  opacity: 1;
+}
+
 .eval-input-field:hover,
 .eval-step-card:hover {
-  border-color: #CBD5E1;
+  border-color: #475569;
 }
 
 .eval-input-field:focus {

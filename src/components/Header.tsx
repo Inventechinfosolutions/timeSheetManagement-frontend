@@ -288,9 +288,11 @@ const Header = ({
         }
         return {
           path: isAdminOrReceptionist
-            ? "/admin-dashboard/appraisal"
+            ? "/admin-dashboard/quarterly-review"
             : "/manager-dashboard/appraisal",
-          label: "Go to My Appraisal →",
+          label: isAdminOrReceptionist
+            ? "Go to Team Appraisals →"
+            : "Go to My Appraisal →",
         };
       }
       return {

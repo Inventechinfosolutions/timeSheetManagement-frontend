@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import { StepProps, ReviewFormData } from "../../../types/appraisal.types";
 import { Star, Edit3, AlertCircle, CheckCircle2, ChevronDown, Calendar, FileText, Clock } from "lucide-react";
 import { getQuarterPeriod } from "../../../utils/appraisalHelpers";
@@ -325,15 +325,12 @@ export const ReviewStep: React.FC<StepProps> = ({
     <div ref={containerRef} className="space-y-6">
       {/* Step Header: hidden in view mode */}
       {!readOnly && (
-        <div className="border-b border-[#E2E8F0] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="border-b border-[#64748B] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-bold text-[#0F172A]">
               <span className="eval-title-anim">Step 6: Review & Final Submission</span>
               <span className="eval-title-accent-line" />
             </h3>
-            <p className="text-xs text-[#64748B] mt-1 eval-subtitle-anim">
-              Review all responses from previous steps. You can use Edit on any section to make changes before final submission.
-            </p>
           </div>
         </div>
       )}
@@ -343,8 +340,8 @@ export const ReviewStep: React.FC<StepProps> = ({
             ASSIGNMENT & MANAGER INSTRUCTIONS (View Mode / Review)
            =================================================================== */}
         {assignment && (
-          <div id="review-assignment-details" className="eval-step-card eval-reveal-card is-revealed space-y-3.5 border border-[#E2E8F0] hover:border-blue-300 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-            <div className="flex items-center gap-2 border-b border-[#E2E8F0] pb-2.5">
+          <div id="review-assignment-details" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-3.5 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
+            <div className="flex items-center gap-2 border-b border-[#64748B] pb-2.5">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold">
                 ℹ
               </span>
@@ -358,7 +355,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                   Assigned Quarter
                 </label>
-                <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
+                <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
                   {assignment.quarter} · {assignment.financialYear}
                 </div>
               </div>
@@ -366,7 +363,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                   Assigned Date
                 </label>
-                <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
+                <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
                   {assignment.assignedDate || "—"}
                 </div>
               </div>
@@ -374,7 +371,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                   Deadline
                 </label>
-                <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
+                <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
                   {assignment.deadline || "—"}
                 </div>
               </div>
@@ -384,7 +381,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Manager Instructions
               </label>
-              <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px]">
+              <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px]">
                 {assignment.description?.trim() || "No instructions provided."}
               </div>
             </div>
@@ -395,8 +392,8 @@ export const ReviewStep: React.FC<StepProps> = ({
             STEP 1: ROLE & QUARTER OVERVIEW
            =================================================================== */}
         {(!readOnly || hasStep1Data) && (
-          <div id="review-step-1" className="eval-step-card eval-reveal-card is-revealed space-y-3 border border-[#E2E8F0] hover:border-blue-300 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-            <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-2.5">
+          <div id="review-step-1" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-3 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
+            <div className="flex items-center justify-between border-b border-[#64748B] pb-2.5">
               <div className="flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                   1
@@ -419,7 +416,7 @@ export const ReviewStep: React.FC<StepProps> = ({
           </div>
 
           <div className="eval-stagger-item eval-stagger-3 space-y-3">
-            <div className="text-xs text-[#64748B] font-medium bg-white p-3 rounded-lg border border-[#CBD5E1]">
+            <div className="text-xs text-[#334155] font-medium bg-white p-3 rounded-lg border border-[#64748B]">
               Review Period: <strong className="text-[#0F172A] font-semibold">{reviewPeriodStart}</strong> to <strong className="text-[#0F172A] font-semibold">{reviewPeriodEnd}</strong>
             </div>
 
@@ -428,7 +425,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                   Overall Performance Summary
                 </label>
-                <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                   {formData.overallPerformanceSummary || formData.overview || "—"}
                 </div>
               </div>
@@ -437,7 +434,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                   Key Highlights
                 </label>
-                <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                   {formData.keyHighlights || "—"}
                 </div>
               </div>
@@ -446,7 +443,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                   Major Contributions
                 </label>
-                <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                   {formData.majorContributions || "—"}
                 </div>
               </div>
@@ -455,7 +452,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                   Areas for Improvement
                 </label>
-                <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                   {formData.areasForImprovement || "—"}
                 </div>
               </div>
@@ -468,8 +465,8 @@ export const ReviewStep: React.FC<StepProps> = ({
             STEP 2: KEY ACHIEVEMENTS & PROJECTS
            =================================================================== */}
         {(!readOnly || hasStep2Data) && (
-          <div id="review-step-2" className="eval-step-card eval-reveal-card is-revealed space-y-3.5 border border-[#E2E8F0] hover:border-blue-300 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-          <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-2.5">
+          <div id="review-step-2" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-3.5 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
+          <div className="flex items-center justify-between border-b border-[#64748B] pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 2
@@ -493,7 +490,7 @@ export const ReviewStep: React.FC<StepProps> = ({
 
           {(formData.projects || []).length === 0 ? (
             readOnly ? (
-              <div className="bg-white border border-[#E2E8F0] rounded-2xl shadow-2xs overflow-hidden">
+              <div className="bg-white border border-[#64748B] rounded-2xl shadow-2xs overflow-hidden">
                 <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-slate-50/60 border-b border-slate-100">
                   <span className="shrink-0 px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
                     Project 1
@@ -509,7 +506,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                       <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Project Name
                       </label>
-                      <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
+                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
                         —
                       </div>
                     </div>
@@ -517,7 +514,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                       <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Project Role
                       </label>
-                      <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
+                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
                         —
                       </div>
                     </div>
@@ -525,7 +522,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                       <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Responsibility Type
                       </label>
-                      <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
+                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
                         —
                       </div>
                     </div>
@@ -536,7 +533,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                       <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Project Description
                       </label>
-                      <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                         —
                       </div>
                     </div>
@@ -544,7 +541,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                       <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Key Responsibilities
                       </label>
-                      <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                         —
                       </div>
                     </div>
@@ -555,7 +552,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                       <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Challenges Faced
                       </label>
-                      <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                         —
                       </div>
                     </div>
@@ -563,7 +560,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                       <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Solutions Implemented
                       </label>
-                      <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                         —
                       </div>
                     </div>
@@ -574,7 +571,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                       <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Key Achievements / Outcomes
                       </label>
-                      <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                         —
                       </div>
                     </div>
@@ -582,7 +579,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                       <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Technologies / Tools Used
                       </label>
-                      <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] font-normal min-h-[44px] flex items-center flex-1">
+                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm text-[#0F172A] font-normal min-h-[44px] flex items-center flex-1">
                         —
                       </div>
                     </div>
@@ -593,7 +590,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                       <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Leadership Qualities
                       </label>
-                      <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                         —
                       </div>
                     </div>
@@ -601,7 +598,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                       <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Client Review & Feedback
                       </label>
-                      <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                         —
                       </div>
                     </div>
@@ -611,14 +608,14 @@ export const ReviewStep: React.FC<StepProps> = ({
                     <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                       Attachments
                     </label>
-                    <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] font-normal min-h-[44px] flex items-center">
+                    <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm text-[#0F172A] font-normal min-h-[44px] flex items-center">
                       —
                     </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#64748B]">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm text-[#334155]">
                 No project added.
               </div>
             )
@@ -629,7 +626,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 return (
                   <div
                     key={`${project.projectName}-${index}`}
-                    className="bg-white border border-[#E2E8F0] hover:border-[#CBD5E1] rounded-2xl shadow-2xs overflow-hidden transition-all duration-200"
+                    className="bg-white border border-[#64748B] hover:border-[#64748B] rounded-2xl shadow-2xs overflow-hidden transition-all duration-200"
                   >
                     {/* Collapsed/Expanded Accordion Header */}
                     <div
@@ -654,7 +651,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                         )}
 
                         {/* Accordion Chevron */}
-                        <div className="p-0.5 rounded-md text-[#64748B] group-hover:text-[#2563EB] transition-colors">
+                        <div className="p-0.5 rounded-md text-[#334155] group-hover:text-[#2563EB] transition-colors">
                           <ChevronDown
                             className={`w-4 h-4 transition-transform duration-300 ease-in-out ${isExpanded ? "rotate-180 text-[#2563EB]" : ""
                               }`}
@@ -671,7 +668,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                             <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                               Project Name
                             </label>
-                            <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
+                            <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
                               {project.projectName || "—"}
                             </div>
                           </div>
@@ -679,7 +676,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                             <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                               Project Role
                             </label>
-                            <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
+                            <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
                               {project.projectRole || "—"}
                             </div>
                           </div>
@@ -687,7 +684,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                             <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                               Responsibility Type
                             </label>
-                            <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
+                            <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
                               {project.responsibilityType || "—"}
                             </div>
                           </div>
@@ -698,7 +695,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                             <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                               Project Description
                             </label>
-                            <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                            <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                               {project.description || "—"}
                             </div>
                           </div>
@@ -706,7 +703,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                             <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                               Key Responsibilities
                             </label>
-                            <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                            <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                               {project.keyResponsibilities || "—"}
                             </div>
                           </div>
@@ -717,7 +714,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                             <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                               Challenges Faced
                             </label>
-                            <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                            <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                               {project.challengesFaced || project.challenge || "—"}
                             </div>
                           </div>
@@ -725,7 +722,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                             <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                               Solutions Implemented
                             </label>
-                            <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                            <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                               {project.solutionsImplemented || "—"}
                             </div>
                           </div>
@@ -736,7 +733,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                             <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                               Key Achievements / Outcomes
                             </label>
-                            <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                            <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                               {project.keyAchievementsOutcomes || "—"}
                             </div>
                           </div>
@@ -744,7 +741,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                             <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                               Technologies / Tools Used
                             </label>
-                            <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg min-h-[44px] flex items-center flex-1">
+                            <div className="p-3 bg-white border border-[#64748B] rounded-lg min-h-[44px] flex items-center flex-1">
                               {(project.technologiesUsed || []).length > 0 ? (
                                 <div className="flex flex-wrap gap-1.5">
                                   {project.technologiesUsed!.map((tech, tIdx) => (
@@ -770,7 +767,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                             <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                               Leadership Qualities
                             </label>
-                            <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                            <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                               {project.leadershipQualities || "—"}
                             </div>
                           </div>
@@ -778,7 +775,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                             <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                               Client Review & Feedback
                             </label>
-                            <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+                            <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                               {project.clientReviewFeedback || "—"}
                             </div>
                           </div>
@@ -788,7 +785,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                           <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                             Attachments
                           </label>
-                          <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg min-h-[44px] flex items-center">
+                          <div className="p-3 bg-white border border-[#64748B] rounded-lg min-h-[44px] flex items-center">
                             {(project.attachments || []).length > 0 ? (
                               <div className="flex flex-wrap gap-2">
                                 {project.attachments!.map((file) => (
@@ -820,8 +817,8 @@ export const ReviewStep: React.FC<StepProps> = ({
             STEP 3: TEAMWORK & COLLABORATION
            =================================================================== */}
         {(!readOnly || hasStep3Data) && (
-          <div id="review-step-3" className="eval-step-card eval-reveal-card is-revealed space-y-3.5 border border-[#E2E8F0] hover:border-blue-300 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-          <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-2.5">
+          <div id="review-step-3" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-3.5 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
+          <div className="flex items-center justify-between border-b border-[#64748B] pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 3
@@ -850,11 +847,11 @@ export const ReviewStep: React.FC<StepProps> = ({
               return avgScore ? (
                 <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
                   <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
-                  <span className="text-[11px] font-semibold text-[#64748B]">Average:</span>
+                  <span className="text-[11px] font-semibold text-[#334155]">Average:</span>
                   <span className="text-xs sm:text-sm font-extrabold text-[#0F172A]">
                     {avgScore}
                   </span>
-                  <span className="text-[10px] font-bold text-[#94A3B8]">/ 5.0</span>
+                  <span className="text-[10px] font-bold text-[#475569]">/ 5.0</span>
                 </div>
               ) : null;
             })()}
@@ -872,7 +869,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 return (
                   <div
                     key={criterion.key}
-                    className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg flex flex-col justify-between gap-3"
+                    className="p-3.5 bg-white border border-[#64748B] rounded-lg flex flex-col justify-between gap-3"
                   >
                     <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
                       <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug">
@@ -901,7 +898,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                       <span className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                         Description
                       </span>
-                      <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-xs font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px]">
+                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-xs font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px]">
                         {desc || "—"}
                       </div>
                     </div>
@@ -917,7 +914,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Team Collaboration Summary
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                 {formData.teamCollaborationSummary || "—"}
               </div>
             </div>
@@ -925,7 +922,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Cross-Team Contributions
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                 {formData.crossTeamContributions || "—"}
               </div>
             </div>
@@ -933,7 +930,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Knowledge Sharing / Mentoring
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                 {formData.knowledgeSharingMentoring || "—"}
               </div>
             </div>
@@ -941,7 +938,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Teamwork Examples
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                 {formData.teamworkExamples || "—"}
               </div>
             </div>
@@ -953,8 +950,8 @@ export const ReviewStep: React.FC<StepProps> = ({
             STEP 4: CONTINUOUS LEARNING & GOALS
            =================================================================== */}
         {(!readOnly || hasStep4Data) && (
-          <div id="review-step-4" className="eval-step-card eval-reveal-card is-revealed space-y-3 border border-[#E2E8F0] hover:border-blue-300 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-          <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-2.5">
+          <div id="review-step-4" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-3 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
+          <div className="flex items-center justify-between border-b border-[#64748B] pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 4
@@ -981,7 +978,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Skills Learned During This Period
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                 {formData.skillsAcquired || "—"}
               </div>
             </div>
@@ -990,7 +987,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Training / Certifications Completed
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                 {formData.certificationsOrCourses || "—"}
               </div>
             </div>
@@ -999,7 +996,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Skills to Improve
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                 {formData.skillsToImprove || "—"}
               </div>
             </div>
@@ -1008,7 +1005,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Support or Training Required
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                 {formData.supportOrTrainingRequired || "—"}
               </div>
             </div>
@@ -1017,18 +1014,18 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Learning Goals for Next Quarter
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px]">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px]">
                 {formData.nextQuarterLearningGoals || "—"}
               </div>
             </div>
 
             {!formData.skillsAcquired && !formData.skillsToImprove && (formData.learningGoalItems || []).length > 0 && (
-              <div className="col-span-1 md:col-span-2 space-y-2 pt-2 border-t border-[#E2E8F0]">
+              <div className="col-span-1 md:col-span-2 space-y-2 pt-2 border-t border-[#64748B]">
                 <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
                   Previous Learning Goals
                 </label>
                 {(formData.learningGoalItems || []).map((goal, index) => (
-                  <div key={`${goal}-${index}`} className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] leading-relaxed font-normal shadow-2xs">
+                  <div key={`${goal}-${index}`} className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm text-[#0F172A] leading-relaxed font-normal shadow-2xs">
                     {goal}
                   </div>
                 ))}
@@ -1042,8 +1039,8 @@ export const ReviewStep: React.FC<StepProps> = ({
             STEP 5: ENVIRONMENT
            =================================================================== */}
         {(!readOnly || hasStep5Data) && (
-          <div id="review-step-5" className="eval-step-card eval-reveal-card is-revealed space-y-3.5 border border-[#E2E8F0] hover:border-blue-300 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-          <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-2.5">
+          <div id="review-step-5" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-3.5 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
+          <div className="flex items-center justify-between border-b border-[#64748B] pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 5
@@ -1087,11 +1084,11 @@ export const ReviewStep: React.FC<StepProps> = ({
                 return avgScore ? (
                   <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
                     <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
-                    <span className="text-[11px] font-semibold text-[#64748B]">Average:</span>
+                    <span className="text-[11px] font-semibold text-[#334155]">Average:</span>
                     <span className="text-xs sm:text-sm font-extrabold text-[#0F172A]">
                       {avgScore}
                     </span>
-                    <span className="text-[10px] font-bold text-[#94A3B8]">/ 5.0</span>
+                    <span className="text-[10px] font-bold text-[#475569]">/ 5.0</span>
                   </div>
                 ) : null;
               })()}
@@ -1131,7 +1128,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               ].map((item, idx) => (
                 <div
                   key={idx}
-                  className="p-3 bg-white border border-[#CBD5E1] rounded-lg flex items-center justify-between gap-2 shadow-2xs"
+                  className="p-3 bg-white border border-[#64748B] rounded-lg flex items-center justify-between gap-2 shadow-2xs"
                 >
                   <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug">
                     {item.title}
@@ -1166,7 +1163,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Feedback on Work Culture
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                 {formData.workCultureFeedback || formData.feedbackOnWorkCulture || "—"}
               </div>
             </div>
@@ -1176,7 +1173,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Work Life Balance
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                 {formData.workLifeBalance || "—"}
               </div>
             </div>
@@ -1186,7 +1183,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Challenges Affecting Productivity
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                 {formData.challengesAffectingProductivity || "—"}
               </div>
             </div>
@@ -1196,7 +1193,7 @@ export const ReviewStep: React.FC<StepProps> = ({
               <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
                 Suggestions for Improvement
               </label>
-              <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
+              <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
                 {formData.suggestionsForImprovement || formData.toolingAndResources || "—"}
               </div>
             </div>
@@ -1208,8 +1205,8 @@ export const ReviewStep: React.FC<StepProps> = ({
             STEP 6: FINAL EVALUATION & SUBMISSION
            =================================================================== */}
         {(!readOnly || hasStep6Data) && (
-          <div id="review-step-6" className="eval-step-card eval-reveal-card is-revealed space-y-5 border border-[#E2E8F0] hover:border-blue-300 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-          <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-2.5">
+          <div id="review-step-6" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-5 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
+          <div className="flex items-center justify-between border-b border-[#64748B] pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 6
@@ -1231,7 +1228,7 @@ export const ReviewStep: React.FC<StepProps> = ({
             id="field-overallSelfRating"
             className={`p-3 sm:py-2.5 sm:px-3.5 rounded-2xl border-[1.5px] bg-white flex flex-wrap items-center justify-between gap-2.5 transition-all duration-300 scroll-mt-24 ${(!formData.overallSelfRating || formData.overallSelfRating <= 0) && errors?.overallSelfRating
                 ? "eval-field-has-error"
-                : "border-[#E2E8F0] hover:border-[#CBD5E1]"
+                : "border-[#64748B] hover:border-[#64748B]"
               }`}
           >
             {/* Left: Checkmark, Title, and Qualitative Badge */}
@@ -1281,7 +1278,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                   {formData.overallSelfRating}.0 / 5.0
                 </span>
               ) : (
-                <span className="text-[10px] font-medium text-slate-400">Not rated</span>
+                <span className="text-[10px] font-medium text-[#475569]">Not rated</span>
               )}
             </div>
 
@@ -1301,7 +1298,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 <label className="block text-[11px] font-bold text-[#475569] uppercase tracking-wider mb-1">
                   Overall Employee Comments
                 </label>
-                <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[75px] flex-1">
+                <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[75px] flex-1">
                   {formData.overallEmployeeComments?.trim() || "—"}
                 </div>
               </div>
@@ -1330,7 +1327,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 <label className="block text-[11px] font-bold text-[#475569] uppercase tracking-wider mb-1">
                   Career Growth Interests
                 </label>
-                <div className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[75px] flex-1">
+                <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[75px] flex-1">
                   {formData.careerGrowthInterests?.trim() || "—"}
                 </div>
               </div>
@@ -1361,7 +1358,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 ? "border-red-400 bg-red-50/20 ring-2 ring-red-100"
                 : formData.confirmationAccepted
                   ? "border-emerald-400 bg-emerald-50/30"
-                  : "border-[#E2E8F0] bg-white shadow-2xs"
+                  : "border-[#64748B] bg-white shadow-2xs"
               }`}
           >
             <label className={`flex items-start gap-3 select-none ${readOnly ? "cursor-default" : "cursor-pointer"}`}>
@@ -1376,7 +1373,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                 <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug block">
                   I confirm that all responses provided in this review are accurate and ready for submission. {!readOnly && <span className="text-red-500">*</span>}
                 </span>
-                <p className="text-[11px] text-[#64748B] leading-relaxed">
+                <p className="text-[11px] text-[#334155] leading-relaxed">
                   {formData.confirmationAccepted
                     ? "Confirmed and verified by employee upon submission."
                     : readOnly
@@ -1403,7 +1400,7 @@ export const ReviewStep: React.FC<StepProps> = ({
             <h4 className="text-base font-bold text-[#0F172A] tracking-tight">
               Review Not Started Yet
             </h4>
-            <p className="text-xs text-[#64748B] mt-1.5 max-w-sm mx-auto leading-relaxed">
+            <p className="text-xs text-[#334155] mt-1.5 max-w-sm mx-auto leading-relaxed">
               The self-assessment for this quarter has not been started yet. Once the review is filled, your responses will appear here.
             </p>
           </div>

@@ -100,9 +100,11 @@ const RECEPTIONIST_BLOCKED_ADMIN_TABS = ["leave-calculation"];
 
 const AdminTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
+  const { pathname } = useLocation();
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const isCeo = isCeoOrGmUser(currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
+  const isManagerDashboard = pathname.includes("/manager-dashboard");
 
   if (isCeo && tab && CEO_BLOCKED_ADMIN_TABS.includes(tab)) {
     return <Navigate to="/admin-dashboard" replace />;
@@ -155,15 +157,28 @@ const AdminTabWrapper = () => {
       return <LeaveManagement />;
     case "quarterly-review":
       return <ManagerQuarterlyReviewPage />;
-    case "my-quarterly-review":
-      return <EmployeeAppraisalPage />;
     case "appraisal":
     case "my-appraisal":
-      return <EmployeeAppraisalPage />;
+    case "my-quarterly-review":
+      // Manager My Workspace → personal assignments only.
+      // Admin/CEO/GM Appraisal tab stays on team assign/review page.
+      if (isManagerDashboard) {
+        return <EmployeeAppraisalPage />;
+      }
+      return tab === "appraisal" ? (
+        <ManagerQuarterlyReviewPage />
+      ) : (
+        <Navigate to="/admin-dashboard/quarterly-review" replace />
+      );
     case "edit-access":
       return <AttendenceEditRequests />;
     default:
-      return <Navigate to="/admin-dashboard" replace />;
+      return (
+        <Navigate
+          to={isManagerDashboard ? "/manager-dashboard" : "/admin-dashboard"}
+          replace
+        />
+      );
   }
 };
 

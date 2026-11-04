@@ -178,7 +178,7 @@ export const AssignSubmitPanel: React.FC<AssignSubmitPanelProps> = ({ summary, s
                     submitted ? "text-emerald-700" : "text-[#64748B]"
                   }`}
                 >
-                  To date
+                  TO Date (DEADLINE)
                 </p>
                 <p className="mt-0.5 font-mono font-bold text-[#0F172A] text-xs">{summary.toDate}</p>
               </div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from "react";
+﻿import React, { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft,
@@ -85,6 +85,24 @@ export interface EvaluationPanelProps {
     managerConfirmation?: boolean | null;
   };
 }
+
+/** Manager read-only employee answers: key : value (no field boxes). */
+const KvRow: React.FC<{ label: string; value?: React.ReactNode; className?: string }> = ({
+  label,
+  value,
+  className = "",
+}) => (
+  <div
+    className={`flex flex-col sm:flex-row sm:items-start gap-0.5 sm:gap-3 py-3 border-b border-[#94A3B8] last:border-b-0 ${className}`}
+  >
+    <span className="text-xs sm:text-[13px] font-bold uppercase tracking-wider text-[#0F172A] sm:min-w-[12.5rem] sm:w-52 shrink-0">
+      {label}:
+    </span>
+    <div className="text-sm sm:text-[15px] text-[#0F172A] font-normal flex-1 min-w-0 whitespace-pre-line leading-relaxed break-words">
+      {value == null || value === "" ? "—" : value}
+    </div>
+  </div>
+);
 
 interface ParameterDef {
   key: string;
@@ -318,6 +336,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   };
 
   const handleNavigateToReview = () => {
+    // Employee only — Admin/Manager keep scores loaded when switching views.
+    clearEmployeeRatingUnlock();
     setActiveView("review");
     scrollToTop();
     setTimeout(scrollToTop, 30);
@@ -410,6 +430,37 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // Employee-only: Admin/Manager use getReviewById (no password). Never clear their matrix scores.
+  const clearEmployeeRatingUnlock = () => {
+    if (!hideScoreParameters) return;
+    if (ratingHideTimerRef.current != null) {
+      window.clearTimeout(ratingHideTimerRef.current);
+      ratingHideTimerRef.current = null;
+    }
+    setIsRatingUnlocked(false);
+    setIsEmailModalOpen(false);
+    setRatingPassword("");
+    setShowRatingPassword(false);
+    setEmailError("");
+    setScores({});
+    setRawInputValues({});
+    setStrengths("");
+    setImprovements("");
+    setRemarks("");
+    setFinalScoreText("");
+    setGoalsForNextReview("");
+    setTrainingRecommendations("");
+    setCareerGrowthRecommendation("");
+    setReviewOutcome("");
+    setPerformanceAction("");
+    try {
+      const id = record.reviewId;
+      if (id) sessionStorage.removeItem(`appraisal-revealed-rating:${id}`);
+    } catch {
+      /* ignore */
+    }
+  };
+
   useEffect(() => {
     return () => {
       if (ratingHideTimerRef.current != null) {
@@ -417,6 +468,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       }
     };
   }, []);
+
+  // Strict: leaving / refreshing this panel must not keep ratings visible without password.
+  useEffect(() => {
+    if (!hideScoreParameters) return;
+    return () => {
+      setIsRatingUnlocked(false);
+    };
+  }, [hideScoreParameters]);
 
   useEffect(() => {
     if (!hideScoreParameters || !isRatingUnlocked) return;
@@ -740,24 +799,17 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     setShowRatingPassword(false);
     setEmailError("");
     if (hideScoreParameters) {
+      // Never persist revealed ratings — password required every open / after back.
       if (ratingHideTimerRef.current != null) {
         window.clearTimeout(ratingHideTimerRef.current);
-      }
-      ratingHideTimerRef.current = window.setTimeout(() => {
-        setIsRatingUnlocked(false);
-        setScores({});
-        setRawInputValues({});
-        setStrengths("");
-        setImprovements("");
-        setRemarks("");
-        setFinalScoreText("");
-        setGoalsForNextReview("");
-        setTrainingRecommendations("");
-        setCareerGrowthRecommendation("");
-        setReviewOutcome("");
-        setPerformanceAction("");
         ratingHideTimerRef.current = null;
-      }, 2 * 60 * 1000);
+      }
+      try {
+        const id = record.reviewId;
+        if (id) sessionStorage.removeItem(`appraisal-revealed-rating:${id}`);
+      } catch {
+        /* ignore */
+      }
     }
   };
 
@@ -822,14 +874,20 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       setEmailError("Password is required.");
       return;
     }
-    if (!reviewId) {
-      setEmailError("This review cannot be opened yet.");
+    const unlockReviewId = Number(reviewId || record.reviewId || 0);
+    const unlockEmployeeId = String(record.id || "").trim();
+    if (!unlockReviewId || !unlockEmployeeId) {
+      setEmailError("This review cannot be opened yet. Go back and open it again from your appraisal list.");
       return;
     }
     setUnlockingRating(true);
     setEmailError("");
     try {
-      const revealed = await AppraisalApi.revealRating(reviewId, record.id, ratingPassword.trim());
+      const revealed = await AppraisalApi.revealRating(
+        unlockReviewId,
+        unlockEmployeeId,
+        ratingPassword.trim(),
+      );
       if (!revealed.passwordVerified) {
         setEmailError("Wrong password.");
         return;
@@ -1427,12 +1485,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         <div>
           <button
             type="button"
-            onClick={activeView === "matrix" && !isViewMode ? handleNavigateToReview : onBack}
+            onClick={activeView === "matrix" ? handleNavigateToReview : onBack}
             className="eval-back-btn mb-2 group cursor-pointer"
-            title={activeView === "matrix" && !isViewMode ? "Back to Employee Review" : "Back to List"}
+            title={activeView === "matrix" ? "Back to Employee Review" : "Back to List"}
           >
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-            <span>{activeView === "matrix" && !isViewMode ? "Back to Employee Review" : "Back to List"}</span>
+            <span>{activeView === "matrix" ? "Back to Employee Review" : "Back to List"}</span>
           </button>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0 eval-trophy-box">
@@ -1451,7 +1509,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </span>
                 <span className="eval-title-accent-line" />
               </h1>
-              <p className="text-xs sm:text-sm font-medium text-[#64748B] mt-1 flex flex-wrap items-center gap-1.5 eval-subtitle-anim">
+              <p className="text-xs sm:text-sm font-medium text-[#334155] mt-1 flex flex-wrap items-center gap-1.5 eval-subtitle-anim">
                 <span>{isViewMode ? "Assigned" : "Evaluating"}</span>
                 <span className="font-bold text-[#2B3674]">{record.name}</span>
                 <span className="inline-flex items-center justify-center rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1 text-xs font-extrabold text-[#1D4ED8]">
@@ -1585,7 +1643,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <span className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                     Assigned Quarter
                   </span>
-                  <div className="rounded-xl border border-[#E2E8F0] bg-gray-50/80 px-3 py-2.5 text-sm font-normal text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
+                  <div className="rounded-xl border border-[#64748B] bg-gray-50/80 px-3 py-2.5 text-sm font-normal text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                     {formatQuarterDisplay(record.quarter)} · {record.financialYear}
                   </div>
                 </div>
@@ -1593,7 +1651,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <span className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                     Assigned Date
                   </span>
-                  <div className="rounded-xl border border-[#E2E8F0] bg-gray-50/80 px-3 py-2.5 text-sm font-normal text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
+                  <div className="rounded-xl border border-[#64748B] bg-gray-50/80 px-3 py-2.5 text-sm font-normal text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                     {assignedDate || "—"}
                   </div>
                 </div>
@@ -1602,7 +1660,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     Deadline{grantAccess ? " *" : ""}
                   </span>
                   {(isViewMode || employeeSubmitted) && !grantAccess ? (
-                    <div className="rounded-xl border border-[#E2E8F0] bg-gray-50/80 px-3 py-2.5 text-sm font-normal text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
+                    <div className="rounded-xl border border-[#64748B] bg-gray-50/80 px-3 py-2.5 text-sm font-normal text-[#0F172A] eval-assignment-readonly-field cursor-not-allowed select-none">
                       {deadlineDate || "—"}
                     </div>
                   ) : (
@@ -1711,7 +1769,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
             {/* STEP 1: ROLE & QUARTER OVERVIEW */}
             {shouldShowStep(1) && (
-              <div id="eval-step-1" className="eval-step-card eval-reveal-card space-y-3">
+              <div id="eval-step-1" className="eval-step-card eval-review-card-noborder eval-reveal-card space-y-3">
                 <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
@@ -1723,55 +1781,25 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
                 </div>
 
-                <div className="eval-stagger-item eval-stagger-3 space-y-3">
-                  <div className="text-xs text-[#64748B] font-medium bg-white p-2.5 rounded-lg border border-[#E2E8F0] shadow-2xs">
-                    Review Period: <strong className="text-[#0F172A]">{formData.reviewPeriodStart || "—"}</strong> to <strong className="text-[#0F172A]">{formData.reviewPeriodEnd || "—"}</strong>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-stretch">
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                        Overall Performance Summary
-                      </label>
-                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line break-words font-normal min-h-[75px] shadow-2xs flex-1">
-                        {formData.overallPerformanceSummary || formData.overview || "—"}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                        Key Highlights
-                      </label>
-                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line break-words font-normal min-h-[75px] shadow-2xs flex-1">
-                        {formData.keyHighlights || "—"}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                        Major Contributions
-                      </label>
-                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line break-words font-normal min-h-[75px] shadow-2xs flex-1">
-                        {formData.majorContributions || "—"}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                        Areas for Improvement
-                      </label>
-                      <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line break-words font-normal min-h-[75px] shadow-2xs flex-1">
-                        {formData.areasForImprovement || "—"}
-                      </div>
-                    </div>
-                  </div>
+                <div className="eval-stagger-item eval-stagger-3 space-y-0">
+                  <KvRow
+                    label="Review Period"
+                    value={`${formData.reviewPeriodStart || "—"} to ${formData.reviewPeriodEnd || "—"}`}
+                  />
+                  <KvRow
+                    label="Overall Performance Summary"
+                    value={formData.overallPerformanceSummary || formData.overview}
+                  />
+                  <KvRow label="Key Highlights" value={formData.keyHighlights} />
+                  <KvRow label="Major Contributions" value={formData.majorContributions} />
+                  <KvRow label="Areas for Improvement" value={formData.areasForImprovement} />
                 </div>
               </div>
             )}
 
             {/* STEP 2: KEY ACHIEVEMENTS & PROJECTS */}
             {shouldShowStep(2) && (
-              <div id="eval-step-2" className="eval-step-card eval-reveal-card space-y-3.5">
+              <div id="eval-step-2" className="eval-step-card eval-review-card-noborder eval-reveal-card space-y-3.5">
                 <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
@@ -1784,189 +1812,85 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </div>
 
                 {(formData.projects || []).length === 0 ? (
-                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#64748B]">
-                    No project added.
-                  </div>
+                  <KvRow label="Projects" value="No project added." />
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {(formData.projects || []).map((project, index) => {
                       const isExpanded = Boolean(expandedProjects[index]);
                       return (
                         <div
                           key={`${project.projectName}-${index}`}
-                          className="bg-white border border-[#E2E8F0] hover:border-[#CBD5E1] rounded-2xl shadow-2xs overflow-hidden transition-all duration-200"
+                          className="rounded-xl bg-slate-50/40 overflow-hidden"
                         >
-                          {/* Collapsed/Expanded Accordion Header */}
                           <div
                             onClick={() => toggleProjectExpand(index)}
-                            className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-white hover:bg-slate-50/60 cursor-pointer select-none group transition-colors"
+                            className="flex items-center justify-between gap-3 px-1 py-2.5 cursor-pointer select-none group border-b border-[#94A3B8]"
                           >
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                              <span className="shrink-0 px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
-                                Project {index + 1}
+                              <span className="shrink-0 text-[11px] font-bold text-[#2563EB]">
+                                Project {index + 1}:
                               </span>
-                              <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] leading-snug group-hover:text-[#2563EB] transition-colors">
+                              <h4 className="text-sm font-semibold text-[#0F172A] leading-snug truncate">
                                 {project.projectName || "—"}
                               </h4>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
                               {project.isDraft && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-300 rounded-md shadow-2xs mr-0.5">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                                  Draft
-                                </span>
+                                <span className="text-[10px] font-bold text-amber-700">Draft</span>
                               )}
-
-                              {/* Accordion Chevron */}
-                              <div className="p-0.5 rounded-md text-[#64748B] group-hover:text-[#2563EB] transition-colors">
-                                <ChevronDown
-                                  className={`w-4 h-4 transition-transform duration-300 ease-in-out ${isExpanded ? "rotate-180 text-[#2563EB]" : ""
-                                    }`}
-                                />
-                              </div>
                             </div>
+                            <ChevronDown
+                              className={`w-4 h-4 text-[#334155] shrink-0 transition-transform duration-300 ${
+                                isExpanded ? "rotate-180 text-[#2563EB]" : ""
+                              }`}
+                            />
                           </div>
 
-                          {/* Accordion Content (Inner Details) */}
                           {isExpanded && (
-                            <div className="p-4 pt-2 space-y-3 border-t border-slate-100 animate-in fade-in duration-200">
-                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-stretch">
-                                <div>
-                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                                    Project Name
-                                  </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-normal text-[#0F172A] shadow-2xs">
-                                    {project.projectName || "—"}
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                                    Project Role
-                                  </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-normal text-[#0F172A] shadow-2xs">
-                                    {project.projectRole || "—"}
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                                    Responsibility Type
-                                  </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm font-normal text-[#0F172A] shadow-2xs">
-                                    {project.responsibilityType || "—"}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
-                                <div>
-                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                                    Project Description
-                                  </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
-                                    {project.description || "—"}
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                                    Key Responsibilities
-                                  </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
-                                    {project.keyResponsibilities || "—"}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
-                                <div>
-                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                                    Challenges Faced
-                                  </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
-                                    {project.challengesFaced || project.challenge || "—"}
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                                    Solutions Implemented
-                                  </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
-                                    {project.solutionsImplemented || "—"}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
-                                <div>
-                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                                    Key Achievements / Outcomes
-                                  </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
-                                    {project.keyAchievementsOutcomes || "—"}
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                                    Technologies / Tools Used
-                                  </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-normal min-h-[75px] flex items-center shadow-2xs">
-                                    {(project.technologiesUsed || []).length > 0 ? (
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {project.technologiesUsed!.map((tech, tIdx) => (
-                                          <span
-                                            key={tIdx}
-                                            className="px-2.5 py-1 text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg shadow-2xs"
-                                          >
-                                            {tech}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    ) : (
-                                      <span className="text-[#0F172A] font-normal">—</span>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
-                                <div>
-                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                                    Leadership Qualities
-                                  </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
-                                    {project.leadershipQualities || "—"}
-                                  </div>
-                                </div>
-                                <div>
-                                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                                    Client Review &amp; Feedback
-                                  </label>
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line leading-relaxed font-normal min-h-[75px] shadow-2xs">
-                                    {project.clientReviewFeedback || "—"}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div>
-                                <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                                  Attachments
-                                </label>
-                                {(project.attachments || []).length > 0 ? (
-                                  <div className="p-3 bg-white border border-[#E2E8F0] rounded-xl flex flex-wrap gap-2 shadow-2xs">
-                                    {project.attachments!.map((file) => (
-                                      <AttachmentItem
-                                        key={file.objectKey || file.fileName}
-                                        file={file}
-                                        readOnly
-                                      />
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] font-normal shadow-2xs">
-                                    —
-                                  </div>
-                                )}
-                              </div>
+                            <div className="px-1 pb-1 animate-in fade-in duration-200">
+                              <KvRow label="Project Name" value={project.projectName} />
+                              <KvRow label="Project Role" value={project.projectRole} />
+                              <KvRow label="Responsibility Type" value={project.responsibilityType} />
+                              <KvRow label="Project Description" value={project.description} />
+                              <KvRow label="Key Responsibilities" value={project.keyResponsibilities} />
+                              <KvRow
+                                label="Challenges Faced"
+                                value={project.challengesFaced || project.challenge}
+                              />
+                              <KvRow label="Solutions Implemented" value={project.solutionsImplemented} />
+                              <KvRow
+                                label="Key Achievements / Outcomes"
+                                value={project.keyAchievementsOutcomes}
+                              />
+                              <KvRow
+                                label="Technologies / Tools Used"
+                                value={
+                                  (project.technologiesUsed || []).length > 0
+                                    ? project.technologiesUsed!.join(", ")
+                                    : "—"
+                                }
+                              />
+                              <KvRow label="Leadership Qualities" value={project.leadershipQualities} />
+                              <KvRow
+                                label="Client Review & Feedback"
+                                value={project.clientReviewFeedback}
+                              />
+                              <KvRow
+                                label="Attachments"
+                                value={
+                                  (project.attachments || []).length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                      {project.attachments!.map((file) => (
+                                        <AttachmentItem
+                                          key={file.objectKey || file.fileName}
+                                          file={file}
+                                          readOnly
+                                        />
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    "—"
+                                  )
+                                }
+                              />
                             </div>
                           )}
                         </div>
@@ -1979,7 +1903,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
             {/* STEP 3: TEAMWORK & COLLABORATION with Interactive Score Bars */}
             {shouldShowStep(3) && (
-              <div id="eval-step-3" className="eval-step-card eval-reveal-card space-y-3.5">
+              <div id="eval-step-3" className="eval-step-card eval-review-card-noborder eval-reveal-card space-y-3.5">
                 <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
@@ -1992,107 +1916,67 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   {avgTeamScore ? (
                     <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
                       <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
-                      <span className="text-[11px] font-semibold text-[#64748B]">Average:</span>
+                      <span className="text-[11px] font-semibold text-[#334155]">Average:</span>
                       <span className="text-xs sm:text-sm font-bold text-[#0F172A]">{avgTeamScore}</span>
-                      <span className="text-[10px] font-bold text-[#94A3B8]">/ 5.0</span>
+                      <span className="text-[10px] font-bold text-[#475569]">/ 5.0</span>
                     </div>
                   ) : null}
                 </div>
 
-                <div className="eval-stagger-item eval-stagger-3 space-y-2">
-                  <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                    Teamwork &amp; Collaboration Dimensions
-                  </label>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-stretch">
-                    {TEAM_CRITERIA.map((criterion) => {
-                      const score =
-                        teamRatings[criterion.key as keyof typeof teamRatings] || 0;
-                      const desc = ((formData as any)?.[criterion.descKey] as string) || "";
-                      return (
-                        <div
-                          key={criterion.key}
-                          className="p-4 bg-white border border-[#E2E8F0] rounded-2xl flex flex-col justify-between gap-3 shadow-md hover:shadow-lg transition-all duration-200"
-                          title="Employee submitted rating & description (Read-only)"
-                        >
-                          <div className="flex items-center justify-between gap-2 border-b border-slate-100 pb-2">
-                            <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug">
-                              {criterion.title}
-                            </span>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <div className="flex items-center gap-1">
-                                {[1, 2, 3, 4, 5].map((s) => (
-                                  <Star
-                                    key={s}
-                                    className={`w-4 h-4 transition-colors duration-150 ${s <= score
-                                      ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
+                <div className="eval-stagger-item eval-stagger-3 space-y-0">
+                  {TEAM_CRITERIA.map((criterion) => {
+                    const score =
+                      teamRatings[criterion.key as keyof typeof teamRatings] || 0;
+                    const desc = ((formData as any)?.[criterion.descKey] as string) || "";
+                    return (
+                      <div
+                        key={criterion.key}
+                        className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 py-3 border-b border-[#94A3B8]"
+                      >
+                        <div className="sm:w-[30%] sm:max-w-[30%] shrink-0 flex flex-col gap-1 min-w-0">
+                          <span className="text-xs sm:text-[13px] font-bold uppercase tracking-wider text-[#0F172A]">
+                            {criterion.title}:
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 flex-wrap">
+                            <span className="inline-flex items-center gap-0.5">
+                              {[1, 2, 3, 4, 5].map((s) => (
+                                <Star
+                                  key={s}
+                                  className={`w-4 h-4 ${
+                                    s <= score
+                                      ? "fill-[#F59E0B] text-[#F59E0B]"
                                       : "fill-transparent text-gray-300"
-                                      }`}
-                                  />
-                                ))}
-                              </div>
-                              {score > 0 && (
-                                <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200">
-                                  {score}.0
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div>
-                            <span className="text-[10px] font-semibold text-[#0F172A] uppercase tracking-wider block mb-1">
-                              Description
+                                  }`}
+                                />
+                              ))}
                             </span>
-                            <p className="text-xs text-[#334155] whitespace-pre-line leading-relaxed font-normal bg-slate-50/70 p-2.5 rounded-lg border border-slate-100 min-h-[48px]">
-                              {desc || "—"}
-                            </p>
+                            <span className="text-sm sm:text-[15px] font-semibold text-[#0F172A]">
+                              {score > 0 ? `${score}.0 / 5.0` : "Not rated"}
+                            </span>
+                          </span>
+                        </div>
+                        <div className="sm:w-[70%] flex-1 min-w-0 flex flex-col gap-1">
+                          <span className="text-xs sm:text-[13px] font-bold uppercase tracking-wider text-[#0F172A]">
+                            {criterion.title} — Description:
+                          </span>
+                          <div className="text-sm sm:text-[15px] text-[#0F172A] font-normal whitespace-pre-line leading-relaxed break-words">
+                            {desc || "—"}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* 4 Teamwork Details in 2 columns */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1 items-stretch">
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                      Team Collaboration Summary
-                    </label>
-                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line break-words leading-relaxed font-normal min-h-[75px] shadow-2xs flex-1">
-                      {formData.teamCollaborationSummary || "—"}
-                    </div>
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                      Cross-Team Contributions
-                    </label>
-                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line break-words leading-relaxed font-normal min-h-[75px] shadow-2xs flex-1">
-                      {formData.crossTeamContributions || "—"}
-                    </div>
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                      Knowledge Sharing / Mentoring
-                    </label>
-                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line break-words leading-relaxed font-normal min-h-[75px] shadow-2xs flex-1">
-                      {formData.knowledgeSharingMentoring || "—"}
-                    </div>
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                      Teamwork Examples
-                    </label>
-                    <div className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] whitespace-pre-line break-words leading-relaxed font-normal min-h-[75px] shadow-2xs flex-1">
-                      {formData.teamworkExamples || "—"}
-                    </div>
-                  </div>
+                      </div>
+                    );
+                  })}
+                  <KvRow label="Team Collaboration Summary" value={formData.teamCollaborationSummary} />
+                  <KvRow label="Cross-Team Contributions" value={formData.crossTeamContributions} />
+                  <KvRow label="Knowledge Sharing / Mentoring" value={formData.knowledgeSharingMentoring} />
+                  <KvRow label="Teamwork Examples" value={formData.teamworkExamples} />
                 </div>
               </div>
             )}
 
             {/* STEP 4: CONTINUOUS LEARNING & GOALS */}
             {shouldShowStep(4) && (
-              <div id="eval-step-4" className="eval-step-card eval-reveal-card space-y-3">
+              <div id="eval-step-4" className="eval-step-card eval-review-card-noborder eval-reveal-card space-y-3">
                 <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
@@ -2104,83 +1988,29 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-stretch eval-stagger-item eval-stagger-3">
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                      Skills Learned During This Period
-                    </label>
-                    <div
-                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line break-words font-normal min-h-[80px] shadow-2xs flex-1"
-                      title="Employee submitted response (Read-only)"
-                    >
-                      {formData.skillsAcquired || "—"}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                      Training / Certifications Completed
-                    </label>
-                    <div
-                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line break-words font-normal min-h-[80px] shadow-2xs flex-1"
-                      title="Employee submitted response (Read-only)"
-                    >
-                      {formData.certificationsOrCourses || "—"}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                      Skills to Improve
-                    </label>
-                    <div
-                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line break-words font-normal min-h-[80px] shadow-2xs flex-1"
-                      title="Employee submitted response (Read-only)"
-                    >
-                      {formData.skillsToImprove || "—"}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                      Support or Training Required
-                    </label>
-                    <div
-                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line break-words font-normal min-h-[80px] shadow-2xs flex-1"
-                      title="Employee submitted response (Read-only)"
-                    >
-                      {formData.supportOrTrainingRequired || "—"}
-                    </div>
-                  </div>
-
-                  <div className="col-span-1 sm:col-span-2 min-w-0">
-                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                      Learning Goals for Next Quarter
-                    </label>
-                    <div
-                      className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[70px] shadow-2xs"
-                      title="Employee submitted response (Read-only)"
-                    >
-                      {formData.nextQuarterLearningGoals || "—"}
-                    </div>
-                  </div>
-
-                  {!formData.skillsAcquired && !formData.skillsToImprove && (formData.learningGoalItems || []).length > 0 && (
-                    <div className="col-span-1 sm:col-span-2 min-w-0 space-y-2 pt-2 border-t border-blue-100">
-                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                        Previous Learning Goals
-                      </label>
-                      {(formData.learningGoalItems || []).map((goal, index) => (
-                        <div
-                          key={`${goal}-${index}`}
-                          className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal shadow-2xs"
-                          title="Employee submitted response (Read-only)"
-                        >
-                          {goal}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                <div className="eval-stagger-item eval-stagger-3 space-y-0">
+                  <KvRow label="Skills Learned During This Period" value={formData.skillsAcquired} />
+                  <KvRow
+                    label="Training / Certifications Completed"
+                    value={formData.certificationsOrCourses}
+                  />
+                  <KvRow label="Skills to Improve" value={formData.skillsToImprove} />
+                  <KvRow
+                    label="Support or Training Required"
+                    value={formData.supportOrTrainingRequired}
+                  />
+                  <KvRow
+                    label="Learning Goals for Next Quarter"
+                    value={formData.nextQuarterLearningGoals}
+                  />
+                  {!formData.skillsAcquired &&
+                    !formData.skillsToImprove &&
+                    (formData.learningGoalItems || []).length > 0 && (
+                      <KvRow
+                        label="Previous Learning Goals"
+                        value={(formData.learningGoalItems || []).join("\n")}
+                      />
+                    )}
                 </div>
               </div>
             )}
@@ -2188,7 +2018,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             {/* STEP 5: ENVIRONMENT */}
             {shouldShowStep(5) && (
               <>
-                <div id="eval-step-5" className="eval-step-card eval-reveal-card space-y-3.5">
+                <div id="eval-step-5" className="eval-step-card eval-review-card-noborder eval-reveal-card space-y-3.5">
                   <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
                     <div className="flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
@@ -2236,125 +2066,76 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         return avgScore ? (
                           <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
                             <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
-                            <span className="text-[11px] font-semibold text-[#64748B]">Average:</span>
+                            <span className="text-[11px] font-semibold text-[#334155]">Average:</span>
                             <span className="text-xs sm:text-sm font-extrabold text-[#0F172A]">
                               {avgScore}
                             </span>
-                            <span className="text-[10px] font-bold text-[#94A3B8]">/ 5.0</span>
+                            <span className="text-[10px] font-bold text-[#475569]">/ 5.0</span>
                           </div>
                         ) : null;
                       })()}
                     </div>
                   </div>
 
-                  {/* Environment Dimensions Rating Preview (Exact Image 2 Style) */}
-                  <div className="eval-stagger-item eval-stagger-3 space-y-2">
-                    <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                      Environment &amp; Support Dimensions
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-stretch">
-                      {[
-                        {
-                          title: "Work Environment Satisfaction",
-                          score: formData.companyEnvironmentRating || 0,
-                        },
-                        {
-                          title: "Availability of Tools & Resources",
-                          score: formData.toolingAndResourcesRating || 0,
-                        },
-                        {
-                          title: "Manager Support",
-                          score: formData.managementSupportRating || 0,
-                        },
-                      ].map((item, idx) => (
-                        <div
-                          key={idx}
-                          className="p-3 bg-white border border-[#CBD5E1] rounded-lg flex items-center justify-between gap-2 shadow-2xs"
-                        >
-                          <span className="text-xs sm:text-sm font-semibold text-[#0F172A] leading-snug">
-                            {item.title}
-                          </span>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <div className="flex items-center gap-1">
-                              {[1, 2, 3, 4, 5].map((s) => (
-                                <Star
-                                  key={s}
-                                  className={`w-4 h-4 transition-colors duration-150 ${s <= item.score
-                                    ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
+                  <div className="eval-stagger-item eval-stagger-3 grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 py-3 border-b border-[#94A3B8]">
+                    {[
+                      {
+                        title: "Work Environment Satisfaction",
+                        score: formData.companyEnvironmentRating || 0,
+                      },
+                      {
+                        title: "Availability of Tools & Resources",
+                        score: formData.toolingAndResourcesRating || 0,
+                      },
+                      {
+                        title: "Manager Support",
+                        score: formData.managementSupportRating || 0,
+                      },
+                    ].map((item) => (
+                      <div key={item.title} className="min-w-0 flex flex-col gap-1">
+                        <span className="text-xs sm:text-[13px] font-bold uppercase tracking-wider text-[#0F172A]">
+                          {item.title}:
+                        </span>
+                        <span className="inline-flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-0.5">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                className={`w-4 h-4 ${
+                                  s <= item.score
+                                    ? "fill-[#F59E0B] text-[#F59E0B]"
                                     : "fill-transparent text-gray-300"
-                                    }`}
-                                />
-                              ))}
-                            </div>
-                            {item.score > 0 && (
-                              <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200">
-                                {item.score}.0
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                                }`}
+                              />
+                            ))}
+                          </span>
+                          <span className="text-sm sm:text-[15px] font-semibold text-[#0F172A]">
+                            {item.score > 0 ? `${item.score}.0 / 5.0` : "Not rated"}
+                          </span>
+                        </span>
+                      </div>
+                    ))}
                   </div>
 
-                  {/* Qualitative Text Areas 2x2 Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1 items-stretch">
-                    {/* Feedback on Work Culture */}
-                    <div className="eval-stagger-item eval-stagger-3 flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Feedback on Work Culture
-                      </label>
-                      <div
-                        className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[44px] flex-1 shadow-2xs"
-                        title="Employee submitted response (Read-only)"
-                      >
-                        {formData.workCultureFeedback || formData.feedbackOnWorkCulture || "—"}
-                      </div>
-                    </div>
-
-                    {/* Work Life Balance */}
-                    <div className="eval-stagger-item eval-stagger-3 flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Work Life Balance
-                      </label>
-                      <div
-                        className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[44px] flex-1 shadow-2xs"
-                        title="Employee submitted response (Read-only)"
-                      >
-                        {formData.workLifeBalance || "—"}
-                      </div>
-                    </div>
-
-                    {/* Challenges Affecting Productivity */}
-                    <div className="eval-stagger-item eval-stagger-4 flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Challenges Affecting Productivity
-                      </label>
-                      <div
-                        className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[44px] flex-1 shadow-2xs"
-                        title="Employee submitted response (Read-only)"
-                      >
-                        {formData.challengesAffectingProductivity || "—"}
-                      </div>
-                    </div>
-
-                    {/* Suggestions for Improvement */}
-                    <div className="eval-stagger-item eval-stagger-4 flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Suggestions for Improvement
-                      </label>
-                      <div
-                        className="p-3.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[44px] flex-1 shadow-2xs"
-                        title="Employee submitted response (Read-only)"
-                      >
-                        {formData.suggestionsForImprovement || formData.toolingAndResources || "—"}
-                      </div>
-                    </div>
+                  <div className="pt-1 space-y-0 eval-stagger-item eval-stagger-3">
+                    <KvRow
+                      label="Feedback on Work Culture"
+                      value={formData.workCultureFeedback || formData.feedbackOnWorkCulture}
+                    />
+                    <KvRow label="Work Life Balance" value={formData.workLifeBalance} />
+                    <KvRow
+                      label="Challenges Affecting Productivity"
+                      value={formData.challengesAffectingProductivity}
+                    />
+                    <KvRow
+                      label="Suggestions for Improvement"
+                      value={formData.suggestionsForImprovement || formData.toolingAndResources}
+                    />
                   </div>
                 </div>
 
                 {/* STEP 6: FINAL REVIEW */}
-                <div id="eval-step-6" className="eval-step-card eval-reveal-card space-y-3.5">
+                <div id="eval-step-6" className="eval-step-card eval-review-card-noborder eval-reveal-card space-y-3.5">
                   <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
                     <div className="flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
@@ -2372,89 +2153,52 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     ) : null}
                   </div>
 
-                  {/* Overall Self-Rating Card (Image 2 Single-Row Pill Style) */}
-                  <div className="eval-stagger-item eval-stagger-3">
-                    <div className="p-3 sm:py-2.5 sm:px-3.5 rounded-2xl border-[1.5px] border-[#E2E8F0] bg-white flex flex-wrap items-center justify-between gap-2.5 shadow-2xs">
-                      {/* Left: Checkmark, Title, and Qualitative Badge */}
-                      <div className="flex items-center gap-2 min-w-0">
-                        {formData.overallSelfRating > 0 && (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB] shrink-0" />
-                        )}
-                        <span className="text-xs sm:text-[13px] font-bold text-[#0F172A] truncate">
-                          Overall Self-Rating
-                        </span>
-                        {formData.overallSelfRating > 0 && (
-                          <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60 ml-1 shrink-0">
-                            {RATING_LABEL_MAP[formData.overallSelfRating] || "Rated"}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Right: 5 Stars & 5.0 / 5.0 Score Pill */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex items-center gap-1">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              className={`w-4 h-4 transition-colors duration-150 ${s <= (formData.overallSelfRating || 0)
-                                ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
-                                : "fill-transparent text-gray-300"
+                  <div className="eval-stagger-item eval-stagger-3 space-y-0">
+                    <KvRow
+                      label="Overall Self-Rating"
+                      value={
+                        <span className="inline-flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                className={`w-3.5 h-3.5 ${
+                                  s <= (formData.overallSelfRating || 0)
+                                    ? "fill-[#F59E0B] text-[#F59E0B]"
+                                    : "fill-transparent text-gray-300"
                                 }`}
-                            />
-                          ))}
-                        </div>
-                        {formData.overallSelfRating > 0 ? (
-                          <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-200 whitespace-nowrap">
-                            {formData.overallSelfRating}.0 / 5.0
+                              />
+                            ))}
                           </span>
-                        ) : (
-                          <span className="text-[10px] font-medium text-slate-400">Not rated</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Qualitative Responses Side by Side */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1 items-stretch">
-                    {/* Overall Employee Comments */}
-                    <div className="eval-stagger-item eval-stagger-3">
-                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                        Overall Employee Comments
-                      </label>
-                      <div
-                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[75px] shadow-2xs"
-                        title="Employee submitted response (Read-only)"
-                      >
-                        {formData.overallEmployeeComments || "—"}
-                      </div>
-                    </div>
-
-                    {/* Career Growth Interests */}
-                    <div className="eval-stagger-item eval-stagger-4">
-                      <label className="text-[11px] font-semibold text-[#0F172A] block mb-1 uppercase tracking-wider">
-                        Career Growth Interests
-                      </label>
-                      <div
-                        className="p-3.5 bg-white border border-[#E2E8F0] rounded-xl text-sm text-[#0F172A] leading-relaxed whitespace-pre-line font-normal min-h-[75px] shadow-2xs"
-                        title="Employee submitted response (Read-only)"
-                      >
-                        {formData.careerGrowthInterests || "—"}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Confirmation Status */}
-                  <div className="eval-stagger-item eval-stagger-4 pt-1">
-                    {formData.confirmationAccepted ? (
-                      <div className="p-3 bg-emerald-50/50 border border-emerald-200/80 rounded-xl flex items-center gap-2 text-emerald-800 text-xs font-semibold shadow-2xs">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Confirmed and verified by employee upon submission</span>
-                      </div>
-                    ) : (
-                      <div className="p-3 bg-slate-50 border border-[#E2E8F0] rounded-xl flex items-center gap-2 text-[#64748B] text-xs font-medium shadow-2xs">
-                        <span>Draft review — pending final employee submission and confirmation.</span>
-                      </div>
-                    )}
+                          {formData.overallSelfRating > 0 ? (
+                            <span className="text-sm font-semibold text-[#0F172A]">
+                              {formData.overallSelfRating}.0 / 5.0
+                              {RATING_LABEL_MAP[formData.overallSelfRating]
+                                ? ` · ${RATING_LABEL_MAP[formData.overallSelfRating]}`
+                                : ""}
+                            </span>
+                          ) : (
+                            <span>Not rated</span>
+                          )}
+                        </span>
+                      }
+                    />
+                    <KvRow
+                      label="Overall Employee Comments"
+                      value={formData.overallEmployeeComments}
+                    />
+                    <KvRow
+                      label="Career Growth Interests"
+                      value={formData.careerGrowthInterests}
+                    />
+                    <KvRow
+                      label="Confirmation"
+                      value={
+                        formData.confirmationAccepted
+                          ? "Confirmed and verified by employee upon submission"
+                          : "Draft review — pending final employee submission and confirmation"
+                      }
+                    />
                   </div>
                 </div>
               </>
@@ -2519,7 +2263,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             : "View Evaluation & Ratings"
                           : "Evaluate Employee Performance"}
                       </h3>
-                      <p className="text-xs text-[#64748B] mt-0.5 max-w-xl leading-relaxed">
+                      <p className="text-xs text-[#334155] mt-0.5 max-w-xl leading-relaxed">
                         {isViewMode
                           ? record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS
                             ? "Navigate to the scored evaluation matrix to inspect draft competencies, ratings, and feedback."
@@ -2572,7 +2316,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               </div>
             ) : hideScoreParameters ? (
               <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4">
-                <p className="text-sm font-medium text-[#64748B]">
+                <p className="text-sm font-medium text-[#334155]">
                   {employeeSubmitted
                     ? "Quarterly performance review submitted. Waiting for manager review."
                     : "Quarterly performance review in progress. Review and complete all steps before final submission."}
@@ -2580,7 +2324,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               </div>
             ) : !employeeSubmitted ? (
               <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4 border border-blue-100 bg-white/60">
-                <p className="text-xs sm:text-sm font-medium text-[#64748B]">
+                <p className="text-xs sm:text-sm font-medium text-[#334155]">
                   The evaluation matrix will unlock once the employee submits their review.
                 </p>
               </div>
@@ -2594,7 +2338,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         {activeView === "matrix" && (
           <div className="w-full space-y-6">
             <div className="eval-glass-card eval-reveal-card p-6 sm:p-7 w-full">
-              <div className="flex items-center gap-3 mb-5 pb-3 border-b border-[#E2E8F0]">
+              <div className="flex items-center gap-3 mb-5 pb-3 border-b border-[#64748B]">
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shrink-0 shadow-md shadow-blue-500/20 eval-stagger-item eval-stagger-1">
                   <Sliders className="w-5 h-5" />
                 </div>
@@ -2604,7 +2348,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       ? "Manager Evaluation (View Mode)"
                       : "Manager Review & Evaluation Matrix"}
                   </h2>
-                  <p className="text-xs text-[#64748B] eval-stagger-item eval-stagger-3">
+                  <p className="text-xs text-[#334155] eval-stagger-item eval-stagger-3">
                     {isViewMode
                       ? "Evaluation record is read-only. Editing is disabled."
                       : "Rate employee across parameters or type score directly"}
@@ -2615,19 +2359,19 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               {matrixLoading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-20">
                   <Loader2 className="w-8 h-8 animate-spin text-[#2563EB]" />
-                  <p className="text-sm font-semibold text-[#64748B]">Loading evaluation</p>
+                  <p className="text-sm font-semibold text-[#334155]">Loading evaluation</p>
                 </div>
               ) : (
               <form
                 onSubmit={isViewMode ? (e) => e.preventDefault() : handleSubmit}
                 className={`space-y-5 ${isViewMode ? "eval-view-mode" : ""}`}
               >
-                {/* Score Evaluation Parameters Box / Hidden State */}
+                {/* Employee-only password gate. Admin/Manager skip this (hideScoreParameters=false). */}
                 {hideScoreParameters && !isRatingUnlocked && !hasManagerEvaluation ? (
                   <div className="space-y-4">
                     <div>
                       <div className="mb-2.5 eval-stagger-item eval-stagger-2">
-                        <label className="block text-[11px] font-extrabold uppercase tracking-wider text-[#64748B] mb-1">
+                        <label className="block text-[11px] font-extrabold uppercase tracking-wider text-[#334155] mb-1">
                           Score Evaluation Parameters (1-5 Scale)
                         </label>
                       </div>
@@ -2648,7 +2392,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               <span className="text-xs font-bold text-[#0F172A] block">
                                 Score Evaluation Parameters (1-5 Scale)
                               </span>
-                              <span className="text-[11px] text-[#64748B]">
+                              <span className="text-[11px] text-[#334155]">
                                 Enter your password to view the evaluation
                               </span>
                             </div>
@@ -2668,7 +2412,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               <h4 className="text-xs font-bold text-[#0F172A]">
                                 Request Rating Access
                               </h4>
-                              <p className="text-[11px] text-[#64748B] mt-0.5">
+                              <p className="text-[11px] text-[#334155] mt-0.5">
                                 Enter your password to view the completed evaluation
                               </p>
                             </div>
@@ -2692,14 +2436,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 ) : (
                   <>
                     {/* Score Evaluation Parameters Box */}
-                    <div>
+                    <div className="eval-glass-card eval-reveal-card p-4 sm:p-5">
                       <div className="mb-2.5 eval-stagger-item eval-stagger-2">
                         <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                           Score Evaluation Parameters (1-5 Scale)
                         </label>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 border border-[#E2E8F0] rounded-2xl p-3 sm:p-4 bg-slate-50/40">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
                         {EVALUATION_PARAMETERS.map((param, pIdx) => {
                           const currentRating = getParamNumericValue(param.key);
                           const isParamHovered = hoveredStar?.key === param.key;
@@ -2714,10 +2458,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               className={`eval-reveal-card eval-stagger-${(pIdx % 4) + 1} flex flex-col`}
                             >
                               <div
-                                className={`eval-param-row bg-white/90 border ${fieldErrors[param.key]
+                                className={`eval-param-row bg-white ${fieldErrors[param.key]
                                   ? "!border-red-500 !ring-2 !ring-red-100 !bg-red-50/25"
-                                  : "border-[#E2E8F0]/70"
-                                  } rounded-xl px-3.5 py-2.5 flex items-center justify-between shadow-2xs transition-all`}
+                                  : ""
+                                  } rounded-xl px-3.5 py-2.5 flex items-center justify-between transition-all`}
                               >
                                 <span className="text-xs sm:text-[13px] font-semibold text-[#0F172A] pr-2">
                                   {param.label} <span className="text-red-500">*</span>
@@ -2847,7 +2591,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         </div>
                         <span className="text-xs sm:text-[13px] font-semibold text-[#0F172A]">
                           Overall Performance Rating
-                          <span className="ml-1.5 text-[11px] font-medium text-[#64748B] normal-case">(auto-calculated)</span>
+                          <span className="ml-1.5 text-[11px] font-medium text-[#334155] normal-case">(auto-calculated)</span>
                         </span>
                       </div>
 
@@ -2874,9 +2618,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           {fieldErrors.finalScore ? (
                             <span className="text-[11px] font-semibold text-red-600">{fieldErrors.finalScore}</span>
                           ) : averageScore !== null ? (
-                            <span className="text-[9px] font-bold text-[#64748B]">{getRatingLabel(averageScore)}</span>
+                            <span className="text-[9px] font-bold text-[#334155]">{getRatingLabel(averageScore)}</span>
                           ) : (
-                            <span className="text-[9px] font-semibold text-[#94A3B8]">Rate parameters above</span>
+                            <span className="text-[9px] font-semibold text-[#475569]">Rate parameters above</span>
                           )}
                         </div>
                       </div>
@@ -2925,7 +2669,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             >
                               {averageScore !== null ? averageScore.toFixed(1) : "—"}
                             </span>
-                            <span className="text-[9px] font-bold text-[#64748B] mt-0.5">/ 5.0</span>
+                            <span className="text-[9px] font-bold text-[#334155] mt-0.5">/ 5.0</span>
                           </div>
                         </div>
                       </div>
@@ -2935,136 +2679,138 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                 {(!hideScoreParameters || isRatingUnlocked) && (
                   <div className="space-y-4">
-                    <div className="eval-reveal-card" id="eval-field-container-strengths">
-                      <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
-                        <span>
-                          Key Strengths <span className="text-red-500">*</span>
-                        </span>
-                        <span className="text-[10px] font-semibold text-[#64748B]">
-                          Key Highlights
-                        </span>
-                      </label>
-                      {isViewMode ? (
-                        <div className="eval-stagger-item eval-stagger-2 p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px]">
-                          {strengths || "—"}
+                    {isViewMode ? (
+                      <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 space-y-0">
+                        <KvRow label="Key Strengths" value={strengths} />
+                        <KvRow label="Areas of Improvement" value={improvements} />
+                        <KvRow label="Manager Comments" value={remarks} />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="eval-reveal-card" id="eval-field-container-strengths">
+                          <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                            <span>
+                              Key Strengths <span className="text-red-500">*</span>
+                            </span>
+                            <span className="text-[10px] font-semibold text-[#334155]">
+                              Key Highlights
+                            </span>
+                          </label>
+                          <textarea
+                            id="eval-field-strengths"
+                            rows={3}
+                            value={strengths}
+                            onChange={(e) => {
+                              setStrengths(e.target.value);
+                              clearFieldError("strengths");
+                            }}
+                            className={`eval-textarea-field eval-stagger-item eval-stagger-2 font-normal text-sm text-[#0F172A] ${fieldErrors.strengths ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""}`}
+                          />
+                          {fieldErrors.strengths && (
+                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600 animate-in fade-in slide-in-from-top-1">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                              <span>{fieldErrors.strengths}</span>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <textarea
-                          id="eval-field-strengths"
-                          rows={3}
-                          value={strengths}
-                          onChange={(e) => {
-                            setStrengths(e.target.value);
-                            clearFieldError("strengths");
-                          }}
-                          className={`eval-textarea-field eval-stagger-item eval-stagger-2 font-normal text-sm text-[#0F172A] ${fieldErrors.strengths ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""}`}
-                        />
-                      )}
-                      {fieldErrors.strengths && (
-                        <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600 animate-in fade-in slide-in-from-top-1">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                          <span>{fieldErrors.strengths}</span>
-                        </div>
-                      )}
-                    </div>
 
-                    <div className="eval-reveal-card" id="eval-field-container-improvements">
-                      <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
-                        <span>
-                          Areas of Improvement <span className="text-red-500">*</span>
-                        </span>
-                        <span className="text-[10px] font-semibold text-[#64748B]">
-                          Growth Objectives
-                        </span>
-                      </label>
-                      {isViewMode ? (
-                        <div className="eval-stagger-item eval-stagger-2 p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px]">
-                          {improvements || "—"}
+                        <div className="eval-reveal-card" id="eval-field-container-improvements">
+                          <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                            <span>
+                              Areas of Improvement <span className="text-red-500">*</span>
+                            </span>
+                            <span className="text-[10px] font-semibold text-[#334155]">
+                              Growth Objectives
+                            </span>
+                          </label>
+                          <textarea
+                            id="eval-field-improvements"
+                            rows={3}
+                            value={improvements}
+                            onChange={(e) => {
+                              setImprovements(e.target.value);
+                              clearFieldError("improvements");
+                            }}
+                            className={`eval-textarea-field eval-stagger-item eval-stagger-2 font-normal text-sm text-[#0F172A] ${fieldErrors.improvements ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""}`}
+                          />
+                          {fieldErrors.improvements && (
+                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600 animate-in fade-in slide-in-from-top-1">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                              <span>{fieldErrors.improvements}</span>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <textarea
-                          id="eval-field-improvements"
-                          rows={3}
-                          value={improvements}
-                          onChange={(e) => {
-                            setImprovements(e.target.value);
-                            clearFieldError("improvements");
-                          }}
-                          className={`eval-textarea-field eval-stagger-item eval-stagger-2 font-normal text-sm text-[#0F172A] ${fieldErrors.improvements ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""}`}
-                        />
-                      )}
-                      {fieldErrors.improvements && (
-                        <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600 animate-in fade-in slide-in-from-top-1">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                          <span>{fieldErrors.improvements}</span>
-                        </div>
-                      )}
-                    </div>
 
-                    <div className="eval-reveal-card" id="eval-field-container-remarks">
-                      <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
-                        <span>
-                          Manager Comments <span className="text-red-500">*</span>
-                        </span>
-                        <span className="text-[10px] font-semibold text-[#64748B] normal-case tracking-normal">
-                          Guidance &amp; Notes
-                        </span>
-                      </label>
-                      {isViewMode ? (
-                        <div className="eval-stagger-item eval-stagger-2 p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px]">
-                          {remarks || "—"}
+                        <div className="eval-reveal-card" id="eval-field-container-remarks">
+                          <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                            <span>
+                              Manager Comments <span className="text-red-500">*</span>
+                            </span>
+                            <span className="text-[10px] font-semibold text-[#334155] normal-case tracking-normal">
+                              Guidance &amp; Notes
+                            </span>
+                          </label>
+                          <textarea
+                            id="eval-field-remarks"
+                            rows={2}
+                            value={remarks}
+                            onChange={(e) => {
+                              setRemarks(e.target.value);
+                              clearFieldError("remarks");
+                            }}
+                            className={`eval-textarea-field eval-stagger-item eval-stagger-2 font-normal text-sm text-[#0F172A] ${fieldErrors.remarks ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""}`}
+                          />
+                          {fieldErrors.remarks && (
+                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600 animate-in fade-in slide-in-from-top-1">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                              <span>{fieldErrors.remarks}</span>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <textarea
-                          id="eval-field-remarks"
-                          rows={2}
-                          value={remarks}
-                          onChange={(e) => {
-                            setRemarks(e.target.value);
-                            clearFieldError("remarks");
-                          }}
-                          className={`eval-textarea-field eval-stagger-item eval-stagger-2 font-normal text-sm text-[#0F172A] ${fieldErrors.remarks ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""}`}
-                        />
-                      )}
-                      {fieldErrors.remarks && (
-                        <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600 animate-in fade-in slide-in-from-top-1">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                          <span>{fieldErrors.remarks}</span>
-                        </div>
-                      )}
-                    </div>
+                      </>
+                    )}
 
                     {/* ========== FINAL REVIEW & SUBMISSION SECTION ========== */}
-                    <div className="eval-step-card eval-reveal-card space-y-4 mt-2 border border-[#E2E8F0] rounded-2xl p-4 sm:p-5 bg-white">
+                    <div className="eval-glass-card eval-reveal-card space-y-4 mt-2 p-4 sm:p-5">
                       {/* Section Header */}
-                      <div className="flex items-center gap-2.5 border-b border-[#E2E8F0] pb-3">
+                      <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
                         <h3 className="text-xs sm:text-sm font-bold text-[#0F172A]">Final Review &amp; Submission</h3>
                         {calculatedAverage !== null && (
-                          <span className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-[#E2E8F0] text-[11px] font-semibold text-[#0F172A]">
+                          <span className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-[11px] font-semibold text-[#0F172A]">
                             <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
                             Avg: {calculatedAverage.toFixed(1)} / 5.0
                           </span>
                         )}
                       </div>
 
+                      {isViewMode ? (
+                        <div className="space-y-0">
+                          <KvRow label="Goals for Next Review Period" value={goalsForNextReview} />
+                          <KvRow
+                            label="Training / Development Recommendations"
+                            value={trainingRecommendations}
+                          />
+                          <KvRow
+                            label="Career Growth Recommendation"
+                            value={careerGrowthRecommendation}
+                          />
+                          <KvRow label="Review Outcome" value={reviewOutcome} />
+                          <KvRow label="Performance Action" value={performanceAction} />
+                        </div>
+                      ) : (
+                        <>
                       {/* Goals for Next Review Period */}
                       <div id="eval-field-container-goals">
                         <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                           Goals for Next Review Period <span className="text-red-500">*</span>
                         </label>
-                        {isViewMode ? (
-                          <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px]">
-                            {goalsForNextReview || "—"}
-                          </div>
-                        ) : (
-                          <textarea
-                            id="eval-field-goals"
-                            rows={3}
-                            value={goalsForNextReview}
-                            onChange={(e) => { setGoalsForNextReview(e.target.value); clearFieldError("goalsForNextReview"); }}
-                            className={`eval-textarea-field font-normal text-sm text-[#0F172A] ${fieldErrors.goalsForNextReview ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""}`}
-                          />
-                        )}
+                        <textarea
+                          id="eval-field-goals"
+                          rows={3}
+                          value={goalsForNextReview}
+                          onChange={(e) => { setGoalsForNextReview(e.target.value); clearFieldError("goalsForNextReview"); }}
+                          className={`eval-textarea-field font-normal text-sm text-[#0F172A] ${fieldErrors.goalsForNextReview ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""}`}
+                        />
                         {fieldErrors.goalsForNextReview && (
                           <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
                             <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
@@ -3077,20 +2823,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       <div>
                         <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                           Training / Development Recommendations
-                          <span className="ml-1.5 text-[10px] font-semibold text-[#64748B] normal-case tracking-normal">(optional)</span>
+                          <span className="ml-1.5 text-[10px] font-semibold text-[#334155] normal-case tracking-normal">(optional)</span>
                         </label>
-                        {isViewMode ? (
-                          <div className="p-3 bg-white border border-[#CBD5E1] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px]">
-                            {trainingRecommendations || "—"}
-                          </div>
-                        ) : (
-                          <textarea
-                            rows={2}
-                            value={trainingRecommendations}
-                            onChange={(e) => setTrainingRecommendations(e.target.value)}
-                            className="eval-textarea-field font-normal text-sm text-[#0F172A]"
-                          />
-                        )}
+                        <textarea
+                          rows={2}
+                          value={trainingRecommendations}
+                          onChange={(e) => setTrainingRecommendations(e.target.value)}
+                          className="eval-textarea-field font-normal text-sm text-[#0F172A]"
+                        />
                       </div>
 
                       {/* 2-col: Career Growth + Review Outcome */}
@@ -3099,23 +2839,21 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         <div>
                           <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                             Career Growth Recommendation
-                            <span className="ml-1.5 text-[10px] font-semibold text-[#64748B] normal-case tracking-normal">(optional)</span>
+                            <span className="ml-1.5 text-[10px] font-semibold text-[#334155] normal-case tracking-normal">(optional)</span>
                           </label>
                           <Dropdown
                             options={CAREER_GROWTH_OPTIONS}
                             value={careerGrowthRecommendation}
                             onChange={(val) => setCareerGrowthRecommendation(val)}
                             placeholder="Select..."
-                            disabled={isViewMode}
-                            allowClear={!isViewMode}
+                            allowClear
                             className="w-full"
                             maxLabelWidth="max-w-none"
-                            buttonClassName={`eval-dropdown-btn !opacity-100 ${isViewMode
-                                ? `eval-dropdown-disabled ${careerGrowthRecommendation ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
-                                : careerGrowthRecommendation
-                                  ? "!text-[#1E293B] !font-medium"
-                                  : "!text-[#94A3B8]"
-                              }`}
+                            buttonClassName={`eval-dropdown-btn !opacity-100 ${
+                              careerGrowthRecommendation
+                                ? "!text-[#1E293B] !font-medium"
+                                : "!text-[#475569]"
+                            }`}
                           />
                         </div>
 
@@ -3132,18 +2870,16 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               clearFieldError("reviewOutcome");
                             }}
                             placeholder="Select outcome..."
-                            disabled={isViewMode}
                             allowClear={false}
                             className="w-full"
                             maxLabelWidth="max-w-none"
-                            buttonClassName={`eval-dropdown-btn !opacity-100 ${fieldErrors.reviewOutcome
+                            buttonClassName={`eval-dropdown-btn !opacity-100 ${
+                              fieldErrors.reviewOutcome
                                 ? "eval-dropdown-error"
-                                : isViewMode
-                                  ? `eval-dropdown-disabled ${reviewOutcome ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
-                                  : reviewOutcome
-                                    ? "!text-[#1E293B] !font-medium"
-                                    : "!text-[#94A3B8]"
-                              }`}
+                                : reviewOutcome
+                                  ? "!text-[#1E293B] !font-medium"
+                                  : "!text-[#475569]"
+                            }`}
                           />
                           {fieldErrors.reviewOutcome && (
                             <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
@@ -3158,29 +2894,29 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       <div>
                         <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
                           Performance Action
-                          <span className="ml-1.5 text-[10px] font-semibold text-[#64748B] normal-case tracking-normal">(optional)</span>
+                          <span className="ml-1.5 text-[10px] font-semibold text-[#334155] normal-case tracking-normal">(optional)</span>
                         </label>
                         <Dropdown
                           options={PERFORMANCE_ACTION_OPTIONS}
                           value={performanceAction}
                           onChange={(val) => setPerformanceAction(val)}
                           placeholder="Select action..."
-                          disabled={isViewMode}
-                          allowClear={!isViewMode}
+                          allowClear
                           className="w-full"
                           maxLabelWidth="max-w-none"
-                          buttonClassName={`eval-dropdown-btn !opacity-100 ${isViewMode
-                              ? `eval-dropdown-disabled ${performanceAction ? "!text-[#1E293B]" : "eval-dropdown-empty !text-[#94A3B8]"}`
-                              : performanceAction
-                                ? "!text-[#1E293B] !font-medium"
-                                : "!text-[#94A3B8]"
-                            }`}
+                          buttonClassName={`eval-dropdown-btn !opacity-100 ${
+                            performanceAction
+                              ? "!text-[#1E293B] !font-medium"
+                              : "!text-[#475569]"
+                          }`}
                         />
                       </div>
+                        </>
+                      )}
 
                       {/* Manager Confirmation Checkbox */}
                       {!isViewMode && (
-                        <div className={`p-3.5 rounded-xl border transition-all ${managerConfirmation ? "border-green-300 bg-green-50/60" : fieldErrors.managerConfirmation ? "border-red-400 bg-red-50/40" : "border-[#E2E8F0] bg-slate-50/60"}`}>
+                        <div className={`p-3.5 rounded-xl border transition-all ${managerConfirmation ? "border-green-300 bg-green-50/60" : fieldErrors.managerConfirmation ? "border-red-400 bg-red-50/40" : "border-[#64748B] bg-slate-50/60"}`}>
                           <label className="flex items-start gap-3 cursor-pointer select-none">
                             <input
                               type="checkbox"
@@ -3346,7 +3082,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     ? "Update Final Review?"
                     : "Submit Final Review?"}
               </h3>
-              <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
+              <p className="text-xs text-[#334155] max-w-xs mx-auto leading-relaxed">
                 {confirmSubmitState === "success" ? (
                   <span>
                     The appraisal has been{" "}
@@ -3382,7 +3118,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 type="button"
                 disabled={isSubmitting || confirmSubmitState !== "idle"}
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#2B3674] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-3 rounded-2xl border border-[#64748B] text-[#2B3674] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -3469,7 +3205,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <h3 className="text-xl font-bold tracking-tight text-[#2B3674]">
                     Authenticate Rating Access
                   </h3>
-                  <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
+                  <p className="text-xs text-[#334155] max-w-xs mx-auto leading-relaxed">
                     Enter your login password. The evaluation is returned only after both rows are completed.
                   </p>
                 </div>
@@ -3490,14 +3226,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         }}
                         placeholder="Password"
                         autoComplete="current-password"
-                        className="w-full px-4 py-3 pl-10 pr-10 rounded-2xl bg-white border border-[#E2E8F0] text-sm text-[#2B3674] placeholder-[#94A3B8] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        className="w-full px-4 py-3 pl-10 pr-10 rounded-2xl bg-white border border-[#64748B] text-sm text-[#2B3674] placeholder-[#475569] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                         autoFocus
                       />
-                      <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <Lock className="w-4 h-4 text-[#475569] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <button
                         type="button"
                         onClick={() => setShowRatingPassword((current) => !current)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#2563EB]"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#2563EB]"
                         aria-label={showRatingPassword ? "Hide password" : "Show password"}
                       >
                         {showRatingPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -3515,7 +3251,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsEmailModalOpen(false)}
-                      className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#2B3674] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
+                      className="flex-1 py-3 rounded-2xl border border-[#64748B] text-[#2B3674] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
                     >
                       Cancel
                     </button>
@@ -3540,7 +3276,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[#2B3674]">
                     Let's verify your number
                   </h3>
-                  <p className="text-xs sm:text-sm text-[#64748B] max-w-xs mx-auto leading-relaxed">
+                  <p className="text-xs sm:text-sm text-[#334155] max-w-xs mx-auto leading-relaxed">
                     Enter the 6-digit verification code sent to{" "}
                     <span className="text-[#2B3674] font-semibold">{emailInput || "your email"}</span>
                   </p>
@@ -3589,9 +3325,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                 {/* Resend Code Option */}
                 <div className="flex items-center justify-between text-xs pt-1 px-1 border-t border-[#F1F5F9]">
-                  <span className="text-[#64748B]">Didn't get the code?</span>
+                  <span className="text-[#334155]">Didn't get the code?</span>
                   {resendTimer > 0 ? (
-                    <span className="text-[#64748B]">
+                    <span className="text-[#334155]">
                       Resend in <span className="text-blue-600 font-semibold">{resendTimer}s</span>
                     </span>
                   ) : (
@@ -3616,7 +3352,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[#2B3674]">
                     Verified successfully
                   </h3>
-                  <p className="text-xs sm:text-sm text-[#64748B] max-w-xs mx-auto">
+                  <p className="text-xs sm:text-sm text-[#334155] max-w-xs mx-auto">
                     Score Evaluation Parameters &amp; Ratings unlocked
                   </p>
                 </div>

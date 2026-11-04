@@ -51,6 +51,8 @@ import {
   Pagination,
   SearchBox,
 } from "../../../components/ui";
+import { useAppSelector } from "../../../hooks";
+import { isAdminAccess } from "../../../utils/roleAccess";
 import "./AppraisalDashboard.css";
 
 // Empty State Illustration using modern vector illustration style from manager side
@@ -603,6 +605,8 @@ const FinancialRatingHeaderCard: React.FC<FinancialRatingHeaderCardProps> = ({ o
 };
 
 export const AppraisalDashboard: React.FC = () => {
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const hideAdminHeaderCards = isAdminAccess(currentUser);
   const {
     assignments,
     activeAssignment,
@@ -1287,9 +1291,50 @@ export const AppraisalDashboard: React.FC = () => {
                 const targetAssignment = activeAssignment;
                 const performance = await loadRowPerformance(targetAssignment);
                 const formData = performance ? toReviewFormData(performance) : undefined;
+                let resolvedReviewId =
+                  performance?.reviewId ?? targetAssignment.reviewId ?? 0;
+                let resolvedReviewStatus =
+                  targetAssignment.reviewStatus || performance?.status || "";
+
+                // Ensure we have a real review id before opening password unlock
+                // (avoids /reveal-rating/0 → invalid API + password loop).
+                if (!resolvedReviewId && targetAssignment.employeeId) {
+                  try {
+                    const list = await AppraisalApi.getManagerReviewList(
+                      targetAssignment.employeeId,
+                      {
+                        financialYear: targetAssignment.financialYear,
+                        quarter:
+                          typeof targetAssignment.quarter === "string"
+                            ? targetAssignment.quarter
+                            : undefined,
+                      },
+                    );
+                    const match = (list.data || []).find(
+                      (row: { id?: number; quarter?: string; financialYear?: string; status?: string }) =>
+                        row.financialYear === targetAssignment.financialYear &&
+                        (typeof targetAssignment.quarter !== "string" ||
+                          row.quarter === targetAssignment.quarter),
+                    );
+                    if (match?.id) {
+                      resolvedReviewId = match.id;
+                      resolvedReviewStatus = match.status || resolvedReviewStatus;
+                    }
+                  } catch {
+                    /* keep existing ids */
+                  }
+                }
+
+                if (!resolvedReviewId) {
+                  message.error(
+                    "This evaluation is not ready to open yet. Please refresh and try again.",
+                  );
+                  return;
+                }
+
                 setViewingForm(formData);
                 setViewingPerformanceStatus(performance?.status || targetAssignment.status || "");
-                setViewingReviewStatus(targetAssignment.reviewStatus || "");
+                setViewingReviewStatus(resolvedReviewStatus);
                 setViewingEvaluation(undefined);
                 setViewingAssignment({
                   ...targetAssignment,
@@ -1304,7 +1349,7 @@ export const AppraisalDashboard: React.FC = () => {
                   performanceDate: performance?.submittedAt
                     ? formatAppraisalDisplayDate(performance.submittedAt)
                     : targetAssignment.performanceDate,
-                  reviewId: performance?.reviewId ?? targetAssignment.reviewId,
+                  reviewId: resolvedReviewId,
                   description: performance?.description ?? targetAssignment.description,
                 });
                 setStepperReadOnly(false);
@@ -1349,19 +1394,21 @@ export const AppraisalDashboard: React.FC = () => {
             </h1>
           </div>
 
-          {/* 2 Summary Cards beside title */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
-            <DeadlineHeaderCard
-              deadlineInfo={deadlineInfo}
-              onOpenEdit={handleOpenEdit}
-              onOpenView={handleOpenView}
-              renderQuarterBadge={renderQuarterBadge}
-            />
+          {/* Deadline + Financial Rating cards — hidden for Admin/CEO/GM */}
+          {!hideAdminHeaderCards && (
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+              <DeadlineHeaderCard
+                deadlineInfo={deadlineInfo}
+                onOpenEdit={handleOpenEdit}
+                onOpenView={handleOpenView}
+                renderQuarterBadge={renderQuarterBadge}
+              />
 
-            <FinancialRatingHeaderCard
-              onOpen={handleOpenAnnualRating}
-            />
-          </div>
+              <FinancialRatingHeaderCard
+                onOpen={handleOpenAnnualRating}
+              />
+            </div>
+          )}
         </div>
 
         {/* MAIN SECTION: QUARTERLY REVIEW HISTORY */}
@@ -1533,18 +1580,9 @@ export const AppraisalDashboard: React.FC = () => {
 
                                 {/* 3. Assigned By */}
                                 <td className="text-center">
-                                  <span
-                                    className={`qr-assigned-by-pill ${(assignment.assignedBy || "Admin").toLowerCase() === "admin"
-                                      ? "qr-assigned-by-admin"
-                                      : ""
-                                      }`}
-                                  >
-                                    {(assignment.assignedBy || "Admin").toLowerCase() === "admin" ? (
-                                      <ShieldCheck className="w-3.5 h-3.5" />
-                                    ) : (
-                                      <UserCheck className="w-3.5 h-3.5" />
-                                    )}
-                                    {assignment.assignedBy || "Admin"}
+                                  <span className="qr-assigned-by-pill">
+                                    <UserCheck className="w-3.5 h-3.5" />
+                                    {assignment.assignedBy || "—"}
                                   </span>
                                 </td>
 
@@ -1712,18 +1750,9 @@ export const AppraisalDashboard: React.FC = () => {
                         <div className="text-xs text-[#64748B] space-y-1.5 pt-1">
                           <div className="flex items-center justify-between">
                             <span>Assigned by:</span>
-                            <span
-                              className={`qr-assigned-by-pill ${(assignment.assignedBy || "Admin").toLowerCase() === "admin"
-                                ? "qr-assigned-by-admin"
-                                : ""
-                                }`}
-                            >
-                              {(assignment.assignedBy || "Admin").toLowerCase() === "admin" ? (
-                                <ShieldCheck className="w-3 h-3" />
-                              ) : (
-                                <UserCheck className="w-3 h-3" />
-                              )}
-                              {assignment.assignedBy || "Admin"}
+                            <span className="qr-assigned-by-pill">
+                              <UserCheck className="w-3 h-3" />
+                              {assignment.assignedBy || "—"}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">

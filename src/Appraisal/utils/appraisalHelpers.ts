@@ -452,6 +452,25 @@ export const formatQuarterDisplay = (quarter: any): string => {
   return str;
 };
 
+/** Assigned By = person's name (same for Manager / Admin / CEO / GM). */
+export const formatAssignedByDisplay = (
+  assignedBy?: string | null,
+  assignerId?: string | null,
+  managerName?: string | null,
+): string => {
+  const name = String(managerName || "").trim();
+  if (name && name.toLowerCase() !== "admin" && name !== "Reporting Manager") {
+    return name;
+  }
+  const id = String(assignerId || "").trim();
+  if (id && id.toLowerCase() !== "admin") return id;
+  const by = String(assignedBy || "").trim();
+  if (by && by.toUpperCase() !== "ADMIN" && by.toUpperCase() !== "MANAGER") {
+    return by;
+  }
+  return name || id || by;
+};
+
 export const isYearlyReview = (record?: {
   quarter?: any;
   reviewPeriod?: string;
@@ -493,15 +512,11 @@ export const toManagerReviewRecord = (
   toDate: formatAppraisalDisplayDate(review.deadlineDate),
   deadline: formatAppraisalDisplayDate(review.deadlineDate),
   assignedOn: formatAppraisalDisplayDate(review.assignedDate),
-  assignedBy:
-    String(("assignedBy" in review && review.assignedBy) || "").toUpperCase() === "ADMIN" ||
-    String(("assignerId" in review && review.assignerId) || "").toLowerCase() === "admin"
-      ? "Admin"
-      : ("managerName" in review && review.managerName)
-        ? review.managerName
-        : ("assignerId" in review && review.assignerId)
-          ? review.assignerId
-          : ("assignedBy" in review && review.assignedBy) || "",
+  assignedBy: formatAssignedByDisplay(
+    "assignedBy" in review ? review.assignedBy : null,
+    "assignerId" in review ? review.assignerId : null,
+    "managerName" in review ? review.managerName : null,
+  ),
   finalRating:
     review.finalRating == null
       ? ""
@@ -592,11 +607,11 @@ export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyRev
     reviewPeriod: review.reviewPeriod || review.performanceDetails?.reviewPeriod,
     yearlyQuarterReviews: review.yearlyQuarterReviews || review.performanceDetails?.yearlyQuarterReviews,
     financialYear: review.performanceDetails?.financialYear || review.financialYear,
-    assignedBy:
-      String((review as any).assignedBy || review.assignerId || "").toUpperCase() === "ADMIN" ||
-      String(review.assignerId || "").toLowerCase() === "admin"
-        ? "Admin"
-        : review.managerName || review.assignerId || "",
+    assignedBy: formatAssignedByDisplay(
+      (review as any).assignedBy,
+      review.assignerId,
+      review.managerName,
+    ),
     assignedDate: formatAppraisalDisplayDate(review.assignedDate),
     deadline: formatAppraisalDisplayDate(review.deadlineDate),
     performanceDate: formatAppraisalDisplayDate(

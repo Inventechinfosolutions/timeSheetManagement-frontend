@@ -126,28 +126,25 @@ export const OverviewStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-6">
       {/* Step Header */}
-      <div className="border-b border-[#E2E8F0] pb-4">
+      <div className="border-b border-[#64748B] pb-4">
         <h3 className="text-lg font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 1: Role & Quarter Overview</span>
           <span className="eval-title-accent-line" />
         </h3>
-        <p className="text-xs text-[#64748B] mt-1 eval-subtitle-anim">
-          Review your quarter timeline and detail your performance, accomplishments, and focus areas.
-        </p>
       </div>
 
       {/* Review Period: Compact, clean card bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-white border border-[#E2E8F0] hover:border-blue-300 rounded-2xl text-xs shadow-sm hover:shadow-md transition-all">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-white border border-[#64748B] hover:border-blue-300 rounded-2xl text-xs shadow-sm hover:shadow-md transition-all">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
           <span className="font-bold text-[#0F172A]">
             Review Period ({quarter} • {financialYear || "FY"}):
           </span>
           <span className="text-[#334155] font-medium">
-            <span className="text-[#64748B]">Start Date:</span>{" "}
+            <span className="text-[#334155]">Start Date:</span>{" "}
             <strong className="text-[#0F172A] font-semibold">{startDate || "—"}</strong>
             {"  "}—{"  "}
-            <span className="text-[#64748B]">End Date:</span>{" "}
+            <span className="text-[#334155]">End Date:</span>{" "}
             <strong className="text-[#0F172A] font-semibold">{endDate || "—"}</strong>
           </span>
         </div>

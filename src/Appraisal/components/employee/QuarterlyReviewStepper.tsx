@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+﻿import React, { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft,
@@ -1449,7 +1449,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
           {!readOnly && (
             <div className="text-right hidden sm:block">
-              <span className="text-xs text-[#64748B] block">Progress</span>
+              <span className="text-xs text-[#334155] block">Progress</span>
               <span className="text-sm font-bold text-[#2563EB]">Step {currentStep} of 6</span>
             </div>
           )}
@@ -1490,7 +1490,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                           ? "bg-[#2563EB] text-white ring-4 ring-blue-400/25 shadow-md shadow-blue-500/20"
                           : isCompleted
                             ? "bg-blue-500 text-white border-2 border-blue-500 shadow-xs"
-                            : "bg-white text-[#64748B] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB]"
+                            : "bg-white text-[#334155] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB]"
                         }`}
                     >
                       {isCompleted ? (
@@ -1506,7 +1506,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                           ? "text-[#2563EB] font-bold"
                           : isCompleted
                             ? "text-[#0F172A] font-semibold"
-                            : "text-[#64748B] group-hover:text-[#0F172A]"
+                            : "text-[#334155] group-hover:text-[#0F172A]"
                         }`}
                     >
                       {step.label}
@@ -1527,7 +1527,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
             </div>
             <h3 className="text-xl font-bold text-[#0F172A]">Quarterly Review Submitted!</h3>
-            <p className="text-sm text-[#64748B] mt-1 max-w-md mx-auto">
+            <p className="text-sm text-[#334155] mt-1 max-w-md mx-auto">
               Your self-evaluation has been successfully recorded. Your manager has been notified for subsequent review.
             </p>
           </div>
@@ -1608,9 +1608,6 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                       <h3 className="text-lg sm:text-xl font-bold text-[#2B3674] mt-1">
                         View Evaluation & Ratings
                       </h3>
-                      <p className="text-xs text-[#64748B] mt-0.5 max-w-xl leading-relaxed">
-                        Navigate to the scored evaluation matrix to inspect finalized competencies, ratings, and feedback.
-                      </p>
                     </div>
                   </div>
 
@@ -1685,7 +1682,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     size="md"
                     onClick={() => void handleSaveAndExit()}
                     disabled={saving}
-                    className="text-[#64748B] hover:text-[#0F172A]"
+                    className="text-[#334155] hover:text-[#0F172A]"
                   >
                     {saving ? "Saving" : "Save & Exit"}
                   </Button>
