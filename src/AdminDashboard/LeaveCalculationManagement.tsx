@@ -303,7 +303,7 @@ const LeaveCalculationManagement = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-[#A3AED0] border-b border-gray-100">
+                <tr className="text-left text-sm tracking-wide text-black border-b border-gray-100">
                   <th className="px-5 py-3 font-semibold">Department</th>
                   <th className="px-5 py-3 font-semibold">Employees</th>
                   <th className="px-5 py-3 font-semibold">Leave Calculation</th>
@@ -338,7 +338,7 @@ const LeaveCalculationManagement = () => {
                       >
                         <td className="px-5 py-3">
                           <div className="font-semibold text-[#2B3674]">{dept.departmentName}</div>
-                          <div className="text-xs text-[#A3AED0]">{dept.departmentCode}</div>
+                          <div className="text-sm text-[#A3AED0]">{dept.departmentCode}</div>
                         </td>
                         <td className="px-5 py-3 text-[#2B3674]">
                           <span className="inline-flex items-center gap-1.5">
@@ -384,7 +384,7 @@ const LeaveCalculationManagement = () => {
                               <Loader2 size={14} className="animate-spin text-[#A3AED0]" />
                             )}
                           </div>
-                          <div className="mt-1 text-[10px] text-[#A3AED0]">
+                          <div className="mt-1 text-sm text-[#A3AED0]">
                             {dept.leaveApproval === "AUTO"
                               ? "Manager self-approves · GM can review"
                               : "GM approves manager requests"}
@@ -463,7 +463,7 @@ const LeaveCalculationManagement = () => {
           <div className="overflow-auto max-h-[65vh]">
             <table className="w-full text-sm">
               <thead className="sticky top-0 z-10 bg-white">
-                <tr className="text-left text-xs uppercase tracking-wide text-[#A3AED0] border-b border-gray-100">
+                <tr className="text-left text-sm tracking-wide text-black border-b border-gray-100">
                   <th className="px-5 py-3 font-semibold">Employee</th>
                   <th className="px-5 py-3 font-semibold">ID</th>
                   <th className="px-5 py-3 font-semibold">Joining Date</th>
