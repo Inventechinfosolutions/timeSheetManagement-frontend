@@ -1985,8 +1985,32 @@ export const getInlineImageFileKey = (img: HTMLImageElement): string | null => {
   const attr = img.getAttribute(INLINE_FILE_KEY_ATTR);
   if (attr) return attr;
   const src = img.getAttribute("src") || "";
-  const match = /\/api\/notes\/attachments\/([^/?#]+)\/(?:view|download)/i.exec(src);
+  const match = /\/attachments\/([^/?#]+)\/(?:view|download)/i.exec(src);
   return match?.[1] ? decodeURIComponent(match[1]) : null;
+};
+
+/**
+ * Copy uploaded file keys onto the live images without swapping their src.
+ * Putting the API view URL on the <img> shows a broken image because that
+ * request has no auth header. Blob/data srcs stay so the picture remains.
+ */
+export const applyInlineImageKeys = (root: HTMLElement, canonicalHtml: string) => {
+  if (!canonicalHtml) return;
+  const parsed = new DOMParser().parseFromString(canonicalHtml, "text/html");
+  const saved = Array.from(parsed.querySelectorAll("img"));
+  const live = Array.from(root.querySelectorAll("img"));
+  saved.forEach((savedImg, index) => {
+    const target = live[index];
+    if (!target) return;
+    const key = getInlineImageFileKey(savedImg);
+    if (key) target.setAttribute(INLINE_FILE_KEY_ATTR, key);
+    const liveSrc = target.getAttribute("src") || "";
+    if (liveSrc.startsWith("blob:") || liveSrc.startsWith("data:")) return;
+    const savedSrc = savedImg.getAttribute("src") || "";
+    if (savedSrc.startsWith("blob:") || savedSrc.startsWith("data:")) {
+      target.setAttribute("src", savedSrc);
+    }
+  });
 };
 
 /**
@@ -2143,7 +2167,9 @@ export const hydrateInlineImagesInRoot = async (
       const key = getInlineImageFileKey(img);
       if (!key) return;
       const src = img.getAttribute("src") || "";
-      if (src.startsWith("blob:") || src.startsWith("data:")) return;
+      // Already displayable locally (fresh paste / prior hydrate) — do not re-fetch.
+      // Re-fetching orphaned keys on every paste was spamming 404 /view requests.
+      if (src.startsWith("data:") || src.startsWith("blob:")) return;
       try {
         const blobUrl = await fetchBlobUrl(key, img.getAttribute("alt") || undefined);
         if (blobUrl) {
@@ -2151,7 +2177,7 @@ export const hydrateInlineImagesInRoot = async (
           img.src = blobUrl;
         }
       } catch {
-        // leave preview URL — may still work if cookies auth the view route
+        // leave current src (broken API URL until user removes it, or cookie-authed view)
       }
     })
   );
