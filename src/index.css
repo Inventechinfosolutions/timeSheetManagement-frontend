@@ -377,6 +377,7 @@ input[type="password"]::-webkit-password-reveal-button {
 .a4-page.doc-pages {
   width: 100% !important;
   min-width: 0 !important;
+  max-width: 100% !important;
   min-height: 0 !important;
   height: auto !important;
   padding: 0 !important;
@@ -393,6 +394,7 @@ input[type="password"]::-webkit-password-reveal-button {
   min-height: 0;
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
   background: transparent;
 }
 
@@ -405,6 +407,7 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-content-view.is-landscape {
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
 }
 
 .notes-rich-editor .page,
@@ -425,8 +428,8 @@ input[type="password"]::-webkit-password-reveal-button {
   box-sizing: border-box !important;
   position: relative;
   /* Allow horizontal scroll for wide email/pasted tables */
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
   word-wrap: break-word;
   overflow-wrap: anywhere;
 }
@@ -607,8 +610,8 @@ input[type="password"]::-webkit-password-reveal-button {
   min-height: 520px !important;
   height: auto;
   max-height: none;
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
 }
 
 /* Pasted chat/code blocks must wrap inside the sheet — never push content off the left */
@@ -927,7 +930,7 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-content-view .note-table-scroll-inner {
   display: block !important;
   width: max-content !important;
-  min-width: 100% !important;
+  min-width: 0 !important;
   max-width: none !important;
 }
 
@@ -936,7 +939,7 @@ input[type="password"]::-webkit-password-reveal-button {
 .notes-rich-editor table.note-wide-table,
 .notes-content-view table.note-wide-table {
   width: max-content !important;
-  min-width: 100% !important;
+  min-width: 0 !important;
   max-width: none !important;
   table-layout: auto !important;
   border-collapse: collapse !important;
@@ -954,7 +957,34 @@ input[type="password"]::-webkit-password-reveal-button {
   white-space: nowrap !important;
   overflow-wrap: normal !important;
   word-break: normal !important;
-  min-width: 72px;
+  min-width: 120px !important;
+  max-width: none !important;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  vertical-align: middle !important;
+}
+
+/* Excel-like smooth horizontal scrollbar */
+.notes-rich-editor .note-table-scroll::-webkit-scrollbar,
+.notes-content-view .note-table-scroll::-webkit-scrollbar {
+  height: 8px !important;
+}
+
+.notes-rich-editor .note-table-scroll::-webkit-scrollbar-track,
+.notes-content-view .note-table-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+  border-radius: 4px !important;
+}
+
+.notes-rich-editor .note-table-scroll::-webkit-scrollbar-thumb,
+.notes-content-view .note-table-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+  border-radius: 4px !important;
+}
+
+.notes-rich-editor .note-table-scroll::-webkit-scrollbar-thumb:hover,
+.notes-content-view .note-table-scroll::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
 }
 
 .notes-rich-editor th,
@@ -1109,6 +1139,8 @@ input[type="password"]::-webkit-password-reveal-button {
   border-radius: 0 !important;
   box-sizing: border-box !important;
   position: relative;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
   transform: none !important;
 }
 

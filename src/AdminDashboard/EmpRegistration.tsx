@@ -20,7 +20,7 @@ import { useAppDispatch, useAppSelector } from "../hooks";
 import { RootState } from "../store";
 import { createUser } from "../reducers/user.reducer";
 import { UserType } from "../enums";
-import { isAdminAccess } from "../utils/roleAccess";
+import { isAdminAccess, isEmployeeRole } from "../utils/roleAccess";
 import { Shield } from "lucide-react";
 
 const Registration = () => {
@@ -104,16 +104,23 @@ const Registration = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]:
-        name === "employeeId"
-          ? value.toUpperCase()
-          : name === "employmentType"
-            ? (value as "" | "FULL_TIMER" | "INTERN")
-            : name === "gender"
-              ? (value as "" | "MALE" | "FEMALE")
-              : value,
+    setFormData((prev) => {
+      const next = {
+        ...prev,
+        [name]:
+          name === "employeeId"
+            ? value.toUpperCase()
+            : name === "employmentType"
+              ? (value as "" | "FULL_TIMER" | "INTERN")
+              : name === "gender"
+                ? (value as "" | "MALE" | "FEMALE")
+                : value,
+      };
+      // Only the Employee role can be an intern
+      if (name === "role" && value && !isEmployeeRole(value)) {
+        next.employmentType = "FULL_TIMER";
+      }
+      return next;
     });
   };
 
@@ -410,7 +417,9 @@ const Registration = () => {
                     >
                       <option value="">Select Employment type</option>
                       <option value="FULL_TIMER">Full time Employee</option>
-                      <option value="INTERN">Intern</option>
+                      {(!formData.role || isEmployeeRole(formData.role)) && (
+                        <option value="INTERN">Intern</option>
+                      )}
                     </select>
                     <Briefcase className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none">

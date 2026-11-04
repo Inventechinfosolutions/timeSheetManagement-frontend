@@ -32,6 +32,7 @@ export const orientPageSize = (
 ): { widthMm: number; heightMm: number } =>
   landscape
     ? { widthMm: A4_LANDSCAPE_WIDTH_MM, heightMm: A4_LANDSCAPE_HEIGHT_MM }
+    
     : { widthMm: A4_PORTRAIT_WIDTH_MM, heightMm: A4_PORTRAIT_HEIGHT_MM };
 
 export interface ExtractedPageSize {

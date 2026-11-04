@@ -18,7 +18,7 @@ import EmployeeLayout from "./navigation/EmployeeLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { UserType } from "./enums";
 import { useAppSelector } from "./hooks";
-import { isCeoUser } from "./utils/roleAccess";
+import { isCeoOrGmUser } from "./utils/roleAccess";
 
 // Lazy load authentication components
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
@@ -62,6 +62,7 @@ import ManagerQuarterlyReviewPage from "./Appraisal/pages/ManagerQuarterlyReview
 import InboxManagement from "./Inbox/InboxManagement";
 import EmployeeAppraisalPage from "./Appraisal/pages/EmployeeAppraisalPage";
 import AttendenceEditRequests from "./AdminDashboard/AttendenceEditRequests";
+import LeaveCalculationManagement from "./AdminDashboard/LeaveCalculationManagement";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -94,13 +95,19 @@ const EmployeeTabWrapper = () => {
   }
 };
 
-const CEO_BLOCKED_ADMIN_TABS = ["registration", "employees"];
+const CEO_BLOCKED_ADMIN_TABS = ["registration", "employees", "leave-calculation"];
+const RECEPTIONIST_BLOCKED_ADMIN_TABS = ["leave-calculation"];
 
 const AdminTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
-  const isCeo = useAppSelector((state) => isCeoUser(state.user.currentUser));
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const isCeo = isCeoOrGmUser(currentUser);
+  const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
 
   if (isCeo && tab && CEO_BLOCKED_ADMIN_TABS.includes(tab)) {
+    return <Navigate to="/admin-dashboard" replace />;
+  }
+  if (isReceptionist && tab && RECEPTIONIST_BLOCKED_ADMIN_TABS.includes(tab)) {
     return <Navigate to="/admin-dashboard" replace />;
   }
 
@@ -123,6 +130,8 @@ const AdminTabWrapper = () => {
       return <Requests />;
     case "work-management":
       return <AdminLeaveManagement />;
+    case "leave-calculation":
+      return <LeaveCalculationManagement />;
     case "leave-balance":
       return <LeaveBalance />;
     case "notes":
@@ -309,7 +318,7 @@ function AppContent() {
                 <Route
                   path="/admin-dashboard"
                   element={
-                    <ProtectedRoute allowedRoles={[UserType.ADMIN, UserType.CEO, UserType.RECEPTIONIST]}>
+                    <ProtectedRoute allowedRoles={[UserType.ADMIN, UserType.CEO, UserType.GENERAL_MANAGER, UserType.RECEPTIONIST]}>
                       <AdminLayout />
                     </ProtectedRoute>
                   }

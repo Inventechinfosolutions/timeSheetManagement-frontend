@@ -40,7 +40,7 @@ import {
   LeaveRequestType,
   UserType,
 } from "../enums";
-import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
+import { isAdminAccess, isCeoUser, isGeneralManagerUser } from "../utils/roleAccess";
 import "./Header.css";
 import InventLogo from "../assets/invent-logo.svg";
 import workspherelogo from "../assets/worksphere_white.svg";
@@ -62,6 +62,7 @@ const Header = ({
   const { currentUser } = useAppSelector((state) => state.user);
   // Permissions
   const isCeo = isCeoUser(currentUser);
+  const isGm = isGeneralManagerUser(currentUser);
   const isAdmin = isAdminAccess(currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isManager = currentUser?.userType === UserType.MANAGER;
@@ -365,6 +366,8 @@ const Header = ({
   // Get first letter of name for avatar fallback
   const avatarLetter = isCeo
     ? "C"
+    : isGm
+    ? "G"
     : isAdmin
       ? "A"
       : isReceptionist
@@ -1288,6 +1291,8 @@ const Header = ({
                     <span className="text-[12px] md:text-sm font-bold text-white transition-colors leading-none">
                       {isCeo
                         ? "CEO"
+                        : isGm
+                        ? "General Manager"
                         : isAdmin
                           ? "Admin"
                           : isReceptionist
@@ -1297,6 +1302,8 @@ const Header = ({
                     <span className="text-[9.5px] md:text-[11px] text-blue-100/80 leading-none mt-1">
                       {isCeo
                         ? "Chief Executive"
+                        : isGm
+                        ? "General Manager"
                         : isAdmin
                           ? "Administrator"
                           : isReceptionist
@@ -1322,6 +1329,13 @@ const Header = ({
                       <p className="text-sm font-bold text-[#1B2559]">CEO</p>
                       <p className="text-xs text-[#667eea] font-medium">
                         Chief Executive
+                      </p>
+                    </div>
+                  ) : isGm ? (
+                    <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                      <p className="text-sm font-bold text-[#1B2559]">General Manager</p>
+                      <p className="text-xs text-[#667eea] font-medium">
+                        General Manager
                       </p>
                     </div>
                   ) : isAdmin ? (

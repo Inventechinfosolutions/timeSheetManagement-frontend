@@ -2,6 +2,7 @@ export interface MasterDepartment {
     id: number;
     departmentName: string;
     departmentCode: string;
+    lockType?: "Weekly" | "Monthly";
     createdAt?: string;
     updatedAt?: string;
 }

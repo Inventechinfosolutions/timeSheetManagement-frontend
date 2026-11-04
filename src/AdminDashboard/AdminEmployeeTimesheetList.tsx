@@ -25,14 +25,14 @@ import Toast from "../components/Toast";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { SearchBox } from "../components/ui";
 import { MonthStatus, UserType } from "../enums";
-import { isAdminAccess, isCeoUser } from "../utils/roleAccess";
+import { isAdminAccess, isCeoOrGmUser } from "../utils/roleAccess";
 
 const AdminEmployeeTimesheetList = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const currentUser = useAppSelector((state: RootState) => state.user.currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
-  const canEditTimesheet = !isReceptionist && !isCeoUser(currentUser);
+  const canEditTimesheet = !isReceptionist && !isCeoOrGmUser(currentUser);
   const isAdminOrManager =
     isAdminAccess(currentUser) ||
     currentUser?.userType === UserType.MANAGER ||

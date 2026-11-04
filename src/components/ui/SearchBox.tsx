@@ -34,8 +34,13 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
   // Keep callback stable so debounce effect does not re-fire on every parent render
   const onDebounceRef = useRef(onDebounce);
   onDebounceRef.current = onDebounce;
+  const isFirstMountRef = useRef(true);
 
   useEffect(() => {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      return;
+    }
     skipNextValueSyncRef.current = true;
     onDebounceRef.current?.(debouncedValue);
   }, [debouncedValue]);

@@ -58,7 +58,7 @@ import {
   LeaveRequestType,
   UserType,
 } from "../enums";
-import { isCeoUser } from "../utils/roleAccess";
+import { isCeoOrGmUser } from "../utils/roleAccess";
 import CommonMultipleUploader from "../EmployeeDashboard/CommonMultipleUploader";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { message, Select, Modal } from "antd";
@@ -76,7 +76,7 @@ const Requests = () => {
   const { entities, loading } = useAppSelector((state) => state.leaveRequest);
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
-  const ceoRequestRole = isCeoUser(currentUser) ? "MANAGER" : undefined;
+  const ceoRequestRole = isCeoOrGmUser(currentUser) ? "MANAGER" : undefined;
 
   // Configure AntD message position to be below the header
   useEffect(() => {

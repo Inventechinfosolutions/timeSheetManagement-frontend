@@ -135,7 +135,7 @@ const Calendar = ({
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&
-      currentUser.role.toUpperCase().includes(UserType.MANAGER));
+      currentUser.role.toUpperCase() === UserType.MANAGER);
   const isMyRoute =
     location.pathname.includes("my-dashboard") ||
     location.pathname.includes("my-timesheet") ||

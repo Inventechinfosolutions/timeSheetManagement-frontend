@@ -60,7 +60,7 @@ const MobileResponsiveCalendarPage = ({
   const isManager =
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&
-      currentUser.role.toUpperCase().includes(UserType.MANAGER));
+      currentUser.role.toUpperCase() === UserType.MANAGER);
 
   // @ts-ignore
   const { holidays } = useAppSelector(
