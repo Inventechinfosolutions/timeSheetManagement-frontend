@@ -8,6 +8,7 @@ import {
   fetchNoteStats,
   fetchProjectsList,
   fetchNoteById,
+  fetchSubNotes,
   createNote,
   updateNote,
   deleteNote,
@@ -47,15 +48,16 @@ import {
   attachmentKeysInHtml,
   refreshAttachmentBadges,
 } from "../utils/noteEditorAttachmentHelpers";
+import { restoreNoteScroll, snapshotNoteScroll } from "../utils/noteEditorTableHelpers";
 import {
   justifyImportedContent,
   wrapWideTablesInRoot,
   noteMatchesSearch,
   noteMatchesCreatedDate,
   rewriteInlineDataImagesInHtml,
+  applyInlineImageKeys,
   hydrateInlineImagesInRoot,
   wrapNoteInlineImages,
-  applyInlineImageKeys,
   NOTE_EDITOR_CHECKPOINT_EVENT,
 } from "../utils/notesHelpers";
 import {
@@ -95,6 +97,67 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   // Accordion expansion state for sub-tables
   const [expandedNotes, setExpandedNotes] = useState<Record<number, boolean>>({});
   const [loadingSubNotes, setLoadingSubNotes] = useState<Record<number, boolean>>({});
+  const [childPages, setChildPages] = useState<Record<number, number>>({});
+  const [childTotals, setChildTotals] = useState<Record<number, number>>({});
+  const [childFilters, setChildFilters] = useState<
+    Record<number, { search: string; from: string; to: string }>
+  >({});
+
+  const handleChildPageChange = async (parentId: number, page: number) => {
+    setChildPages((prev) => ({ ...prev, [parentId]: page }));
+    const filter = childFilters[parentId] || { search: "", from: "", to: "" };
+    setLoadingSubNotes((prev) => ({ ...prev, [parentId]: true }));
+    try {
+      const res = await dispatch(
+        fetchSubNotes({
+          parentId,
+          page,
+          limit: 3,
+          search: filter.search || undefined,
+          fromDate: filter.from || undefined,
+          toDate: filter.to || undefined,
+        })
+      ).unwrap();
+      if (res?.total !== undefined) {
+        setChildTotals((prev) => ({ ...prev, [parentId]: res.total }));
+      }
+    } catch (err) {
+      console.error("Failed to load sub-notes page:", page, err);
+    } finally {
+      setLoadingSubNotes((prev) => ({ ...prev, [parentId]: false }));
+    }
+  };
+
+  const handleChildFilterChange = async (
+    parentId: number,
+    patch: Partial<{ search: string; from: string; to: string }>
+  ) => {
+    const current = childFilters[parentId] || { search: "", from: "", to: "" };
+    const updated = { ...current, ...patch };
+    setChildFilters((prev) => ({ ...prev, [parentId]: updated }));
+    setChildPages((prev) => ({ ...prev, [parentId]: 1 }));
+
+    setLoadingSubNotes((prev) => ({ ...prev, [parentId]: true }));
+    try {
+      const res = await dispatch(
+        fetchSubNotes({
+          parentId,
+          page: 1,
+          limit: 3,
+          search: updated.search || undefined,
+          fromDate: updated.from || undefined,
+          toDate: updated.to || undefined,
+        })
+      ).unwrap();
+      if (res?.total !== undefined) {
+        setChildTotals((prev) => ({ ...prev, [parentId]: res.total }));
+      }
+    } catch (err) {
+      console.error("Failed to filter sub-notes:", err);
+    } finally {
+      setLoadingSubNotes((prev) => ({ ...prev, [parentId]: false }));
+    }
+  };
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   /** Immediate search text for client-side filtering (Redux `searchQuery` is debounced for API). */
@@ -252,7 +315,7 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     }
   };
 
-  // Toggle sub-table accordion: fetch child notes on-demand via GET /notes/:id
+  // Toggle sub-table accordion: fetch child notes on-demand via GET /api/notes/:id/sub-notes
   const toggleExpand = async (noteId: number) => {
     const isCurrentlyExpanded = !!expandedNotes[noteId];
     if (isCurrentlyExpanded) {
@@ -268,17 +331,28 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       [noteId]: true,
     }));
 
-    // On-demand fetch child sub-notes if not yet loaded
-    const note = notes.find((n) => n.id === noteId);
-    if (!note?.subNotes || note.subNotes.length === 0) {
-      try {
-        setLoadingSubNotes((prev) => ({ ...prev, [noteId]: true }));
-        await dispatch(fetchNoteById(noteId)).unwrap();
-      } catch (err) {
-        console.error("Failed to load child notes for note:", noteId, err);
-      } finally {
-        setLoadingSubNotes((prev) => ({ ...prev, [noteId]: false }));
+    // Reset child page to 1 when expanding
+    setChildPages((prev) => ({ ...prev, [noteId]: 1 }));
+    const filter = childFilters[noteId] || { search: "", from: "", to: "" };
+    try {
+      setLoadingSubNotes((prev) => ({ ...prev, [noteId]: true }));
+      const res = await dispatch(
+        fetchSubNotes({
+          parentId: noteId,
+          page: 1,
+          limit: 3,
+          search: filter.search || undefined,
+          fromDate: filter.from || undefined,
+          toDate: filter.to || undefined,
+        })
+      ).unwrap();
+      if (res?.total !== undefined) {
+        setChildTotals((prev) => ({ ...prev, [noteId]: Number(res.total) }));
       }
+    } catch (err) {
+      console.error("Failed to load sub-notes on expand:", noteId, err);
+    } finally {
+      setLoadingSubNotes((prev) => ({ ...prev, [noteId]: false }));
     }
   };
 
@@ -429,9 +503,12 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   const runA4Pagination = (reflow = true) => {
     const editor = editorRef.current;
     if (!editor) return;
+    const scrollSnaps = snapshotNoteScroll(editor);
     const landscape =
       editor.classList.contains("is-landscape") || isNoteLandscape(formData);
     paginateToA4Sheets(editor, landscape, reflow);
+    restoreNoteScroll(scrollSnaps);
+    requestAnimationFrame(() => restoreNoteScroll(scrollSnaps));
     setFormData((prev) => ({
       ...prev,
       description: editor.innerHTML,
@@ -496,9 +573,9 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
   const hydrateEditorInlineImages = async (root?: HTMLElement | null) => {
     const target = root || editorRef.current;
     if (!target) return;
-    await hydrateInlineImagesInRoot(target, async (key, fileName) => {
+    await hydrateInlineImagesInRoot(target, async (key) => {
       const response = await dispatch(
-        previewNoteAttachment({ key, fileName })
+        previewNoteAttachment({ key })
       ).unwrap();
       const blob = new Blob([response.data], {
         type: response.headers?.["content-type"] || "image/*",
@@ -644,8 +721,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     const withoutBase64 = await persistInlineImagesInHtml(
       richHtml || formData.description || ""
     );
-    if (editorRef.current && withoutBase64 !== editorRef.current.innerHTML) {
-      editorRef.current.innerHTML = withoutBase64;
+    if (editorRef.current) {
+      applyInlineImageKeys(editorRef.current, withoutBase64);
     }
     if (!formData.excelWorkbook) {
       setFormData((prev) => ({ ...prev, description: withoutBase64 }));
@@ -683,9 +760,33 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       clearTimeout(paginateTimerRef.current);
       paginateTimerRef.current = null;
     }
-    // Undo/redo restores exact HTML — re-paginating would wipe the undo result
+    // Skip while typing/pasting — full A4 reflow jumps the caret to another page.
+    // Overflow pagination runs on blur / save / orientation change instead.
     if (opts?.skipPagination) return;
-    paginateTimerRef.current = setTimeout(() => runA4Pagination(false), 400);
+    // Soft overflow-only pass (reflow=false). Keep scroll + selection so we stay on the same page.
+    paginateTimerRef.current = setTimeout(() => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      const sel = window.getSelection();
+      let savedRange: Range | null = null;
+      try {
+        if (sel && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+          savedRange = sel.getRangeAt(0).cloneRange();
+        }
+      } catch {
+        savedRange = null;
+      }
+      runA4Pagination(false);
+      if (savedRange) {
+        try {
+          const live = window.getSelection();
+          live?.removeAllRanges();
+          live?.addRange(savedRange);
+        } catch {
+          /* node may have moved during overflow split */
+        }
+      }
+    }, 800);
   };
 
   const handleInsertLink = () => {
@@ -941,11 +1042,33 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
       clearTimeout(autoSaveTimerRef.current);
     }
     setAutoSaveStatus("idle");
+    const closingNote = activeNote;
+    const parentCtx = parentNoteContext;
     setPageMode("list");
     setActiveNote(null);
     setParentNoteContext(null);
     if (shouldReload) {
       loadNotes();
+    }
+    // When returning from edit/view, refresh child notes for parent note if applicable
+    const parentIdToRefresh =
+      closingNote?.parentId ||
+      (closingNote && expandedNotes[closingNote.id] ? closingNote.id : null) ||
+      parentCtx?.id ||
+      null;
+    if (parentIdToRefresh) {
+      setExpandedNotes((prev) => ({ ...prev, [parentIdToRefresh]: true }));
+      setLoadingSubNotes((prev) => ({ ...prev, [parentIdToRefresh]: true }));
+      dispatch(fetchSubNotes({ parentId: parentIdToRefresh, page: 1, limit: 3 }))
+        .unwrap()
+        .then((res) => {
+          if (res?.total !== undefined) {
+            setChildTotals((prev) => ({ ...prev, [parentIdToRefresh]: Number(res.total) }));
+          }
+        })
+        .catch(() => dispatch(fetchNoteById(parentIdToRefresh)).unwrap())
+        .catch((err) => console.error("Failed to refresh child notes on return:", err))
+        .finally(() => setLoadingSubNotes((prev) => ({ ...prev, [parentIdToRefresh]: false })));
     }
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -1652,6 +1775,89 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     }
   };
 
+  /**
+   * Preview pasted screenshot via GET /notes/attachments/:key/view (auth).
+   * Falls back to blob/data only when the image is not uploaded yet.
+   */
+  const handlePreviewInlineImage = async (
+    url: string,
+    title?: string,
+    fileKey?: string | null
+  ) => {
+    const displayName = title || "Screenshot";
+    const keyFromUrl = /\/attachments\/([^/?#]+)\/(?:view|download)/i.exec(url)?.[1];
+    const key = fileKey || (keyFromUrl ? decodeURIComponent(keyFromUrl) : null);
+
+    const openWithBlob = (blob: Blob, mime?: string) => {
+      const blobUrl = window.URL.createObjectURL(blob);
+      setPreviewImageModal({
+        open: true,
+        url: blobUrl,
+        title: displayName,
+        mimeType: mime || blob.type || "image/*",
+      });
+    };
+
+    if (key) {
+      const hide = message.loading("Opening screenshot...", 0);
+      try {
+        const response = await dispatch(
+          previewNoteAttachment({ key, fileName: displayName })
+        ).unwrap();
+        hide();
+        const contentType = response.headers?.["content-type"] || "image/*";
+        if (contentType.includes("json") || contentType.includes("text/html")) {
+          throw new Error("Screenshot file was not returned");
+        }
+        openWithBlob(new Blob([response.data], { type: contentType }), contentType);
+        return;
+      } catch (err: any) {
+        hide();
+        message.error(err || "Failed to open screenshot");
+        return;
+      }
+    }
+
+    // Not uploaded yet — show local paste
+    if (url.startsWith("data:") || url.startsWith("blob:")) {
+      if (url.startsWith("data:")) {
+        setPreviewImageModal({
+          open: true,
+          url,
+          title: displayName,
+          mimeType: url.slice(5, url.indexOf(";")) || "image/*",
+        });
+        return;
+      }
+      try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        openWithBlob(blob, blob.type || "image/*");
+      } catch {
+        message.error("Screenshot is still uploading — try again in a moment");
+      }
+      return;
+    }
+
+    message.error("Screenshot key is missing — save the note and try again");
+  };
+
+  /**
+   * Delete pasted screenshot from storage via DELETE /notes/attachments/:key
+   */
+  const handleDeleteInlineImage = async (fileKey: string) => {
+    if (!fileKey) return;
+    try {
+      await dispatch(
+        deleteNoteAttachment({ noteId: activeNote?.id, key: fileKey })
+      ).unwrap();
+      message.success("Screenshot deleted");
+    } catch (err: any) {
+      message.error(err || "Failed to delete screenshot");
+      throw err;
+    }
+  };
+
   // Preview Attachment — keep Excel inside the app (modal), same as PDF/images
   const handlePreviewAttachment = async (item: NoteDocumentItem) => {
     const displayName = item.name || item.fileName || "document";
@@ -1971,6 +2177,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     handleSubmitForm,
     handleDeleteNote,
     handleDeleteAttachment,
+    handlePreviewInlineImage,
+    handleDeleteInlineImage,
     handlePreviewAttachment,
     handleDownloadAttachment,
     dragDrop,
@@ -1988,5 +2196,10 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     dispatch,
     handleSearchChange,
     handleClearSearch,
+    childPages,
+    childTotals,
+    childFilters,
+    handleChildPageChange,
+    handleChildFilterChange,
   };
 };

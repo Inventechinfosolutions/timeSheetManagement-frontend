@@ -1569,31 +1569,52 @@ export const wrapWideTablesInRoot = (root: HTMLElement | null | undefined) => {
   if (!root) return;
   root.querySelectorAll("table").forEach((tableEl) => {
     const table = tableEl as HTMLTableElement;
-    if (isEditorManagedTable(table)) return;
+    const managed = isEditorManagedTable(table) || table.classList.contains("note-editor-table");
+
     if (table.closest(".note-table-scroll")) {
-      relaxPastedTableConstraints(table);
+      if (managed) {
+        table.classList.add("note-wide-table", "note-editor-table");
+        table.style.setProperty("width", "max-content", "important");
+        table.style.setProperty("max-width", "none", "important");
+        table.style.setProperty("table-layout", "auto", "important");
+      } else {
+        relaxPastedTableConstraints(table);
+      }
       return;
     }
+
     const colCount = table.rows[0]?.cells.length || 0;
-    // Always scroll-wrap pasted/email tables; also wrap any wide table
+    // Excel editor tables + pasted wide tables need horizontal scroll
     const shouldWrap =
+      managed ||
       table.classList.contains("note-wide-table") ||
       colCount >= 4 ||
       table.querySelector("colgroup, col") !== null;
 
-    relaxPastedTableConstraints(table);
+    if (!managed) {
+      relaxPastedTableConstraints(table);
+    } else {
+      table.classList.add("note-wide-table", "note-editor-table");
+      table.style.removeProperty("width");
+      table.style.removeProperty("max-width");
+      table.style.setProperty("width", "max-content", "important");
+      table.style.setProperty("max-width", "none", "important");
+      table.style.setProperty("table-layout", "auto", "important");
+    }
     if (!shouldWrap && colCount < 3) return;
 
     const wrap = document.createElement("div");
     wrap.className = "note-table-scroll";
     wrap.setAttribute("contenteditable", "false");
-    table.parentNode?.insertBefore(wrap, table);
+    const host = table.closest(".note-inserted-table");
+    const moveTarget = host && host.parentElement ? host : table;
+    moveTarget.parentNode?.insertBefore(wrap, moveTarget);
     // Inner editable host so users can still edit cell text
     const inner = document.createElement("div");
     inner.className = "note-table-scroll-inner";
     inner.setAttribute("contenteditable", "true");
     wrap.appendChild(inner);
-    inner.appendChild(table);
+    inner.appendChild(moveTarget);
   });
 };
 
@@ -2123,13 +2144,10 @@ export const rewriteInlineDataImagesInHtml = async (
         const key = await upload(file);
         if (!key) continue;
         img.setAttribute(INLINE_FILE_KEY_ATTR, key);
+        // Keep a placeholder src in saved HTML; live editor keeps its blob until hydrate.
+        // Do NOT revokeObjectURL here — the editor <img> still uses that blob.
         img.setAttribute("src", toPreviewUrl(key));
         changed = true;
-        try {
-          URL.revokeObjectURL(src);
-        } catch {
-          /* ignore */
-        }
       } catch {
         /* leave blob src — save may still fail if not uploaded */
       }
@@ -2187,6 +2205,40 @@ export const hydrateInlineImagesInRoot = async (
  * Wrap pasted/inline screenshots so edit mode can show a remove (X) control.
  * Skips Docling page images and images already wrapped.
  */
+/** Place caret after an inline widget (image wrap) so typing continues past the × control */
+export const placeCaretAfterInlineWidget = (node: Node | null | undefined) => {
+  if (!node?.parentNode) return;
+  const wrapped =
+    node instanceof HTMLElement
+      ? node.closest(".note-inline-image")
+      : node.parentElement?.closest(".note-inline-image");
+  const target = (wrapped as Node | null) || node;
+  const parent = target.parentNode;
+  if (!parent) return;
+
+  // contenteditable=false widgets need a real text node after them for the caret
+  let next = target.nextSibling;
+  if (!next || next.nodeType !== Node.TEXT_NODE) {
+    next = document.createTextNode("\u200B");
+    parent.insertBefore(next, target.nextSibling);
+  } else if (!(next.textContent || "").length) {
+    next.textContent = "\u200B";
+  }
+
+  const sel = window.getSelection();
+  if (!sel) return;
+  try {
+    const range = document.createRange();
+    const len = (next.textContent || "").length;
+    range.setStart(next, len);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  } catch {
+    /* ignore */
+  }
+};
+
 export const wrapNoteInlineImages = (root: HTMLElement | null | undefined) => {
   if (!root) return;
   const images = Array.from(
@@ -2207,6 +2259,10 @@ export const wrapNoteInlineImages = (root: HTMLElement | null | undefined) => {
     img.parentNode?.insertBefore(wrap, img);
     wrap.appendChild(img);
     wrap.appendChild(removeBtn);
+    // Leave a caret slot after × so the cursor is not trapped before the remove control
+    if (!wrap.nextSibling || wrap.nextSibling.nodeType !== Node.TEXT_NODE) {
+      wrap.parentNode?.insertBefore(document.createTextNode("\u200B"), wrap.nextSibling);
+    }
   });
 };
 

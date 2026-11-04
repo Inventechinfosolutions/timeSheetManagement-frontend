@@ -185,7 +185,9 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
     if (
       single.children.length > 0 &&
       ["DIV", "SECTION", "ARTICLE", "MAIN", "BODY", "BLOCKQUOTE"].includes(single.tagName) &&
-      !single.classList.contains("note-table-scroll")
+      !single.classList.contains("note-table-scroll") &&
+      !single.classList.contains("note-inserted-table") &&
+      !single.classList.contains("note-table-scroll-inner")
     ) {
       while (single.firstChild) {
         page.insertBefore(single.firstChild, single);
@@ -214,12 +216,32 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
   );
   if (!overflowChild) return null;
 
-  // If the overflowing child is a container with children, unwrap it so its inner children can paginate cleanly
+  const isProtectedTableHost = (el: HTMLElement) =>
+    el.classList.contains("note-table-scroll") ||
+    el.classList.contains("note-inserted-table") ||
+    el.classList.contains("note-table-scroll-inner") ||
+    Boolean(
+      el.querySelector?.(
+        "table.note-editor-table, table .excel-sl-col, .excel-attachment-col, .excel-attachment-cell"
+      )
+    );
+
+  const isEditorExcelTable = (el: HTMLElement) =>
+    el.tagName === "TABLE" &&
+    (el.classList.contains("note-editor-table") ||
+      el.classList.contains("note-wide-table") ||
+      Boolean(
+        el.querySelector(
+          ".excel-sl-col, .excel-attachment-col, .excel-attachment-cell"
+        )
+      ));
+
+  // Keep Excel / inserted table hosts intact — unwrapping caused duplicate header rows
   if (
     overflowChild &&
     overflowChild.children.length > 0 &&
     ["DIV", "SECTION", "ARTICLE", "MAIN", "BLOCKQUOTE", "ASIDE"].includes(overflowChild.tagName) &&
-    !overflowChild.classList.contains("note-table-scroll")
+    !isProtectedTableHost(overflowChild)
   ) {
     while (overflowChild.firstChild) {
       page.insertBefore(overflowChild.firstChild, overflowChild);
@@ -231,7 +253,19 @@ const pushOverflowToNextPage = (page: HTMLElement, landscape: boolean): HTMLElem
   // Enter / blank lines past the fold stay on this page — only real content starts a new sheet
   if (isTrivialOverflowNode(overflowChild)) return null;
 
-  // Handle table splitting
+  // Excel-style tables must stay whole (no thead clone → no unwanted SL/A/B/C rows).
+  // Move the entire table/host to the next page instead of splitting rows.
+  if (isEditorExcelTable(overflowChild) || isProtectedTableHost(overflowChild)) {
+    if (children.length <= 1) return null;
+    const startIndex = Math.max(1, children.indexOf(overflowChild));
+    const moving = children.slice(startIndex);
+    if (moving.length === 0 || moving.every(isTrivialOverflowNode)) return null;
+    const next = createSheet(0, landscape);
+    moving.forEach((child) => next.appendChild(child));
+    return next;
+  }
+
+  // Handle pasted/simple table splitting only (non-Excel tables)
   if (overflowChild.tagName === "TABLE") {
     const leftover = splitTableAcrossPage(overflowChild as HTMLTableElement, page, landscape);
     if (leftover) {
