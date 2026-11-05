@@ -2027,6 +2027,18 @@ const LeaveManagement = () => {
             Recent Log History
           </h3>
           <div className="flex flex-wrap gap-3 items-end">
+            {(entity?.department ||
+              (entities as any[])?.find((r) => r?.department)?.department) && (
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-bold text-gray-400 pl-1">
+                  Department
+                </span>
+                <span className="inline-flex items-center justify-center h-10 px-4 rounded-2xl text-xs font-bold bg-white text-[#2B3674] border border-transparent shadow-sm whitespace-nowrap">
+                  {entity?.department ||
+                    (entities as any[])?.find((r) => r?.department)?.department}
+                </span>
+              </div>
+            )}
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-bold text-gray-400 pl-1">Month</span>
               <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden">
@@ -2185,13 +2197,13 @@ const LeaveManagement = () => {
                     Type
                   </th>
                   <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                    Department
-                  </th>
-                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                     Date Range
                   </th>
                   <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                     Submitted
+                  </th>
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Reviewed By
                   </th>
                   <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                     Status
@@ -2382,11 +2394,6 @@ const LeaveManagement = () => {
                           </span>
                         </td>
                         <td className="py-4 px-4 text-center whitespace-nowrap">
-                          <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
-                            {item.department || "N/A"}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 text-center whitespace-nowrap">
                           <span className="text-sm font-bold text-[#2B3674]">
                             {dayjs(item.fromDate).format("DD MMM")} -{" "}
                             {dayjs(item.toDate).format("DD MMM - YYYY")}, TOTAL:{" "}
@@ -2403,6 +2410,11 @@ const LeaveManagement = () => {
                             : item.created_at
                               ? dayjs(item.created_at).format("DD MMM - YYYY")
                               : "-"}
+                        </td>
+                        <td className="py-4 px-4 text-center whitespace-nowrap">
+                          <span className="text-xs font-bold text-[#2B3674]">
+                            {item.reviewedBy || "—"}
+                          </span>
                         </td>
                         <td
                           className={`py-4 px-3 text-center sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
