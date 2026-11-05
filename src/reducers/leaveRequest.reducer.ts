@@ -22,6 +22,8 @@ export interface LeaveRequest {
   duration?: number;
   department?: string;
   fullName?: string;
+  /** Name of the person who last approved/rejected this request */
+  reviewedBy?: string | null;
   requestModifiedFrom?: string;
   isHalfDay?: boolean;
   halfDayType?: string | null;

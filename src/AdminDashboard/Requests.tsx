@@ -82,7 +82,10 @@ const Requests = () => {
     !isAdminAccess(currentUser) &&
     (currentUser?.userType === UserType.MANAGER ||
       String(currentUser?.role || "").toUpperCase() === UserType.MANAGER);
+  /** Admin / CEO / GM / receptionist keep Department column; plain manager shows one header badge. */
+  const showDepartmentColumn = isAdminAccess(currentUser) || isReceptionist;
   const [canSelfApprove, setCanSelfApprove] = useState(false);
+  const [managerDepartment, setManagerDepartment] = useState("");
 
   useEffect(() => {
     if (!isPlainManager) return;
@@ -99,6 +102,30 @@ const Requests = () => {
       cancelled = true;
     };
   }, [isPlainManager]);
+
+  // Manager team shares one department — show it once beside search, not per row.
+  useEffect(() => {
+    if (!isPlainManager) {
+      setManagerDepartment("");
+      return;
+    }
+    const empId = currentUser?.employeeId || currentUser?.loginId;
+    if (!empId) return;
+    let cancelled = false;
+    dispatch(getEntity(empId))
+      .unwrap()
+      .then((emp: any) => {
+        if (!cancelled && emp?.department) {
+          setManagerDepartment(String(emp.department));
+        }
+      })
+      .catch(() => {
+        /* ignore — may fall back from request list */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isPlainManager, currentUser?.employeeId, currentUser?.loginId, dispatch]);
 
   /** Manager's own request that only the GM may review (department leave approval = MANUAL). */
   const isOwnBlockedRequest = (req?: any) => {
@@ -1102,6 +1129,15 @@ const Requests = () => {
         ? "bg-gray-50 text-[#475569] border-gray-200 hover:bg-gray-100"
         : "bg-[#F4F7FE] text-[#4318FF] border-[#4318FF]/15 hover:bg-[#4318FF]/10";
 
+  const managerDeptLabel =
+    managerDepartment ||
+    (isPlainManager
+      ? String(
+          (entities as LeaveRequest[]).find((r) => r.department)?.department ||
+            "",
+        )
+      : "");
+
   return (
     <div className="p-4 md:p-8 bg-[#F4F7FE] font-sans">
       {/* Header + Search */}
@@ -1115,23 +1151,30 @@ const Requests = () => {
           </p>
         </div>
 
-        <SearchBox
-          placeholder="Search by name or employee ID..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onDebounce={(val) => {
-            setDebouncedSearchTerm(val);
-            setCurrentPage(1);
-          }}
-          onClear={() => {
-            setSearchTerm("");
-            setDebouncedSearchTerm("");
-            setCurrentPage(1);
-          }}
-          inputSize="lg"
-          variant="outlined"
-          containerClassName="w-full sm:w-auto sm:min-w-[300px] md:min-w-[360px] lg:min-w-[400px] sm:max-w-[480px]"
-        />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto sm:justify-end">
+          {isPlainManager && managerDeptLabel ? (
+            <span className="inline-flex items-center justify-center px-4 py-2.5 rounded-full text-xs font-bold bg-white text-[#2B3674] border border-gray-100 shadow-sm whitespace-nowrap">
+              {managerDeptLabel}
+            </span>
+          ) : null}
+          <SearchBox
+            placeholder="Search by name or employee ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onDebounce={(val) => {
+              setDebouncedSearchTerm(val);
+              setCurrentPage(1);
+            }}
+            onClear={() => {
+              setSearchTerm("");
+              setDebouncedSearchTerm("");
+              setCurrentPage(1);
+            }}
+            inputSize="lg"
+            variant="outlined"
+            containerClassName="w-full sm:w-auto sm:min-w-[300px] md:min-w-[360px] lg:min-w-[400px] sm:max-w-[480px]"
+          />
+        </div>
       </div>
 
       {/* Filters Area */}
@@ -1292,25 +1335,36 @@ const Requests = () => {
             </div>
           </div>
 
-          {/* Status Dropdown Filter */}
+          {/* Status Dropdown Filter — pill badge style matches employee Recent Log History */}
           <div className="flex flex-col gap-1.5 relative" ref={statusDropdownRef}>
             <span className="text-xs font-bold text-gray-400 pl-1">Status</span>
-            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden min-w-[200px] h-12">
+            <div className="bg-white rounded-2xl shadow-sm border border-transparent hover:border-blue-100 transition-all flex items-center px-4 overflow-hidden min-w-[220px] h-12">
               <button
                 type="button"
                 onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-                className={`w-full flex items-center justify-between gap-2 font-bold text-sm ${
-                  selectedStatus !== "All" ? "text-[#4318FF]" : "text-[#2B3674]"
-                }`}
+                className="w-full flex items-center justify-between gap-2 font-bold text-sm text-[#2B3674]"
               >
-                <div className="flex items-center gap-2">
-                  <Filter size={16} className={selectedStatus !== "All" ? "text-[#4318FF]" : "text-gray-400"} />
-                  <span className="truncate max-w-[130px]">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Filter
+                    size={16}
+                    className={
+                      selectedStatuses.includes("All") || selectedStatuses.length === 0
+                        ? "text-gray-400 shrink-0"
+                        : "text-[#4318FF] shrink-0"
+                    }
+                  />
+                  <span
+                    className={`truncate px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                      selectedStatuses.includes("All") || selectedStatuses.length === 0
+                        ? "bg-gray-50 text-[#475569] border-gray-200"
+                        : "bg-[#F4F7FE] text-[#4318FF] border-[#4318FF]/20"
+                    }`}
+                  >
                     {selectedStatuses.includes("All") || selectedStatuses.length === 0
                       ? "All Status"
                       : selectedStatuses.length === 1
-                      ? selectedStatuses[0]
-                      : `${selectedStatuses.length} statuses`}
+                        ? selectedStatuses[0]
+                        : `${selectedStatuses.length} statuses`}
                   </span>
                 </div>
                 <ChevronDown
@@ -1544,14 +1598,19 @@ const Requests = () => {
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Duration Type
                 </th>
-                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                  Department
-                </th>
+                {showDepartmentColumn && (
+                  <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                    Department
+                  </th>
+                )}
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Duration
                 </th>
                 <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                   Submitted Date
+                </th>
+                <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                  Reviewed By
                 </th>
                 <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                   Status
@@ -1565,7 +1624,10 @@ const Requests = () => {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={isBulkEligibleStatus ? 10 : 9}
+                    colSpan={
+                      (showDepartmentColumn ? 10 : 9) +
+                      (isBulkEligibleStatus ? 1 : 0)
+                    }
                     className="py-20 text-center text-gray-400 font-medium tracking-wide"
                   >
                     <div className="flex flex-col items-center justify-center py-6">
@@ -1575,7 +1637,13 @@ const Requests = () => {
                 </tr>
               ) : filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={isBulkEligibleStatus ? 10 : 9} className="py-20 text-center text-gray-400">
+                  <td
+                    colSpan={
+                      (showDepartmentColumn ? 10 : 9) +
+                      (isBulkEligibleStatus ? 1 : 0)
+                    }
+                    className="py-20 text-center text-gray-400"
+                  >
                     <div className="flex flex-col items-center gap-2">
                       <Clock size={40} className="text-gray-200" />
                       <p className="font-medium text-lg">No requests found</p>
@@ -1646,7 +1714,7 @@ const Requests = () => {
                               <User size={20} />
                             )}
                           </div>
-                          <div>
+                          <div className="min-w-0 flex flex-col gap-1">
                             <p className="font-bold text-[#2B3674] leading-tight">
                               {req.fullName || "Unknown"}
                             </p>
@@ -1784,11 +1852,13 @@ const Requests = () => {
                           })()}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-center whitespace-nowrap">
-                        <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
-                          {req.department || "N/A"}
-                        </span>
-                      </td>
+                      {showDepartmentColumn && (
+                        <td className="py-4 px-4 text-center whitespace-nowrap">
+                          <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
+                            {req.department || "N/A"}
+                          </span>
+                        </td>
+                      )}
                       <td className="py-4 px-4 text-center whitespace-nowrap">
                         <span className="text-sm font-bold text-[#2B3674]">
                           {dayjs(req.fromDate).format("DD MMM")} -{" "}
@@ -1805,6 +1875,11 @@ const Requests = () => {
                           : req.created_at
                             ? dayjs(req.created_at).format("DD MMM - YYYY")
                             : "N/A"}
+                      </td>
+                      <td className="py-4 px-4 text-center whitespace-nowrap">
+                        <span className="text-xs font-bold text-[#2B3674]">
+                          {req.reviewedBy || "—"}
+                        </span>
                       </td>
                       <td
                         className={`py-4 px-3 text-center sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
