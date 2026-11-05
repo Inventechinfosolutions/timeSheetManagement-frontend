@@ -537,9 +537,9 @@ const AdminDashboard = () => {
     onClick?: () => void;
   }[] = [
         {
-          label: "Total Employees",
+          label: "Total Active Employees",
           value: summary?.totalEmployees ?? dashboardStats.totalEmployees,
-          sub: isManagerView ? "" : "Active workforce",
+          sub: isManagerView ? "" : "in the organisation",
           icon: Users,
           color: "bg-linear-to-r from-[#4318FF] to-[#868CFF]",
           onClick: isManagerView ? () => navigate(`${basePath}/employees`) : undefined,
