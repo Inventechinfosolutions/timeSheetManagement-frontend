@@ -53,6 +53,11 @@ const SidebarLayout = ({
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const unreadInboxCount = useAppSelector((state) => state.inbox?.unreadCount || 0);
+  const { entity } = useAppSelector((state) => state.employeeDetails);
+  const { currentUser } = useAppSelector((state) => state.user);
+  const sidebarEmployeeId =
+    entity?.employeeId || currentUser?.employeeId || currentUser?.loginId || title;
+  const sidebarRoleLabel = title;
 
   useEffect(() => {
     dispatch(fetchInboxUnreadCount());
@@ -340,14 +345,19 @@ const SidebarLayout = ({
             <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10">
               <AlarmClock className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-white tracking-tight">
-              {title}
-            </span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xl font-bold text-white tracking-tight truncate">
+                {sidebarEmployeeId}
+              </span>
+              <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest">
+                {sidebarRoleLabel}
+              </span>
+            </div>
           </div>
 
           {/* Branding & Lock Toggle - Desktop Only */}
           <div className="hidden md:flex h-14 items-center justify-between px-0 relative mb-0">
-            {/* Logo Area */}
+            {/* Logo Area — same pattern as Employee: ID + role */}
             <div
               className={`flex items-center gap-3 transition-all duration-300 overflow-hidden h-full
                         ${isOpen
@@ -368,10 +378,10 @@ const SidebarLayout = ({
                         `}
               >
                 <span className="text-lg font-bold text-white tracking-tight whitespace-nowrap">
-                  {title}
+                  {sidebarEmployeeId}
                 </span>
                 <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                  Management
+                  {sidebarRoleLabel}
                 </span>
               </div>
             </div>
