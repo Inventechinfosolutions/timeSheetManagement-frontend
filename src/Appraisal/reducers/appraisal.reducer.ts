@@ -24,6 +24,7 @@ import {
   MappedEmployee,
   MasterFinancialYearOption,
   MasterQuarterRecord,
+  PerformanceProject,
   PerformanceWritePayload,
   QuarterlyReviewListQuery,
   QuarterlyReviewSearchQuery,
@@ -150,8 +151,14 @@ export const AppraisalApi = {
   deletePerformanceProject: async (
     performanceId: number,
     projectIndex: number,
-  ): Promise<EmployeePerformanceDetail> => {
-    const response = await axios.delete<EmployeePerformanceDetail>(
+  ): Promise<{
+    id: number;
+    status: string;
+    canEdit?: boolean;
+    step?: number;
+    data: { projects?: PerformanceProject[] } | null;
+  }> => {
+    const response = await axios.delete(
       `${EMPLOYEE_PERFORMANCE_URL}/${performanceId}/projects/${projectIndex}`,
     );
     return response.data;
@@ -233,11 +240,53 @@ export const AppraisalApi = {
     return response.data;
   },
 
+  /** GET one step only (overview | achievements | teamwork | learning | environment | final-review). */
+  getPerformanceStep: async (
+    performanceId: number,
+    stepPath: string,
+  ): Promise<{
+    id: number;
+    status: string;
+    canEdit?: boolean;
+    step?: number;
+    data: Record<string, unknown> | null;
+  }> => {
+    const response = await axios.get(
+      `${EMPLOYEE_PERFORMANCE_URL}/${performanceId}/${stepPath}`,
+    );
+    return response.data;
+  },
+
+  /** PATCH one step — body must contain only changed fields. */
+  patchPerformanceStep: async (
+    performanceId: number,
+    stepPath: string,
+    payload: Record<string, unknown>,
+  ): Promise<{
+    id: number;
+    status: string;
+    canEdit?: boolean;
+    step?: number;
+    data: Record<string, unknown> | null;
+  }> => {
+    const response = await axios.patch(
+      `${EMPLOYEE_PERFORMANCE_URL}/${performanceId}/${stepPath}`,
+      payload,
+    );
+    return response.data;
+  },
+
   createPerformanceProject: async (
     performanceId: number,
     project: Record<string, unknown>,
-  ): Promise<EmployeePerformanceDetail> => {
-    const response = await axios.post<EmployeePerformanceDetail>(
+  ): Promise<{
+    id: number;
+    status: string;
+    canEdit?: boolean;
+    step?: number;
+    data: { projects?: PerformanceProject[] } | null;
+  }> => {
+    const response = await axios.post(
       `${EMPLOYEE_PERFORMANCE_URL}/${performanceId}/projects`,
       project,
     );
@@ -248,8 +297,14 @@ export const AppraisalApi = {
     performanceId: number,
     projectIndex: number,
     project: Record<string, unknown>,
-  ): Promise<EmployeePerformanceDetail> => {
-    const response = await axios.patch<EmployeePerformanceDetail>(
+  ): Promise<{
+    id: number;
+    status: string;
+    canEdit?: boolean;
+    step?: number;
+    data: { projects?: PerformanceProject[] } | null;
+  }> => {
+    const response = await axios.patch(
       `${EMPLOYEE_PERFORMANCE_URL}/${performanceId}/projects/${projectIndex}`,
       project,
     );

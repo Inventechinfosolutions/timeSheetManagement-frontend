@@ -153,18 +153,19 @@ export const isResubmittedStatus = (status?: string | null): boolean => {
 // FORM DATA & PAYLOAD PARSERS
 // 
 export const readProjectList = (
-  value: PerformanceProject[] | string | null | undefined,
+  value: PerformanceProject[] | string | null | undefined | unknown,
 ): PerformanceProject[] => {
-  const source = typeof value === "string" ? (() => {
+  const parsed = typeof value === "string" ? (() => {
     try {
       return JSON.parse(value) as PerformanceProject[];
     } catch {
       return [];
     }
   })() : value;
-  if (!Array.isArray(source)) {
+  if (!Array.isArray(parsed)) {
     return [];
   }
+  const source = parsed as PerformanceProject[];
   return source
     .filter((project) => project && (project.projectName || (project as { title?: string }).title || project.description || project.challenge || project.challengesFaced))
     .map((project) => ({
@@ -311,6 +312,260 @@ export const toReviewFormData = (
 
 const trimText = (value?: string | null): string => (value || "").trim();
 
+/** URL slug for per-step GET/PATCH APIs (not used for step 2 projects list — those use /projects). */
+export const PERFORMANCE_STEP_PATH: Record<number, string> = {
+  1: "overview",
+  2: "achievements",
+  3: "teamwork",
+  4: "learning",
+  5: "environment",
+  6: "final-review",
+};
+
+const hasStepText = (value?: string | null): boolean => Boolean((value || "").trim());
+
+/** First incomplete step (1–6) from DB step JSON on performance — no local storage. */
+export const computeResumeStepFromPerformance = (perf?: {
+  step?: number | null;
+  stepOverview?: Record<string, any> | null;
+  stepAchievements?: { projects?: unknown[] | null } | null;
+  stepTeamwork?: Record<string, any> | null;
+  stepLearning?: Record<string, any> | null;
+  stepEnvironment?: Record<string, any> | null;
+  stepFinalReview?: Record<string, any> | null;
+} | null): number => {
+  if (perf?.step && perf.step >= 1 && perf.step <= 6) {
+    return perf.step;
+  }
+  const overview = perf?.stepOverview;
+  const summary = (overview?.overallPerformanceSummary || "").trim();
+  if (!summary) return 1;
+
+  const projects = perf?.stepAchievements?.projects || [];
+  if (!Array.isArray(projects) || projects.length === 0) return 2;
+
+  const team = perf?.stepTeamwork;
+  const ratings = (team?.teamRatings || {}) as Record<string, number>;
+  const teamDone =
+    (ratings.communication || 0) > 0 &&
+    hasStepText(team?.communicationDescription) &&
+    (ratings.ownership || 0) > 0 &&
+    hasStepText(team?.ownershipDescription) &&
+    (ratings.collaboration || 0) > 0 &&
+    hasStepText(team?.collaborationDescription) &&
+    (ratings.problemSolving || 0) > 0 &&
+    hasStepText(team?.problemSolvingDescription) &&
+    (ratings.leadership || 0) > 0 &&
+    hasStepText(team?.leadershipDescription) &&
+    (ratings.adaptability || 0) > 0 &&
+    hasStepText(team?.adaptabilityDescription);
+  if (!teamDone) return 3;
+
+  const learning = perf?.stepLearning;
+  const learningDone =
+    hasStepText(learning?.skillsAcquired) ||
+    hasStepText(learning?.certificationsOrCourses) ||
+    hasStepText(learning?.skillsToImprove) ||
+    hasStepText(learning?.supportOrTrainingRequired) ||
+    hasStepText(learning?.nextQuarterLearningGoals);
+  if (!learningDone) return 4;
+
+  const env = perf?.stepEnvironment;
+  const envDone =
+    hasStepText(env?.feedbackOnWorkCulture) ||
+    hasStepText(env?.workLifeBalance) ||
+    hasStepText(env?.suggestionsForImprovement) ||
+    hasStepText(env?.challengesAffectingProductivity) ||
+    (env?.workEnvironmentRating || 0) > 0 ||
+    (env?.toolsResourcesRating || 0) > 0 ||
+    (env?.managerSupportRating || 0) > 0;
+  if (!envDone) return 5;
+
+  return 6;
+};
+
+/** Merge one step's GET `data` into form — leaves other steps unchanged. */
+export const applyStepDataToForm = (
+  form: ReviewFormData,
+  step: number,
+  data: Record<string, unknown> | null | undefined,
+): ReviewFormData => {
+  if (!data) {
+    return form;
+  }
+  const stepObj = data as Record<string, any>;
+  if (step === 1) {
+    return {
+      ...form,
+      overallPerformanceSummary: stepText(stepObj, "overallPerformanceSummary"),
+      keyHighlights: stepText(stepObj, "keyHighlights"),
+      majorContributions: stepText(stepObj, "majorContributions"),
+      areasForImprovement: stepText(stepObj, "areasForImprovement"),
+      reviewPeriodStart: stepText(stepObj, "reviewPeriodStart"),
+      reviewPeriodEnd: stepText(stepObj, "reviewPeriodEnd"),
+    };
+  }
+  if (step === 2) {
+    return {
+      ...form,
+      projects: readProjectList(stepObj.projects),
+    };
+  }
+  if (step === 3) {
+    const teamRatings = (stepObj.teamRatings && typeof stepObj.teamRatings === "object"
+      ? stepObj.teamRatings
+      : form.teamRatings) as ReviewFormData["teamRatings"];
+    return {
+      ...form,
+      teamCollaborationSummary: stepText(stepObj, "teamCollaborationSummary"),
+      crossTeamContributions: stepText(stepObj, "crossTeamContributions"),
+      knowledgeSharingMentoring: stepText(stepObj, "knowledgeSharingMentoring"),
+      teamworkExamples: stepText(stepObj, "teamworkExamples"),
+      teamRatings,
+      communicationDescription: stepText(stepObj, "communicationDescription"),
+      ownershipDescription: stepText(stepObj, "ownershipDescription"),
+      collaborationDescription: stepText(stepObj, "collaborationDescription"),
+      problemSolvingDescription: stepText(stepObj, "problemSolvingDescription"),
+      leadershipDescription: stepText(stepObj, "leadershipDescription"),
+      adaptabilityDescription: stepText(stepObj, "adaptabilityDescription"),
+    };
+  }
+  if (step === 4) {
+    return {
+      ...form,
+      skillsAcquired: stepText(stepObj, "skillsAcquired"),
+      certificationsOrCourses: stepText(stepObj, "certificationsOrCourses"),
+      skillsToImprove: stepText(stepObj, "skillsToImprove"),
+      nextQuarterLearningGoals: stepText(stepObj, "nextQuarterLearningGoals"),
+      supportOrTrainingRequired: stepText(stepObj, "supportOrTrainingRequired"),
+    };
+  }
+  if (step === 5) {
+    const culture = stepText(stepObj, "feedbackOnWorkCulture");
+    return {
+      ...form,
+      workCultureFeedback: culture,
+      feedbackOnWorkCulture: culture,
+      workLifeBalance: stepText(stepObj, "workLifeBalance"),
+      suggestionsForImprovement: stepText(stepObj, "suggestionsForImprovement"),
+      challengesAffectingProductivity: stepText(stepObj, "challengesAffectingProductivity"),
+      rateCompanyEnvironment: stepText(stepObj, "rateCompanyEnvironment"),
+      companyEnvironmentRating: stepNumber(stepObj, "workEnvironmentRating"),
+      toolingAndResourcesRating: stepNumber(stepObj, "toolsResourcesRating"),
+      managementSupportRating: stepNumber(stepObj, "managerSupportRating"),
+    };
+  }
+  if (step === 6) {
+    // Final-review GET includes prior steps for the review summary — hydrate them first.
+    let next = form;
+    if (stepObj.stepOverview && typeof stepObj.stepOverview === "object") {
+      next = applyStepDataToForm(next, 1, stepObj.stepOverview as Record<string, unknown>);
+    }
+    if (stepObj.stepAchievements && typeof stepObj.stepAchievements === "object") {
+      next = applyStepDataToForm(next, 2, stepObj.stepAchievements as Record<string, unknown>);
+    }
+    if (stepObj.stepTeamwork && typeof stepObj.stepTeamwork === "object") {
+      next = applyStepDataToForm(next, 3, stepObj.stepTeamwork as Record<string, unknown>);
+    }
+    if (stepObj.stepLearning && typeof stepObj.stepLearning === "object") {
+      next = applyStepDataToForm(next, 4, stepObj.stepLearning as Record<string, unknown>);
+    }
+    if (stepObj.stepEnvironment && typeof stepObj.stepEnvironment === "object") {
+      next = applyStepDataToForm(next, 5, stepObj.stepEnvironment as Record<string, unknown>);
+    }
+    const comments = stepText(stepObj, "overallEmployeeComments");
+    return {
+      ...next,
+      overallSelfRating: stepNumber(stepObj, "overallSelfRating"),
+      overallEmployeeComments: comments,
+      careerGrowthInterests: stepText(stepObj, "careerGrowthInterests"),
+      confirmationAccepted: Boolean(stepObj.confirmationAccepted),
+      finalComments: comments,
+    };
+  }
+  return form;
+};
+
+/** Flat step fields for PATCH /:id/{step} — full snapshot of current step values. */
+export const toStepFields = (step: number, formData: ReviewFormData): Record<string, unknown> => {
+  if (step === 1) {
+    return {
+      overallPerformanceSummary: trimText(formData.overallPerformanceSummary || formData.overview),
+      keyHighlights: trimText(formData.keyHighlights),
+      majorContributions: trimText(formData.majorContributions),
+      areasForImprovement: trimText(formData.areasForImprovement),
+      reviewPeriodStart: formData.reviewPeriodStart || "",
+      reviewPeriodEnd: formData.reviewPeriodEnd || "",
+    };
+  }
+  if (step === 3) {
+    return {
+      teamCollaborationSummary: trimText(formData.teamCollaborationSummary),
+      crossTeamContributions: trimText(formData.crossTeamContributions),
+      knowledgeSharingMentoring: trimText(formData.knowledgeSharingMentoring),
+      teamworkExamples: trimText(formData.teamworkExamples),
+      teamRatings: formData.teamRatings || {},
+      communicationDescription: trimText(formData.communicationDescription),
+      ownershipDescription: trimText(formData.ownershipDescription),
+      collaborationDescription: trimText(formData.collaborationDescription),
+      problemSolvingDescription: trimText(formData.problemSolvingDescription),
+      leadershipDescription: trimText(formData.leadershipDescription),
+      adaptabilityDescription: trimText(formData.adaptabilityDescription),
+    };
+  }
+  if (step === 4) {
+    return {
+      skillsAcquired: trimText(formData.skillsAcquired),
+      certificationsOrCourses: trimText(formData.certificationsOrCourses),
+      skillsToImprove: trimText(formData.skillsToImprove),
+      supportOrTrainingRequired: trimText(formData.supportOrTrainingRequired),
+      nextQuarterLearningGoals: trimText(formData.nextQuarterLearningGoals),
+    };
+  }
+  if (step === 5) {
+    return {
+      workEnvironmentRating: formData.companyEnvironmentRating || null,
+      toolsResourcesRating: formData.toolingAndResourcesRating || null,
+      managerSupportRating: formData.managementSupportRating || null,
+      challengesAffectingProductivity: trimText(formData.challengesAffectingProductivity),
+      feedbackOnWorkCulture: trimText(formData.workCultureFeedback || formData.feedbackOnWorkCulture),
+      workLifeBalance: trimText(formData.workLifeBalance),
+      suggestionsForImprovement: trimText(formData.suggestionsForImprovement),
+      rateCompanyEnvironment: formData.rateCompanyEnvironment || null,
+    };
+  }
+  if (step === 6) {
+    return {
+      overallSelfRating: formData.overallSelfRating || null,
+      overallEmployeeComments: trimText(formData.overallEmployeeComments),
+      careerGrowthInterests: trimText(formData.careerGrowthInterests),
+      confirmationAccepted: Boolean(formData.confirmationAccepted),
+    };
+  }
+  return {};
+};
+
+/** Only fields that changed vs previous form snapshot — for PATCH body. */
+export const changedStepFields = (
+  step: number,
+  previous: ReviewFormData | null | undefined,
+  next: ReviewFormData,
+): Record<string, unknown> => {
+  const after = toStepFields(step, next);
+  if (!previous) {
+    return after;
+  }
+  const before = toStepFields(step, previous);
+  const patch: Record<string, unknown> = {};
+  Object.keys(after).forEach((key) => {
+    if (JSON.stringify(before[key] ?? null) !== JSON.stringify(after[key] ?? null)) {
+      patch[key] = after[key];
+    }
+  });
+  return patch;
+};
+
+/** Legacy wrapper: nest flat fields under step* keys for PATCH /:id (full record). */
 export const toStepPatch = (
   step: number,
   formData: ReviewFormData,
@@ -318,70 +573,12 @@ export const toStepPatch = (
   PerformanceWritePayload,
   "stepOverview" | "stepTeamwork" | "stepLearning" | "stepEnvironment" | "stepFinalReview"
 > => {
-  if (step === 1) {
-    return {
-      stepOverview: {
-        overallPerformanceSummary: trimText(formData.overallPerformanceSummary || formData.overview),
-        keyHighlights: trimText(formData.keyHighlights),
-        majorContributions: trimText(formData.majorContributions),
-        areasForImprovement: trimText(formData.areasForImprovement),
-        reviewPeriodStart: formData.reviewPeriodStart || "",
-        reviewPeriodEnd: formData.reviewPeriodEnd || "",
-      },
-    };
-  }
-  if (step === 3) {
-    return {
-      stepTeamwork: {
-        teamCollaborationSummary: trimText(formData.teamCollaborationSummary),
-        crossTeamContributions: trimText(formData.crossTeamContributions),
-        knowledgeSharingMentoring: trimText(formData.knowledgeSharingMentoring),
-        teamworkExamples: trimText(formData.teamworkExamples),
-        teamRatings: formData.teamRatings || {},
-        communicationDescription: trimText(formData.communicationDescription),
-        ownershipDescription: trimText(formData.ownershipDescription),
-        collaborationDescription: trimText(formData.collaborationDescription),
-        problemSolvingDescription: trimText(formData.problemSolvingDescription),
-        leadershipDescription: trimText(formData.leadershipDescription),
-        adaptabilityDescription: trimText(formData.adaptabilityDescription),
-      },
-    };
-  }
-  if (step === 4) {
-    return {
-      stepLearning: {
-        skillsAcquired: trimText(formData.skillsAcquired),
-        certificationsOrCourses: trimText(formData.certificationsOrCourses),
-        skillsToImprove: trimText(formData.skillsToImprove),
-        supportOrTrainingRequired: trimText(formData.supportOrTrainingRequired),
-        nextQuarterLearningGoals: trimText(formData.nextQuarterLearningGoals),
-      },
-    };
-  }
-  if (step === 5) {
-    return {
-      stepEnvironment: {
-        workEnvironmentRating: formData.companyEnvironmentRating || null,
-        toolsResourcesRating: formData.toolingAndResourcesRating || null,
-        managerSupportRating: formData.managementSupportRating || null,
-        challengesAffectingProductivity: trimText(formData.challengesAffectingProductivity),
-        feedbackOnWorkCulture: trimText(formData.workCultureFeedback || formData.feedbackOnWorkCulture),
-        workLifeBalance: trimText(formData.workLifeBalance),
-        suggestionsForImprovement: trimText(formData.suggestionsForImprovement),
-        rateCompanyEnvironment: formData.rateCompanyEnvironment || null,
-      },
-    };
-  }
-  if (step === 6) {
-  return {
-      stepFinalReview: {
-        overallSelfRating: formData.overallSelfRating || null,
-        overallEmployeeComments: trimText(formData.overallEmployeeComments),
-        careerGrowthInterests: trimText(formData.careerGrowthInterests),
-        confirmationAccepted: Boolean(formData.confirmationAccepted),
-      },
-    };
-  }
+  const fields = toStepFields(step, formData);
+  if (step === 1) return { stepOverview: fields };
+  if (step === 3) return { stepTeamwork: fields };
+  if (step === 4) return { stepLearning: fields };
+  if (step === 5) return { stepEnvironment: fields };
+  if (step === 6) return { stepFinalReview: fields };
   return {};
 };
 
@@ -592,11 +789,13 @@ export const toPerformanceAssignment = (
     editAllowedUntil: row.editAllowedUntil || undefined,
     reassignCount: row.reassignCount || 0,
     editRequestReason: row.editRequestReason || (row as any).edit_request_reason || undefined,
+    step: computeResumeStepFromPerformance(row),
   };
 };
 
 export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyReviewAssignment => {
   const rawStatus = review.performanceDetails?.status || review.status;
+  const step = computeResumeStepFromPerformance(review.performanceDetails);
   const isResubmitted = isResubmittedStatus(rawStatus);
   return {
     id: String(review.id),
@@ -630,6 +829,7 @@ export const toEmployeeAssignment = (review: EmployeeReviewDetail): QuarterlyRev
     reassignCount: review.reassignCount || review.performanceDetails?.reassignCount || 0,
     auditHistory: review.auditHistory || review.performanceDetails?.auditHistory || undefined,
     editRequestReason: review.performanceDetails?.editRequestReason || (review as any).editRequestReason || (review as any).edit_request_reason || undefined,
+    step,
   };
 };
 
