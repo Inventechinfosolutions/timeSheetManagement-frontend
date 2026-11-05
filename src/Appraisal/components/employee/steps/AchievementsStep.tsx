@@ -899,13 +899,12 @@ export const AchievementsStep: React.FC<StepProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Header */}
-      <div id="field-projects" className="flex items-start justify-between gap-3 border-b border-[#64748B] pb-4 scroll-mt-24">
+      <div id="field-projects" className="flex items-start justify-between gap-3 scroll-mt-24">
         <div>
-          <h3 className="text-lg font-bold text-[#0F172A]">
+          <h3 className="text-[1.24rem] font-bold text-[#0F172A]">
             <span className="eval-title-anim">Step 2: Key Achievements & Projects</span>
-            <span className="eval-title-accent-line" />
           </h3>
         </div>
         {!readOnly && (

@@ -248,13 +248,12 @@ export const TeamContributionStep: React.FC<StepProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Step Header */}
-      <div className="border-b border-[#64748B] pb-4">
-        <h3 className="text-lg font-bold text-[#0F172A]">
+      <div>
+        <h3 className="text-[1.24rem] font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 3: Teamwork & Collaboration</span>{" "}
           <span className="text-red-500">*</span>
-          <span className="eval-title-accent-line" />
         </h3>
       </div>
 

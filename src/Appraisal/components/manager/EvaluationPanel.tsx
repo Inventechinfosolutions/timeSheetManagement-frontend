@@ -2914,9 +2914,17 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         </>
                       )}
 
-                      {/* Manager Confirmation Checkbox */}
+                      {/* Manager Confirmation Checkbox — same soft blue border as Overall Performance Rating */}
                       {!isViewMode && (
-                        <div className={`p-3.5 rounded-xl border transition-all ${managerConfirmation ? "border-green-300 bg-green-50/60" : fieldErrors.managerConfirmation ? "border-red-400 bg-red-50/40" : "border-[#64748B] bg-slate-50/60"}`}>
+                        <div
+                          className={`p-3.5 rounded-[1.15rem] transition-all ${
+                            fieldErrors.managerConfirmation
+                              ? "border-[1.5px] border-red-400 bg-red-50/40"
+                              : managerConfirmation
+                                ? "border-[1.5px] border-[#93C5FD] bg-gradient-to-br from-white via-[#EFF6FF] to-white shadow-[0_2px_8px_rgba(37,99,235,0.05)]"
+                                : "border-[1.5px] border-[#BFDBFE] bg-gradient-to-br from-white via-[#EFF6FF] to-white shadow-[0_2px_8px_rgba(37,99,235,0.05)]"
+                          }`}
+                        >
                           <label className="flex items-start gap-3 cursor-pointer select-none">
                             <input
                               type="checkbox"

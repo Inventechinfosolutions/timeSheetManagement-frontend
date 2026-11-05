@@ -1459,10 +1459,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         {!readOnly && (
           <div className="mt-7 pt-6 border-t border-blue-100 overflow-x-auto no-scrollbar pb-2">
             <div className="relative flex items-center justify-between min-w-[620px] px-6">
-              {/* Background connecting progress line */}
-              <div className="absolute top-5 -translate-y-1/2 left-[44px] right-[44px] h-[3px] bg-blue-100 rounded-full z-0">
+              {/* Connecting line: gray for incomplete, blue for completed progress */}
+              <div className="absolute top-5 -translate-y-1/2 left-[44px] right-[44px] h-[3px] bg-[#CBD5E1] rounded-full z-0">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-400 to-[#2563EB] rounded-full transition-all duration-500 ease-out shadow-xs"
+                  className="h-full bg-[#2563EB] rounded-full transition-all duration-500 ease-out"
                   style={{
                     width: `${((currentStep - 1) / (STEP_DEFINITIONS.length - 1)) * 100}%`,
                   }}

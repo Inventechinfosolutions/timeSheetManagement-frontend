@@ -124,17 +124,16 @@ export const OverviewStep: React.FC<StepProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Step Header */}
-      <div className="border-b border-[#64748B] pb-4">
-        <h3 className="text-lg font-bold text-[#0F172A]">
+      <div>
+        <h3 className="text-[1.24rem] font-bold text-[#0F172A]">
           <span className="eval-title-anim">Step 1: Role & Quarter Overview</span>
-          <span className="eval-title-accent-line" />
         </h3>
       </div>
 
       {/* Review Period: Compact, clean card bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-white border border-[#64748B] hover:border-blue-300 rounded-2xl text-xs shadow-sm hover:shadow-md transition-all">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-white rounded-2xl text-xs shadow-sm hover:shadow-md transition-all">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
           <span className="font-bold text-[#0F172A]">
@@ -181,7 +180,7 @@ export const OverviewStep: React.FC<StepProps> = ({
                 value={value}
                 readOnly={readOnly}
                 onChange={(e) => handleFieldChange(field.key, e.target.value)}
-                className={`eval-textarea-field leading-relaxed text-sm font-normal ${
+                className={`eval-textarea-field eval-overview-field-noborder leading-relaxed text-sm font-normal ${
                   error ? "eval-input-error" : ""
                 } ${readOnly ? "eval-textarea-readonly" : ""}`}
               />

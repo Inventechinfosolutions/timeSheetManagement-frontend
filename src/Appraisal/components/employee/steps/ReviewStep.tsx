@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { StepProps, ReviewFormData } from "../../../types/appraisal.types";
 import { Star, Edit3, AlertCircle, CheckCircle2, ChevronDown, Calendar, FileText, Clock } from "lucide-react";
 import { getQuarterPeriod } from "../../../utils/appraisalHelpers";
@@ -322,14 +322,13 @@ export const ReviewStep: React.FC<StepProps> = ({
     hasStep6Data;
 
   return (
-    <div ref={containerRef} className="space-y-6">
+    <div ref={containerRef} className="space-y-3">
       {/* Step Header: hidden in view mode */}
       {!readOnly && (
-        <div className="border-b border-[#64748B] pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h3 className="text-lg font-bold text-[#0F172A]">
+            <h3 className="text-[1.24rem] font-bold text-[#0F172A]">
               <span className="eval-title-anim">Step 6: Review & Final Submission</span>
-              <span className="eval-title-accent-line" />
             </h3>
           </div>
         </div>
@@ -341,7 +340,7 @@ export const ReviewStep: React.FC<StepProps> = ({
            =================================================================== */}
         {assignment && (
           <div id="review-assignment-details" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-3.5 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-            <div className="flex items-center gap-2 border-b border-[#64748B] pb-2.5">
+            <div className="flex items-center gap-2 pb-2.5">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold">
                 ℹ
               </span>
@@ -393,7 +392,7 @@ export const ReviewStep: React.FC<StepProps> = ({
            =================================================================== */}
         {(!readOnly || hasStep1Data) && (
           <div id="review-step-1" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-3 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-            <div className="flex items-center justify-between border-b border-[#64748B] pb-2.5">
+            <div className="flex items-center justify-between pb-2.5">
               <div className="flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                   1
@@ -466,7 +465,7 @@ export const ReviewStep: React.FC<StepProps> = ({
            =================================================================== */}
         {(!readOnly || hasStep2Data) && (
           <div id="review-step-2" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-3.5 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-          <div className="flex items-center justify-between border-b border-[#64748B] pb-2.5">
+          <div className="flex items-center justify-between pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 2
@@ -489,136 +488,9 @@ export const ReviewStep: React.FC<StepProps> = ({
           </div>
 
           {(formData.projects || []).length === 0 ? (
-            readOnly ? (
-              <div className="bg-white border border-[#64748B] rounded-2xl shadow-2xs overflow-hidden">
-                <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-slate-50/60 border-b border-slate-100">
-                  <span className="shrink-0 px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
-                    Project 1
-                  </span>
-                  <h4 className="text-xs sm:text-sm font-semibold text-[#0F172A]">
-                    —
-                  </h4>
-                </div>
-
-                <div className="p-4 space-y-3">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Project Name
-                      </label>
-                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
-                        —
-                      </div>
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Project Role
-                      </label>
-                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
-                        —
-                      </div>
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Responsibility Type
-                      </label>
-                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] min-h-[44px] flex items-center">
-                        —
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Project Description
-                      </label>
-                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
-                        —
-                      </div>
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Key Responsibilities
-                      </label>
-                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
-                        —
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Challenges Faced
-                      </label>
-                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
-                        —
-                      </div>
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Solutions Implemented
-                      </label>
-                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
-                        —
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Key Achievements / Outcomes
-                      </label>
-                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
-                        —
-                      </div>
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Technologies / Tools Used
-                      </label>
-                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm text-[#0F172A] font-normal min-h-[44px] flex items-center flex-1">
-                        —
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Leadership Qualities
-                      </label>
-                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
-                        —
-                      </div>
-                    </div>
-                    <div className="flex flex-col">
-                      <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                        Client Review & Feedback
-                      </label>
-                      <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px] flex-1">
-                        —
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col">
-                    <label className="text-[11px] font-bold text-[#475569] uppercase tracking-wider block mb-1">
-                      Attachments
-                    </label>
-                    <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm text-[#0F172A] font-normal min-h-[44px] flex items-center">
-                      —
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
               <div className="p-3.5 bg-white border border-[#64748B] rounded-lg text-sm text-[#334155]">
                 No project added.
               </div>
-            )
           ) : (
             <div className="space-y-3">
               {(formData.projects || []).map((project, index) => {
@@ -818,7 +690,7 @@ export const ReviewStep: React.FC<StepProps> = ({
            =================================================================== */}
         {(!readOnly || hasStep3Data) && (
           <div id="review-step-3" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-3.5 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-          <div className="flex items-center justify-between border-b border-[#64748B] pb-2.5">
+          <div className="flex items-center justify-between pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 3
@@ -951,7 +823,7 @@ export const ReviewStep: React.FC<StepProps> = ({
            =================================================================== */}
         {(!readOnly || hasStep4Data) && (
           <div id="review-step-4" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-3 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-          <div className="flex items-center justify-between border-b border-[#64748B] pb-2.5">
+          <div className="flex items-center justify-between pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 4
@@ -1040,7 +912,7 @@ export const ReviewStep: React.FC<StepProps> = ({
            =================================================================== */}
         {(!readOnly || hasStep5Data) && (
           <div id="review-step-5" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-3.5 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-          <div className="flex items-center justify-between border-b border-[#64748B] pb-2.5">
+          <div className="flex items-center justify-between pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 5
@@ -1206,7 +1078,7 @@ export const ReviewStep: React.FC<StepProps> = ({
            =================================================================== */}
         {(!readOnly || hasStep6Data) && (
           <div id="review-step-6" className="eval-step-card eval-review-card-noborder eval-reveal-card is-revealed space-y-5 !border-0 shadow-lg hover:shadow-xl rounded-2xl bg-white transition-all duration-300">
-          <div className="flex items-center justify-between border-b border-[#64748B] pb-2.5">
+          <div className="flex items-center justify-between pb-2.5">
             <div className="flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold eval-stagger-item eval-stagger-1">
                 6

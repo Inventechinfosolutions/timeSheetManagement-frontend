@@ -596,12 +596,18 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       onClose={assignmentNoticeCount > 0 ? closeAssignmentNotice : handleModalClose}
       title={modalTitle}
       footer={modalFooter}
-      maxWidth="2xl"
+      maxWidth={
+        buttonState !== AssignButtonState.IDLE && submitSummary ? "4xl" : "2xl"
+      }
       overlayClassName={`assign-quarterly-modal-overlay ${isModalClosing ? "modal-overlay-is-closing" : ""}`}
       closeBtnClassName="assign-modal-close-btn"
       closeOnBackdrop={false}
       closeOnEsc={false}
-      className={`assign-quarterly-modal-dialog ${isModalClosing ? "modal-is-closing" : ""} p-5 sm:p-6 overflow-hidden flex flex-col [&>div:first-child]:border-none [&>div:first-child]:pb-1.5 [&>div:first-child]:mb-1.5 [&>div:last-child]:border-none [&>div:last-child]:pt-2 [&>div:last-child]:mt-1.5 [&>div:last-child]:w-full`}
+      className={`assign-quarterly-modal-dialog ${isModalClosing ? "modal-is-closing" : ""} p-5 sm:p-6 ${
+        buttonState !== AssignButtonState.IDLE && submitSummary
+          ? "overflow-y-auto"
+          : "overflow-hidden"
+      } flex flex-col [&>div:first-child]:border-none [&>div:first-child]:pb-1.5 [&>div:first-child]:mb-1.5 [&>div:last-child]:border-none [&>div:last-child]:pt-2 [&>div:last-child]:mt-1.5 [&>div:last-child]:w-full`}
     >
       {assignmentNoticeCount > 0 ? (
         <div className="overflow-hidden rounded-2xl border border-[#E2E8F0]">
