@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Send,
@@ -38,6 +37,7 @@ import { emptyReviewFormData } from "../../constants/emptyReviewForm";
 import { AppraisalApi, readApiError, toProjectWriteBody, changedProjectFields } from "../../reducers/appraisal.reducer";
 import { readProjectList, PERFORMANCE_STEP_PATH, changedStepFields, toStepFields, applyStepDataToForm } from "../../utils/appraisalHelpers";
 import { EmployeePerformanceStatus, QuaterlyEnum, QuarterlyReviewStatus, ReviewPeriod } from "../../enums/appraisal.enums";
+import AppraisalMomentCard from "../common/AppraisalMomentCard";
 import { message } from "antd";
 import OverviewStep from "./steps/OverviewStep";
 import AchievementsStep from "./steps/AchievementsStep";
@@ -1349,9 +1349,14 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
     setSaving(false);
     setSubmitted(true);
-    setTimeout(() => {
-      onSubmitSuccess?.();
-    }, 1200);
+    submitFinishedRef.current = false;
+  };
+
+  const submitFinishedRef = useRef(false);
+  const finishSubmitted = () => {
+    if (submitFinishedRef.current) return;
+    submitFinishedRef.current = true;
+    onSubmitSuccess?.();
   };
 
   const handleSubmit = async () => {
@@ -1593,15 +1598,13 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       {/* Main Step Body Card */}
       <Card className="rounded-3xl p-6 sm:p-8 manager-review-glass-card">
         {submitted ? (
-          <div className="py-16 text-center animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 rounded-full bg-[#EFF6FF] text-[#2563EB] mx-auto flex items-center justify-center mb-4 shadow-sm border border-[#BFDBFE]">
-              <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
-            </div>
-            <h3 className="text-xl font-bold text-[#0F172A]">Quarterly Review Submitted!</h3>
-            <p className="text-sm text-[#334155] mt-1 max-w-md mx-auto">
-              Your self-evaluation has been successfully recorded. Your manager has been notified for subsequent review.
-            </p>
-          </div>
+          <AppraisalMomentCard
+            kind="submitted"
+            name={assignment.employeeName || "Employee"}
+            quarter={assignment.quarter}
+            financialYear={assignment.financialYear}
+            onClose={finishSubmitted}
+          />
         ) : (
           <>
             <div
@@ -1862,7 +1865,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               </div>
               <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-800 bg-amber-50/90 border border-amber-200/80 rounded-lg px-2.5 py-1.5 pt-1 mt-1">
                 <Lock className="w-3.5 h-3.5 shrink-0 text-amber-600" />
-                <span>Self-assessment will be locked for editing upon submission.</span>
+                <span>Self-reviwe will be locked for editing upon submission.</span>
               </div>
             </div>
 

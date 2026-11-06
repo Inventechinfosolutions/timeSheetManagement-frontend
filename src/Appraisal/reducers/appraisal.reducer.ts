@@ -117,6 +117,11 @@ export const AppraisalApi = {
     return response.data;
   },
 
+  getEvaluation: async (reviewId: number): Promise<RevealedRating> => {
+    const response = await axios.get<RevealedRating>(`${QUARTERLY_REVIEW_URL}/${reviewId}/evaluation`);
+    return response.data;
+  },
+
   uploadPerformanceAttachment: async (
     performanceId: number,
     file: File,
@@ -506,8 +511,8 @@ export const AppraisalApi = {
       finalRating?: number;
       isDraft?: boolean;
     },
-  ): Promise<ManagerReviewApiRecord> => {
-    const response = await axios.patch<ManagerReviewApiRecord>(
+  ): Promise<Partial<RevealedRating> & { status?: string; isDraft?: boolean }> => {
+    const response = await axios.patch<Partial<RevealedRating> & { status?: string; isDraft?: boolean }>(
       `${QUARTERLY_REVIEW_URL}/${reviewId}/evaluate`,
       payload,
     );
@@ -697,7 +702,7 @@ export const updateQuarterlyReview = createAsyncThunk<
 });
 
 export const evaluateQuarterlyReview = createAsyncThunk<
-  ManagerReviewApiRecord,
+  Partial<RevealedRating> & { status?: string; isDraft?: boolean },
   { reviewId: number; payload: Parameters<typeof AppraisalApi.evaluateReview>[1] },
   { rejectValue: string }
 >('appraisal/evaluateQuarterlyReview', async ({ reviewId, payload }, { rejectWithValue }) => {
@@ -871,10 +876,28 @@ const appraisalSlice = createSlice({
       })
       .addCase(evaluateQuarterlyReview.fulfilled, (state, action) => {
         state.actionLoading = false;
-        const evaluated = action.payload;
-        state.reviews = state.reviews.map((r) => (r.id === evaluated.id ? { ...r, ...evaluated } : r));
-        if (state.selectedReview?.id === evaluated.id) {
-          state.selectedReview = { ...state.selectedReview, ...evaluated };
+        const reviewId = action.meta.arg.reviewId;
+        const patch = action.payload;
+        const applyPatch = (review: ManagerReviewApiRecord): ManagerReviewApiRecord => ({
+          ...review,
+          ...(patch.finalRating != null ? { finalRating: Number(patch.finalRating) } : {}),
+          ...(patch.overallPerformanceRating != null
+            ? { overallPerformanceRating: Number(patch.overallPerformanceRating) }
+            : {}),
+          ...(patch.ratingDescription != null
+            ? { ratingDescription: patch.ratingDescription }
+            : {}),
+          ...(patch.managerConfirmation != null
+            ? { managerConfirmation: Boolean(patch.managerConfirmation) }
+            : {}),
+          ...(patch.status
+            ? { status: patch.status as ManagerReviewApiRecord["status"] }
+            : {}),
+          id: review.id,
+        });
+        state.reviews = state.reviews.map((r) => (r.id === reviewId ? applyPatch(r) : r));
+        if (state.selectedReview?.id === reviewId) {
+          state.selectedReview = applyPatch(state.selectedReview);
         }
         state.successMessage = 'Evaluation recorded and locked successfully';
       })

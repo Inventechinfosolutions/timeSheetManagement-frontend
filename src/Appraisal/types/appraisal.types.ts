@@ -389,6 +389,7 @@ export interface RevealedRating {
   performanceAction?: string | null;
   managerConfirmation?: boolean | null;
   passwordVerified: boolean;
+  status?: string;
 }
 
 export interface EditRequestRecord {

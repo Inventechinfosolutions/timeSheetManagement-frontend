@@ -1,6 +1,7 @@
 export const QUARTERLY_REVIEW_TABLE_PAGE_SIZE = 10;
 
 export const RATING_REVEAL_DURATION_MS = 2 * 60 * 1000;
+export const SUCCESS_MODAL_CLOSE_MS = 5 * 1000;
 export const RATING_REVEAL_TICK_MS = 1000;
 
 export const AppraisalCopy = {

@@ -37,6 +37,7 @@ import { AppraisalFilterAll } from "../../enums/appraisal.enums";
 import { isYearlyReview, yearlyQuarterLabels, formatQuarterDisplay, PERFORMANCE_STEP_PATH, applyStepDataToForm } from "../../utils/appraisalHelpers";
 import { AppraisalApi, formatAppraisalDisplayDate, isResubmittedStatus, readApiError, toReviewFormData } from "../../reducers/appraisal.reducer";
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
+import { RATING_REVEAL_DURATION_MS } from "../../constants/appraisal.constants";
 import QuarterlyReviewStepper from "./QuarterlyReviewStepper";
 import EvaluationPanel from "../manager/EvaluationPanel";
 import RatingVerificationModal from "./RatingVerificationModal";
@@ -763,7 +764,7 @@ export const AppraisalDashboard: React.FC = () => {
       }
       const rowId = ratingTarget.id;
       const scoreNum = Number(revealed.finalRating);
-      const expiresAt = Date.now() + 2 * 60 * 1000; // 2 minutes auto-timeout
+      const expiresAt = Date.now() + RATING_REVEAL_DURATION_MS;
       const sessionData: ActiveRatingSession = {
         finalRating: scoreNum,
         expiresAt,
@@ -787,7 +788,7 @@ export const AppraisalDashboard: React.FC = () => {
           return next;
         });
         delete ratingTimersRef.current[rowId];
-      }, 2 * 60 * 1000);
+      }, RATING_REVEAL_DURATION_MS);
 
       // Open celebratory modern 3D rating modal
       setRevealedModalData({
@@ -1318,15 +1319,11 @@ export const AppraisalDashboard: React.FC = () => {
               scrollToPageTop();
               try {
                 const targetAssignment = activeAssignment;
-                const performance = await loadRowPerformance(targetAssignment);
-                const formData = performance ? toReviewFormData(performance) : undefined;
-                let resolvedReviewId =
-                  performance?.reviewId ?? targetAssignment.reviewId ?? 0;
+                let resolvedReviewId = targetAssignment.reviewId ?? 0;
                 let resolvedReviewStatus =
-                  targetAssignment.reviewStatus || performance?.status || "";
+                  targetAssignment.reviewStatus || targetAssignment.status || "";
 
-                // Ensure we have a real review id before opening password unlock
-                // (avoids /reveal-rating/0 → invalid API + password loop).
+                // Do not GET /employee-performance here. Scores load only after the password.
                 if (!resolvedReviewId && targetAssignment.employeeId) {
                   try {
                     const list = await AppraisalApi.getManagerReviewList(
@@ -1361,25 +1358,13 @@ export const AppraisalDashboard: React.FC = () => {
                   return;
                 }
 
-                setViewingForm(formData);
-                setViewingPerformanceStatus(performance?.status || targetAssignment.status || "");
+                setViewingForm(editingForm);
+                setViewingPerformanceStatus(targetAssignment.status || "");
                 setViewingReviewStatus(resolvedReviewStatus);
                 setViewingEvaluation(undefined);
                 setViewingAssignment({
                   ...targetAssignment,
-                  performanceId: performance?.id ?? targetAssignment.performanceId,
-                  assignedBy: performance?.assignedBy || targetAssignment.assignedBy,
-                  assignedDate: performance?.assignedDate
-                    ? formatAppraisalDisplayDate(performance.assignedDate)
-                    : targetAssignment.assignedDate,
-                  deadline: performance?.deadlineDate
-                    ? formatAppraisalDisplayDate(performance.deadlineDate)
-                    : targetAssignment.deadline,
-                  performanceDate: performance?.submittedAt
-                    ? formatAppraisalDisplayDate(performance.submittedAt)
-                    : targetAssignment.performanceDate,
                   reviewId: resolvedReviewId,
-                  description: performance?.description ?? targetAssignment.description,
                 });
                 setStepperReadOnly(false);
                 setEditingForm(undefined);

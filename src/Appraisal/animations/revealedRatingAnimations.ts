@@ -51,12 +51,23 @@ export const animateRevealedModalEntrance = (
     gsap.to(".gsap-confetti", { y: -6, rotation: "random(-15, 15)", stagger: 0.15, duration: 2, repeat: -1, yoyo: true, ease: "sine.inOut" });
     gsap.to(".gsap-sparkle-star", { scale: 1.4, opacity: 0.9, stagger: 0.2, duration: 1.2, repeat: -1, yoyo: true, ease: "sine.inOut" });
 
-    // 5. Floating Motivation Badge & festive bursts
-    const badge = elements.card?.querySelector(".gsap-success-badge");
-    if (badge) {
-      gsap.fromTo(badge, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(1.8)", delay: 0.12 });
-      gsap.to(badge, { y: -3, duration: 2.2, repeat: -1, yoyo: true, ease: "sine.inOut", delay: 0.5 });
-    }
+    // 5. Floating Motivation Badge / standing badge & festive bursts
+    const badges = elements.card?.querySelectorAll(".gsap-success-badge, .gsap-tier-badge");
+    badges?.forEach((badge, index) => {
+      gsap.fromTo(
+        badge,
+        { scale: 0, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.35, ease: "back.out(1.8)", delay: 0.12 + index * 0.04 },
+      );
+      gsap.to(badge, {
+        y: -3,
+        duration: 2.2,
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut",
+        delay: 0.5 + index * 0.04,
+      });
+    });
     gsap.fromTo(".gsap-burst-ray", { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, stagger: 0.04, duration: 0.25, ease: "back.out(2)", delay: 0.08 });
 
     // 6. Rating stars wave pop
