@@ -148,6 +148,12 @@ const Calendar = ({
     (isMyRoute
       ? currentUser?.employeeId || currentUser?.loginId
       : entity?.employeeId || currentUser?.employeeId || currentUser?.loginId);
+  const isManagerView = !!(
+    isManager &&
+    currentEmployeeId &&
+    currentEmployeeId === (currentUser?.employeeId || currentUser?.loginId)
+  );
+  const canOverrideLocks = isAdmin || (isManager && !isManagerView);
 
   // const holidaysFetched = useRef(false);
   const attendanceFetchedKey = useRef<string | null>(null);
@@ -309,16 +315,15 @@ const Calendar = ({
       return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
     });
     if (
-      !isAdmin &&
-      !isManager &&
+      !canOverrideLocks &&
       isLockedAttendance(recordForDay) &&
       !approvedDates.includes(dateStr)
     ) {
       return true;
     }
 
-    // 1. Month Lock (Skip for Admin/Manager)
-    if (!isAdmin && !isManager && !isEditableMonth(d)) return true;
+    // Past months stay locked on a manager's own sheet.
+    if (!canOverrideLocks && !isEditableMonth(d)) return true;
 
     // 2. Manual Blockers
     const isManualBlocked = blockers.some((b) => {
@@ -332,7 +337,7 @@ const Calendar = ({
 
     // 3. Restricted Activity (Mixed Combinations / Leave / WFH)
     // If the record exists and has non-office activity, it's blocked for editing
-    if (!isAdmin && !isManager) {
+    if (!canOverrideLocks) {
       const dateStr = dayjs(d).format("YYYY-MM-DD");
       const entry = records.find((r) => {
         const rDate = new Date(r.workingDate);
@@ -378,15 +383,14 @@ const Calendar = ({
       return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
     });
     if (
-      !isAdmin &&
-      !isManager &&
+      !canOverrideLocks &&
       isLockedAttendance(recordForDay) &&
       !approvedDates.includes(dateStr)
     ) {
       return "Date is Locked. Raise an Access Request to update it.";
     }
 
-    if (!isAdmin && !isManager && !isEditableMonth(d)) return "Month is Locked";
+    if (!canOverrideLocks && !isEditableMonth(d)) return "Month is Locked";
 
     // 2. Manual Blocker
     const blocker = getBlocker(date);
@@ -396,7 +400,7 @@ const Calendar = ({
     }
 
     // 3. Restricted Activity
-    if (!isAdmin && !isManager) {
+    if (!canOverrideLocks) {
       const dateStr = dayjs(d).format("YYYY-MM-DD");
       const entry = records.find((r) => {
         const rDate = new Date(r.workingDate);
@@ -966,15 +970,20 @@ const Calendar = ({
                 <div
                   key={day}
                   onClick={() => {
-                    if (isBlocked && (isAdmin || isManager) && onBlockedClick) {
-                      onBlockedClick();
-                      return;
-                    }
                     const targetDate = new Date(
                       displayDate.getFullYear(),
                       displayDate.getMonth(),
                       day,
                     );
+                    if (
+                      isBlocked &&
+                      (isAdmin || isManager) &&
+                      getBlocker(targetDate) &&
+                      onBlockedClick
+                    ) {
+                      onBlockedClick();
+                      return;
+                    }
                     const timestamp = targetDate.getTime();
 
                     if (onNavigateToDate) {

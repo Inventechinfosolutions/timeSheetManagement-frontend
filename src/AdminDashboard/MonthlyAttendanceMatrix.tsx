@@ -30,6 +30,7 @@ import {
   Dropdown,
   Button,
   Badge,
+  Pagination,
 } from "../components/ui";
 import { WorksphereLogoLoader } from "../components/ApiLoadingSpinner";
 import type { DropdownOption } from "../components/ui";
@@ -140,6 +141,15 @@ const MonthlyAttendanceMatrix: React.FC = () => {
   });
   // Status Filter: All, Submitted, Pending
   const [selectedStatus, setSelectedStatus] = useState<string>("All");
+
+  // Pagination: 20 records per page for the Excel grid
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 20;
+
+  // Reset page when month, year, search, department, or status changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedMonth, selectedYear, debouncedSearchTerm, selectedDepartment, selectedStatus]);
 
   // Status dropdown options
   const statusOptions: DropdownOption[] = useMemo(
@@ -332,6 +342,16 @@ const MonthlyAttendanceMatrix: React.FC = () => {
       return matchesSearch && matchesDept && matchesStatus;
     });
   }, [matrixData, debouncedSearchTerm, selectedDepartment, selectedStatus, isManager]);
+
+  const totalEmployees = filteredEmployees.length;
+  const totalPages = Math.max(1, Math.ceil(totalEmployees / pageSize));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  // Paginated employees for 20 records per page
+  const paginatedEmployees = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize;
+    return filteredEmployees.slice(start, start + pageSize);
+  }, [filteredEmployees, safeCurrentPage, pageSize]);
 
   // Aggregate summary stats across visible employees
   const totalStats = useMemo(() => {
@@ -678,9 +698,10 @@ const MonthlyAttendanceMatrix: React.FC = () => {
                   </thead>
 
                   <tbody>
-                    {filteredEmployees.map((emp, empIdx) => {
+                    {paginatedEmployees.map((emp, empIdx) => {
                       const isEven = empIdx % 2 === 0;
                       const rowBg = isEven ? "bg-white" : "bg-[#F8F9FC]";
+                      const serialNumber = (safeCurrentPage - 1) * pageSize + empIdx + 1;
                       return (
                         <tr
                           key={emp.employeeId}
@@ -690,7 +711,7 @@ const MonthlyAttendanceMatrix: React.FC = () => {
                           <td
                             className={`sticky left-0 z-10 py-2.5 px-2 text-center font-semibold text-xs text-[#475569] border-r border-b border-gray-200 min-w-[50px] max-w-[50px] shadow-[2px_0_6px_rgba(0,0,0,0.04)] ${rowBg} group-hover:bg-[#F1F5FD] transition-colors`}
                           >
-                            {empIdx + 1}
+                            {serialNumber}
                           </td>
 
                           {/* Sticky Employee Name Cell */}
@@ -777,13 +798,18 @@ const MonthlyAttendanceMatrix: React.FC = () => {
                 </table>
               </div>
 
-              {/* Table Footer Summary */}
-              <div className="p-4 bg-gray-50/80 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500 font-medium">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-[#2B3674]">{filteredEmployees.length}</span>
-                  <span>Employees displayed</span>
+              {/* Table Footer Summary & Pagination */}
+              {totalEmployees > 0 && (
+                <div className="p-4 bg-gray-50/80 border-t border-gray-100">
+                  <Pagination
+                    currentPage={safeCurrentPage}
+                    totalItems={totalEmployees}
+                    pageSize={pageSize}
+                    onPageChange={(page) => setCurrentPage(page)}
+                    className="w-full"
+                  />
                 </div>
-              </div>
+              )}
             </div>
           )}
         </div>

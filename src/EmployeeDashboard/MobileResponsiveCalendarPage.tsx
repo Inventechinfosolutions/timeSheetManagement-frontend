@@ -83,6 +83,12 @@ const MobileResponsiveCalendarPage = ({
     (isMyRoute
       ? currentUser?.employeeId || currentUser?.loginId
       : entity?.employeeId || currentUser?.employeeId || currentUser?.loginId);
+  const isManagerView = !!(
+    isManager &&
+    currentEmployeeId &&
+    currentEmployeeId === (currentUser?.employeeId || currentUser?.loginId)
+  );
+  const canOverrideLocks = isAdmin || (isManager && !isManagerView);
 
   const attendanceFetchedKey = useRef<string | null>(null);
 
@@ -343,7 +349,7 @@ const MobileResponsiveCalendarPage = ({
             if (dayOfWeek === 0) isDeptBlocked = true;
 
             const isStatusLocked = entry?.status === AttendanceStatus.LOCKED;
-            const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (entry?.status === AttendanceStatus.LEAVE || isDeptBlocked || !!holiday));
+            const isBlocked = !!manualBlocker || (!canOverrideLocks && (entry?.status === AttendanceStatus.LEAVE || isStatusLocked || isDeptBlocked || !!holiday));
             
             const isToday =
               day === now.getDate() &&
@@ -418,7 +424,7 @@ const MobileResponsiveCalendarPage = ({
               <div
                 key={day}
                 onClick={() => {
-                  if (isBlocked && (isAdmin || isManager) && onBlockedClick) {
+                  if (isBlocked && manualBlocker && (isAdmin || isManager) && onBlockedClick) {
                     onBlockedClick();
                     return;
                   }
