@@ -18,6 +18,8 @@ export interface LeaveNotification {
   requestModifiedFrom?: string;
   firstHalf?: string;
   secondHalf?: string;
+  /** Present on employee status updates when a reviewer acted */
+  reviewedBy?: string | null;
 }
 
 interface NotificationState {

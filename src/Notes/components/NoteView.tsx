@@ -49,7 +49,7 @@ interface NoteViewProps {
   onBack: () => void;
   onPreviewAttachment: (item: NoteDocumentItem) => void;
   onDownloadAttachment: (item: NoteDocumentItem) => void;
-  onPreviewImage?: (url: string, title?: string) => void;
+  onPreviewImage?: (url: string, title?: string, fileKey?: string | null) => void;
   /** Resolve authorized blob URLs for inline images saved as attachment keys */
   onHydrateInlineImages?: (root: HTMLElement) => Promise<void>;
   onTogglePin?: (noteId: number) => void;
@@ -148,7 +148,15 @@ export const NoteView: React.FC<NoteViewProps> = ({
       if (src) {
         e.preventDefault();
         e.stopPropagation();
-        onPreviewImage(src, img.getAttribute("alt") || img.getAttribute("title") || "Screenshot");
+        const fileKey =
+          img.getAttribute("data-inline-file-key") ||
+          /\/attachments\/([^/?#]+)\/(?:view|download)/i.exec(src)?.[1] ||
+          null;
+        onPreviewImage(
+          src,
+          img.getAttribute("alt") || img.getAttribute("title") || "Screenshot",
+          fileKey
+        );
         return;
       }
     }
