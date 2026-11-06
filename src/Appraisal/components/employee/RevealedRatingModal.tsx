@@ -27,7 +27,7 @@ interface RevealedRatingModalProps {
 /**
  * 1.0–1.9: Sprout & Growth Path (Needs Improvement - Red/Coral)
  */
-const SproutIllustration: React.FC = () => (
+export const SproutIllustration: React.FC = () => (
   <svg viewBox="0 0 220 200" className="w-40 h-36 sm:w-48 sm:h-44 drop-shadow-md overflow-visible">
     <defs>
       <linearGradient id="podiumSprout" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -113,7 +113,7 @@ const SproutIllustration: React.FC = () => (
 /**
  * 2.0–2.9: Ascending Steps & Progress Arrow (Developing - Vibrant Orange)
  */
-const StepsIllustration: React.FC = () => (
+export const StepsIllustration: React.FC = () => (
   <svg viewBox="0 0 220 200" className="w-40 h-36 sm:w-48 sm:h-44 drop-shadow-md overflow-visible">
     <defs>
       <linearGradient id="podiumOrange" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -203,7 +203,7 @@ const StepsIllustration: React.FC = () => (
 /**
  * 3.0–3.9: Prestigious 3D Bronze Shield of Achievement (Meets Expectations - Bronze 3rd Place)
  */
-const BronzeShieldIllustration: React.FC = () => (
+export const BronzeShieldIllustration: React.FC = () => (
   <svg viewBox="0 0 220 200" className="w-40 h-36 sm:w-48 sm:h-44 drop-shadow-md overflow-visible">
     <defs>
       <radialGradient id="shieldBronzeGrad" cx="38%" cy="32%" r="68%">
@@ -308,7 +308,7 @@ const BronzeShieldIllustration: React.FC = () => (
 /**
  * 4.0–4.5: Award Medal with Laurel Leaves (Exceeds Expectations - Prestigious 2nd Place Silver)
  */
-const MedalIllustration: React.FC = () => (
+export const MedalIllustration: React.FC = () => (
   <svg viewBox="0 0 220 200" className="w-40 h-36 sm:w-48 sm:h-44 drop-shadow-md overflow-visible">
     <defs>
       <linearGradient id="podiumSilver" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -394,7 +394,7 @@ const MedalIllustration: React.FC = () => (
 /**
  * 4.6–5.0: Premium Golden Champion Trophy (Outstanding - Gold)
  */
-const ChampionTrophyIllustration: React.FC = () => (
+export const ChampionTrophyIllustration: React.FC = () => (
   <svg viewBox="0 0 220 200" className="w-40 h-36 sm:w-48 sm:h-44 drop-shadow-lg overflow-visible">
     <defs>
       <radialGradient id="cupGoldGrand" cx="36%" cy="36%" r="68%">

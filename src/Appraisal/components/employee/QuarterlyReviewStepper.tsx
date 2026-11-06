@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Send,
@@ -32,11 +31,13 @@ import {
   QuarterlyReviewAssignment,
   StoredPerformanceFile,
   PerformanceProject,
+  PerformanceWritePayload,
 } from "../../types/appraisal.types";
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
-import { AppraisalApi, readApiError, toReviewFormData, toStepPatch, toProjectWriteBody, changedProjectFields } from "../../reducers/appraisal.reducer";
-import { readProjectList } from "../../utils/appraisalHelpers";
+import { AppraisalApi, readApiError, toProjectWriteBody, changedProjectFields } from "../../reducers/appraisal.reducer";
+import { readProjectList, PERFORMANCE_STEP_PATH, changedStepFields, toStepFields, applyStepDataToForm } from "../../utils/appraisalHelpers";
 import { EmployeePerformanceStatus, QuaterlyEnum, QuarterlyReviewStatus, ReviewPeriod } from "../../enums/appraisal.enums";
+import AppraisalMomentCard from "../common/AppraisalMomentCard";
 import { message } from "antd";
 import OverviewStep from "./steps/OverviewStep";
 import AchievementsStep from "./steps/AchievementsStep";
@@ -201,7 +202,7 @@ const isStepDone = (stepId: number, data: ReviewFormData): boolean => {
   return false;
 };
 
-const getFirstIncompleteStep = (data: ReviewFormData): number => {
+export const getFirstIncompleteStep = (data: ReviewFormData): number => {
   for (let s = 1; s <= 5; s++) {
     if (!isStepDone(s, data)) return s;
   }
@@ -303,6 +304,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     const initialData = initialFormData || emptyReviewFormData;
     return getFirstIncompleteStep(initialData);
   });
+  /** First incomplete step from DB (API `step`). Used for checkmarks + forward skips. */
+  const [dbOpenStep, setDbOpenStep] = useState<number>(() =>
+    Math.min(Math.max(Number(assignment.step) || Number(initialStep) || 1, 1), 6),
+  );
   const [exitingStep, setExitingStep] = useState<number | null>(null);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const [formData, setFormData] = useState<ReviewFormData>(initialFormData || emptyReviewFormData);
@@ -817,27 +822,31 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       setSaveError("This quarter is missing an employee, quarter, or financial year.");
       return false;
     }
-    const payload: {
+    const metaPayload: {
       status?: EmployeePerformanceStatus | string;
       clearSteps?: boolean;
-      stepOverview?: Record<string, unknown> | null;
-      stepTeamwork?: Record<string, unknown> | null;
-      stepLearning?: Record<string, unknown> | null;
-      stepEnvironment?: Record<string, unknown> | null;
-      stepFinalReview?: Record<string, unknown> | null;
     } = {};
     const resetting = targetStatus === EmployeePerformanceStatus.NOT_STARTED && !hasAnyDataEntered(dataToPersist);
-    if (targetStatus) {
-      payload.status = targetStatus;
-    }
     if (resetting) {
-      payload.clearSteps = true;
-    } else if (stepNumber && stepNumber !== 2) {
-      Object.assign(payload, toStepPatch(stepNumber, dataToPersist));
+      metaPayload.clearSteps = true;
+      metaPayload.status = EmployeePerformanceStatus.NOT_STARTED;
+    } else if (
+      targetStatus &&
+      targetStatus !== EmployeePerformanceStatus.DRAFT
+    ) {
+      // Non-draft status changes only (submit/lock/etc). DRAFT is set by step PATCH.
+      metaPayload.status = targetStatus;
     }
-    if (asDraft && !payload.status && !isReassignedReview && !resetting) {
-      payload.status = EmployeePerformanceStatus.DRAFT;
-    }
+
+    const stepPath = stepNumber ? PERFORMANCE_STEP_PATH[stepNumber] : undefined;
+    // PATCH body = only fields that differ from last loaded snapshot
+    const stepBody =
+      !resetting && stepNumber && stepNumber !== 2
+        ? changedStepFields(stepNumber, initialFormDataRef.current, dataToPersist)
+        : {};
+    // Steps 1,3–6 use /:id/{step} only — do not also PATCH /:id for DRAFT
+    const usesStepPatch = Boolean(stepPath) && stepNumber !== 2 && !resetting;
+
     setSaving(true);
     setSaveError("");
     try {
@@ -861,20 +870,32 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       if (existingId) {
         performanceIdRef.current = existingId;
         setPerformanceId(existingId);
-        if (Object.keys(payload).length > 0) {
-          await AppraisalApi.updatePerformance(existingId, payload);
+        if (!usesStepPatch && Object.keys(metaPayload).length > 0) {
+          await AppraisalApi.updatePerformance(existingId, metaPayload);
+        } else if (resetting) {
+          await AppraisalApi.updatePerformance(existingId, metaPayload);
+        }
+        if (usesStepPatch && Object.keys(stepBody).length > 0) {
+          await AppraisalApi.patchPerformanceStep(existingId, stepPath!, stepBody);
         }
         if (stepNumber === 2 && !resetting) {
           await savePendingProject(dataToPersist);
         }
         return true;
       }
-      const saved = await AppraisalApi.createPerformance({
+      const createBody: PerformanceWritePayload = {
         employeeId: assignment.employeeId,
         quarter,
         financialYear: assignment.financialYear,
-        ...payload,
-      });
+        ...metaPayload,
+        ...(asDraft && !resetting ? { status: EmployeePerformanceStatus.DRAFT } : {}),
+      };
+      if (stepNumber === 1) createBody.stepOverview = toStepFields(1, dataToPersist);
+      else if (stepNumber === 3) createBody.stepTeamwork = toStepFields(3, dataToPersist);
+      else if (stepNumber === 4) createBody.stepLearning = toStepFields(4, dataToPersist);
+      else if (stepNumber === 5) createBody.stepEnvironment = toStepFields(5, dataToPersist);
+      else if (stepNumber === 6) createBody.stepFinalReview = toStepFields(6, dataToPersist);
+      const saved = await AppraisalApi.createPerformance(createBody);
       performanceIdRef.current = saved.id;
       setPerformanceId(saved.id);
       if (stepNumber === 2 && !resetting) {
@@ -912,35 +933,77 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
   };
 
-  const loadFreshForm = async (preserveDraftInputs = true): Promise<boolean> => {
+  /** Merge one step from API into form without wiping other steps already in memory. */
+  const hydrateStepIntoForm = async (
+    stepNumber: number,
+    base: ReviewFormData,
+  ): Promise<ReviewFormData> => {
+    if (isStepDone(stepNumber, base)) {
+      return base;
+    }
+    const id = performanceIdRef.current || assignment.performanceId;
+    const stepPath = PERFORMANCE_STEP_PATH[stepNumber];
+    if (!id || !stepPath) {
+      return base;
+    }
+    try {
+      const stepRes = await AppraisalApi.getPerformanceStep(Number(id), stepPath);
+      if (typeof stepRes.step === "number" && stepRes.step >= 1 && stepRes.step <= 6) {
+        setDbOpenStep((prev) => Math.max(prev, stepRes.step!));
+      }
+      return applyStepDataToForm(base, stepNumber, stepRes.data);
+    } catch {
+      return base;
+    }
+  };
+
+  /** Load only the given step via GET /:id/{step} — not the full appraisal. */
+  const loadFreshForm = async (
+    preserveDraftInputs = true,
+    stepToLoad: number = currentStep,
+  ): Promise<boolean> => {
     const id = performanceIdRef.current || assignment.performanceId;
     if (!id) {
       return true;
     }
+    const stepPath = PERFORMANCE_STEP_PATH[stepToLoad];
+    if (!stepPath) {
+      return true;
+    }
     try {
-      const performance = await AppraisalApi.getPerformanceById(id);
-      const fresh = toReviewFormData(performance);
-      if (preserveDraftInputs && formDataRef.current) {
+      const stepRes = await AppraisalApi.getPerformanceStep(Number(id), stepPath);
+      if (typeof stepRes.step === "number" && stepRes.step >= 1 && stepRes.step <= 6) {
+        setDbOpenStep((prev) => Math.max(prev, stepRes.step!));
+      }
+      let fresh = applyStepDataToForm(
+        formDataRef.current || emptyReviewFormData,
+        stepToLoad,
+        stepRes.data,
+      );
+      if (preserveDraftInputs && formDataRef.current && stepToLoad === 2) {
         const current = formDataRef.current;
-        fresh.projectName = current.projectName;
-        fresh.projectDescription = current.projectDescription;
-        fresh.projectRole = current.projectRole;
-        fresh.responsibilityType = current.responsibilityType;
-        fresh.leadershipQualities = current.leadershipQualities;
-        fresh.clientReviewFeedback = current.clientReviewFeedback;
-        fresh.keyResponsibilities = current.keyResponsibilities;
-        fresh.challengesFaced = current.challengesFaced;
-        fresh.projectChallenge = current.projectChallenge;
-        fresh.solutionsImplemented = current.solutionsImplemented;
-        fresh.keyAchievementsOutcomes = current.keyAchievementsOutcomes;
-        fresh.technologiesUsed = current.technologiesUsed;
-        fresh.projectAttachments = current.projectAttachments;
-        fresh.editingProjectIndex = current.editingProjectIndex;
+        fresh = {
+          ...fresh,
+          projectName: current.projectName,
+          projectDescription: current.projectDescription,
+          projectRole: current.projectRole,
+          responsibilityType: current.responsibilityType,
+          leadershipQualities: current.leadershipQualities,
+          clientReviewFeedback: current.clientReviewFeedback,
+          keyResponsibilities: current.keyResponsibilities,
+          challengesFaced: current.challengesFaced,
+          projectChallenge: current.projectChallenge,
+          solutionsImplemented: current.solutionsImplemented,
+          keyAchievementsOutcomes: current.keyAchievementsOutcomes,
+          technologiesUsed: current.technologiesUsed,
+          projectAttachments: current.projectAttachments,
+          editingProjectIndex: current.editingProjectIndex,
+        };
       }
       formDataRef.current = fresh;
       initialFormDataRef.current = fresh;
-      performanceIdRef.current = performance.id;
-      setPerformanceId(performance.id);
+      performanceIdRef.current = stepRes.id;
+      setPerformanceId(stepRes.id);
       setFormData(fresh);
       return true;
     } catch (error) {
@@ -990,7 +1053,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       };
       setFormData(updatedData);
       formDataRef.current = updatedData;
-      await loadFreshForm(false);
+      await loadFreshForm(false, 2);
       return true;
     } catch (error) {
       setSaveError(readApiError(error));
@@ -1063,9 +1126,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
     if (existingId) {
       try {
-        const updatedPerf = await AppraisalApi.deletePerformanceProject(existingId, index);
-        const freshProjects = updatedPerf?.stepAchievements?.projects
-          ? readProjectList(updatedPerf.stepAchievements.projects)
+        const updatedStep = await AppraisalApi.deletePerformanceProject(existingId, index);
+        const freshProjects = updatedStep?.data?.projects
+          ? readProjectList(updatedStep.data.projects)
           : updatedProjects;
 
         const nextData: ReviewFormData = {
@@ -1114,20 +1177,20 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
     setErrors({});
 
-    // 1. Save changes via PUT by id
+    // 1. Save this step via PATCH /:id/{step} (only changed fields)
     const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT, currentStep);
     if (!saved) {
       return;
     }
 
-    // 2. Fetch fresh data via GET by id to keep state synchronized
-    await loadFreshForm(false);
+    const nextStep = currentStep + 1;
+    // 2. Load only the next step via GET /:id/{step}
+    await loadFreshForm(false, nextStep);
 
     message.success(stepSavedMessage(currentStep));
-    console.info(`[Appraisal] Step ${currentStep} saved successfully. Moving to Step ${currentStep + 1}`);
+    console.info(`[Appraisal] Step ${currentStep} saved successfully. Moving to Step ${nextStep}`);
 
-    // 4. Navigate to next step
-    goToStep(currentStep + 1, true);
+    goToStep(nextStep, true);
   };
 
   const handlePrev = async () => {
@@ -1144,10 +1207,11 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
     setErrors({});
 
-    // Do NOT call PUT. Call GET by id to fetch fresh saved data from database
-    await loadFreshForm();
+    const prevStep = currentStep - 1;
+    // Load only the previous step via GET /:id/{step}
+    await loadFreshForm(true, prevStep);
 
-    goToStep(currentStep - 1, true);
+    goToStep(prevStep, true);
   };
 
   const handleStepClick = async (targetStep: number) => {
@@ -1160,18 +1224,22 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
     if (targetStep === currentStep || saving) return;
 
-    // Moving backward: do not PUT, call GET to re-sync
+    // Moving backward: GET only the target step (keep other steps already in form)
     if (targetStep < currentStep) {
       setErrors({});
-      await loadFreshForm();
+      await loadFreshForm(true, targetStep);
       goToStep(targetStep, true);
       return;
     }
 
-    const currentData = formData;
-
+    // Moving forward: re-hydrate any skipped steps from DB before validating
+    // (local form may be empty for step 3 after visiting step 2 only)
+    let data = formDataRef.current || formData;
     for (let s = currentStep; s < targetStep; s++) {
-      const validation = validateStep(s, currentData);
+      data = await hydrateStepIntoForm(s, data);
+      formDataRef.current = data;
+      setFormData(data);
+      const validation = validateStep(s, data);
       if (!validation.isValid) {
         if (s !== currentStep) {
           goToStep(s, false);
@@ -1183,9 +1251,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
 
     setErrors({});
-    const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT, currentStep);
+    const saved = await persistStep(true, data, EmployeePerformanceStatus.DRAFT, currentStep);
     if (!saved) return;
-    await loadFreshForm(false);
+    await loadFreshForm(false, targetStep);
     message.success(stepSavedMessage(currentStep));
     console.info(`[Appraisal] Step ${currentStep} saved successfully. Moving to Step ${targetStep}`);
     goToStep(targetStep, true);
@@ -1220,7 +1288,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
 
     // ── Case 2: Form has not been modified since it was loaded (not dirty) ──
-    // No need to save again; just exit
+    // No need to save again; just exit — resume step is computed from DB next open
     if (!formDirty && existingId) {
       console.info("[Appraisal] Form not dirty, exiting without extra save");
       scrollToTop();
@@ -1281,9 +1349,14 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
     setSaving(false);
     setSubmitted(true);
-    setTimeout(() => {
-      onSubmitSuccess?.();
-    }, 1200);
+    submitFinishedRef.current = false;
+  };
+
+  const submitFinishedRef = useRef(false);
+  const finishSubmitted = () => {
+    if (submitFinishedRef.current) return;
+    submitFinishedRef.current = true;
+    onSubmitSuccess?.();
   };
 
   const handleSubmit = async () => {
@@ -1472,7 +1545,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               {/* Stepper Steps (Number in Circle, Title Below) */}
               {STEP_DEFINITIONS.map((step) => {
                 const hasData = isStepDone(step.id, formData);
-                const isCompleted = isAlreadySubmitted ? true : hasData;
+                // Complete = before DB open step, or local form has that step filled
+                const isCompleted = isAlreadySubmitted
+                  ? true
+                  : step.id < dbOpenStep || (step.id !== currentStep && hasData);
                 const isActive = currentStep === step.id;
 
                 return (
@@ -1522,15 +1598,13 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       {/* Main Step Body Card */}
       <Card className="rounded-3xl p-6 sm:p-8 manager-review-glass-card">
         {submitted ? (
-          <div className="py-16 text-center animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 rounded-full bg-[#EFF6FF] text-[#2563EB] mx-auto flex items-center justify-center mb-4 shadow-sm border border-[#BFDBFE]">
-              <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
-            </div>
-            <h3 className="text-xl font-bold text-[#0F172A]">Quarterly Review Submitted!</h3>
-            <p className="text-sm text-[#334155] mt-1 max-w-md mx-auto">
-              Your self-evaluation has been successfully recorded. Your manager has been notified for subsequent review.
-            </p>
-          </div>
+          <AppraisalMomentCard
+            kind="submitted"
+            name={assignment.employeeName || "Employee"}
+            quarter={assignment.quarter}
+            financialYear={assignment.financialYear}
+            onClose={finishSubmitted}
+          />
         ) : (
           <>
             <div
@@ -1791,7 +1865,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               </div>
               <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-800 bg-amber-50/90 border border-amber-200/80 rounded-lg px-2.5 py-1.5 pt-1 mt-1">
                 <Lock className="w-3.5 h-3.5 shrink-0 text-amber-600" />
-                <span>Self-assessment will be locked for editing upon submission.</span>
+                <span>Self-reviwe will be locked for editing upon submission.</span>
               </div>
             </div>
 

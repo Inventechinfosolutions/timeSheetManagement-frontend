@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { StepProps } from "../../../types/appraisal.types";
+import { ReviewFormData, StepProps } from "../../../types/appraisal.types";
 import {
   AlertCircle,
   Calendar,
 } from "lucide-react";
-import { AppraisalApi } from "../../../reducers/appraisal.reducer";
-import { formatAppraisalDisplayDate, getQuarterPeriod, isYearlyReview } from "../../../utils/appraisalHelpers";
+import { getQuarterPeriod } from "../../../utils/appraisalHelpers";
 import "../AppraisalDashboard.css";
 
 interface OverviewFieldConfig {
@@ -65,61 +64,34 @@ export const OverviewStep: React.FC<StepProps> = ({
   const [endDate, setEndDate] = useState<string>(formData.reviewPeriodEnd || "");
   const [periodLoading, setPeriodLoading] = useState<boolean>(false);
 
-  // Compute fallback and fetch quarter dates
+  // Prefer dates from GET /overview step API; fallback to local quarter defaults only if missing
   useEffect(() => {
-    let isMounted = true;
-    const fromYearMatch = financialYear.match(/^(\d{4})/);
-    const fromYear = fromYearMatch ? parseInt(fromYearMatch[1], 10) : new Date().getFullYear();
-    const defaults = getQuarterPeriod(quarter, financialYear, assignment?.reviewPeriod);
-    const defaultStart = defaults.start;
-    const defaultEnd = defaults.end;
-
-    if (!formData.reviewPeriodStart && defaultStart) {
-      setStartDate(defaultStart);
-      onChange("reviewPeriodStart", defaultStart);
-    }
-    if (!formData.reviewPeriodEnd && defaultEnd) {
-      setEndDate(defaultEnd);
-      onChange("reviewPeriodEnd", defaultEnd);
-    }
-
-    if (isYearlyReview(assignment)) {
+    const apiStart = (formData.reviewPeriodStart || "").trim();
+    const apiEnd = (formData.reviewPeriodEnd || "").trim();
+    if (apiStart && apiEnd) {
+      setStartDate(apiStart);
+      setEndDate(apiEnd);
       setPeriodLoading(false);
       return;
     }
 
-    // Fetch master quarters from backend API
-    setPeriodLoading(true);
-    AppraisalApi.getMasterQuarters(fromYear)
-      .then((quarters) => {
-        if (!isMounted) return;
-        const match = quarters.find((q) => q.quaterLabel === quarter);
-        if (match?.startDate && match?.endDate) {
-          const formattedStart = formatAppraisalDisplayDate(match.startDate);
-          const formattedEnd = formatAppraisalDisplayDate(match.endDate);
-          setStartDate(formattedStart);
-          setEndDate(formattedEnd);
-          onChange("reviewPeriodStart", formattedStart);
-          onChange("reviewPeriodEnd", formattedEnd);
-        }
-      })
-      .catch(() => {
-        // Retain default dates if master quarter fetch fails
-      })
-      .finally(() => {
-        if (isMounted) setPeriodLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, [quarter, financialYear, assignment?.reviewPeriod]);
+    const defaults = getQuarterPeriod(quarter, financialYear, assignment?.reviewPeriod);
+    if (!apiStart && defaults.start) {
+      setStartDate(defaults.start);
+      onChange("reviewPeriodStart", defaults.start);
+    }
+    if (!apiEnd && defaults.end) {
+      setEndDate(defaults.end);
+      onChange("reviewPeriodEnd", defaults.end);
+    }
+    setPeriodLoading(false);
+  }, [formData.reviewPeriodStart, formData.reviewPeriodEnd, quarter, financialYear, assignment?.reviewPeriod]);
 
   // Unified field change handler
-  const handleFieldChange = (key: string, val: string) => {
+  const handleFieldChange = (key: keyof ReviewFormData, val: string) => {
     onChange(key, val);
     if (clearError) {
-      clearError(key);
+      clearError(String(key));
     }
   };
 

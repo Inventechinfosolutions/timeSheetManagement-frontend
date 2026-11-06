@@ -170,6 +170,8 @@ export interface QuarterlyReviewAssignment {
   reassignCount?: number;
   auditHistory?: AppraisalAuditEntry[];
   editRequestReason?: string | null;
+  /** First incomplete step from DB (1–6); Edit opens this step only. */
+  step?: number;
 }
 
 export interface AccessRequest {
@@ -387,6 +389,7 @@ export interface RevealedRating {
   performanceAction?: string | null;
   managerConfirmation?: boolean | null;
   passwordVerified: boolean;
+  status?: string;
 }
 
 export interface EditRequestRecord {
@@ -606,6 +609,7 @@ export interface EmployeePerformanceDetail {
   editRequestReason?: string | null;
   reassignCount?: number | null;
   auditHistory?: AppraisalAuditEntry[];
+  step?: number | null;
 }
 
 export interface EmployeeReviewDetail {

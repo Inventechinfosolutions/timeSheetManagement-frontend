@@ -249,7 +249,7 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
                   <ShieldCheck className="w-6 h-6" />
                 </div>
                 <h3 className="text-xl font-bold tracking-tight text-[#0F172A]">
-                  Annual Rating Unlocked
+                  Annual Rating
                 </h3>
                 <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
                   Verified rating breakdown for <span className="font-semibold text-[#0F172A]">{summary.financialYear}</span>.

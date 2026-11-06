@@ -36,6 +36,7 @@ import { DatePicker as AntDatePicker, ConfigProvider, message } from "antd";
 import dayjs from "dayjs";
 import { getRatingTierConfig, formatQuarterDisplay } from "../../utils/appraisalHelpers";
 import { ENVIRONMENT_SCORES } from "../../constants/appraisal.constants";
+import AppraisalMomentCard from "../common/AppraisalMomentCard";
 import { renderAnimatedEmojiIcon } from "../employee/steps/CompanyEnvironmentStep";
 import "./EvaluationPanel.css";
 import "./AssignQuarterlyReviewModal.css";
@@ -714,6 +715,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const [managerConfirmation, setManagerConfirmation] = useState<boolean>(Boolean(managerEvaluation?.managerConfirmation));
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const lastEvaluationResultRef = useRef<EvaluationData | null>(null);
+  const evaluationFinishedRef = useRef(false);
+  const finishEvaluationRef = useRef<() => void>(() => {});
   const savedEvaluationRef = useRef({
     productivity: savedManagerScore("productivity"),
     qualityOfWork: savedManagerScore("qualityOfWork"),
@@ -826,34 +829,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     }
     let cancelled = false;
     setMatrixLoading(true);
-    void AppraisalApi.getReviewById(id)
+    void AppraisalApi.getEvaluation(id)
       .then((review) => {
         if (cancelled) return;
         setLoadedReviewStatus(String(review.status || ""));
-        applyRevealedEvaluation({
-          quarter: review.quarter,
-          financialYear: review.financialYear,
-          finalRating: Number(review.finalRating) || 0,
-          ratingDescription: "",
-          productivity: Number(review.productivity) || 0,
-          qualityOfWork: Number(review.qualityOfWork) || 0,
-          ownershipResponsibility: Number(review.ownershipResponsibility) || 0,
-          communication: Number(review.communication) || 0,
-          teamCollaboration: Number(review.teamCollaboration) || 0,
-          innovationProblemSolving: Number(review.innovationProblemSolving) || 0,
-          technicalJobSkills: Number(review.technicalJobSkills) || 0,
-          overallPerformanceRating: Number(review.overallPerformanceRating) || 0,
-          performanceStrengths: review.performanceStrengths || "",
-          areasOfImprovement: review.areasOfImprovement || "",
-          managerComment: review.managerComment || "",
-          goalsForNextReviewPeriod: review.goalsForNextReviewPeriod,
-          trainingDevelopmentRecommendations: review.trainingDevelopmentRecommendations,
-          careerGrowthRecommendation: review.careerGrowthRecommendation,
-          reviewOutcome: review.reviewOutcome,
-          performanceAction: review.performanceAction,
-          managerConfirmation: review.managerConfirmation,
-          passwordVerified: true,
-        });
+        applyRevealedEvaluation(review);
       })
       .catch((error) => {
         if (cancelled) return;
@@ -1177,6 +1157,114 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     setShowConfirmModal(true);
   };
 
+  const syncSavedEvaluationFromForm = () => {
+    savedEvaluationRef.current = {
+      productivity: Number(scores.productivity) || 0,
+      qualityOfWork: Number(scores.qualityOfWork) || 0,
+      ownership: Number(scores.ownership) || 0,
+      communication: Number(scores.communication) || 0,
+      teamCollaboration: Number(scores.teamCollaboration) || 0,
+      innovation: Number(scores.innovation) || 0,
+      technicalJobSkills: Number(scores.technicalJobSkills) || 0,
+      performanceStrengths: strengths.trim(),
+      areasOfImprovement: improvements.trim(),
+      managerComment: remarks.trim(),
+      goalsForNextReviewPeriod: goalsForNextReview.trim(),
+      trainingDevelopmentRecommendations: trainingRecommendations.trim(),
+      careerGrowthRecommendation: careerGrowthRecommendation || "",
+      reviewOutcome: reviewOutcome || "",
+      performanceAction: performanceAction || "",
+      managerConfirmation: Boolean(managerConfirmation),
+    };
+  };
+
+  /** PATCH body: only fields that differ from the last loaded/saved evaluation. */
+  const buildEvaluationPatchPayload = (options: {
+    isDraft: boolean;
+    forceManagerConfirmation?: boolean;
+  }) => {
+    const saved = savedEvaluationRef.current;
+    const payload: {
+      productivity?: number;
+      qualityOfWork?: number;
+      ownership?: number;
+      ownershipResponsibility?: number;
+      communication?: number;
+      teamCollaboration?: number;
+      innovation?: number;
+      innovationProblemSolving?: number;
+      technicalJobSkills?: number;
+      overallPerformanceRating?: number;
+      performanceStrengths?: string;
+      areasOfImprovement?: string;
+      managerComment?: string;
+      goalsForNextReviewPeriod?: string;
+      trainingDevelopmentRecommendations?: string;
+      careerGrowthRecommendation?: string;
+      reviewOutcome?: string;
+      performanceAction?: string;
+      managerConfirmation?: boolean;
+      finalRating?: number;
+      isDraft: boolean;
+    } = { isDraft: options.isDraft };
+
+    if (Number(scores.productivity) !== saved.productivity) payload.productivity = scores.productivity;
+    if (Number(scores.qualityOfWork) !== saved.qualityOfWork) payload.qualityOfWork = scores.qualityOfWork;
+    if (Number(scores.ownership) !== saved.ownership) {
+      payload.ownership = scores.ownership;
+      payload.ownershipResponsibility = scores.ownership;
+    }
+    if (Number(scores.communication) !== saved.communication) payload.communication = scores.communication;
+    if (Number(scores.teamCollaboration) !== saved.teamCollaboration) {
+      payload.teamCollaboration = scores.teamCollaboration;
+    }
+    if (Number(scores.innovation) !== saved.innovation) {
+      payload.innovation = scores.innovation;
+      payload.innovationProblemSolving = scores.innovation;
+    }
+    if (Number(scores.technicalJobSkills) !== saved.technicalJobSkills) {
+      payload.technicalJobSkills = scores.technicalJobSkills;
+    }
+    if (strengths.trim() !== saved.performanceStrengths) payload.performanceStrengths = strengths.trim();
+    if (improvements.trim() !== saved.areasOfImprovement) payload.areasOfImprovement = improvements.trim();
+    if (remarks.trim() !== saved.managerComment) payload.managerComment = remarks.trim();
+    if (goalsForNextReview.trim() !== saved.goalsForNextReviewPeriod) {
+      payload.goalsForNextReviewPeriod = goalsForNextReview.trim();
+    }
+    if ((trainingRecommendations.trim() || "") !== saved.trainingDevelopmentRecommendations) {
+      payload.trainingDevelopmentRecommendations = trainingRecommendations.trim() || undefined;
+    }
+    if ((careerGrowthRecommendation || "") !== saved.careerGrowthRecommendation) {
+      payload.careerGrowthRecommendation = careerGrowthRecommendation || undefined;
+    }
+    if (reviewOutcome !== saved.reviewOutcome) payload.reviewOutcome = reviewOutcome;
+    if ((performanceAction || "") !== saved.performanceAction) {
+      payload.performanceAction = performanceAction || undefined;
+    }
+
+    const scoreChanged = [
+      "productivity",
+      "qualityOfWork",
+      "ownership",
+      "communication",
+      "teamCollaboration",
+      "innovation",
+      "technicalJobSkills",
+    ].some((key) => key in payload);
+    if (scoreChanged) {
+      payload.overallPerformanceRating = averageScore || undefined;
+      payload.finalRating = averageScore || undefined;
+    }
+
+    if (options.forceManagerConfirmation) {
+      if (!saved.managerConfirmation) payload.managerConfirmation = true;
+    } else if (managerConfirmation !== saved.managerConfirmation) {
+      payload.managerConfirmation = managerConfirmation;
+    }
+
+    return payload;
+  };
+
   // Called after user confirms in the modal
   const handleConfirmedSubmit = () => {
     if (confirmSubmitState !== "idle" || isSubmitting) return;
@@ -1196,97 +1284,32 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     };
     lastEvaluationResultRef.current = evaluationResult;
 
-    const saved = savedEvaluationRef.current;
-    const fullPayload = {
-      managerId: record.managerId || record.assignedBy || undefined,
-      productivity: scores.productivity,
-      qualityOfWork: scores.qualityOfWork,
-      ownership: scores.ownership,
-      ownershipResponsibility: scores.ownership,
-      communication: scores.communication,
-      teamCollaboration: scores.teamCollaboration,
-      innovation: scores.innovation,
-      innovationProblemSolving: scores.innovation,
-      technicalJobSkills: scores.technicalJobSkills,
-      overallPerformanceRating: averageScore || undefined,
-      performanceStrengths: strengths.trim(),
-      areasOfImprovement: improvements.trim(),
-      managerComment: remarks.trim(),
-      goalsForNextReviewPeriod: goalsForNextReview.trim(),
-      trainingDevelopmentRecommendations: trainingRecommendations.trim() || undefined,
-      careerGrowthRecommendation: careerGrowthRecommendation || undefined,
-      reviewOutcome: reviewOutcome,
-      performanceAction: performanceAction || undefined,
-      managerConfirmation: true,
-      finalRating: averageScore || undefined,
-      isDraft: false as const,
-    };
-    const updatePayload: Partial<typeof fullPayload> = {};
-    if (Number(scores.productivity) !== saved.productivity) updatePayload.productivity = scores.productivity;
-    if (Number(scores.qualityOfWork) !== saved.qualityOfWork) updatePayload.qualityOfWork = scores.qualityOfWork;
-    if (Number(scores.ownership) !== saved.ownership) {
-      updatePayload.ownership = scores.ownership;
-      updatePayload.ownershipResponsibility = scores.ownership;
-    }
-    if (Number(scores.communication) !== saved.communication) updatePayload.communication = scores.communication;
-    if (Number(scores.teamCollaboration) !== saved.teamCollaboration) updatePayload.teamCollaboration = scores.teamCollaboration;
-    if (Number(scores.innovation) !== saved.innovation) {
-      updatePayload.innovation = scores.innovation;
-      updatePayload.innovationProblemSolving = scores.innovation;
-    }
-    if (Number(scores.technicalJobSkills) !== saved.technicalJobSkills) updatePayload.technicalJobSkills = scores.technicalJobSkills;
-    if (strengths.trim() !== saved.performanceStrengths) updatePayload.performanceStrengths = strengths.trim();
-    if (improvements.trim() !== saved.areasOfImprovement) updatePayload.areasOfImprovement = improvements.trim();
-    if (remarks.trim() !== saved.managerComment) updatePayload.managerComment = remarks.trim();
-    if (goalsForNextReview.trim() !== saved.goalsForNextReviewPeriod) updatePayload.goalsForNextReviewPeriod = goalsForNextReview.trim();
-    if ((trainingRecommendations.trim() || "") !== saved.trainingDevelopmentRecommendations) {
-      updatePayload.trainingDevelopmentRecommendations = trainingRecommendations.trim() || undefined;
-    }
-    if ((careerGrowthRecommendation || "") !== saved.careerGrowthRecommendation) {
-      updatePayload.careerGrowthRecommendation = careerGrowthRecommendation || undefined;
-    }
-    if (reviewOutcome !== saved.reviewOutcome) updatePayload.reviewOutcome = reviewOutcome;
-    if ((performanceAction || "") !== saved.performanceAction) updatePayload.performanceAction = performanceAction || undefined;
-    if (managerConfirmation !== saved.managerConfirmation) updatePayload.managerConfirmation = managerConfirmation;
-    const scoreChanged = [
-      "productivity",
-      "qualityOfWork",
-      "ownership",
-      "communication",
-      "teamCollaboration",
-      "innovation",
-      "technicalJobSkills",
-    ].some((key) => key in updatePayload);
-    if (scoreChanged) {
-      updatePayload.overallPerformanceRating = averageScore || undefined;
-      updatePayload.finalRating = averageScore || undefined;
-    }
-    const changedKeys = Object.keys(updatePayload);
+    const patchPayload = buildEvaluationPatchPayload({
+      isDraft: false,
+      forceManagerConfirmation: true,
+    });
+    const changedKeys = Object.keys(patchPayload).filter((key) => key !== "isDraft");
+    // Completed edits: only PATCH when something actually changed.
+    // First finalize: allow { isDraft: false, managerConfirmation: true } alone.
     if (isRecordCompleted && changedKeys.length === 0) {
       message.info("No changes to update.");
       setShowConfirmModal(false);
       return;
     }
+    if (!isRecordCompleted) {
+      patchPayload.managerConfirmation = true;
+    }
 
+    evaluationFinishedRef.current = false;
     setIsSubmitting(true);
     setConfirmSubmitState("submitting");
 
-    void AppraisalApi.evaluateReview(reviewId, isRecordCompleted ? updatePayload : fullPayload)
+    void AppraisalApi.evaluateReview(reviewId, patchPayload)
       .then(() => {
+        syncSavedEvaluationFromForm();
         setConfirmSubmitState("success");
         setSubmitButtonState("assigned");
         setIsSubmitting(false);
-
-        // Keep the success state visible before closing the modal and returning to dashboard
-        setTimeout(() => {
-          setShowConfirmModal(false);
-          setConfirmSubmitState("idle");
-          if (lastEvaluationResultRef.current) {
-            onSubmitEvaluation?.(record.reviewId ? String(record.reviewId) : record.id, lastEvaluationResultRef.current);
-          }
-          message.success(isRecordCompleted ? "Evaluation updated successfully!" : "Evaluation submitted successfully!");
-          onBack();
-        }, 1200);
       })
       .catch((error) => {
         setIsSubmitting(false);
@@ -1302,32 +1325,16 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       message.error("This review cannot be saved.");
       return;
     }
+    const patchPayload = buildEvaluationPatchPayload({ isDraft: true });
+    const changedKeys = Object.keys(patchPayload).filter((key) => key !== "isDraft");
+    if (changedKeys.length === 0) {
+      message.info("No changes to save.");
+      return;
+    }
     setIsDraftSaving(true);
-    void AppraisalApi.evaluateReview(reviewId, {
-      managerId: record.managerId || record.assignedBy || undefined,
-      productivity: scores.productivity || undefined,
-      qualityOfWork: scores.qualityOfWork || undefined,
-      ownership: scores.ownership || undefined,
-      ownershipResponsibility: scores.ownership || undefined,
-      communication: scores.communication || undefined,
-      teamCollaboration: scores.teamCollaboration || undefined,
-      innovation: scores.innovation || undefined,
-      innovationProblemSolving: scores.innovation || undefined,
-      technicalJobSkills: scores.technicalJobSkills || undefined,
-      overallPerformanceRating: averageScore || undefined,
-      performanceStrengths: strengths.trim() || undefined,
-      areasOfImprovement: improvements.trim() || undefined,
-      managerComment: remarks.trim() || undefined,
-      goalsForNextReviewPeriod: goalsForNextReview.trim() || undefined,
-      trainingDevelopmentRecommendations: trainingRecommendations.trim() || undefined,
-      careerGrowthRecommendation: careerGrowthRecommendation || undefined,
-      reviewOutcome: reviewOutcome || undefined,
-      performanceAction: performanceAction || undefined,
-      managerConfirmation: managerConfirmation,
-      finalRating: averageScore || undefined,
-      isDraft: true,
-    })
+    void AppraisalApi.evaluateReview(reviewId, patchPayload)
       .then(() => {
+        syncSavedEvaluationFromForm();
         message.success("Saved successfully");
       })
       .catch((error) => {
@@ -1360,6 +1367,23 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     String(record.performanceStatus || "").toUpperCase() === "COMPLETED" ||
     String(record.status || "").toUpperCase() === "COMPLETED" ||
     loadedReviewStatus.toUpperCase() === "COMPLETED";
+
+  finishEvaluationRef.current = () => {
+    if (evaluationFinishedRef.current) return;
+    evaluationFinishedRef.current = true;
+    setShowConfirmModal(false);
+    setConfirmSubmitState("idle");
+    if (lastEvaluationResultRef.current) {
+      onSubmitEvaluation?.(
+        record.reviewId ? String(record.reviewId) : record.id,
+        lastEvaluationResultRef.current,
+      );
+    }
+    message.success(
+      isRecordCompleted ? "Evaluation updated successfully!" : "Evaluation submitted successfully!",
+    );
+    onBack();
+  };
 
   const managerEvaluationReady = isRecordCompleted;
 
@@ -3046,8 +3070,19 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         )}
       </div>
 
+      {showConfirmModal && confirmSubmitState === "success" && (
+        <AppraisalMomentCard
+          kind="evaluated"
+          name={record.name || "Employee"}
+          quarter={formatQuarterDisplay(record.quarter)}
+          financialYear={record.financialYear}
+          score={lastEvaluationResultRef.current?.averageScore ?? averageScore ?? undefined}
+          onClose={() => finishEvaluationRef.current()}
+        />
+      )}
+
       {/* Submit Confirmation Modal */}
-      {showConfirmModal && typeof document !== "undefined" && createPortal(
+      {showConfirmModal && confirmSubmitState !== "success" && typeof document !== "undefined" && createPortal(
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 eval-themed-modal-overlay animate-in fade-in duration-200"
           onClick={() => !isSubmitting && confirmSubmitState === "idle" && setShowConfirmModal(false)}

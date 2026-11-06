@@ -20,6 +20,7 @@ import {
 import { DatePicker as AntDatePicker, ConfigProvider } from "antd";
 import dayjs from "dayjs";
 import { AssignSubmitPanel, AssignSubmitSummary } from "./AssignSubmitPanel";
+import AppraisalMomentCard from "../common/AppraisalMomentCard";
 import { loadAppraisalPeriod } from "../../utils/appraisalHelpers";
 import "./AssignQuarterlyReviewModal.css";
 
@@ -435,6 +436,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     void Promise.all([apiCall, minAnimTime])
       .then(() => {
         setButtonState(AssignButtonState.ASSIGNED);
+        closedNoticeRef.current = false;
         setAssignmentNoticeCount(submitSummary.people.length);
       })
       .catch((error: unknown) => {
@@ -444,7 +446,11 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       });
   };
 
+  const closedNoticeRef = useRef(false);
+
   const closeAssignmentNotice = () => {
+    if (closedNoticeRef.current) return;
+    closedNoticeRef.current = true;
     setAssignmentNoticeCount(0);
     onAssign?.({
       quarter: selectedQuarter,
@@ -590,10 +596,27 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     </div>
   );
 
+  if (isOpen && assignmentNoticeCount > 0) {
+    const people = submitSummary?.people || [];
+    const name =
+      people.length > 1
+        ? `${people.length} employees`
+        : people[0]?.employeeName || "Team";
+    return (
+      <AppraisalMomentCard
+        kind="assigned"
+        name={name}
+        quarter={selectedQuarter}
+        financialYear={selectedFinancialYear}
+        onClose={closeAssignmentNotice}
+      />
+    );
+  }
+
   return (
     <Modal
       open={isOpen}
-      onClose={assignmentNoticeCount > 0 ? closeAssignmentNotice : handleModalClose}
+      onClose={handleModalClose}
       title={modalTitle}
       footer={modalFooter}
       maxWidth={

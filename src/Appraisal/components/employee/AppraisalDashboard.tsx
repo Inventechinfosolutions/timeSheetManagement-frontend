@@ -34,8 +34,10 @@ import {
 } from "../../types/appraisal.types";
 import { useEmployeeAppraisal } from "../../hooks/useEmployeeAppraisal";
 import { AppraisalFilterAll } from "../../enums/appraisal.enums";
-import { isYearlyReview, yearlyQuarterLabels, formatQuarterDisplay } from "../../utils/appraisalHelpers";
+import { isYearlyReview, yearlyQuarterLabels, formatQuarterDisplay, PERFORMANCE_STEP_PATH, applyStepDataToForm } from "../../utils/appraisalHelpers";
 import { AppraisalApi, formatAppraisalDisplayDate, isResubmittedStatus, readApiError, toReviewFormData } from "../../reducers/appraisal.reducer";
+import { emptyReviewFormData } from "../../constants/emptyReviewForm";
+import { RATING_REVEAL_DURATION_MS } from "../../constants/appraisal.constants";
 import QuarterlyReviewStepper from "./QuarterlyReviewStepper";
 import EvaluationPanel from "../manager/EvaluationPanel";
 import RatingVerificationModal from "./RatingVerificationModal";
@@ -635,6 +637,7 @@ export const AppraisalDashboard: React.FC = () => {
     submitReview,
   } = useEmployeeAppraisal();
   const [editingForm, setEditingForm] = useState<ReviewFormData | undefined>(undefined);
+  const [editingOpenStep, setEditingOpenStep] = useState<number | undefined>(undefined);
   const [stepperReadOnly, setStepperReadOnly] = useState<boolean>(false);
   interface ActiveRatingSession {
     finalRating: number;
@@ -761,7 +764,7 @@ export const AppraisalDashboard: React.FC = () => {
       }
       const rowId = ratingTarget.id;
       const scoreNum = Number(revealed.finalRating);
-      const expiresAt = Date.now() + 2 * 60 * 1000; // 2 minutes auto-timeout
+      const expiresAt = Date.now() + RATING_REVEAL_DURATION_MS;
       const sessionData: ActiveRatingSession = {
         finalRating: scoreNum,
         expiresAt,
@@ -785,7 +788,7 @@ export const AppraisalDashboard: React.FC = () => {
           return next;
         });
         delete ratingTimersRef.current[rowId];
-      }, 2 * 60 * 1000);
+      }, RATING_REVEAL_DURATION_MS);
 
       // Open celebratory modern 3D rating modal
       setRevealedModalData({
@@ -906,15 +909,10 @@ export const AppraisalDashboard: React.FC = () => {
     });
   };
 
-  // Scroll to top helper handlers for View and Edit
-  const loadRowPerformance = async (assignment: QuarterlyReviewAssignment) => {
+  /** Resolve performance id from assignment (list row or quarter lookup) — no full GET. */
+  const resolvePerformanceId = async (assignment: QuarterlyReviewAssignment): Promise<number | null> => {
     if (assignment.performanceId) {
-      try {
-        const perf = await AppraisalApi.getPerformanceById(Number(assignment.performanceId));
-        if (perf) return perf;
-      } catch (err) {
-        // Fallback to query by quarter
-      }
+      return Number(assignment.performanceId);
     }
     const q = (
       assignment.quarter === "Q1" ||
@@ -925,31 +923,60 @@ export const AppraisalDashboard: React.FC = () => {
     ) ? (assignment.quarter as any) : undefined;
     if (assignment.employeeId && q && assignment.financialYear) {
       try {
-        return await AppraisalApi.getEmployeePerformance(assignment.employeeId, q, assignment.financialYear);
-      } catch (err) {
+        const found = await AppraisalApi.getEmployeePerformance(assignment.employeeId, q, assignment.financialYear);
+        return found?.id ? Number(found.id) : null;
+      } catch {
         return null;
       }
     }
     return null;
   };
 
+  /** Full record — only for evaluation / flows that need every step at once. */
+  const loadRowPerformance = async (assignment: QuarterlyReviewAssignment) => {
+    const id = await resolvePerformanceId(assignment);
+    if (!id) return null;
+    try {
+      return await AppraisalApi.getPerformanceById(id);
+    } catch {
+      return null;
+    }
+  };
+
+  /**
+   * Edit resume: `step` comes from DB (list row). Call only that step GET — no full GET, no local storage.
+   */
+  const loadResumeEditForm = async (assignment: QuarterlyReviewAssignment) => {
+    const id = await resolvePerformanceId(assignment);
+    if (!id) return null;
+    const openStep = Math.min(Math.max(Number(assignment.step) || 1, 1), 6);
+    const stepRes = await AppraisalApi.getPerformanceStep(
+      id,
+      PERFORMANCE_STEP_PATH[openStep],
+    );
+    return {
+      id: stepRes.id,
+      status: stepRes.status,
+      form: applyStepDataToForm(emptyReviewFormData, openStep, stepRes.data),
+      step: stepRes.step || openStep,
+    };
+  };
+
   const handleOpenEdit = async (assignment: QuarterlyReviewAssignment) => {
     scrollToPageTop();
     try {
-      const performance = await loadRowPerformance(assignment);
+      const stepLoad = await loadResumeEditForm(assignment);
       setStepperReadOnly(false);
-      setEditingForm(performance ? toReviewFormData(performance) : undefined);
+      setEditingForm(stepLoad?.form);
+      setEditingOpenStep(stepLoad?.step);
       openAssignment({
         ...assignment,
-        performanceId: performance?.id ?? assignment.performanceId,
-        assignedBy: performance?.assignedBy || assignment.assignedBy,
-        assignedDate: performance?.assignedDate
-          ? formatAppraisalDisplayDate(performance.assignedDate)
-          : assignment.assignedDate,
-        deadline: performance?.deadlineDate
-          ? formatAppraisalDisplayDate(performance.deadlineDate)
-          : assignment.deadline,
-        description: performance?.description ?? assignment.description,
+        performanceId: stepLoad?.id ?? assignment.performanceId,
+        step: stepLoad?.step ?? assignment.step,
+        assignedBy: assignment.assignedBy,
+        assignedDate: assignment.assignedDate,
+        deadline: assignment.deadline,
+        description: assignment.description,
       });
     } catch (error) {
       message.error(readApiError(error));
@@ -958,13 +985,14 @@ export const AppraisalDashboard: React.FC = () => {
     setTimeout(scrollToPageTop, 50);
   };
 
+  /** View mode: full GET /:id (all steps) — not the per-step APIs. */
   const handleOpenView = async (assignment: QuarterlyReviewAssignment) => {
     scrollToPageTop();
     try {
       const performance = await loadRowPerformance(assignment);
-      const formData = performance ? toReviewFormData(performance) : undefined;
       setStepperReadOnly(true);
-      setEditingForm(formData);
+      setEditingForm(performance ? toReviewFormData(performance) : undefined);
+      setEditingOpenStep(undefined);
       openAssignment({
         ...assignment,
         performanceId: performance?.id ?? assignment.performanceId,
@@ -1273,14 +1301,16 @@ export const AppraisalDashboard: React.FC = () => {
       <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
         <div className="relative z-10 w-full flex-1 flex flex-col min-h-0">
           <QuarterlyReviewStepper
-            key={`${activeAssignment.id}-${stepperReadOnly ? "view" : "edit"}`}
+            key={`${activeAssignment.id}-${stepperReadOnly ? "view" : "edit"}-${editingOpenStep ?? "auto"}`}
             assignment={activeAssignment}
             initialFormData={editingForm}
+            initialStep={stepperReadOnly ? undefined : editingOpenStep}
             readOnly={stepperReadOnly}
             onBack={() => {
               scrollToPageTop();
               setStepperReadOnly(false);
               setEditingForm(undefined);
+              setEditingOpenStep(undefined);
               closeAssignment();
               reloadAssignments();
               setTimeout(scrollToPageTop, 50);
@@ -1289,15 +1319,11 @@ export const AppraisalDashboard: React.FC = () => {
               scrollToPageTop();
               try {
                 const targetAssignment = activeAssignment;
-                const performance = await loadRowPerformance(targetAssignment);
-                const formData = performance ? toReviewFormData(performance) : undefined;
-                let resolvedReviewId =
-                  performance?.reviewId ?? targetAssignment.reviewId ?? 0;
+                let resolvedReviewId = targetAssignment.reviewId ?? 0;
                 let resolvedReviewStatus =
-                  targetAssignment.reviewStatus || performance?.status || "";
+                  targetAssignment.reviewStatus || targetAssignment.status || "";
 
-                // Ensure we have a real review id before opening password unlock
-                // (avoids /reveal-rating/0 → invalid API + password loop).
+                // Do not GET /employee-performance here. Scores load only after the password.
                 if (!resolvedReviewId && targetAssignment.employeeId) {
                   try {
                     const list = await AppraisalApi.getManagerReviewList(
@@ -1332,25 +1358,13 @@ export const AppraisalDashboard: React.FC = () => {
                   return;
                 }
 
-                setViewingForm(formData);
-                setViewingPerformanceStatus(performance?.status || targetAssignment.status || "");
+                setViewingForm(editingForm);
+                setViewingPerformanceStatus(targetAssignment.status || "");
                 setViewingReviewStatus(resolvedReviewStatus);
                 setViewingEvaluation(undefined);
                 setViewingAssignment({
                   ...targetAssignment,
-                  performanceId: performance?.id ?? targetAssignment.performanceId,
-                  assignedBy: performance?.assignedBy || targetAssignment.assignedBy,
-                  assignedDate: performance?.assignedDate
-                    ? formatAppraisalDisplayDate(performance.assignedDate)
-                    : targetAssignment.assignedDate,
-                  deadline: performance?.deadlineDate
-                    ? formatAppraisalDisplayDate(performance.deadlineDate)
-                    : targetAssignment.deadline,
-                  performanceDate: performance?.submittedAt
-                    ? formatAppraisalDisplayDate(performance.submittedAt)
-                    : targetAssignment.performanceDate,
                   reviewId: resolvedReviewId,
-                  description: performance?.description ?? targetAssignment.description,
                 });
                 setStepperReadOnly(false);
                 setEditingForm(undefined);
