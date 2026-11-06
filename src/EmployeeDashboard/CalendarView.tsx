@@ -3,8 +3,6 @@ import dayjs from "dayjs";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Tooltip } from "antd";
 import {
-  ChevronLeft,
-  ChevronRight,
   Download,
   X,
   Calendar as CalendarIcon,
@@ -12,6 +10,7 @@ import {
   ShieldBan,
   ArrowLeft,
 } from "lucide-react";
+import { MonthNavigator } from "../components/ui";
 import { saveAs } from "file-saver";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { RootState } from "../store";
@@ -551,44 +550,13 @@ const Calendar = ({
               )}
 
               {!hideMonthNavigation && (
-                <div
-                  className={`flex items-center gap-1 ${
-                    isSidebar
-                      ? "bg-transparent p-0"
-                      : "bg-[#F4F7FE] p-1 rounded-xl border border-transparent hover:border-gray-200 transition-colors"
-                  }`}
-                >
-                  <button
-                    onClick={handlePrevMonth}
-                    className={`p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#4318FF] active:scale-90 ${
-                      isSidebar ? "p-1" : ""
-                    }`}
-                  >
-                    <ChevronLeft size={20} strokeWidth={2.5} />
-                  </button>
-                  <span
-                    className={`${
-                      isSidebar
-                        ? "text-sm min-w-[90px]"
-                        : "text-sm font-extrabold min-w-[120px] md:min-w-[140px]"
-                    } text-[#2B3674] text-center select-none`}
-                  >
-                    {currentMonthName}
-                  </span>
-                  <button
-                    onClick={handleNextMonth}
-                    disabled={!canNavigateToNextMonth}
-                    className={`p-1.5 rounded-lg transition-all active:scale-90 ${
-                      isSidebar ? "p-1" : ""
-                    } ${
-                      !canNavigateToNextMonth
-                        ? "text-gray-300 cursor-not-allowed"
-                        : "text-[#A3AED0] hover:text-[#4318FF] hover:bg-white hover:shadow-sm"
-                    }`}
-                  >
-                    <ChevronRight size={20} strokeWidth={2.5} />
-                  </button>
-                </div>
+                <MonthNavigator
+                  month={displayDate.getMonth() + 1}
+                  year={displayDate.getFullYear()}
+                  onPrev={handlePrevMonth}
+                  onNext={handleNextMonth}
+                  nextDisabled={!canNavigateToNextMonth}
+                />
               )}
             </div>
           </div>

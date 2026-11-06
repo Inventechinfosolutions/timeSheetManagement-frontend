@@ -3,8 +3,6 @@ import dayjs from "dayjs";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { Modal, message, Tooltip } from "antd";
 import {
-  ChevronLeft,
-  ChevronRight,
   Save,
   AlertCircle,
   Rocket,
@@ -12,6 +10,7 @@ import {
   ArrowLeft,
   Unlock,
 } from "lucide-react";
+import { MonthNavigator } from "../components/ui";
 import { TimesheetEntry } from "../types";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import {
@@ -2028,40 +2027,15 @@ const MyTimesheet = ({
         {/* Header Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mb-4 gap-4 sm:gap-0 px-2">
           <div className="flex items-center justify-between sm:justify-start gap-4">
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handlePrevMonth}
-                disabled={isAdminView || loading}
-                className={`p-1 rounded-lg transition-all ${
-                  isAdminView
-                    ? "text-gray-300 cursor-not-allowed hidden"
-                    : loading
-                      ? "text-gray-300 cursor-wait"
-                      : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
-                }`}
-              >
-                <ChevronLeft size={16} strokeWidth={2.5} />
-              </button>
-              <p className="text-sm sm:text-base font-bold text-[#2B3674] min-w-[110px] text-center">
-                {now.toLocaleDateString("en-US", {
-                  month: "long",
-                  year: "numeric",
-                })}
-              </p>
-              <button
-                onClick={handleNextMonth}
-                disabled={isAdminView || loading}
-                className={`p-1 rounded-lg transition-all ${
-                  isAdminView
-                    ? "text-gray-300 cursor-not-allowed hidden"
-                    : loading
-                      ? "text-gray-300 cursor-wait"
-                      : "hover:bg-gray-50 text-gray-400 hover:text-[#4318FF]"
-                }`}
-              >
-                <ChevronRight size={16} strokeWidth={2.5} />
-              </button>
-            </div>
+            {!isAdminView && (
+              <MonthNavigator
+                month={now.getMonth() + 1}
+                year={now.getFullYear()}
+                onPrev={handlePrevMonth}
+                onNext={handleNextMonth}
+                disabled={loading}
+              />
+            )}
 
             {/* Total Hours Mobile (Show when sm:hidden) */}
             <div className="sm:hidden text-right">

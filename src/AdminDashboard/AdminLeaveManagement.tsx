@@ -3458,7 +3458,7 @@ const AdminLeaveManagement = () => {
                     className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${errors.description
                         ? "border-red-500"
                         : "border-gray-400"
-                      } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
+                      } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none overflow-hidden field-sizing-content`}
                     value={formData.description}
                     onChange={(e) => {
                       setFormData({
@@ -4063,7 +4063,7 @@ const AdminLeaveManagement = () => {
                 setModifyErrors({ ...modifyErrors, description: "" });
               }}
               rows={3}
-              className={`w-full px-5 py-3 rounded-xl bg-white border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none ${modifyErrors.description ? "border-red-500" : "border-gray-200"
+              className={`w-full px-5 py-3 rounded-xl bg-white border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none overflow-hidden field-sizing-content ${modifyErrors.description ? "border-red-500" : "border-gray-200"
                 }`}
               placeholder="Please provide details about your request..."
             />

@@ -18,7 +18,7 @@ import EmployeeLayout from "./navigation/EmployeeLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { UserType } from "./enums";
 import { useAppSelector } from "./hooks";
-import { isCeoOrGmUser } from "./utils/roleAccess";
+import { isAdminAccess, isCeoOrGmUser } from "./utils/roleAccess";
 
 // Lazy load authentication components
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
@@ -62,6 +62,7 @@ import InboxManagement from "./Inbox/InboxManagement";
 import EmployeeAppraisalPage from "./Appraisal/pages/EmployeeAppraisalPage";
 import AttendenceEditRequests from "./AdminDashboard/AttendenceEditRequests";
 import LeaveCalculationManagement from "./AdminDashboard/LeaveCalculationManagement";
+import HolidayManagementPage from "./AdminDashboard/HolidayManagementPage";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -95,13 +96,17 @@ const EmployeeTabWrapper = () => {
 };
 
 const CEO_BLOCKED_ADMIN_TABS = ["registration", "employees", "leave-calculation"];
-const RECEPTIONIST_BLOCKED_ADMIN_TABS = ["leave-calculation"];
+const RECEPTIONIST_BLOCKED_ADMIN_TABS = ["leave-calculation", "holiday-management"];
 
 const AdminTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
+  const location = useLocation();
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const isCeo = isCeoOrGmUser(currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
+  const dashboardHome = location.pathname.startsWith("/manager-dashboard")
+    ? "/manager-dashboard"
+    : "/admin-dashboard";
 
   if (isCeo && tab && CEO_BLOCKED_ADMIN_TABS.includes(tab)) {
     return <Navigate to="/admin-dashboard" replace />;
@@ -159,6 +164,11 @@ const AdminTabWrapper = () => {
       return <EmployeeAppraisalPage />;
     case "edit-access":
       return <AttendenceEditRequests />;
+    case "holiday-management":
+      if (!isAdminAccess(currentUser)) {
+        return <Navigate to={dashboardHome} replace />;
+      }
+      return <HolidayManagementPage />;
     default:
       return <Navigate to="/admin-dashboard" replace />;
   }

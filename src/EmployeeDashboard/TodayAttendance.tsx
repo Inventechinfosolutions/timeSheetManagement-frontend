@@ -11,9 +11,8 @@ import {
   MapPin,
   Laptop,
   Edit,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
+import { MonthNavigator } from "../components/ui";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { AttendanceStatus, UserType } from "../enums";
 import { isAdminAccess } from "../utils/roleAccess";
@@ -397,36 +396,21 @@ const TodayAttendance = ({
             )}
           </div>
 
-          <div className="inline-flex items-center bg-white rounded-full px-3 py-1 shadow-sm border border-gray-100/50 gap-2 self-end">
-            <button
-              onClick={() => {
-                const prev = new Date(calendarDate);
-                prev.setMonth(prev.getMonth() - 1);
-                setCalendarDate(prev);
-              }}
-              className="p-1 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
-            >
-              <ChevronLeft size={16} strokeWidth={2.5} />
-            </button>
-
-            <span className="text-[#1B2559] font-bold min-w-[90px] text-center text-xs md:text-sm selection:bg-none tracking-tight">
-              {calendarDate.toLocaleString("default", {
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
-
-            <button
-              onClick={() => {
-                const next = new Date(calendarDate);
-                next.setMonth(next.getMonth() + 1);
-                setCalendarDate(next);
-              }}
-              className="p-1 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
-            >
-              <ChevronRight size={16} strokeWidth={2.5} />
-            </button>
-          </div>
+          <MonthNavigator
+            className="self-end"
+            month={calendarDate.getMonth() + 1}
+            year={calendarDate.getFullYear()}
+            onPrev={() => {
+              const prev = new Date(calendarDate);
+              prev.setMonth(prev.getMonth() - 1);
+              setCalendarDate(prev);
+            }}
+            onNext={() => {
+              const next = new Date(calendarDate);
+              next.setMonth(next.getMonth() + 1);
+              setCalendarDate(next);
+            }}
+          />
         </div>
 
         {/* Top Section: Dashboard Cards */}
