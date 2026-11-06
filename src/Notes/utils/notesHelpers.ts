@@ -2012,8 +2012,8 @@ export const getInlineImageFileKey = (img: HTMLImageElement): string | null => {
 
 /**
  * Copy uploaded file keys onto the live images without swapping their src.
- * Putting the API view URL on the <img> shows a broken "image.png" because
- * that request has no auth header. Blob/data srcs stay so the picture remains.
+ * Putting the API view URL on the <img> shows a broken image because that
+ * request has no auth header. Blob/data srcs stay so the picture remains.
  */
 export const applyInlineImageKeys = (root: HTMLElement, canonicalHtml: string) => {
   if (!canonicalHtml) return;
@@ -2185,24 +2185,17 @@ export const hydrateInlineImagesInRoot = async (
       const key = getInlineImageFileKey(img);
       if (!key) return;
       const src = img.getAttribute("src") || "";
-      // data: embeds are self-contained — leave them
-      if (src.startsWith("data:")) return;
+      // Already displayable locally (fresh paste / prior hydrate) — do not re-fetch.
+      // Re-fetching orphaned keys on every paste was spamming 404 /view requests.
+      if (src.startsWith("data:") || src.startsWith("blob:")) return;
       try {
         const blobUrl = await fetchBlobUrl(key, img.getAttribute("alt") || undefined);
         if (blobUrl) {
           img.setAttribute(INLINE_FILE_KEY_ATTR, key);
-          // Replace revoked blob / unauth API view URL with a fresh authorized blob
-          if (src.startsWith("blob:") && src !== blobUrl) {
-            try {
-              URL.revokeObjectURL(src);
-            } catch {
-              /* ignore */
-            }
-          }
           img.src = blobUrl;
         }
       } catch {
-        // leave current src
+        // leave current src (broken API URL until user removes it, or cookie-authed view)
       }
     })
   );

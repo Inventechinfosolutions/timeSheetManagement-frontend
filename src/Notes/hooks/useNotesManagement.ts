@@ -532,11 +532,34 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     };
   };
 
+  /** Normalize POST /notes/upload payload shapes into a single file key. */
+  const pickUploadedFileKey = (uploadedPayload: unknown): string | null => {
+    const root = uploadedPayload as any;
+    const list = Array.isArray(root)
+      ? root
+      : Array.isArray(root?.uploaded)
+        ? root.uploaded
+        : Array.isArray(root?.data)
+          ? root.data
+          : root
+            ? [root]
+            : [];
+    const first = list[0];
+    if (!first) return null;
+    return (
+      first.key ||
+      first.fileKey ||
+      first.documentKey ||
+      first.s3Key ||
+      (typeof first.id === "string" ? first.id : null) ||
+      null
+    );
+  };
+
   /** Upload a single inline image without listing it under Files & Attachments. */
   const uploadInlineImageFile = async (file: File): Promise<string | null> => {
     const res = await dispatch(uploadDirectNoteFiles({ files: [file] })).unwrap();
-    const uploaded = Array.isArray(res.uploaded) ? res.uploaded[0] : res.uploaded;
-    return uploaded?.key || uploaded?.fileKey || null;
+    return pickUploadedFileKey(res?.uploaded ?? res);
   };
 
   const persistInlineImagesInHtml = async (html: string): Promise<string> => {
@@ -572,7 +595,8 @@ export const useNotesManagement = (options?: { loadList?: boolean }) => {
     // Keep the picture the user pasted. Replacing innerHTML with the API url
     // flashes a broken image.png and jumps the caret back to column 1.
     applyInlineImageKeys(editorRef.current, next);
-    // Refresh keyed images with authorized blobs so preview/view stay valid
+    // Only hydrate imgs that still point at /attachments/.../view (e.g. reloaded
+    // notes). Fresh pastes keep their blob: src — skip so we don't GET orphan keys.
     await hydrateEditorInlineImages(editorRef.current);
     if (shouldCancel?.()) return;
     wrapNoteInlineImages(editorRef.current);

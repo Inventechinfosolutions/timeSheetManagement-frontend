@@ -430,8 +430,8 @@ input[type="password"]::-webkit-password-reveal-button {
   overflow-wrap: anywhere;
 }
 
-.notes-rich-editor .page *,
-.notes-content-view .page * {
+.notes-rich-editor .page *:not(.note-inline-image):not(.note-inline-image-remove),
+.notes-content-view .page *:not(.note-inline-image):not(.note-inline-image-remove) {
   position: static !important;
   top: auto !important;
   left: auto !important;
@@ -755,12 +755,19 @@ input[type="password"]::-webkit-password-reveal-button {
   box-shadow: 0 0 0 2px rgba(67, 24, 255, 0.18);
 }
 
-/* Remove (X) control — edit mode only (always visible so users can cancel) */
+/* Remove (X) control — overlay inside image, top-right (edit mode only) */
+.notes-rich-editor .page .note-inline-image {
+  position: relative !important;
+  overflow: visible;
+}
+
 .notes-rich-editor .page .note-inline-image-remove {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  z-index: 2;
+  position: absolute !important;
+  top: 4px !important;
+  right: 4px !important;
+  left: auto !important;
+  bottom: auto !important;
+  z-index: 3;
   width: 18px;
   height: 18px;
   padding: 0;
