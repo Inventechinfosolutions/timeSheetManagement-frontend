@@ -21,7 +21,11 @@ const AdminLayout = () => {
   const isGm = isGeneralManagerUser(currentUser);
 
   const getActiveTab = () =>
-    resolveAdminActiveLabel(location.pathname, tab, { isCeo, isGm });
+    resolveAdminActiveLabel(location.pathname, tab, {
+      isCeo,
+      isGm,
+      isReceptionist,
+    });
 
   const handleTabChange = (tabName: string) => {
     const path = resolveAdminNavigatePath(tabName);

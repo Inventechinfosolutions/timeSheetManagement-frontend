@@ -641,7 +641,9 @@ const AdminDashboard = () => {
                 ? "CEO Dashboard"
                 : isGm
                   ? "General Manager Dashboard"
-                  : "Admin Dashboard"}
+                  : currentUser?.userType === UserType.RECEPTIONIST
+                    ? "Receptionist Dashboard"
+                    : "Admin Dashboard"}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             {dayjs().format("dddd, D MMMM YYYY")} ·{" "}
