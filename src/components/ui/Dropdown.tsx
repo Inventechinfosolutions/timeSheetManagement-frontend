@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, FileSpreadsheet, X } from "lucide-react";
 import { WorksphereLogoLoader } from "../ApiLoadingSpinner";
 import { Tooltip } from "./Tooltip";
 
@@ -30,6 +30,7 @@ export interface DropdownProps<T = string> {
   loading?: boolean;
   contentWidth?: boolean;
   align?: "left" | "right";
+  emptyMessage?: string;
 }
 
 export function Dropdown<T extends string = string>({
@@ -49,6 +50,7 @@ export function Dropdown<T extends string = string>({
   loading = false,
   contentWidth = false,
   align,
+  emptyMessage = "No Data",
 }: DropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
@@ -174,49 +176,56 @@ export function Dropdown<T extends string = string>({
                 <WorksphereLogoLoader />
               </div>
             </div>
-          ) : options.map((option) => {
-            const isSelected = option.value === value;
-            return (
-              <button
-                key={String(option.value)}
-                type="button"
-                title={option.label}
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center justify-between cursor-pointer ${
-                  isSelected
-                    ? "bg-[#4318FF] text-white shadow-xs"
-                    : "text-[#1E293B] hover:bg-slate-50 hover:text-slate-900"
-                }`}
-              >
-                <div className="flex items-center gap-2 min-w-0 pr-2">
-                  {option.dotColor && (
+          ) : options.length === 0 ? (
+            <div className="py-8 px-3 flex flex-col items-center justify-center gap-2 text-center">
+              <FileSpreadsheet size={36} className="text-gray-300" />
+              <span className="text-xs font-bold text-[#2B3674]">{emptyMessage}</span>
+            </div>
+          ) : (
+            options.map((option) => {
+              const isSelected = option.value === value;
+              return (
+                <button
+                  key={String(option.value)}
+                  type="button"
+                  title={option.label}
+                  onClick={() => {
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition-all flex items-center justify-between cursor-pointer ${
+                    isSelected
+                      ? "bg-[#4318FF] text-white shadow-xs"
+                      : "text-[#1E293B] hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    {option.dotColor && (
+                      <span
+                        style={{
+                          backgroundColor: isSelected ? "#FFFFFF" : option.dotColor,
+                        }}
+                        className="w-2 h-2 rounded-full shrink-0"
+                      />
+                    )}
+                    <span className={contentWidth ? "whitespace-nowrap" : "truncate"}>{option.label}</span>
+                  </div>
+                  {option.badgeText && (
                     <span
-                      style={{
-                        backgroundColor: isSelected ? "#FFFFFF" : option.dotColor,
-                      }}
-                      className="w-2 h-2 rounded-full shrink-0"
-                    />
+                      className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0 ml-1.5 ${
+                        isSelected
+                          ? "bg-white/20 text-white border border-white/20"
+                          : option.badgeClass ||
+                            "bg-gray-100 text-gray-600 border border-gray-200"
+                      }`}
+                    >
+                      {option.badgeText}
+                    </span>
                   )}
-                  <span className={contentWidth ? "whitespace-nowrap" : "truncate"}>{option.label}</span>
-                </div>
-                {option.badgeText && (
-                  <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold shrink-0 ml-1.5 ${
-                      isSelected
-                        ? "bg-white/20 text-white border border-white/20"
-                        : option.badgeClass ||
-                          "bg-gray-100 text-gray-600 border border-gray-200"
-                    }`}
-                  >
-                    {option.badgeText}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                </button>
+              );
+            })
+          )}
         </div>,
         document.body,
         )}

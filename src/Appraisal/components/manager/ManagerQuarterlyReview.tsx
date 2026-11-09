@@ -479,6 +479,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
     { value: QuarterlyReviewStatus.ASSIGNED, label: "Assigned" },
     { value: QuarterlyReviewStatus.PERFORMANCE_RECEIVED, label: "Performance Received" },
     { value: QuarterlyReviewStatus.EVALUATION_IN_PROGRESS, label: "Evaluation In Progress" },
+    {
+      value: QuarterlyReviewStatus.AWAITING_MANAGER_FINAL_REVIEW,
+      label: "Awaiting Manager Final Comment",
+    },
     { value: QuarterlyReviewStatus.COMPLETED, label: "Completed" },
   ];
 

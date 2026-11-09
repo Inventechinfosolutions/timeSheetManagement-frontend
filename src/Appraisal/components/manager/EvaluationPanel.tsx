@@ -38,6 +38,11 @@ import { getRatingTierConfig, formatQuarterDisplay } from "../../utils/appraisal
 import { ENVIRONMENT_SCORES } from "../../constants/appraisal.constants";
 import AppraisalMomentCard from "../common/AppraisalMomentCard";
 import { renderAnimatedEmojiIcon } from "../employee/steps/CompanyEnvironmentStep";
+import {
+  AppraisalMappingRecord,
+  fetchAppraisalMappingByEmployee,
+} from "../../reducers/appraisalMapping.reducer";
+import { useAppDispatch } from "../../../hooks";
 import "./EvaluationPanel.css";
 import "./AssignQuarterlyReviewModal.css";
 import AttachmentItem from "../common/AttachmentItem";
@@ -226,10 +231,32 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       managerEvaluation.areasOfImprovement?.trim() ||
       managerEvaluation.managerComment?.trim()),
   );
+  const dispatch = useAppDispatch();
   const [activeView, setActiveView] = useState<"review" | "matrix">(initialActiveView || "review");
   const [matrixLoading, setMatrixLoading] = useState(false);
   const [loadedReviewStatus, setLoadedReviewStatus] = useState("");
+  const [appraisalMapping, setAppraisalMapping] = useState<AppraisalMappingRecord | null>(null);
   const panelTopRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const employeeId = String(record.id || "").trim();
+    if (!employeeId) {
+      setAppraisalMapping(null);
+      return;
+    }
+    let cancelled = false;
+    void dispatch(fetchAppraisalMappingByEmployee(employeeId))
+      .unwrap()
+      .then((mapping) => {
+        if (!cancelled) setAppraisalMapping(mapping || null);
+      })
+      .catch(() => {
+        if (!cancelled) setAppraisalMapping(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, record.id]);
 
   const scrollToTop = () => {
     if (panelTopRef.current) {
@@ -1109,8 +1136,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       }
     }
 
-    // 4. Manager Comments (required)
-    if (!remarks.trim()) {
+    // 4. Manager Comments — required for manager / old flow; hidden for employee-assigner first pass
+    const statusUpper = String(loadedReviewStatus || record.reviewStatus || record.status || "").toUpperCase();
+    const hideManagerCommentForAssigner =
+      appraisalMapping?.assignerType === "EMPLOYEE" &&
+      statusUpper !== QuarterlyReviewStatus.AWAITING_MANAGER_FINAL_REVIEW &&
+      statusUpper !== QuarterlyReviewStatus.COMPLETED;
+    if (!hideManagerCommentForAssigner && !remarks.trim()) {
       newErrors.remarks = "Please fill out the Manager Comments.";
       if (!firstErrorElement) {
         firstErrorElement = document.getElementById("eval-field-remarks");
@@ -1362,6 +1394,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       ).toFixed(1)
       : null;
 
+  const effectiveReviewStatus = String(
+    loadedReviewStatus || record.reviewStatus || record.status || "",
+  ).toUpperCase();
+  const isAwaitingManagerFinal =
+    effectiveReviewStatus === QuarterlyReviewStatus.AWAITING_MANAGER_FINAL_REVIEW;
+  const hideManagerCommentForAssigner =
+    appraisalMapping?.assignerType === "EMPLOYEE" &&
+    !isAwaitingManagerFinal &&
+    effectiveReviewStatus !== QuarterlyReviewStatus.COMPLETED;
   const isRecordCompleted =
     String(record.reviewStatus || "").toUpperCase() === "COMPLETED" ||
     String(record.performanceStatus || "").toUpperCase() === "COMPLETED" ||
@@ -2765,37 +2806,46 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           )}
                         </div>
 
-                        <div className="eval-reveal-card" id="eval-field-container-remarks">
-                          <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
-                            <span>
-                              Manager Comments <span className="text-red-500">*</span>
-                            </span>
-                            <span className="text-[10px] font-semibold text-[#334155] normal-case tracking-normal">
-                              Guidance &amp; Notes
-                            </span>
-                          </label>
-                          <textarea
-                            id="eval-field-remarks"
-                            rows={2}
-                            value={remarks}
-                            onChange={(e) => {
-                              setRemarks(e.target.value);
-                              clearFieldError("remarks");
-                            }}
-                            className={`eval-textarea-field eval-stagger-item eval-stagger-2 font-normal text-sm text-[#0F172A] ${fieldErrors.remarks ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""}`}
-                          />
-                          {fieldErrors.remarks && (
-                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600 animate-in fade-in slide-in-from-top-1">
-                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                              <span>{fieldErrors.remarks}</span>
-                            </div>
-                          )}
-                        </div>
+                        {!hideManagerCommentForAssigner && (
+                          <div className="eval-reveal-card" id="eval-field-container-remarks">
+                            <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
+                              <span>
+                                Manager Comments <span className="text-red-500">*</span>
+                              </span>
+                              <span className="text-[10px] font-semibold text-[#334155] normal-case tracking-normal">
+                                {isAwaitingManagerFinal
+                                  ? "Manager final comment"
+                                  : "Guidance & Notes"}
+                              </span>
+                            </label>
+                            <textarea
+                              id="eval-field-remarks"
+                              rows={2}
+                              value={remarks}
+                              onChange={(e) => {
+                                setRemarks(e.target.value);
+                                clearFieldError("remarks");
+                              }}
+                              className={`eval-textarea-field eval-stagger-item eval-stagger-2 font-normal text-sm text-[#0F172A] ${fieldErrors.remarks ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""}`}
+                            />
+                            {fieldErrors.remarks && (
+                              <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600 animate-in fade-in slide-in-from-top-1">
+                                <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                                <span>{fieldErrors.remarks}</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </>
                     )}
 
                     {/* ========== FINAL REVIEW & SUBMISSION SECTION ========== */}
                     <div className="eval-glass-card eval-reveal-card space-y-4 mt-2 p-4 sm:p-5">
+                      {isAwaitingManagerFinal && (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                          Awaiting manager final comment. Manager can update ratings if needed, then add the final comment and complete.
+                        </div>
+                      )}
                       {/* Section Header */}
                       <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
                         <h3 className="text-xs sm:text-sm font-bold text-[#0F172A]">Final Review &amp; Submission</h3>

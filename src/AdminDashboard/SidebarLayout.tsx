@@ -105,6 +105,7 @@ const SidebarLayout = ({
       { name: "Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
       { name: "Manager Mapping", icon: Users },
+      { name: "Appraisal Mapping", icon: ClipboardCheck },
       { name: "Notification", icon: Bell },
     ],
     [],
@@ -151,6 +152,8 @@ const SidebarLayout = ({
         return "Notification";
       case "manager-mapping":
         return "Manager Mapping";
+      case "appraisal-mapping":
+        return "Appraisal Mapping";
       case "leave-balance":
         return "Leave Balance";
       case "work-management":

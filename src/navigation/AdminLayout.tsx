@@ -48,6 +48,18 @@ const AdminLayout = () => {
       return "Notes";
     }
     if (
+      path.includes("/admin-dashboard/appraisal-mapping") ||
+      path.includes("/admin-dashboard/appraisal-assigner-employees/")
+    ) {
+      return "Appraisal Mapping";
+    }
+    if (
+      path.includes("/admin-dashboard/manager-mapping") ||
+      path.includes("/admin-dashboard/manager-employees/")
+    ) {
+      return "Manager Mapping";
+    }
+    if (
       path.includes("/admin-dashboard/appraisal") ||
       path.includes("/admin-dashboard/quarterly-review") ||
       path.includes("/admin-dashboard/my-appraisal") ||
@@ -60,12 +72,6 @@ const AdminLayout = () => {
     }
     if (path.includes("/admin-dashboard/edit-access")) {
       return "Access Ticket";
-    }
-    if (
-      path.includes("/admin-dashboard/manager-mapping") ||
-      path.includes("/admin-dashboard/manager-employees/")
-    ) {
-      return "Manager Mapping";
     }
 
     switch (tab) {
@@ -89,6 +95,8 @@ const AdminLayout = () => {
         return "Leave Balance";
       case "manager-mapping":
         return "Manager Mapping";
+      case "appraisal-mapping":
+        return "Appraisal Mapping";
       case "appraisal":
       case "my-appraisal":
       case "my-quarterly-review":
@@ -138,6 +146,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/leave-balance");
     } else if (tabName === "Manager Mapping") {
       navigate("/admin-dashboard/manager-mapping");
+    } else if (tabName === "Appraisal Mapping") {
+      navigate("/admin-dashboard/appraisal-mapping");
     } else if (tabName === "Appraisal" || tabName === "Quarterly Review") {
       navigate("/admin-dashboard/quarterly-review");
     } else if (tabName === "Notes") {
