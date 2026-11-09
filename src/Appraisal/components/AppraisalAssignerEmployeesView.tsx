@@ -1,12 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Building2, ChevronLeft, ChevronRight, Trash2, Users } from "lucide-react";
-import { message } from "antd";
+import { ArrowLeft, Building2, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../../hooks";
-import { SearchBox, Tooltip } from "../../components/ui";
+import { SearchBox } from "../../components/ui";
 import {
   AppraisalMappingRecord,
-  deactivateAppraisalMapping,
   fetchAppraisalMappingsByAssigner,
 } from "../reducers/appraisalMapping.reducer";
 
@@ -28,7 +26,7 @@ const AppraisalAssignerEmployeesView: React.FC = () => {
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
 
-  const reload = () => {
+  useEffect(() => {
     if (!assignerId) return;
     void dispatch(
       fetchAppraisalMappingsByAssigner({
@@ -37,11 +35,6 @@ const AppraisalAssignerEmployeesView: React.FC = () => {
         status: "ACTIVE",
       }),
     );
-  };
-
-  useEffect(() => {
-    reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, assignerId, locationState.department]);
 
   const filteredPeople = useMemo(() => {
@@ -80,16 +73,6 @@ const AppraisalAssignerEmployeesView: React.FC = () => {
   const backPath = location.pathname.includes("/manager-dashboard")
     ? "/manager-dashboard/appraisal-mapping"
     : "/admin-dashboard/appraisal-mapping";
-
-  const handleUnmap = async (id: number) => {
-    try {
-      await dispatch(deactivateAppraisalMapping(id)).unwrap();
-      message.success("Person unmapped.");
-      reload();
-    } catch (error) {
-      message.error(typeof error === "string" ? error : "Failed to unmap.");
-    }
-  };
 
   return (
     <div className="min-h-screen p-4 md:p-8 bg-[#F4F7FE] font-['DM_Sans',sans-serif]">
@@ -158,13 +141,12 @@ const AppraisalAssignerEmployeesView: React.FC = () => {
                 <th className="py-3.5 px-4 font-bold text-left">Employee Name</th>
                 <th className="py-3.5 px-4 font-bold text-center">Employee ID</th>
                 <th className="py-3.5 px-4 font-bold text-center">Status</th>
-                <th className="py-3.5 px-4 font-bold text-center">Action</th>
               </tr>
             </thead>
             <tbody>
               {!assignerLoading && people.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-12 text-center text-[#A3AED0]">
+                  <td colSpan={4} className="py-12 text-center text-[#A3AED0]">
                     <Users size={40} className="mx-auto mb-2 opacity-30" />
                     <p className="text-sm font-medium">No employees found for this assigner</p>
                   </td>
@@ -195,17 +177,6 @@ const AppraisalAssignerEmployeesView: React.FC = () => {
                     <span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
                       {row.status}
                     </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <Tooltip title="Unmap" placement="top">
-                      <button
-                        type="button"
-                        onClick={() => void handleUnmap(row.id)}
-                        className="inline-flex p-2 rounded-lg text-red-500 hover:bg-red-50"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </Tooltip>
                   </td>
                 </tr>
               ))}

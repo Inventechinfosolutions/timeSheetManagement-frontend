@@ -538,6 +538,44 @@ export const AppraisalApi = {
     return response.data.items ?? [];
   },
 
+  /** People under an appraisal assigner (appraisal_mapping — not manager_mapping). */
+  getAppraisalMappedEmployees: async (
+    assignerId: string,
+    search?: string,
+  ): Promise<MappedEmployee[]> => {
+    const response = await axios.get<
+      Array<{
+        employeeId: string;
+        employeeName: string;
+        department?: string | null;
+      }>
+    >(`/api/appraisal-mapping/by-assigner/${encodeURIComponent(assignerId)}`, {
+      params: { status: "ACTIVE" },
+      skipGlobalLoader: true,
+    });
+    const term = (search || "").trim().toLowerCase();
+    const rows = response.data || [];
+    const mapped = rows.map((row) => ({
+      employeeId: row.employeeId,
+      employeeName: row.employeeName,
+      department: row.department || undefined,
+      designation: undefined as string | undefined,
+    }));
+    if (!term) return mapped;
+    return mapped.filter(
+      (emp) =>
+        emp.employeeId.toLowerCase().includes(term) ||
+        emp.employeeName.toLowerCase().includes(term),
+    );
+  },
+
+  /** True when this person has at least one ACTIVE appraisal_mapping as assigner. */
+  isAppraisalAssigner: async (assignerId: string): Promise<boolean> => {
+    if (!assignerId) return false;
+    const people = await AppraisalApi.getAppraisalMappedEmployees(assignerId);
+    return people.length > 0;
+  },
+
   getEmployeesByDepartment: async (department: string, search?: string, role?: string): Promise<MappedEmployee[]> => {
     const params: Record<string, string> = {};
     if (department && department !== 'All') {

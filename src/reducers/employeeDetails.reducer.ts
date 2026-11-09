@@ -114,13 +114,15 @@ export const getEntitiesSelect = createAsyncThunk<
     department?: string;
     role?: string;
     search?: string;
-    /** When false, do not hide people already in manager_mapping (appraisal mapping). */
+    /** When false, do not hide people already in manager_mapping (Manager Mapping). */
     excludeMapped?: boolean;
+    /** Appraisal assigner id → backend returns { mappedToAssigner, unmappedInDepartment }. */
+    employeeId?: string;
   },
   ThunkConfig
 >(
   'employeeDetails/fetch_entity_list_select',
-  async ({ department, role, search, excludeMapped }, { rejectWithValue }) => {
+  async ({ department, role, search, excludeMapped, employeeId }, { rejectWithValue }) => {
     try {
       const params: any = {};
       if (department && department !== 'All') {
@@ -132,7 +134,9 @@ export const getEntitiesSelect = createAsyncThunk<
       if (search) {
         params.search = search;
       }
-      if (excludeMapped === false) {
+      if (employeeId) {
+        params.employeeId = employeeId;
+      } else if (excludeMapped === false) {
         params.excludeMapped = 'false';
       }
 

@@ -23,6 +23,7 @@ export interface AssignQuarterlyReviewModalProps {
   onBack?: () => void;
   assignmentType?: AssignmentType | null;
   selectedDepartment?: string;
+  /** Admin/CEO/GM: department list-select. Manager/Employee: appraisal_mapping. */
   isAdmin?: boolean;
   managersOnly?: boolean;
   onAssign?: (data: {

@@ -1,18 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Building2, Check, Eye, Pencil, RefreshCw, Trash2, Users, UserRound } from "lucide-react";
 import { message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../../hooks";
 import { fetchDepartments } from "../../reducers/masterDepartment.reducer";
 import { getEntitiesSelect } from "../../reducers/employeeDetails.reducer";
-import { Dropdown, SearchBox, Tooltip } from "../../components/ui";
+import { Dropdown, Pagination, SearchBox, Tooltip } from "../../components/ui";
 import {
+  AppraisalAssignerListItem,
   AppraisalAssignerType,
   AppraisalMappingRecord,
   createAppraisalMappingsBulk,
   deactivateAppraisalMapping,
   fetchAppraisalMappings,
-  fetchAppraisalMappingsByAssigner,
 } from "../reducers/appraisalMapping.reducer";
 
 interface AssignerHistoryGroup {
@@ -22,7 +22,8 @@ interface AssignerHistoryGroup {
   assignerType: AppraisalAssignerType;
   department: string | null;
   status: string;
-  people: AppraisalMappingRecord[];
+  mappedCount: number;
+  mappedEmployeeIds: string[];
 }
 
 interface Person {
@@ -31,9 +32,15 @@ interface Person {
   fullName: string;
   department: string;
   role: string;
+  mapped?: boolean;
+  isAssigner?: boolean;
+  assignerId?: string | null;
+  /** appraisal_mapping row id when mapped (edit/unmap) */
+  mappingId?: number | null;
 }
 
-const APPRAISAL_ROLES = "MANAGER,EMPLOYEE,TEAM LEAD";
+const APPRAISAL_ROLES = "MANAGER,EMPLOYEE";
+const HISTORY_PAGE_SIZE = 10;
 
 const DROPDOWN_BTN =
   "w-full min-h-[48px] rounded-xl px-4 py-3 text-sm font-semibold bg-white border border-[#E2E8F0] text-[#2B3674] shadow-[0_10px_30px_rgba(112,144,176,0.18)] hover:border-[#4318FF]/40 hover:bg-white";
@@ -126,7 +133,7 @@ const AppraisalMappingPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { departments } = useAppSelector((s) => s.masterDepartments);
-  const { items, mappedEmployeeIds, loading } = useAppSelector((s) => s.appraisalMapping);
+  const { items, total, loading } = useAppSelector((s) => s.appraisalMapping);
 
   const [selectedDepartment, setSelectedDepartment] = useState("");
   const [selectedAssignerId, setSelectedAssignerId] = useState("");
@@ -140,16 +147,19 @@ const AppraisalMappingPage: React.FC = () => {
   const [historySearch, setHistorySearch] = useState("");
   const [debouncedHistorySearch, setDebouncedHistorySearch] = useState("");
   const [historyDepartment, setHistoryDepartment] = useState("");
+  const [historyPage, setHistoryPage] = useState(1);
+  /** Bumps on Edit so list-select re-runs even if same assigner is already selected. */
+  const [editLoadNonce, setEditLoadNonce] = useState(0);
   const [saving, setSaving] = useState(false);
   const [loadingAssigners, setLoadingAssigners] = useState(false);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
   const [editBaseline, setEditBaseline] = useState<AppraisalMappingRecord[]>([]);
-  const [pendingEdit, setPendingEdit] = useState<{
-    assignerId: string;
-    assignerName: string;
-    assignerType: AppraisalAssignerType;
-    people: AppraisalMappingRecord[];
-  } | null>(null);
+  /** Seed staged from mappedToAssigner once per assigner select (not on every search). */
+  const lastSeededAssignerRef = useRef("");
+  /** Skip department assigner list-select once when Edit seeds the assigner locally. */
+  const skipDeptAssignerFetchRef = useRef(false);
+  /** When set, available list-select response also builds editBaseline (single Edit API call). */
+  const pendingEditGroupRef = useRef<AssignerHistoryGroup | null>(null);
 
   const isEditing = editBaseline.length > 0;
   const editBaselineIds = useMemo(
@@ -183,27 +193,20 @@ const AppraisalMappingPage: React.FC = () => {
     [departmentOptions],
   );
 
-  const groupedHistory = useMemo(() => {
-    const map = new Map<string, AssignerHistoryGroup>();
-    for (const row of items) {
-      const key = `${row.assignerId}::${row.department || ""}`;
-      const existing = map.get(key);
-      if (existing) {
-        existing.people.push(row);
-      } else {
-        map.set(key, {
-          key,
-          assignerId: row.assignerId,
-          assignerName: row.assignerName,
-          assignerType: row.assignerType,
-          department: row.department || null,
-          status: row.status,
-          people: [row],
-        });
-      }
-    }
-    return Array.from(map.values());
-  }, [items]);
+  const groupedHistory = useMemo(
+    (): AssignerHistoryGroup[] =>
+      (items as AppraisalAssignerListItem[]).map((row) => ({
+        key: `${row.assignerId}::${row.department || ""}`,
+        assignerId: row.assignerId,
+        assignerName: row.assignerName,
+        assignerType: row.assignerType,
+        department: row.department || null,
+        status: row.status,
+        mappedCount: row.mappedCount ?? 0,
+        mappedEmployeeIds: row.mappedEmployeeIds || [],
+      })),
+    [items],
+  );
 
   const selectedAssigner = useMemo(
     () => assignerPeople.find((p) => p.employeeId === selectedAssignerId) || null,
@@ -212,12 +215,21 @@ const AppraisalMappingPage: React.FC = () => {
 
   const assignerOptions = useMemo(
     () =>
-      assignerPeople.map((p) => ({
-        value: p.employeeId,
-        label: `${p.fullName} (${p.employeeId})`,
-        badgeText: resolveAssignerType(p.role),
-        badgeClass: "bg-[#EEF2FF] text-[#4318FF] border border-[#C7D2FE]",
-      })),
+      assignerPeople.map((p) => {
+        const bits: string[] = [resolveAssignerType(p.role)];
+        if (p.isAssigner) bits.push("Assigner");
+        if (p.mapped) bits.push("Mapped");
+        return {
+          value: p.employeeId,
+          label: `${p.fullName} (${p.employeeId})`,
+          badgeText: bits.join(" · "),
+          badgeClass: p.mapped
+            ? "bg-amber-50 text-amber-700 border border-amber-200"
+            : p.isAssigner
+              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+              : "bg-[#EEF2FF] text-[#4318FF] border border-[#C7D2FE]",
+        };
+      }),
     [assignerPeople],
   );
 
@@ -232,20 +244,29 @@ const AppraisalMappingPage: React.FC = () => {
   }, [dispatch]);
 
   useEffect(() => {
+    setHistoryPage(1);
+  }, [debouncedHistorySearch, historyDepartment]);
+
+  useEffect(() => {
     dispatch(
       fetchAppraisalMappings({
-        limit: 100,
+        page: historyPage,
+        limit: HISTORY_PAGE_SIZE,
         status: "ACTIVE",
         search: debouncedHistorySearch || undefined,
         department: historyDepartment || undefined,
       }),
     );
-  }, [dispatch, debouncedHistorySearch, historyDepartment]);
+  }, [dispatch, debouncedHistorySearch, historyDepartment, historyPage]);
 
-  // Assigner dropdown: full active dept list (no search)
+  // Assigner dropdown: full active dept list (skipped on Edit — only by-assigner + employeeId list-select)
   useEffect(() => {
     if (!selectedDepartment) {
       setAssignerPeople([]);
+      return;
+    }
+    if (skipDeptAssignerFetchRef.current) {
+      skipDeptAssignerFetchRef.current = false;
       return;
     }
     let cancelled = false;
@@ -254,7 +275,6 @@ const AppraisalMappingPage: React.FC = () => {
       getEntitiesSelect({
         department: selectedDepartment,
         role: APPRAISAL_ROLES,
-        excludeMapped: false,
       }),
     )
       .then((action: any) => {
@@ -272,10 +292,11 @@ const AppraisalMappingPage: React.FC = () => {
     };
   }, [dispatch, selectedDepartment]);
 
-  // Available to map: backend search (debounced)
+  // Available / already-mapped: assigner-scoped list-select (two groups) — single call path
   useEffect(() => {
     if (!selectedAssignerId || !selectedDepartment) {
       setAvailablePeople([]);
+      lastSeededAssignerRef.current = "";
       return;
     }
     let cancelled = false;
@@ -285,15 +306,49 @@ const AppraisalMappingPage: React.FC = () => {
         department: selectedDepartment,
         role: APPRAISAL_ROLES,
         search: debouncedSearch || undefined,
-        excludeMapped: false,
+        employeeId: selectedAssignerId,
       }),
     )
       .then((action: any) => {
         if (cancelled) return;
-        const list = Array.isArray(action.payload)
-          ? action.payload
-          : action.payload?.data || [];
-        setAvailablePeople(mapPeople(list as Person[]));
+        const payload = action.payload;
+        const unmapped = Array.isArray(payload?.unmappedInDepartment)
+          ? payload.unmappedInDepartment
+          : Array.isArray(payload)
+            ? payload
+            : [];
+        const mapped = Array.isArray(payload?.mappedToAssigner)
+          ? payload.mappedToAssigner
+          : [];
+        const mappedPeople = mapPeople(mapped as Person[]);
+        setAvailablePeople(mapPeople(unmapped as Person[]));
+
+        const editGroup = pendingEditGroupRef.current;
+        const shouldSeedStaged =
+          Boolean(editGroup) || lastSeededAssignerRef.current !== selectedAssignerId;
+
+        if (shouldSeedStaged) {
+          lastSeededAssignerRef.current = selectedAssignerId;
+          setStagedEmployees(mappedPeople);
+        }
+
+        if (editGroup && editGroup.assignerId === selectedAssignerId) {
+          pendingEditGroupRef.current = null;
+          setEditBaseline(
+            mappedPeople
+              .filter((p) => p.mappingId != null)
+              .map((p) => ({
+                id: Number(p.mappingId),
+                department: p.department || selectedDepartment,
+                assignerId: editGroup.assignerId,
+                assignerName: editGroup.assignerName,
+                assignerType: editGroup.assignerType,
+                employeeId: p.employeeId,
+                employeeName: p.fullName,
+                status: "ACTIVE" as const,
+              })),
+          );
+        }
       })
       .finally(() => {
         if (!cancelled) setLoadingAvailable(false);
@@ -301,7 +356,7 @@ const AppraisalMappingPage: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [dispatch, selectedDepartment, selectedAssignerId, debouncedSearch]);
+  }, [dispatch, selectedDepartment, selectedAssignerId, debouncedSearch, editLoadNonce]);
 
   const availableEmployees = useMemo(() => {
     return availablePeople.filter((emp) => {
@@ -309,55 +364,13 @@ const AppraisalMappingPage: React.FC = () => {
       if (!empId) return false;
       if (selectedAssignerId && empId === selectedAssignerId) return false;
       if (stagedEmployees.some((s) => s.employeeId === empId)) return false;
-      if (mappedEmployeeIds.includes(empId) && !editBaselineIds.includes(empId)) {
-        return false;
-      }
       return true;
     });
-  }, [
-    availablePeople,
-    mappedEmployeeIds,
-    stagedEmployees,
-    selectedAssignerId,
-    editBaselineIds,
-  ]);
-
-  // Apply pending edit once assigner list for the department is ready
-  useEffect(() => {
-    if (!pendingEdit || !selectedDepartment) return;
-    const exists = assignerPeople.some((p) => p.employeeId === pendingEdit.assignerId);
-    if (!exists && assignerPeople.length === 0 && loadingAssigners) return;
-
-    if (!exists) {
-      setAssignerPeople((prev) => [
-        ...prev,
-        {
-          id: pendingEdit.assignerId,
-          employeeId: pendingEdit.assignerId,
-          fullName: pendingEdit.assignerName,
-          department: selectedDepartment,
-          role: pendingEdit.assignerType,
-        },
-      ]);
-    }
-
-    setSelectedAssignerId(pendingEdit.assignerId);
-    setStagedEmployees(
-      pendingEdit.people.map((p) => ({
-        id: String(p.id),
-        employeeId: p.employeeId,
-        fullName: p.employeeName,
-        department: p.department || selectedDepartment,
-        role: p.assignerType,
-      })),
-    );
-    setEditBaseline(pendingEdit.people);
-    setSelectedEmployeeIds([]);
-    setSelectedStagedIds([]);
-    setPendingEdit(null);
-  }, [pendingEdit, assignerPeople, selectedDepartment, loadingAssigners]);
+  }, [availablePeople, stagedEmployees, selectedAssignerId]);
 
   const handleDepartmentChange = (name: string) => {
+    skipDeptAssignerFetchRef.current = false;
+    pendingEditGroupRef.current = null;
     setSelectedDepartment(name);
     setSelectedAssignerId("");
     setStagedEmployees([]);
@@ -367,10 +380,11 @@ const AppraisalMappingPage: React.FC = () => {
     setDebouncedSearch("");
     setAvailablePeople([]);
     setEditBaseline([]);
-    setPendingEdit(null);
+    lastSeededAssignerRef.current = "";
   };
 
   const handleAssignerChange = (employeeId: string) => {
+    pendingEditGroupRef.current = null;
     setSelectedAssignerId(employeeId);
     setStagedEmployees([]);
     setSelectedEmployeeIds([]);
@@ -378,7 +392,7 @@ const AppraisalMappingPage: React.FC = () => {
     setSearchText("");
     setDebouncedSearch("");
     setEditBaseline([]);
-    setPendingEdit(null);
+    lastSeededAssignerRef.current = "";
   };
 
   const toggleEmployee = (employeeId: string) => {
@@ -407,9 +421,17 @@ const AppraisalMappingPage: React.FC = () => {
 
   const handleUnmapSelected = () => {
     if (selectedStagedIds.length === 0) return;
-    setStagedEmployees((prev) =>
-      prev.filter((p) => !selectedStagedIds.includes(p.employeeId)),
-    );
+    setStagedEmployees((prev) => {
+      const movingBack = prev.filter((p) =>
+        selectedStagedIds.includes(p.employeeId),
+      );
+      setAvailablePeople((avail) => {
+        const existing = new Set(avail.map((a) => a.employeeId));
+        const toAdd = movingBack.filter((p) => !existing.has(p.employeeId));
+        return toAdd.length ? [...avail, ...toAdd] : avail;
+      });
+      return prev.filter((p) => !selectedStagedIds.includes(p.employeeId));
+    });
     setSelectedStagedIds([]);
   };
 
@@ -471,9 +493,11 @@ const AppraisalMappingPage: React.FC = () => {
       setSelectedStagedIds([]);
       setEditBaseline([]);
       setSelectedAssignerId("");
+      setHistoryPage(1);
       dispatch(
         fetchAppraisalMappings({
-          limit: 100,
+          page: 1,
+          limit: HISTORY_PAGE_SIZE,
           status: "ACTIVE",
           search: debouncedHistorySearch || undefined,
           department: historyDepartment || undefined,
@@ -499,40 +523,39 @@ const AppraisalMappingPage: React.FC = () => {
     });
   };
 
-  const handleEditMapping = async (group: AssignerHistoryGroup) => {
+  const handleEditMapping = (group: AssignerHistoryGroup) => {
     const dept = group.department || "";
     if (!dept) {
       message.warning("This mapping has no department to edit.");
       return;
     }
-    setEditBaseline([]);
-    setSelectedAssignerId("");
-    setStagedEmployees([]);
+
+    // Edit: one list-select?employeeId= via the available effect (mapped + unmapped).
+    skipDeptAssignerFetchRef.current = selectedDepartment !== dept;
+    pendingEditGroupRef.current = group;
+    setAssignerPeople([
+      {
+        id: group.assignerId,
+        employeeId: group.assignerId,
+        fullName: group.assignerName,
+        department: dept,
+        role: group.assignerType,
+        isAssigner: true,
+      },
+    ]);
     setSelectedEmployeeIds([]);
     setSelectedStagedIds([]);
     setSearchText("");
     setDebouncedSearch("");
+    setEditBaseline([]);
+    setStagedEmployees([]);
+    setAvailablePeople([]);
+    // Force effect to re-seed even if same assigner was already selected
+    lastSeededAssignerRef.current = "";
     setSelectedDepartment(dept);
+    setSelectedAssignerId(group.assignerId);
+    setEditLoadNonce((n) => n + 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
-
-    try {
-      const people = await dispatch(
-        fetchAppraisalMappingsByAssigner({
-          assignerId: group.assignerId,
-          department: dept,
-          status: "ACTIVE",
-        }),
-      ).unwrap();
-
-      setPendingEdit({
-        assignerId: group.assignerId,
-        assignerName: group.assignerName,
-        assignerType: group.assignerType,
-        people: people || [],
-      });
-    } catch (error) {
-      message.error(typeof error === "string" ? error : "Failed to load mappings for edit.");
-    }
   };
 
   return (
@@ -797,7 +820,7 @@ const AppraisalMappingPage: React.FC = () => {
                   }`}
                 >
                   <td className="py-3.5 pl-6 pr-2 text-center text-[#475569] font-semibold">
-                    {index + 1}
+                    {(historyPage - 1) * HISTORY_PAGE_SIZE + index + 1}
                   </td>
                   <td className="py-3.5 px-4 text-[#475569] font-semibold">
                     {group.department || "—"}
@@ -812,7 +835,7 @@ const AppraisalMappingPage: React.FC = () => {
                     </span>
                   </td>
                   <td className="py-3.5 px-4 text-center font-bold text-[#2B3674]">
-                    {group.people.length}
+                    {group.mappedCount}
                   </td>
                   <td className="py-3.5 px-4 text-center">
                     <span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
@@ -853,6 +876,16 @@ const AppraisalMappingPage: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {total > 0 && (
+          <Pagination
+            className="mt-5"
+            currentPage={historyPage}
+            totalItems={total}
+            pageSize={HISTORY_PAGE_SIZE}
+            onPageChange={setHistoryPage}
+          />
+        )}
       </section>
     </div>
   );

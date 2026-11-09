@@ -20,6 +20,17 @@ export interface AppraisalMappingRecord {
   updatedAt?: string;
 }
 
+/** History table row: one assigner + mapped people summary */
+export interface AppraisalAssignerListItem {
+  department?: string | null;
+  assignerId: string;
+  assignerName: string;
+  assignerType: AppraisalAssignerType;
+  status: AppraisalMappingStatus;
+  mappedCount: number;
+  mappedEmployeeIds: string[];
+}
+
 export interface CreateAppraisalMappingPayload {
   department: string;
   assignerId: string;
@@ -30,7 +41,7 @@ export interface CreateAppraisalMappingPayload {
 }
 
 interface AppraisalMappingState {
-  items: AppraisalMappingRecord[];
+  items: AppraisalAssignerListItem[];
   total: number;
   assignerPeople: AppraisalMappingRecord[];
   mappedEmployeeIds: string[];
@@ -64,9 +75,10 @@ export const fetchAppraisalMappings = createAsyncThunk(
   ) => {
     try {
       const response = await axios.get<{
-        items: AppraisalMappingRecord[];
+        items: AppraisalAssignerListItem[];
         total: number;
-        mappedEmployeeIds?: string[];
+        page?: number;
+        limit?: number;
       }>(API, { params });
       return response.data;
     } catch (error) {
@@ -165,9 +177,6 @@ const appraisalMappingSlice = createSlice({
         state.loading = false;
         state.items = action.payload.items || [];
         state.total = action.payload.total || 0;
-        if (Array.isArray(action.payload.mappedEmployeeIds)) {
-          state.mappedEmployeeIds = action.payload.mappedEmployeeIds;
-        }
       })
       .addCase(fetchAppraisalMappings.rejected, (state, action) => {
         state.loading = false;
@@ -189,21 +198,16 @@ const appraisalMappingSlice = createSlice({
         state.assignerPeople = [];
         state.error = String(action.payload || "Failed to load assigner mappings");
       })
-      .addCase(createAppraisalMappingsBulk.fulfilled, (state, action) => {
-        state.items = [...(action.payload || []), ...state.items];
-        state.total += action.payload?.length || 0;
-        for (const row of action.payload || []) {
-          if (!state.mappedEmployeeIds.includes(row.employeeId)) {
-            state.mappedEmployeeIds.push(row.employeeId);
-          }
-        }
+      .addCase(createAppraisalMappingsBulk.fulfilled, () => {
+        // History list is assigner-grouped; refresh via fetchAppraisalMappings after save.
       })
       .addCase(deactivateAppraisalMapping.fulfilled, (state, action) => {
-        state.items = state.items.filter((item) => item.id !== action.payload.id);
+        state.assignerPeople = state.assignerPeople.filter(
+          (item) => item.id !== action.payload.id,
+        );
         state.mappedEmployeeIds = state.mappedEmployeeIds.filter(
           (id) => id !== action.payload.employeeId,
         );
-        state.total = Math.max(0, state.total - 1);
       });
   },
 });

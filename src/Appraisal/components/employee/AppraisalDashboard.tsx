@@ -1404,7 +1404,7 @@ export const AppraisalDashboard: React.FC = () => {
         <div className="mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
-              <span className="manager-review-title-anim">Quarterly Review</span>
+              <span className="manager-review-title-anim">Appraisal</span>
             </h1>
           </div>
 
@@ -1434,7 +1434,7 @@ export const AppraisalDashboard: React.FC = () => {
                 <BarChart3 className="w-4 h-4" />
               </div>
               <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title">
-                Quarterly Review History
+                Appraisal History
               </CardTitle>
             </div>
 

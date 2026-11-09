@@ -568,7 +568,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
               <span className="manager-review-title-anim">
-                {isAdmin ? "Appraisal Reviews" : "Manager Quarterly Review"}
+                {isAdmin ? "Appraisal Reviews" : "Quarterly Review"}
               </span>
             </h1>
           </div>

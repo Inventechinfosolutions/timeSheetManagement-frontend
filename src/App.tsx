@@ -85,8 +85,9 @@ const EmployeeTabWrapper = () => {
     case "leave-balance":
       return <LeaveBalance />;
     case "appraisal":
-    case "quarterly-review":
       return <EmployeeAppraisalPage />;
+    case "quarterly-review":
+      return <ManagerQuarterlyReviewPage />;
     case "notes":
     case "employee-notes":
       return <NotesManagement />;

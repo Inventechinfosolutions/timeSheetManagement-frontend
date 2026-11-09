@@ -17,6 +17,16 @@ export const isAdminAccess = (
   );
 };
 
+/** Plain ADMIN only (not CEO/GM). Uses department list / manager-mapping style assign flow. */
+export const isPlainAdminUser = (
+  user?: { userType?: string | null; role?: string | null } | null,
+): boolean => {
+  if (!user) return false;
+  const type = String(user.userType || "").toUpperCase();
+  const role = String(user.role || "").toUpperCase();
+  return type === UserType.ADMIN || role === UserType.ADMIN;
+};
+
 export const isCeoUser = (
   user?: { userType?: string | null; role?: string | null } | null,
 ): boolean => {
