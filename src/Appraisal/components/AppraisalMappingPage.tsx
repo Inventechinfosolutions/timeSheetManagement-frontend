@@ -160,6 +160,9 @@ const AppraisalMappingPage: React.FC = () => {
   const skipDeptAssignerFetchRef = useRef(false);
   /** When set, available list-select response also builds editBaseline (single Edit API call). */
   const pendingEditGroupRef = useRef<AssignerHistoryGroup | null>(null);
+  /** Latest assigner list for baseline name/type without re-fetching available on list change. */
+  const assignerPeopleRef = useRef<Person[]>([]);
+  assignerPeopleRef.current = assignerPeople;
 
   const isEditing = editBaseline.length > 0;
   const editBaselineIds = useMemo(
@@ -330,19 +333,34 @@ const AppraisalMappingPage: React.FC = () => {
         if (shouldSeedStaged) {
           lastSeededAssignerRef.current = selectedAssignerId;
           setStagedEmployees(mappedPeople);
-        }
 
-        if (editGroup && editGroup.assignerId === selectedAssignerId) {
-          pendingEditGroupRef.current = null;
+          // Baseline already-mapped rows so Save only creates new / unmaps removed
+          // (not a full re-create of people already under this assigner).
+          const assignerPerson = assignerPeopleRef.current.find(
+            (p) => p.employeeId === selectedAssignerId,
+          );
+          const baselineMeta =
+            editGroup && editGroup.assignerId === selectedAssignerId
+              ? editGroup
+              : {
+                  assignerId: selectedAssignerId,
+                  assignerName: assignerPerson?.fullName || selectedAssignerId,
+                  assignerType: resolveAssignerType(assignerPerson?.role),
+                };
+
+          if (editGroup && editGroup.assignerId === selectedAssignerId) {
+            pendingEditGroupRef.current = null;
+          }
+
           setEditBaseline(
             mappedPeople
               .filter((p) => p.mappingId != null)
               .map((p) => ({
                 id: Number(p.mappingId),
                 department: p.department || selectedDepartment,
-                assignerId: editGroup.assignerId,
-                assignerName: editGroup.assignerName,
-                assignerType: editGroup.assignerType,
+                assignerId: baselineMeta.assignerId,
+                assignerName: baselineMeta.assignerName,
+                assignerType: baselineMeta.assignerType,
                 employeeId: p.employeeId,
                 employeeName: p.fullName,
                 status: "ACTIVE" as const,
@@ -473,9 +491,15 @@ const AppraisalMappingPage: React.FC = () => {
         }
         message.success("Appraisal mapping updated.");
       } else {
+        // Never re-create rows that already have a mapping id
+        const toCreate = stagedEmployees.filter((emp) => emp.mappingId == null);
+        if (toCreate.length === 0) {
+          message.info("No new people to map.");
+          return;
+        }
         await dispatch(
           createAppraisalMappingsBulk(
-            stagedEmployees.map((emp) => ({
+            toCreate.map((emp) => ({
               department: selectedDepartment,
               assignerId: selectedAssigner.employeeId,
               assignerName: selectedAssigner.fullName,

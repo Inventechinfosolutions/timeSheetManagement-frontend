@@ -477,6 +477,7 @@ export const AppraisalApi = {
       reviewOutcome?: string;
       performanceAction?: string;
       managerConfirmation?: boolean;
+      assignerConfirmation?: boolean;
       finalRating?: number;
       isDraft?: boolean;
     },
@@ -508,6 +509,7 @@ export const AppraisalApi = {
       reviewOutcome?: string;
       performanceAction?: string;
       managerConfirmation?: boolean;
+      assignerConfirmation?: boolean;
       finalRating?: number;
       isDraft?: boolean;
     },

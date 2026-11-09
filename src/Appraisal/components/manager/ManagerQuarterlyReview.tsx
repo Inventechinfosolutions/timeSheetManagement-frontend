@@ -477,6 +477,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
     { value: QuarterlyReviewStatus.SUBMITTED, label: "Submitted" },
     { value: QuarterlyReviewStatus.REQUESTED_FOR_EDIT, label: "Requested for edit" },
     { value: QuarterlyReviewStatus.ASSIGNED, label: "Assigned" },
+    { value: QuarterlyReviewStatus.REASSIGNED, label: "Re-Assigned" },
     { value: QuarterlyReviewStatus.PERFORMANCE_RECEIVED, label: "Performance Received" },
     { value: QuarterlyReviewStatus.EVALUATION_IN_PROGRESS, label: "Evaluation In Progress" },
     {

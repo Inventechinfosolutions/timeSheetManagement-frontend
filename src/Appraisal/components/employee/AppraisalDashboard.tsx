@@ -118,9 +118,13 @@ const renderQuarterBadge = (assignmentOrQuarter: QuarterlyReviewAssignment | str
   return <span className={`qr-quarter-pill ${qClass}`}>{qRaw}</span>;
 };
 
-const renderStatusBadge = (status: string) => {
-  const raw = (status || "").trim();
-  if (raw.toUpperCase() === "NOT_UPDATED" || raw.toUpperCase() === "LOCKED") {
+const renderStatusBadge = (status: string, reassignCount?: number) => {
+  const rawUpper = (status || "").trim().toUpperCase();
+  const effective =
+    rawUpper === "REASSIGNED" || (rawUpper === "ASSIGNED" && Number(reassignCount || 0) >= 1)
+      ? "REASSIGNED"
+      : rawUpper;
+  if (effective === "NOT_UPDATED" || effective === "LOCKED") {
     return (
       <span className="qr-status-badge qr-status-locked" title="Locked because the deadline was missed">
         <Lock className="w-3 h-3 text-rose-500 mr-0.5 inline" />
@@ -128,7 +132,15 @@ const renderStatusBadge = (status: string) => {
       </span>
     );
   }
-  const normalized = raw.toLowerCase().replace(/_/g, " ");
+  if (effective === "REASSIGNED") {
+    return (
+      <span className="qr-status-badge qr-status-not-started" title="Reopened after deadline miss">
+        <span className="qr-status-dot" />
+        Re-Assigned
+      </span>
+    );
+  }
+  const normalized = effective.toLowerCase().replace(/_/g, " ");
   let badgeClass = "qr-status-not-started";
 
   if (normalized.includes("progress") || normalized === "draft" || normalized.includes("requested")) {
@@ -1168,7 +1180,17 @@ export const AppraisalDashboard: React.FC = () => {
     };
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const closed = new Set(["submitted", "reviewed", "completed", "re_submitted", "under_review"]);
+    // Already past employee submission — no deadline countdown (incl. assigner→manager final).
+    const closed = new Set([
+      "submitted",
+      "reviewed",
+      "completed",
+      "re_submitted",
+      "under_review",
+      "evaluation_in_progress",
+      "awaiting_manager_final_review",
+      "performance_received",
+    ]);
     const editWindow = new Set([
       "requested_for_edit",
       "edit_requested",
@@ -1519,6 +1541,8 @@ export const AppraisalDashboard: React.FC = () => {
                 options={[
                   { value: "NOT_STARTED", label: "Not Started" },
                   { value: "DRAFT", label: "Draft" },
+                  { value: "ASSIGNED", label: "Assigned" },
+                  { value: "REASSIGNED", label: "Re-Assigned" },
                   { value: "SUBMITTED", label: "Submitted" },
                   { value: "EVALUATION_IN_PROGRESS", label: "Evaluation In Progress" },
                   { value: "COMPLETED", label: "Completed" },
@@ -1623,7 +1647,7 @@ export const AppraisalDashboard: React.FC = () => {
 
                                 {/* 5. Status */}
                                 <td className="text-center">
-                                  {renderStatusBadge(assignment.status)}
+                                  {renderStatusBadge(assignment.status, assignment.reassignCount)}
                                 </td>
 
                                 <td className="text-center">
@@ -1758,7 +1782,7 @@ export const AppraisalDashboard: React.FC = () => {
                               {assignment.financialYear}
                             </span>
                           </div>
-                          {renderStatusBadge(assignment.status)}
+                          {renderStatusBadge(assignment.status, assignment.reassignCount)}
                         </div>
 
                         <div className="text-xs text-[#64748B] space-y-1.5 pt-1">

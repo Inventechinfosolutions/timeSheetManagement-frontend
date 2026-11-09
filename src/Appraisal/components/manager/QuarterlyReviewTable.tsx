@@ -26,18 +26,6 @@ interface QuarterlyReviewTableProps {
   viewOnly?: boolean;
 }
 
-const extractReassignReasons = (description?: string | null): string[] => {
-  if (!description?.trim()) {
-    return [];
-  }
-  return description
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => /^\[Re-assigned on /i.test(line))
-    .map((line) => line.replace(/^\[Re-assigned on [^\]]+\]:\s*/i, "").trim())
-    .filter(Boolean);
-};
-
 // Harmonious colorful avatar palettes matching the frosted ice-blue & royal blue aesthetic
 const AVATAR_PALETTES = [
   { bg: "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)", text: "#1D4ED8", border: "#BFDBFE" }, // Royal Blue
@@ -157,9 +145,14 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
     return AVATAR_PALETTES[idx];
   };
 
-  const renderStatusBadge = (status: string) => {
-    const raw = (status || "").trim();
-    if (raw.toUpperCase() === "NOT_UPDATED" || raw.toUpperCase() === "LOCKED") {
+  const renderStatusBadge = (status: string, reassignCount?: number) => {
+    const rawUpper = (status || "").trim().toUpperCase();
+    // Legacy rows stayed ASSIGNED after unlock — still show Re-assigned when count > 0.
+    const effective =
+      rawUpper === "REASSIGNED" || (rawUpper === "ASSIGNED" && Number(reassignCount || 0) >= 1)
+        ? "REASSIGNED"
+        : rawUpper;
+    if (effective === "NOT_UPDATED" || effective === "LOCKED") {
       return (
         <span className="qr-status-badge qr-status-locked" title="Locked because the deadline was missed">
           <Lock className="w-3 h-3 text-rose-500 mr-0.5" />
@@ -167,7 +160,15 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
         </span>
       );
     }
-    const normalized = raw.toLowerCase().replace(/_/g, " ");
+    if (effective === "REASSIGNED") {
+      return (
+        <span className="qr-status-badge qr-status-not-started" title="Reopened after deadline miss">
+          <span className="qr-status-dot" />
+          Re-Assigned
+        </span>
+      );
+    }
+    const normalized = effective.toLowerCase().replace(/_/g, " ");
     let badgeClass = "qr-status-not-started";
 
     if (normalized.includes("progress") || normalized === "draft" || normalized.includes("requested")) {
@@ -483,20 +484,45 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               <XCircle size={18} />
             </button>
           </>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              scrollToTop();
-              onEdit?.(record);
-            }}
-            className="qr-action-icon-btn qr-action-btn-edit"
-            title={`Edit evaluation for ${record.name}`}
-            aria-label={`Edit evaluation for ${record.name}`}
-          >
-            <Pencil size={18} />
-          </button>
-        )}
+        ) : (() => {
+          const statusUpper = String(
+            record.status || record.reviewStatus || "",
+          ).toUpperCase();
+          const assignerViewOnlyStatus =
+            statusUpper === "AWAITING_MANAGER_FINAL_REVIEW" ||
+            statusUpper === "COMPLETED" ||
+            statusUpper === "REVIEWED" ||
+            statusUpper === "APPROVED";
+          const currentId = String(managerId || "").trim().toUpperCase();
+          const recordAssignerId = String(record.assignerId || "")
+            .trim()
+            .toUpperCase();
+          const recordManagerId = String(record.managerId || "")
+            .trim()
+            .toUpperCase();
+          // Employee-assigner after forward/complete: view-only. Manager can edit anytime.
+          const isEmployeeAssignerViewOnly =
+            assignerViewOnlyStatus &&
+            !!currentId &&
+            !!recordAssignerId &&
+            recordAssignerId === currentId &&
+            (!recordManagerId || recordManagerId !== currentId);
+          if (isEmployeeAssignerViewOnly) return null;
+          return (
+            <button
+              type="button"
+              onClick={() => {
+                scrollToTop();
+                onEdit?.(record);
+              }}
+              className="qr-action-icon-btn qr-action-btn-edit"
+              title={`Edit evaluation for ${record.name}`}
+              aria-label={`Edit evaluation for ${record.name}`}
+            >
+              <Pencil size={18} />
+            </button>
+          );
+        })()}
       </div>
     );
   };
@@ -619,7 +645,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   <td className="text-center">{renderRating(record.finalRating)}</td>
 
                   {/* 11. Status */}
-                  <td className="text-center">{renderStatusBadge(record.status)}</td>
+                  <td className="text-center">{renderStatusBadge(record.status, record.reassignCount)}</td>
 
                   {/* 12. Sticky Action */}
                   <td className="text-center qr-sticky-action-td">
@@ -691,21 +717,6 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   "{decisionRecord.editRequestReason || "No description provided."}"
                 </p>
               </div>
-
-              {extractReassignReasons(decisionRecord.description).length > 0 && (
-                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
-                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Re-assign Reasons
-                  </div>
-                  <ul className="space-y-1.5">
-                    {extractReassignReasons(decisionRecord.description).map((reason, index) => (
-                      <li key={`${reason}-${index}`} className="text-sm text-slate-700 italic">
-                        "{reason}"
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
 
               <div className="p-3 bg-amber-50 border border-amber-200/60 rounded-xl text-xs text-amber-800 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
@@ -790,20 +801,6 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   "{accessPreviewRecord.editRequestReason || "No description provided."}"
                 </p>
               </div>
-              {extractReassignReasons(accessPreviewRecord.description).length > 0 && (
-                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5">
-                  <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Re-assign Reasons
-                  </div>
-                  <ul className="space-y-1.5">
-                    {extractReassignReasons(accessPreviewRecord.description).map((reason, index) => (
-                      <li key={`${reason}-${index}`} className="text-sm text-slate-700 italic">
-                        "{reason}"
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </div>
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
               <button

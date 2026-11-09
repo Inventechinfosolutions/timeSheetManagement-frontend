@@ -92,23 +92,68 @@ export const getQuarterPeriod = (
   const fromYearMatch = (financialYear || "").match(/^(\d{4})/);
   const fromYear = fromYearMatch ? parseInt(fromYearMatch[1], 10) : new Date().getFullYear();
   const toYear = fromYear + 1;
+  const quarterKey = String(quarter || "")
+    .toUpperCase()
+    .match(/Q[1-4]|YEARLY/)?.[0];
 
-  if (reviewPeriod === ReviewPeriod.YEARLY || quarter === "YEARLY") {
+  if (reviewPeriod === ReviewPeriod.YEARLY || quarterKey === "YEARLY") {
     return { start: `01-04-${fromYear}`, end: `31-03-${toYear}` };
   }
-  if (quarter === "Q1") {
+  if (quarterKey === "Q1") {
     return { start: `01-04-${fromYear}`, end: `30-06-${fromYear}` };
   }
-  if (quarter === "Q2") {
+  if (quarterKey === "Q2") {
     return { start: `01-07-${fromYear}`, end: `30-09-${fromYear}` };
   }
-  if (quarter === "Q3") {
+  if (quarterKey === "Q3") {
     return { start: `01-10-${fromYear}`, end: `31-12-${fromYear}` };
   }
-  if (quarter === "Q4") {
+  if (quarterKey === "Q4") {
     return { start: `01-01-${toYear}`, end: `31-03-${toYear}` };
   }
   return { start: "", end: "" };
+};
+
+/**
+ * Review Period for an assigned appraisal = master quarter start→end for that FY
+ * (not employee overview step fields).
+ */
+export async function resolveAssignedQuarterPeriod(opts: {
+  quarter?: string;
+  financialYear?: string;
+  reviewPeriod?: string;
+}): Promise<{ start: string; end: string }> {
+  const quarterKey = String(opts.quarter || "")
+    .toUpperCase()
+    .match(/Q[1-4]|YEARLY/)?.[0];
+  const fromYearMatch = String(opts.financialYear || "").match(/^(\d{4})/);
+  const fromYear = fromYearMatch ? parseInt(fromYearMatch[1], 10) : NaN;
+
+  if (
+    opts.reviewPeriod === ReviewPeriod.YEARLY ||
+    quarterKey === "YEARLY"
+  ) {
+    return getQuarterPeriod("YEARLY", opts.financialYear, ReviewPeriod.YEARLY);
+  }
+
+  if (Number.isFinite(fromYear) && quarterKey) {
+    try {
+      const quarters = await AppraisalApi.getMasterQuarters(fromYear);
+      const match = quarters.find(
+        (item) => String(item.quaterLabel || "").toUpperCase() === quarterKey,
+      );
+      if (match?.startDate && match?.endDate) {
+        return {
+          start: formatAppraisalDisplayDate(match.startDate),
+          end: formatAppraisalDisplayDate(match.endDate),
+        };
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+
+  return getQuarterPeriod(quarterKey || opts.quarter, opts.financialYear, opts.reviewPeriod);
 };
 
 export const formatStoredFileSize = (bytes: number): string => {
@@ -714,6 +759,8 @@ export const toManagerReviewRecord = (
     "assignerId" in review ? review.assignerId : null,
     "managerName" in review ? review.managerName : null,
   ),
+  assignerId: "assignerId" in review ? review.assignerId || undefined : undefined,
+  managerId: "managerId" in review ? review.managerId || undefined : undefined,
   finalRating:
     review.finalRating == null
       ? ""
@@ -757,6 +804,7 @@ export const toManagerReviewRecord = (
     reviewOutcome: review.reviewOutcome,
     performanceAction: review.performanceAction,
     managerConfirmation: review.managerConfirmation,
+    assignerConfirmation: review.assignerConfirmation,
   },
 });
 

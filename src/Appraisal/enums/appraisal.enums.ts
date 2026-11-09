@@ -17,6 +17,7 @@ export enum EmployeePerformanceStatus {
 export enum QuarterlyReviewStatus {
   NOT_STARTED = "NOT_STARTED",
   ASSIGNED = "ASSIGNED",
+  REASSIGNED = "REASSIGNED",
   DRAFT = "DRAFT",
   PENDING = "PENDING",
   IN_PROGRESS = "IN_PROGRESS",

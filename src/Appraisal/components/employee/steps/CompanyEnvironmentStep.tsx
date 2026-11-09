@@ -743,7 +743,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
             disabled={readOnly}
             readOnly={readOnly}
             onChange={(e) => handleTextChange("workCultureFeedback", e.target.value)}
-            placeholder="Share your thoughts on the workplace culture, core values, and overall atmosphere..."
+            placeholder=""
             className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-[#475569] eval-placeholder-sm ${
               readOnly ? "eval-textarea-readonly" : ""
             } ${errors?.workCultureFeedback ? "eval-input-error" : ""}`}
@@ -774,7 +774,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
             disabled={readOnly}
             readOnly={readOnly}
             onChange={(e) => handleTextChange("workLifeBalance", e.target.value)}
-            placeholder="Share how well your workload, schedule, and personal commitments are balanced..."
+            placeholder=""
             className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-[#475569] eval-placeholder-sm ${
               readOnly ? "eval-textarea-readonly" : ""
             } ${errors?.workLifeBalance ? "eval-input-error" : ""}`}
@@ -807,7 +807,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
             onChange={(e) =>
               handleTextChange("challengesAffectingProductivity", e.target.value)
             }
-            placeholder="Describe any obstacles, bottlenecks, or challenges affecting your productivity..."
+            placeholder=""
             className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-[#475569] eval-placeholder-sm ${
               readOnly ? "eval-textarea-readonly" : ""
             } ${errors?.challengesAffectingProductivity ? "eval-input-error" : ""}`}
@@ -840,7 +840,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
             onChange={(e) =>
               handleTextChange("suggestionsForImprovement", e.target.value)
             }
-            placeholder="Suggest ideas for tools, processes, training, or workplace improvement..."
+            placeholder=""
             className={`eval-textarea-field leading-relaxed text-sm flex-1 font-medium placeholder:text-[10px] placeholder:font-semibold placeholder:text-[#475569] eval-placeholder-sm ${
               readOnly ? "eval-textarea-readonly" : ""
             } ${errors?.suggestionsForImprovement ? "eval-input-error" : ""}`}

@@ -1353,17 +1353,19 @@ export const AchievementsStep: React.FC<StepProps> = ({
             )}
           </div>
         </div>
-        {/* Added Projects Accordion */}
-        {projects.length > 0 && (
+        {/* Added Projects Accordion — hide the row currently in the form to avoid looking like a duplicate */}
+        {projects.some((_, index) => index !== editingIndex) && (
           <div ref={accordionContainerRef} className="space-y-2 pt-2">
             <div className="flex items-center justify-between px-1">
               <span className="text-xs font-bold uppercase tracking-wider text-[#334155]">
-                Added Projects ({projects.length})
+                Added Projects (
+                {projects.filter((_, index) => index !== editingIndex).length})
               </span>
             </div>
 
             <div className="bg-white rounded-xl border border-slate-200 shadow-2xs divide-y divide-slate-100 overflow-hidden">
               {projects.map((project, index) => {
+                if (editingIndex === index) return null;
                 const isExpanded = expandedIndex === index;
                 const displayProjectName = project.projectName || `Project ${index + 1}`;
                 const projectError =
