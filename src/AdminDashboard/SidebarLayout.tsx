@@ -28,6 +28,8 @@ import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
 import { fetchNotes } from "../reducers/notes.reducer";
 import { useAppSelector } from "../hooks";
+import { sidebarLabelTextClass } from "../utils/sidebarLabel";
+import { resolveAdminLabelFromTab } from "../navigation/adminNav";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import ScrollNavigator from "../components/ScrollNavigator";
 import Header from "../components/Header";
@@ -166,39 +168,16 @@ const SidebarLayout = ({
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
     if (activeTab && activeTab !== "Dashboard") return activeTab;
-    switch (tab) {
-      case "registration":
-        return "User & Role Management";
-      case "employees":
-        return "Employee Directory";
-      case "timesheet-list":
-      case "working-details":
-        return "Employee Timesheet";
-      case "requests":
-        return "Notification";
-      case "manager-mapping":
-        return "Manager Mapping";
-      case "leave-balance":
-        return "Leave Balance";
-      case "work-management":
-        return "Request Management";
-      case "leave-calculation":
-        return "Leave Management";
 
-      case "appraisal":
-      case "quarterly-review":
-        return "Appraisal";
+    // Shared admin nav config (label/path/tab in one place)
+    const fromAdminNav = resolveAdminLabelFromTab(tab);
+    if (fromAdminNav) return fromAdminNav;
+
+    // Manager workspace tabs (not in admin nav)
+    switch (tab) {
       case "my-appraisal":
       case "my-quarterly-review":
         return "My Appraisal";
-      case "edit-access":
-        return "Access Ticket";
-      case "holiday-management":
-        return "Holiday Management";
-      case "notes":
-        return "Notes";
-      case "inbox":
-        return "Inbox";
       case "my-dashboard":
         return "My Dashboard";
       case "my-timesheet":
@@ -302,14 +281,6 @@ const SidebarLayout = ({
 
   const navIconClass = (isActive: boolean, expanded = true) =>
     `w-5 h-5 transition-all duration-300 ${isActive && expanded ? "text-[#4318FF]" : isActive ? "text-[#4318FF]" : "group-hover:scale-110"}`;
-
-  /** Keep labels on one line; shrink font slightly for long names like General Manager Dashboard. */
-  const sidebarLabelTextClass = (name: string) => {
-    const len = name.length;
-    if (len >= 26) return "text-[11px] leading-snug tracking-tight";
-    if (len >= 22) return "text-xs leading-snug";
-    return "text-sm leading-snug";
-  };
 
   return (
     <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
