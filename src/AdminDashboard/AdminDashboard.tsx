@@ -870,7 +870,8 @@ const AdminDashboard = () => {
         </div>
       )}
 
-      {!isManagerView && isAdminAccess(currentUser) && (
+      {/* CEO / GM keep the dashboard card; Admin uses sidebar → Holiday Management */}
+      {!isManagerView && isCeoOrGm && (
         <div className="mb-8">
           <HolidayManagementCard
             holidays={holidays || []}

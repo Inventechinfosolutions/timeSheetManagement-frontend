@@ -19,6 +19,7 @@ import {
   Inbox,
   ClipboardCheck,
   CalendarCheck,
+  CalendarDays,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -27,6 +28,8 @@ import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
 import { fetchNotes } from "../reducers/notes.reducer";
 import { useAppSelector } from "../hooks";
+import { sidebarLabelTextClass } from "../utils/sidebarLabel";
+import { resolveAdminLabelFromTab } from "../navigation/adminNav";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import ScrollNavigator from "../components/ScrollNavigator";
 import Header from "../components/Header";
@@ -116,14 +119,32 @@ const SidebarLayout = ({
   );
 
   // Receptionist: hide Request Management and Leave Management from sidebar
+  // Admin: hide Notes and Inbox; add Holiday Management (CEO/GM keep dashboard card)
   const visibleAdminSidebarItems = useMemo(() => {
-    const items =
+    let items =
       title === "Receptionist"
-
         ? adminSidebarItems.filter(
             (i) => i.name !== "Request Management" && i.name !== "Leave Management",
           )
-        : adminSidebarItems;
+        : title === "Admin"
+          ? adminSidebarItems.filter(
+              (i) => i.name !== "Notes" && i.name !== "Inbox",
+            )
+          : adminSidebarItems;
+
+    if (title === "Admin") {
+      const leaveIdx = items.findIndex((i) => i.name === "Leave Management");
+      const holidayItem = { name: "Holiday Management", icon: CalendarDays };
+      if (leaveIdx >= 0) {
+        items = [
+          ...items.slice(0, leaveIdx + 1),
+          holidayItem,
+          ...items.slice(leaveIdx + 1),
+        ];
+      } else {
+        items = [...items, holidayItem];
+      }
+    }
     if (title === "CEO" || title === "General Manager") {
       return items
         .filter((item) => item.name !== "Employee Directory" && item.name !== "Leave Management")
@@ -147,38 +168,16 @@ const SidebarLayout = ({
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
     if (activeTab && activeTab !== "Dashboard") return activeTab;
-    switch (tab) {
-      case "registration":
-        return "User & Role Management";
-      case "employees":
-        return "Employee Directory";
-      case "timesheet-list":
-      case "working-details":
-        return "Employee Timesheet";
-      case "requests":
-        return "Notification";
-      case "manager-mapping":
-        return "Manager Mapping";
-      case "leave-balance":
-        return "Leave Balance";
-      case "work-management":
-        return "Request Management";
-      case "leave-calculation":
-        return "Leave Management";
 
-      case "appraisal":
-      case "quarterly-review":
-        return "Appraisal";
+    // Shared admin nav config (label/path/tab in one place)
+    const fromAdminNav = resolveAdminLabelFromTab(tab);
+    if (fromAdminNav) return fromAdminNav;
+
+    // Manager workspace tabs (not in admin nav)
+    switch (tab) {
       case "my-appraisal":
       case "my-quarterly-review":
         return "My Appraisal";
-      case "edit-access":
-        return "Access Ticket";
-
-      case "notes":
-        return "Notes";
-      case "inbox":
-        return "Inbox";
       case "my-dashboard":
         return "My Dashboard";
       case "my-timesheet":
@@ -263,13 +262,13 @@ const SidebarLayout = ({
 
   const navItemClass = (isActive: boolean, expanded = true) =>
     [
-      "w-full flex items-center cursor-pointer transition-all duration-300 relative group rounded-xl",
+      "w-full min-w-0 flex items-center cursor-pointer transition-all duration-300 relative group rounded-xl overflow-hidden",
       isActive
         ? expanded
           ? "bg-white/95 text-[#2B3674] font-semibold shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
           : "md:justify-center"
         : "text-white/80 hover:bg-white/10 hover:text-white",
-      expanded ? "gap-3 px-3 py-2.5" : "md:justify-center md:px-0 py-2",
+      expanded ? "gap-2.5 px-3 py-2.5" : "md:justify-center md:px-0 py-2",
     ].join(" ");
 
   const navIconWrapClass = (isActive: boolean, expanded = true) =>
@@ -475,16 +474,18 @@ const SidebarLayout = ({
                                 <Icon className={navIconClass(isActive, isOpen)} />
                               </div>
                               <span
-                                className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10 flex-1 flex items-center justify-between
+                                className={`min-w-0 transition-all duration-300 relative z-10 flex-1 flex items-center justify-between overflow-hidden
                                                             ${isOpen
-                                    ? "opacity-100 translate-x-0 w-auto"
+                                    ? "opacity-100 translate-x-0"
                                     : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                                   }
                                                         `}
                               >
-                                <span>{item.name}</span>
+                                <span className={`whitespace-nowrap ${sidebarLabelTextClass(item.name)}`}>
+                                  {item.name}
+                                </span>
                                 {item.name === "Inbox" && unreadInboxCount > 0 && isOpen && (
-                                  <span className="ml-2 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
+                                  <span className="ml-2 shrink-0 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
                                     {unreadInboxCount}
                                   </span>
                                 )}
@@ -524,16 +525,18 @@ const SidebarLayout = ({
                         <Icon className={navIconClass(isActive, isOpen)} />
                       </div>
                       <span
-                        className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10 flex-1 flex items-center justify-between
+                        className={`min-w-0 transition-all duration-300 relative z-10 flex-1 flex items-center justify-between overflow-hidden
                                             ${isOpen
-                            ? "opacity-100 translate-x-0 w-auto"
+                            ? "opacity-100 translate-x-0"
                             : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                           }
                                         `}
                       >
-                        <span>{item.name}</span>
+                        <span className={`whitespace-nowrap ${sidebarLabelTextClass(item.name)}`}>
+                          {item.name}
+                        </span>
                         {item.name === "Inbox" && unreadInboxCount > 0 && isOpen && (
-                          <span className="ml-2 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
+                          <span className="ml-2 shrink-0 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
                             {unreadInboxCount}
                           </span>
                         )}
