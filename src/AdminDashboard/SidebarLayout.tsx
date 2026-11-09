@@ -19,6 +19,7 @@ import {
   Inbox,
   ClipboardCheck,
   CalendarCheck,
+  CalendarDays,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -116,14 +117,32 @@ const SidebarLayout = ({
   );
 
   // Receptionist: hide Request Management and Leave Management from sidebar
+  // Admin: hide Notes and Inbox; add Holiday Management (CEO/GM keep dashboard card)
   const visibleAdminSidebarItems = useMemo(() => {
-    const items =
+    let items =
       title === "Receptionist"
-
         ? adminSidebarItems.filter(
             (i) => i.name !== "Request Management" && i.name !== "Leave Management",
           )
-        : adminSidebarItems;
+        : title === "Admin"
+          ? adminSidebarItems.filter(
+              (i) => i.name !== "Notes" && i.name !== "Inbox",
+            )
+          : adminSidebarItems;
+
+    if (title === "Admin") {
+      const leaveIdx = items.findIndex((i) => i.name === "Leave Management");
+      const holidayItem = { name: "Holiday Management", icon: CalendarDays };
+      if (leaveIdx >= 0) {
+        items = [
+          ...items.slice(0, leaveIdx + 1),
+          holidayItem,
+          ...items.slice(leaveIdx + 1),
+        ];
+      } else {
+        items = [...items, holidayItem];
+      }
+    }
     if (title === "CEO" || title === "General Manager") {
       return items
         .filter((item) => item.name !== "Employee Directory" && item.name !== "Leave Management")
@@ -174,7 +193,8 @@ const SidebarLayout = ({
         return "My Appraisal";
       case "edit-access":
         return "Access Ticket";
-
+      case "holiday-management":
+        return "Holiday Management";
       case "notes":
         return "Notes";
       case "inbox":
@@ -263,13 +283,13 @@ const SidebarLayout = ({
 
   const navItemClass = (isActive: boolean, expanded = true) =>
     [
-      "w-full flex items-center cursor-pointer transition-all duration-300 relative group rounded-xl",
+      "w-full min-w-0 flex items-center cursor-pointer transition-all duration-300 relative group rounded-xl overflow-hidden",
       isActive
         ? expanded
           ? "bg-white/95 text-[#2B3674] font-semibold shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
           : "md:justify-center"
         : "text-white/80 hover:bg-white/10 hover:text-white",
-      expanded ? "gap-3 px-3 py-2.5" : "md:justify-center md:px-0 py-2",
+      expanded ? "gap-2.5 px-3 py-2.5" : "md:justify-center md:px-0 py-2",
     ].join(" ");
 
   const navIconWrapClass = (isActive: boolean, expanded = true) =>
@@ -282,6 +302,14 @@ const SidebarLayout = ({
 
   const navIconClass = (isActive: boolean, expanded = true) =>
     `w-5 h-5 transition-all duration-300 ${isActive && expanded ? "text-[#4318FF]" : isActive ? "text-[#4318FF]" : "group-hover:scale-110"}`;
+
+  /** Keep labels on one line; shrink font slightly for long names like General Manager Dashboard. */
+  const sidebarLabelTextClass = (name: string) => {
+    const len = name.length;
+    if (len >= 26) return "text-[11px] leading-snug tracking-tight";
+    if (len >= 22) return "text-xs leading-snug";
+    return "text-sm leading-snug";
+  };
 
   return (
     <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
@@ -475,16 +503,18 @@ const SidebarLayout = ({
                                 <Icon className={navIconClass(isActive, isOpen)} />
                               </div>
                               <span
-                                className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10 flex-1 flex items-center justify-between
+                                className={`min-w-0 transition-all duration-300 relative z-10 flex-1 flex items-center justify-between overflow-hidden
                                                             ${isOpen
-                                    ? "opacity-100 translate-x-0 w-auto"
+                                    ? "opacity-100 translate-x-0"
                                     : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                                   }
                                                         `}
                               >
-                                <span>{item.name}</span>
+                                <span className={`whitespace-nowrap ${sidebarLabelTextClass(item.name)}`}>
+                                  {item.name}
+                                </span>
                                 {item.name === "Inbox" && unreadInboxCount > 0 && isOpen && (
-                                  <span className="ml-2 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
+                                  <span className="ml-2 shrink-0 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
                                     {unreadInboxCount}
                                   </span>
                                 )}
@@ -524,16 +554,18 @@ const SidebarLayout = ({
                         <Icon className={navIconClass(isActive, isOpen)} />
                       </div>
                       <span
-                        className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10 flex-1 flex items-center justify-between
+                        className={`min-w-0 transition-all duration-300 relative z-10 flex-1 flex items-center justify-between overflow-hidden
                                             ${isOpen
-                            ? "opacity-100 translate-x-0 w-auto"
+                            ? "opacity-100 translate-x-0"
                             : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                           }
                                         `}
                       >
-                        <span>{item.name}</span>
+                        <span className={`whitespace-nowrap ${sidebarLabelTextClass(item.name)}`}>
+                          {item.name}
+                        </span>
                         {item.name === "Inbox" && unreadInboxCount > 0 && isOpen && (
-                          <span className="ml-2 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
+                          <span className="ml-2 shrink-0 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
                             {unreadInboxCount}
                           </span>
                         )}

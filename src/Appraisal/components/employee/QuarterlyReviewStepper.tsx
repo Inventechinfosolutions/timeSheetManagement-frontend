@@ -156,7 +156,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
           ? (el as HTMLElement)
           : (el.querySelector("input, textarea, button") as HTMLElement | null);
         if (focusTarget && typeof focusTarget.focus === "function") {
-          focusTarget.focus({ preventScroll: true });
+            focusTarget.focus({ preventScroll: true });
         }
 
         animateFieldError(el);
@@ -334,7 +334,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     const created = await AppraisalApi.createPerformance(
       toPerformancePayload(
         assignment.employeeId,
-        quarter,
+      quarter,
         assignment.financialYear,
         formDataRef.current,
       ),
@@ -372,9 +372,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       return false;
     }
     const payload = toPerformancePayload(
-      assignment.employeeId,
-      quarter,
-      assignment.financialYear,
+            assignment.employeeId,
+            quarter,
+            assignment.financialYear,
       dataToPersist,
     );
     setSaving(true);
@@ -503,15 +503,15 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
 
     if (targetStep > currentStep) {
-      for (let s = currentStep; s < targetStep; s++) {
+    for (let s = currentStep; s < targetStep; s++) {
         const validation = validateStep(s, currentData);
-        if (!validation.isValid) {
-          if (s !== currentStep) {
-            goToStep(s, false);
-          }
-          setErrors(validation.errors);
-          scrollToField(validation.firstFieldId);
-          return;
+      if (!validation.isValid) {
+        if (s !== currentStep) {
+          goToStep(s, false);
+        }
+        setErrors(validation.errors);
+        scrollToField(validation.firstFieldId);
+        return;
         }
       }
     }
@@ -549,8 +549,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (!saved) {
       return;
     }
-    scrollToTop();
-    onBack();
+      scrollToTop();
+      onBack();
   };
 
   const handleSubmit = async () => {
@@ -571,8 +571,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         goToStep(s, false);
         setErrors(validation.errors);
         scrollToField(validation.firstFieldId);
-        return;
-      }
+      return;
+    }
     }
     const saved = await persistStep(false, currentData);
     if (!saved) {
@@ -674,7 +674,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
           <span>
             {assignment.status.toUpperCase() === "EDIT_GRANTED"
               ? "Your edit deadline granted by your manager has expired. This review is locked."
-              : "This review is currently locked for editing."}
+                : "This review is currently locked for editing."}
           </span>
         </div>
       )}
@@ -710,73 +710,73 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             </div>
           </div>
 
-          <div className="text-right hidden sm:block">
+            <div className="text-right hidden sm:block">
             <span className="text-xs text-[#64748B] block">Progress</span>
-            <span className="text-sm font-bold text-[#2563EB]">Step {currentStep} of 6</span>
-          </div>
+              <span className="text-sm font-bold text-[#2563EB]">Step {currentStep} of 6</span>
+            </div>
         </div>
 
         {/* Numbered Stepper with Title Below and Click Navigation */}
-        <div className="mt-7 pt-6 border-t border-blue-100 overflow-x-auto no-scrollbar pb-2">
-          <div className="relative flex items-center justify-between min-w-[620px] px-6">
+          <div className="mt-7 pt-6 border-t border-blue-100 overflow-x-auto no-scrollbar pb-2">
+            <div className="relative flex items-center justify-between min-w-[620px] px-6">
             {/* Background connecting progress line */}
             <div className="absolute top-5 -translate-y-1/2 left-[44px] right-[44px] h-[3px] bg-blue-100 rounded-full z-0">
-              <div
+                <div
                 className="h-full bg-gradient-to-r from-blue-400 to-[#2563EB] rounded-full transition-all duration-500 ease-out shadow-xs"
-                style={{
-                  width: `${((currentStep - 1) / (STEP_DEFINITIONS.length - 1)) * 100}%`,
-                }}
-              />
-            </div>
+                  style={{
+                    width: `${((currentStep - 1) / (STEP_DEFINITIONS.length - 1)) * 100}%`,
+                  }}
+                />
+              </div>
 
-            {/* Stepper Steps (Number in Circle, Title Below) */}
-            {STEP_DEFINITIONS.map((step) => {
+              {/* Stepper Steps (Number in Circle, Title Below) */}
+              {STEP_DEFINITIONS.map((step) => {
               const isCompleted = currentStep > step.id;
-              const isActive = currentStep === step.id;
+                const isActive = currentStep === step.id;
 
-              return (
-                <button
-                  key={step.id}
-                  type="button"
-                  onClick={() => handleStepClick(step.id)}
-                  title={`Go to Step ${step.id}: ${step.label}`}
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    onClick={() => handleStepClick(step.id)}
+                    title={`Go to Step ${step.id}: ${step.label}`}
                   className="group relative z-10 flex flex-col items-center cursor-pointer select-none focus:outline-none transition-transform"
-                >
+                  >
                   {/* Circle with Step Number */}
-                  <div
-                    ref={isActive ? activeCircleRef : undefined}
+                    <div
+                      ref={isActive ? activeCircleRef : undefined}
                     className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ease-out ${
                       isActive
                         ? "bg-[#2563EB] text-white ring-4 ring-blue-400/30 shadow-lg shadow-blue-500/25 scale-110"
-                        : isCompleted
+                          : isCompleted
                         ? "bg-blue-500 text-white shadow-xs hover:scale-105 border-2 border-blue-500"
                         : "bg-white text-[#64748B] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB] hover:scale-105"
-                    }`}
-                  >
-                    {isCompleted ? (
-                      <Check className="w-5 h-5 stroke-[2.8]" />
-                    ) : (
+                        }`}
+                    >
+                      {isCompleted ? (
+                        <Check className="w-5 h-5 stroke-[2.8]" />
+                      ) : (
                       <span>{step.id}</span>
-                    )}
-                  </div>
+                      )}
+                    </div>
 
-                  {/* Title Placed Below Circle */}
-                  <span
+                    {/* Title Placed Below Circle */}
+                    <span
                     className={`mt-2 text-xs font-semibold text-center whitespace-nowrap transition-all duration-300 ${
                       isActive
                         ? "text-[#2563EB] font-extrabold scale-105"
-                        : isCompleted
-                        ? "text-[#0F172A] font-semibold"
+                          : isCompleted
+                            ? "text-[#0F172A] font-semibold"
                         : "text-[#64748B] group-hover:text-[#0F172A]"
-                    }`}
-                  >
-                    {step.label}
-                  </span>
-                </button>
-              );
-            })}
+                        }`}
+                    >
+                      {step.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
       </Card>
 
       {/* Main Step Body Card */}
@@ -797,7 +797,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               disabled={readOnly}
               className={`relative min-h-[380px] border-0 p-0 m-0 min-w-0 ${
                 exitingStep !== null ? "overflow-hidden" : "overflow-visible"
-              }`}
+                }`}
             >
               {exitingStep !== null && (
                 <div
@@ -820,38 +820,38 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             {/* Stepper Navigation Footer */}
             <div className="flex items-center justify-between pt-6 mt-8 border-t border-blue-100">
               {currentStep === 1 ? (
-                <Button
-                  variant="outline"
-                  size="md"
-                  onClick={onBack}
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={onBack}
                   leftIcon={<ArrowLeft className="w-4 h-4" />}
                   className="px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400"
-                >
-                  Back
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="md"
-                  onClick={handlePrev}
+                  >
+                    Back
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={handlePrev}
                   className="px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400"
-                >
-                  Previous
-                </Button>
+                  >
+                    Previous
+                  </Button>
               )}
 
               <div className="flex items-center gap-3">
                 {saveError ? <p className="text-xs font-bold text-red-600">{saveError}</p> : null}
                 {!isLocked && (
-                <Button
-                  variant="ghost"
-                  size="md"
-                  onClick={() => void handleSaveAndExit()}
-                  disabled={saving}
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    onClick={() => void handleSaveAndExit()}
+                    disabled={saving}
                   className="text-[#64748B] hover:text-[#0F172A]"
-                >
-                  {saving ? "Saving" : "Save & Exit"}
-                </Button>
+                  >
+                    {saving ? "Saving" : "Save & Exit"}
+                  </Button>
                 )}
 
                 {isLocked && currentStep === 6 ? null : currentStep < 6 ? (

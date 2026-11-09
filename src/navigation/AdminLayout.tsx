@@ -59,6 +59,9 @@ const AdminLayout = () => {
     if (path.includes("/admin-dashboard/edit-access")) {
       return "Access Ticket";
     }
+    if (path.includes("/admin-dashboard/holiday-management")) {
+      return "Holiday Management";
+    }
     if (
       path.includes("/admin-dashboard/manager-mapping") ||
       path.includes("/admin-dashboard/manager-employees/")
@@ -96,6 +99,8 @@ const AdminLayout = () => {
         return "Inbox";
       case "edit-access":
         return "Access Ticket";
+      case "holiday-management":
+        return "Holiday Manager";
       default:
         return isCeo
           ? "CEO Dashboard"
@@ -142,6 +147,8 @@ const AdminLayout = () => {
       navigate("/admin-dashboard/inbox");
     } else if (tabName === "Access Ticket" || tabName === "Edit Access") {
       navigate("/admin-dashboard/edit-access");
+    } else if (tabName === "Holiday Management") {
+      navigate("/admin-dashboard/holiday-management");
     }
   };
 
