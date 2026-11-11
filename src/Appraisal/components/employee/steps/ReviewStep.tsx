@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { StepProps, ReviewFormData } from "../../../types/appraisal.types";
 import { Star, Edit3, AlertCircle, CheckCircle2, ChevronDown, Calendar, FileText, Clock } from "lucide-react";
-import { getQuarterPeriod } from "../../../utils/appraisalHelpers";
+import { resolveAssignedQuarterPeriod } from "../../../utils/appraisalHelpers";
 import { ENVIRONMENT_SCORES } from "../../../constants/appraisal.constants";
 import {
   initScrollRevealCards,
@@ -151,14 +151,27 @@ export const ReviewStep: React.FC<StepProps> = ({
   const [hoveredRating, setHoveredRating] = useState<number>(0);
   const [animatingStar, setAnimatingStar] = useState<number | null>(null);
   const [shatteringStars, setShatteringStars] = useState<number[]>([]);
+  const [assignedReviewPeriod, setAssignedReviewPeriod] = useState<{
+    start: string;
+    end: string;
+  }>({ start: "", end: "" });
 
-  const fallbackPeriod = getQuarterPeriod(
-    assignment?.quarter,
-    assignment?.financialYear,
-    assignment?.reviewPeriod,
-  );
-  const reviewPeriodStart = formData.reviewPeriodStart || fallbackPeriod.start || "—";
-  const reviewPeriodEnd = formData.reviewPeriodEnd || fallbackPeriod.end || "—";
+  useEffect(() => {
+    let cancelled = false;
+    void resolveAssignedQuarterPeriod({
+      quarter: assignment?.quarter,
+      financialYear: assignment?.financialYear,
+      reviewPeriod: assignment?.reviewPeriod,
+    }).then((period) => {
+      if (!cancelled) setAssignedReviewPeriod(period);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [assignment?.quarter, assignment?.financialYear, assignment?.reviewPeriod]);
+
+  const reviewPeriodStart = assignedReviewPeriod.start || "—";
+  const reviewPeriodEnd = assignedReviewPeriod.end || "—";
 
   const teamRatings = formData.teamRatings || {};
 
@@ -381,8 +394,50 @@ export const ReviewStep: React.FC<StepProps> = ({
                 Manager Instructions
               </label>
               <div className="p-3 bg-white border border-[#64748B] rounded-lg text-sm font-normal text-[#0F172A] leading-relaxed whitespace-pre-line break-words min-h-[44px]">
-                {assignment.description?.trim() || "No instructions provided."}
+                {(() => {
+                  const raw = assignment.description?.trim() || "";
+                  if (!raw) return "No instructions provided.";
+                  const reassignLines = raw
+                    .split(/\r?\n/)
+                    .map((line) => line.trim())
+                    .filter((line) => /^\[Re-assigned on /i.test(line));
+                  if (reassignLines.length === 0) return raw;
+                  // Show reason only — date/prefix live in the Note below.
+                  return (
+                    reassignLines[reassignLines.length - 1].replace(
+                      /^\[Re-assigned on [^\]]+\]:\s*/i,
+                      "",
+                    ).trim() || "No instructions provided."
+                  );
+                })()}
               </div>
+              {(Number(assignment.reassignCount || 0) >= 1 ||
+                /\[re-assigned/i.test(assignment.description || "")) && (
+                <div className="mt-2.5 rounded-xl border border-sky-200 bg-gradient-to-r from-sky-50 via-white to-sky-50 px-3.5 py-3 shadow-xs">
+                  <p className="text-xs font-medium text-sky-800/90 leading-relaxed">
+                    <span className="font-bold text-sky-950">Note:</span>{" "}
+                    The deadline has passed and the employee did not submit the appraisal, so it has been
+                    reassigned by{" "}
+                    <span className="font-bold text-sky-950">
+                      {assignment.assignedBy?.trim() || "the assigner"}
+                    </span>
+                    {" "}on date:{" "}
+                    <span className="font-bold text-sky-950">
+                      {(() => {
+                        const match = /\[Re-assigned on ([^\]]+)\]/i.exec(
+                          assignment.description || "",
+                        );
+                        const raw = (match?.[1] || assignment.assignedDate || "").trim();
+                        if (!raw) return "—";
+                        const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+                        if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
+                        return raw;
+                      })()}
+                    </span>
+                    .
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}

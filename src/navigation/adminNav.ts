@@ -115,6 +115,15 @@ export const ADMIN_NAV: AdminNavItem[] = [
     ],
   },
   {
+    label: "Appraisal Mapping",
+    path: "/admin-dashboard/appraisal-mapping",
+    tabs: ["appraisal-mapping"],
+    pathIncludes: [
+      "/admin-dashboard/appraisal-mapping",
+      "/admin-dashboard/appraisal-assigner-employees/",
+    ],
+  },
+  {
     label: "Notification",
     path: "/admin-dashboard/requests",
     tabs: ["requests"],

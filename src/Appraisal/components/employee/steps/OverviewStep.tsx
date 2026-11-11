@@ -4,7 +4,7 @@ import {
   AlertCircle,
   Calendar,
 } from "lucide-react";
-import { getQuarterPeriod } from "../../../utils/appraisalHelpers";
+import { resolveAssignedQuarterPeriod } from "../../../utils/appraisalHelpers";
 import "../AppraisalDashboard.css";
 
 interface OverviewFieldConfig {
@@ -59,33 +59,30 @@ export const OverviewStep: React.FC<StepProps> = ({
   const quarter = assignment?.quarter || "Q1";
   const financialYear = assignment?.financialYear || "";
 
-  // Review Period State
-  const [startDate, setStartDate] = useState<string>(formData.reviewPeriodStart || "");
-  const [endDate, setEndDate] = useState<string>(formData.reviewPeriodEnd || "");
-  const [periodLoading, setPeriodLoading] = useState<boolean>(false);
+  // Review Period = assigned quarter master start/end (not overview-step saved fields)
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  const [periodLoading, setPeriodLoading] = useState<boolean>(true);
 
-  // Prefer dates from GET /overview step API; fallback to local quarter defaults only if missing
   useEffect(() => {
-    const apiStart = (formData.reviewPeriodStart || "").trim();
-    const apiEnd = (formData.reviewPeriodEnd || "").trim();
-    if (apiStart && apiEnd) {
-      setStartDate(apiStart);
-      setEndDate(apiEnd);
+    let cancelled = false;
+    setPeriodLoading(true);
+    void resolveAssignedQuarterPeriod({
+      quarter,
+      financialYear,
+      reviewPeriod: assignment?.reviewPeriod,
+    }).then((period) => {
+      if (cancelled) return;
+      setStartDate(period.start);
+      setEndDate(period.end);
+      if (period.start) onChange("reviewPeriodStart", period.start);
+      if (period.end) onChange("reviewPeriodEnd", period.end);
       setPeriodLoading(false);
-      return;
-    }
-
-    const defaults = getQuarterPeriod(quarter, financialYear, assignment?.reviewPeriod);
-    if (!apiStart && defaults.start) {
-      setStartDate(defaults.start);
-      onChange("reviewPeriodStart", defaults.start);
-    }
-    if (!apiEnd && defaults.end) {
-      setEndDate(defaults.end);
-      onChange("reviewPeriodEnd", defaults.end);
-    }
-    setPeriodLoading(false);
-  }, [formData.reviewPeriodStart, formData.reviewPeriodEnd, quarter, financialYear, assignment?.reviewPeriod]);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [quarter, financialYear, assignment?.reviewPeriod]);
 
   // Unified field change handler
   const handleFieldChange = (key: keyof ReviewFormData, val: string) => {

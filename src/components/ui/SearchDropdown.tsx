@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, Search, X } from "lucide-react";
+import { Check, ChevronDown, FileSpreadsheet, Search, X } from "lucide-react";
 import { WorksphereLogoLoader } from "../ApiLoadingSpinner";
 import { Tooltip } from "./Tooltip";
 import { useDebounce } from "../../hooks/useDebounce";
@@ -315,8 +315,9 @@ export function SearchDropdown<T extends string = string>({
                 </div>
               </div>
             ) : filteredOptions.length === 0 ? (
-              <div className="py-5 text-center text-xs font-medium text-gray-400">
-                {emptyMessage}
+              <div className="py-8 px-3 flex flex-col items-center justify-center gap-2 text-center">
+                <FileSpreadsheet size={36} className="text-gray-300" />
+                <span className="text-xs font-bold text-[#2B3674]">{emptyMessage}</span>
               </div>
             ) : (
               filteredOptions.map((option) => {

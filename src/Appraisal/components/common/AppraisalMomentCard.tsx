@@ -14,7 +14,7 @@ import {
   StepsIllustration,
 } from "../employee/RevealedRatingModal";
 
-export type AppraisalMomentKind = "assigned" | "submitted" | "evaluated";
+export type AppraisalMomentKind = "assigned" | "submitted" | "evaluated" | "forwarded";
 
 interface AppraisalMomentCardProps {
   kind: AppraisalMomentKind;
@@ -23,6 +23,11 @@ interface AppraisalMomentCardProps {
   financialYear?: string;
   /** Manager evaluation score — drives the 5 rating tiers on the evaluated card. */
   score?: number;
+  /**
+   * Who receives the employee submission for review.
+   * EMPLOYEE assigner (appraisal mapping) → "Team Lead"; otherwise "manager".
+   */
+  reviewerLabel?: "manager" | "Team Lead";
   onClose: () => void;
 }
 
@@ -43,7 +48,7 @@ const MOMENTS: Record<
     headline: "Review assigned",
     badge: "ASSIGNED",
     quote:
-      "Employees will receive the assignment email. They can fill their self-review and you'll be notified when they submit the final review.",
+      "Employees will receive the assignment email. They can fill their self-review and you'll be notified when they submit their review.",
     lines: ["The review", "is open", "for your team"],
   },
   submitted: {
@@ -62,6 +67,16 @@ const MOMENTS: Record<
     badge: "COMPLETED",
     quote: "The appraisal is finalized and shared with the employee.",
     lines: ["Final review", "submitted", "successfully"],
+  },
+  /** Employee-assigner submitted scores → waiting for manager final comment */
+  forwarded: {
+    score: 4.2,
+    greeting: "Forwarded,",
+    headline: "Sent for manager final review",
+    badge: "AWAITING MANAGER",
+    quote:
+      "The evaluation has been reviewed and forwarded to the Reporting Manager for final comments and appraisal completion.",
+    lines: ["Forwarded for", "manager final", "comment & review"],
   },
 };
 
@@ -113,6 +128,7 @@ const AppraisalMomentCard: React.FC<AppraisalMomentCardProps> = ({
   quarter,
   financialYear,
   score: scoreProp,
+  reviewerLabel = "manager",
   onClose,
 }) => {
   const moment = MOMENTS[kind];
@@ -123,8 +139,14 @@ const AppraisalMomentCard: React.FC<AppraisalMomentCardProps> = ({
   const greeting = moment.greeting;
   const headline = moment.headline;
   const badge = useRatingTier ? tier.badge : moment.badge;
-  const quote = managerCopy?.quote ?? moment.quote;
-  const lines = managerCopy?.lines ?? moment.lines;
+  const submittedQuote = `Your self-assessment has been submitted successfully and sent to your ${reviewerLabel} for review.`;
+  const submittedLines = ["Sent to", `your ${reviewerLabel}`, "for review"];
+  const quote =
+    managerCopy?.quote ??
+    (kind === "submitted" ? submittedQuote : moment.quote);
+  const lines =
+    managerCopy?.lines ??
+    (kind === "submitted" ? submittedLines : moment.lines);
   const period = [quarter, financialYear ? `FY ${financialYear}` : ""].filter(Boolean).join(" • ");
 
   const cardRef = useRef<HTMLDivElement>(null);

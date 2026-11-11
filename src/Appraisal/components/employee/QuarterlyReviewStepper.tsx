@@ -38,6 +38,8 @@ import { AppraisalApi, readApiError, toProjectWriteBody, changedProjectFields } 
 import { readProjectList, PERFORMANCE_STEP_PATH, changedStepFields, toStepFields, applyStepDataToForm } from "../../utils/appraisalHelpers";
 import { EmployeePerformanceStatus, QuaterlyEnum, QuarterlyReviewStatus, ReviewPeriod } from "../../enums/appraisal.enums";
 import AppraisalMomentCard from "../common/AppraisalMomentCard";
+import { fetchAppraisalMappingByEmployee } from "../../reducers/appraisalMapping.reducer";
+import { useAppDispatch } from "../../../hooks";
 import { message } from "antd";
 import OverviewStep from "./steps/OverviewStep";
 import AchievementsStep from "./steps/AchievementsStep";
@@ -325,10 +327,46 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   const [showSubmitConfirmModal, setShowSubmitConfirmModal] = useState<boolean>(false);
   const [pendingSubmitData, setPendingSubmitData] = useState<ReviewFormData | null>(null);
   const [isSubmittingModal, setIsSubmittingModal] = useState<boolean>(false);
+  /** EMPLOYEE / Team Lead assigner → "Team Lead"; otherwise "manager". */
+  const [reviewerLabel, setReviewerLabel] = useState<"manager" | "Team Lead">("manager");
   const initialFormDataRef = useRef<ReviewFormData>(initialFormData || emptyReviewFormData);
+  const dispatch = useAppDispatch();
 
   const topRef = useRef<HTMLDivElement>(null);
   const transitionTimerRef = useRef<any>(null);
+
+  useEffect(() => {
+    const empId = String(assignment.employeeId || "").trim();
+    const assignedByRole = String(assignment.assignedBy || "").trim().toUpperCase();
+    // Fast path when assignedBy is still the role enum (not a person name)
+    if (assignedByRole === "EMPLOYEE" || assignedByRole === "TEAM LEAD") {
+      setReviewerLabel("Team Lead");
+      return;
+    }
+    if (assignedByRole === "MANAGER" || assignedByRole === "ADMIN") {
+      setReviewerLabel("manager");
+      return;
+    }
+    if (!empId) {
+      setReviewerLabel("manager");
+      return;
+    }
+    let cancelled = false;
+    void dispatch(fetchAppraisalMappingByEmployee(empId))
+      .unwrap()
+      .then((mapping) => {
+        if (cancelled) return;
+        setReviewerLabel(
+          mapping?.assignerType === "EMPLOYEE" ? "Team Lead" : "manager",
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setReviewerLabel("manager");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [assignment.employeeId, assignment.assignedBy, dispatch]);
 
   const scrollToTop = () => {
     if (topRef.current) {
@@ -388,6 +426,83 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     transitionTimerRef.current = setTimeout(() => {
       setExitingStep(null);
     }, 480);
+  };
+
+  /** Clear active project draft fields (does not touch projects[]). */
+  const clearActiveProjectDraft = (base: ReviewFormData): ReviewFormData => ({
+    ...base,
+    projectName: "",
+    projectDescription: "",
+    projectRole: "",
+    responsibilityType: "",
+    leadershipQualities: "",
+    clientReviewFeedback: "",
+    keyResponsibilities: "",
+    challengesFaced: "",
+    projectChallenge: "",
+    solutionsImplemented: "",
+    keyAchievementsOutcomes: "",
+    technologiesUsed: [],
+    projectAttachments: [],
+    editingProjectIndex: null,
+  });
+
+  /** Load one saved project into the active Step 2 form for editing. */
+  const applyProjectToActiveForm = (
+    base: ReviewFormData,
+    index: number,
+  ): ReviewFormData => {
+    const project = (base.projects || [])[index];
+    if (!project) {
+      return clearActiveProjectDraft(base);
+    }
+    const challenge = project.challengesFaced || project.challenge || "";
+    return {
+      ...base,
+      projectName: project.projectName || "",
+      projectDescription: project.description || "",
+      projectRole: project.projectRole || "",
+      responsibilityType: project.responsibilityType || "",
+      leadershipQualities: project.leadershipQualities || "",
+      clientReviewFeedback: project.clientReviewFeedback || "",
+      keyResponsibilities: project.keyResponsibilities || "",
+      challengesFaced: challenge,
+      projectChallenge: challenge,
+      solutionsImplemented: project.solutionsImplemented || "",
+      keyAchievementsOutcomes: project.keyAchievementsOutcomes || "",
+      technologiesUsed: project.technologiesUsed ? [...project.technologiesUsed] : [],
+      projectAttachments: project.attachments ? [...project.attachments] : [],
+      editingProjectIndex: index,
+    };
+  };
+
+  /**
+   * Final-review "Edit" on a step.
+   * Step 2 special case:
+   * - 1 project → fill form for that project; list below hides it (no duplicate look)
+   * - 2+ projects → empty form; list below so user picks which to edit
+   */
+  const handleEditStepFromReview = async (step: number) => {
+    if (saving) return;
+    setErrors({});
+
+    if (step === 2) {
+      await loadFreshForm(false, 2);
+      const projects = formDataRef.current.projects || [];
+      let next = clearActiveProjectDraft(formDataRef.current);
+      if (projects.length === 1) {
+        next = applyProjectToActiveForm(next, 0);
+      }
+      formDataRef.current = next;
+      setFormData(next);
+      goToStep(2, true);
+      return;
+    }
+
+    if (step < currentStep) {
+      await loadFreshForm(true, step);
+    }
+    goToStep(step, true);
   };
 
   const activeCircleRef = useRef<HTMLDivElement | null>(null);
@@ -1466,7 +1581,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             clearError={handleClearError}
             readOnly={readOnly}
             assignment={assignment}
-            onEditStep={readOnly ? undefined : (step) => goToStep(step, true)}
+            onEditStep={readOnly ? undefined : (step) => void handleEditStepFromReview(step)}
           />
         );
       default:
@@ -1603,6 +1718,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             name={assignment.employeeName || "Employee"}
             quarter={assignment.quarter}
             financialYear={assignment.financialYear}
+            reviewerLabel={reviewerLabel}
             onClose={finishSubmitted}
           />
         ) : (
@@ -1840,7 +1956,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   Submit Quarterly Appraisal
                 </h3>
                 <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                  Are you sure you want to submit your appraisal? Once submitted, your self-assessment will be locked and sent to your manager for evaluation.
+                  Are you sure you want to submit your appraisal? Once submitted, your self-assessment will be locked and sent to your {reviewerLabel} for evaluation.
                 </p>
               </div>
             </div>

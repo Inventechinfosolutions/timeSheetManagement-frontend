@@ -42,9 +42,34 @@ import {
 import { ENVIRONMENT_SCORES } from "../../constants/appraisal.constants";
 import AppraisalMomentCard from "../common/AppraisalMomentCard";
 import { renderAnimatedEmojiIcon } from "../employee/steps/CompanyEnvironmentStep";
+import {
+  AppraisalMappingRecord,
+  fetchAppraisalMappingByEmployee,
+} from "../../reducers/appraisalMapping.reducer";
+import { useAppDispatch, useAppSelector } from "../../../hooks";
 import "./EvaluationPanel.css";
 import "./AssignQuarterlyReviewModal.css";
 import AttachmentItem from "../common/AttachmentItem";
+
+/** Employee-assigner session → assignerConfirmation; manager (or anyone else) → managerConfirmation. */
+const isAssignerConfirmationPath = (opts: {
+  sessionEmployeeId?: string | null;
+  mapping?: AppraisalMappingRecord | null;
+  recordAssignerId?: string | null;
+}): boolean => {
+  const sessionId = String(opts.sessionEmployeeId || "").trim().toUpperCase();
+  if (!sessionId) return false;
+  const mappingAssignerId = String(opts.mapping?.assignerId || "").trim().toUpperCase();
+  if (opts.mapping?.assignerType === "EMPLOYEE" && mappingAssignerId === sessionId) {
+    return true;
+  }
+  const recordAssignerId = String(opts.recordAssignerId || "").trim().toUpperCase();
+  // Mapping not loaded yet: same person as record assigner (employee dual-flow).
+  if (!opts.mapping && recordAssignerId && recordAssignerId === sessionId) {
+    return true;
+  }
+  return false;
+};
 
 export interface EvaluationData {
   scores: Record<string, number>;
@@ -88,6 +113,7 @@ export interface EvaluationPanelProps {
     reviewOutcome?: string | null;
     performanceAction?: string | null;
     managerConfirmation?: boolean | null;
+    assignerConfirmation?: boolean | null;
   };
 }
 
@@ -230,9 +256,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       managerEvaluation.areasOfImprovement?.trim() ||
       managerEvaluation.managerComment?.trim()),
   );
+  const dispatch = useAppDispatch();
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const sessionEmployeeId =
+    currentUser?.employeeId || currentUser?.loginId || currentUser?.aliasLoginName || "";
   const [activeView, setActiveView] = useState<"review" | "matrix">(initialActiveView || "review");
   const [matrixLoading, setMatrixLoading] = useState(false);
   const [loadedReviewStatus, setLoadedReviewStatus] = useState("");
+  const [appraisalMapping, setAppraisalMapping] = useState<AppraisalMappingRecord | null>(null);
+  /** Assigned quarter start/end from master quarterly (not overview step). */
   const [assignedReviewPeriod, setAssignedReviewPeriod] = useState<{ start: string; end: string }>({
     start: "",
     end: "",
@@ -252,6 +284,26 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       cancelled = true;
     };
   }, [record.quarter, record.financialYear, record.reviewPeriod]);
+
+  useEffect(() => {
+    const employeeId = String(record.id || "").trim();
+    if (!employeeId) {
+      setAppraisalMapping(null);
+      return;
+    }
+    let cancelled = false;
+    void dispatch(fetchAppraisalMappingByEmployee(employeeId))
+      .unwrap()
+      .then((mapping) => {
+        if (!cancelled) setAppraisalMapping(mapping || null);
+      })
+      .catch(() => {
+        if (!cancelled) setAppraisalMapping(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dispatch, record.id]);
 
   const scrollToTop = () => {
     if (panelTopRef.current) {
@@ -718,7 +770,21 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const [reviewId, setReviewId] = useState<number | undefined>(record.reviewId);
   const [assignedDate, setAssignedDate] = useState<string>(record.assignedOn || record.fromDate || "");
   const [deadlineDate, setDeadlineDate] = useState<string>(record.toDate || "");
-  const [assignmentDescription, setAssignmentDescription] = useState<string>(record.description || "");
+  const latestReassignDescription = (text?: string | null): string => {
+    const lines = String(text || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /^\[Re-assigned on /i.test(line));
+    if (lines.length === 0) return String(text || "");
+    // Description shows reason only — date/prefix live in the Note card.
+    return lines[lines.length - 1].replace(/^\[Re-assigned on [^\]]+\]:\s*/i, "").trim();
+  };
+  const [assignmentDescription, setAssignmentDescription] = useState<string>(() => {
+    const raw = record.description || "";
+    return Number(record.reassignCount || 0) >= 1 || /\[re-assigned/i.test(raw)
+      ? latestReassignDescription(raw)
+      : raw;
+  });
   const [savingAssignment, setSavingAssignment] = useState<boolean>(false);
   const [assignmentError, setAssignmentError] = useState<string>("");
   const datePickerWrapperRef = useRef<HTMLDivElement>(null);
@@ -734,7 +800,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const [careerGrowthRecommendation, setCareerGrowthRecommendation] = useState<string>(managerEvaluation?.careerGrowthRecommendation || "");
   const [reviewOutcome, setReviewOutcome] = useState<string>(managerEvaluation?.reviewOutcome || "");
   const [performanceAction, setPerformanceAction] = useState<string>(managerEvaluation?.performanceAction || "");
-  const [managerConfirmation, setManagerConfirmation] = useState<boolean>(Boolean(managerEvaluation?.managerConfirmation));
+  const [managerConfirmation, setManagerConfirmation] = useState<boolean>(() => {
+    const assignerPath = isAssignerConfirmationPath({
+      sessionEmployeeId,
+      recordAssignerId: record.assignerId,
+    });
+    return assignerPath
+      ? Boolean(managerEvaluation?.assignerConfirmation)
+      : Boolean(managerEvaluation?.managerConfirmation);
+  });
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const lastEvaluationResultRef = useRef<EvaluationData | null>(null);
   const evaluationFinishedRef = useRef(false);
@@ -756,6 +830,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     reviewOutcome: managerEvaluation?.reviewOutcome || "",
     performanceAction: managerEvaluation?.performanceAction || "",
     managerConfirmation: Boolean(managerEvaluation?.managerConfirmation),
+    assignerConfirmation: Boolean(managerEvaluation?.assignerConfirmation),
   });
   const [isDraftSaving, setIsDraftSaving] = useState<boolean>(false);
   const [finalScoreText, setFinalScoreText] = useState<string>(() => {
@@ -796,9 +871,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     setCareerGrowthRecommendation(rating.careerGrowthRecommendation || "");
     setReviewOutcome(rating.reviewOutcome || "");
     setPerformanceAction(rating.performanceAction || "");
-    if (rating.managerConfirmation != null) {
-      setManagerConfirmation(Boolean(rating.managerConfirmation));
-    }
+    const assignerConfirmed = Boolean(rating.assignerConfirmation);
+    const managerConfirmed = Boolean(rating.managerConfirmation);
+    const assignerPath = isAssignerConfirmationPath({
+      sessionEmployeeId,
+      mapping: appraisalMapping,
+      recordAssignerId: record.assignerId,
+    });
+    // Manager session → managerConfirmation; assigner session → assignerConfirmation.
+    setManagerConfirmation(assignerPath ? assignerConfirmed : managerConfirmed);
     savedEvaluationRef.current = {
       productivity: Number(rating.productivity) || 0,
       qualityOfWork: Number(rating.qualityOfWork) || 0,
@@ -815,7 +896,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       careerGrowthRecommendation: rating.careerGrowthRecommendation || "",
       reviewOutcome: rating.reviewOutcome || "",
       performanceAction: rating.performanceAction || "",
-      managerConfirmation: Boolean(rating.managerConfirmation),
+      managerConfirmation: managerConfirmed,
+      assignerConfirmation: assignerConfirmed,
     };
 
     setIsRatingUnlocked(true);
@@ -907,6 +989,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [submitButtonState, setSubmitButtonState] = useState<"idle" | "animating" | "assigned">("idle");
   const [confirmSubmitState, setConfirmSubmitState] = useState<"idle" | "submitting" | "success">("idle");
+  /** After assigner forward → manager final: show "forwarded" moment instead of "Finalized". */
+  const [successMomentKind, setSuccessMomentKind] = useState<"evaluated" | "forwarded">("evaluated");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const clearFieldError = (fieldKey: string) => {
@@ -1131,8 +1215,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       }
     }
 
-    // 4. Manager Comments (required)
-    if (!remarks.trim()) {
+    // 4. Manager Comments — required for manager / old flow; hidden for employee-assigner first pass
+    const statusUpper = String(loadedReviewStatus || record.reviewStatus || record.status || "").toUpperCase();
+    const hideManagerCommentForAssigner =
+      appraisalMapping?.assignerType === "EMPLOYEE" &&
+      statusUpper !== QuarterlyReviewStatus.AWAITING_MANAGER_FINAL_REVIEW &&
+      statusUpper !== QuarterlyReviewStatus.COMPLETED;
+    if (!hideManagerCommentForAssigner && !remarks.trim()) {
       newErrors.remarks = "Please fill out the Manager Comments.";
       if (!firstErrorElement) {
         firstErrorElement = document.getElementById("eval-field-remarks");
@@ -1179,7 +1268,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     setShowConfirmModal(true);
   };
 
-  const syncSavedEvaluationFromForm = () => {
+  const syncSavedEvaluationFromForm = (opts?: { assignerConfirmPath?: boolean }) => {
+    const assignerPath = Boolean(opts?.assignerConfirmPath);
     savedEvaluationRef.current = {
       productivity: Number(scores.productivity) || 0,
       qualityOfWork: Number(scores.qualityOfWork) || 0,
@@ -1196,7 +1286,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       careerGrowthRecommendation: careerGrowthRecommendation || "",
       reviewOutcome: reviewOutcome || "",
       performanceAction: performanceAction || "",
-      managerConfirmation: Boolean(managerConfirmation),
+      managerConfirmation: assignerPath
+        ? savedEvaluationRef.current.managerConfirmation
+        : Boolean(managerConfirmation),
+      assignerConfirmation: assignerPath
+        ? Boolean(managerConfirmation)
+        : savedEvaluationRef.current.assignerConfirmation,
     };
   };
 
@@ -1204,6 +1299,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const buildEvaluationPatchPayload = (options: {
     isDraft: boolean;
     forceManagerConfirmation?: boolean;
+    /** Employee-assigner first pass → write assignerConfirmation instead of managerConfirmation */
+    assignerConfirmPath?: boolean;
   }) => {
     const saved = savedEvaluationRef.current;
     const payload: {
@@ -1226,6 +1323,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       reviewOutcome?: string;
       performanceAction?: string;
       managerConfirmation?: boolean;
+      assignerConfirmation?: boolean;
       finalRating?: number;
       isDraft: boolean;
     } = { isDraft: options.isDraft };
@@ -1278,8 +1376,17 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       payload.finalRating = averageScore || undefined;
     }
 
+    const assignerPath = Boolean(options.assignerConfirmPath);
     if (options.forceManagerConfirmation) {
-      if (!saved.managerConfirmation) payload.managerConfirmation = true;
+      if (assignerPath) {
+        if (!saved.assignerConfirmation) payload.assignerConfirmation = true;
+      } else if (!saved.managerConfirmation) {
+        payload.managerConfirmation = true;
+      }
+    } else if (assignerPath) {
+      if (managerConfirmation !== saved.assignerConfirmation) {
+        payload.assignerConfirmation = managerConfirmation;
+      }
     } else if (managerConfirmation !== saved.managerConfirmation) {
       payload.managerConfirmation = managerConfirmation;
     }
@@ -1306,29 +1413,51 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     };
     lastEvaluationResultRef.current = evaluationResult;
 
+    const statusBefore = String(
+      loadedReviewStatus || record.reviewStatus || record.status || "",
+    ).toUpperCase();
+    const assignerConfirmPath = isAssignerConfirmationPath({
+      sessionEmployeeId,
+      mapping: appraisalMapping,
+      recordAssignerId: record.assignerId,
+    });
+    // Success card "forwarded" only when employee-assigner submits before manager final.
+    const isAssignerForwardSubmit =
+      assignerConfirmPath &&
+      statusBefore !== QuarterlyReviewStatus.AWAITING_MANAGER_FINAL_REVIEW &&
+      statusBefore !== QuarterlyReviewStatus.COMPLETED;
+
     const patchPayload = buildEvaluationPatchPayload({
       isDraft: false,
       forceManagerConfirmation: true,
+      assignerConfirmPath,
     });
     const changedKeys = Object.keys(patchPayload).filter((key) => key !== "isDraft");
     // Completed edits: only PATCH when something actually changed.
-    // First finalize: allow { isDraft: false, managerConfirmation: true } alone.
+    // First finalize: allow confirmation flag alone.
     if (isRecordCompleted && changedKeys.length === 0) {
       message.info("No changes to update.");
       setShowConfirmModal(false);
       return;
     }
     if (!isRecordCompleted) {
-      patchPayload.managerConfirmation = true;
+      if (assignerConfirmPath) {
+        delete patchPayload.managerConfirmation;
+        patchPayload.assignerConfirmation = true;
+      } else {
+        delete patchPayload.assignerConfirmation;
+        patchPayload.managerConfirmation = true;
+      }
     }
 
     evaluationFinishedRef.current = false;
     setIsSubmitting(true);
     setConfirmSubmitState("submitting");
+    setSuccessMomentKind(isAssignerForwardSubmit ? "forwarded" : "evaluated");
 
     void AppraisalApi.evaluateReview(reviewId, patchPayload)
       .then(() => {
-        syncSavedEvaluationFromForm();
+        syncSavedEvaluationFromForm({ assignerConfirmPath });
         setConfirmSubmitState("success");
         setSubmitButtonState("assigned");
         setIsSubmitting(false);
@@ -1347,7 +1476,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       message.error("This review cannot be saved.");
       return;
     }
-    const patchPayload = buildEvaluationPatchPayload({ isDraft: true });
+    const assignerConfirmPath = isAssignerConfirmationPath({
+      sessionEmployeeId,
+      mapping: appraisalMapping,
+      recordAssignerId: record.assignerId,
+    });
+    const patchPayload = buildEvaluationPatchPayload({
+      isDraft: true,
+      assignerConfirmPath,
+    });
     const changedKeys = Object.keys(patchPayload).filter((key) => key !== "isDraft");
     if (changedKeys.length === 0) {
       message.info("No changes to save.");
@@ -1356,7 +1493,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     setIsDraftSaving(true);
     void AppraisalApi.evaluateReview(reviewId, patchPayload)
       .then(() => {
-        syncSavedEvaluationFromForm();
+        syncSavedEvaluationFromForm({ assignerConfirmPath });
         message.success("Saved successfully");
       })
       .catch((error) => {
@@ -1384,6 +1521,24 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       ).toFixed(1)
       : null;
 
+  const effectiveReviewStatus = String(
+    loadedReviewStatus || record.reviewStatus || record.status || "",
+  ).toUpperCase();
+  const isAwaitingManagerFinal =
+    effectiveReviewStatus === QuarterlyReviewStatus.AWAITING_MANAGER_FINAL_REVIEW;
+  const hideManagerCommentForAssigner =
+    appraisalMapping?.assignerType === "EMPLOYEE" &&
+    !isAwaitingManagerFinal &&
+    effectiveReviewStatus !== QuarterlyReviewStatus.COMPLETED;
+  /** Assigner first-pass confirm modal: Forward Evaluation (not Finalize). */
+  const isAssignerForwardModal =
+    isAssignerConfirmationPath({
+      sessionEmployeeId,
+      mapping: appraisalMapping,
+      recordAssignerId: record.assignerId,
+    }) &&
+    !isAwaitingManagerFinal &&
+    effectiveReviewStatus !== QuarterlyReviewStatus.COMPLETED;
   const isRecordCompleted =
     String(record.reviewStatus || "").toUpperCase() === "COMPLETED" ||
     String(record.performanceStatus || "").toUpperCase() === "COMPLETED" ||
@@ -1431,7 +1586,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
   useEffect(() => {
     setReviewId(record.reviewId);
-    setAssignmentDescription(record.description || "");
+    {
+      const raw = record.description || "";
+      setAssignmentDescription(
+        Number(record.reassignCount || 0) >= 1 || /\[re-assigned/i.test(raw)
+          ? latestReassignDescription(raw)
+          : raw,
+      );
+    }
     if (grantAccess) {
       setAssignedDate(todayDisplayDate());
       setDeadlineDate("");
@@ -1451,7 +1613,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           return;
         }
         setReviewId(match.id);
-        setAssignmentDescription(match.description || "");
+        {
+          const raw = match.description || "";
+          const reassigned =
+            Number(match.reassignCount || record.reassignCount || 0) >= 1 ||
+            /\[re-assigned/i.test(raw);
+          setAssignmentDescription(reassigned ? latestReassignDescription(raw) : raw);
+        }
         setAssignedDate(formatAppraisalDisplayDate(match.assignedDate));
         setDeadlineDate(formatAppraisalDisplayDate(match.deadlineDate));
       })
@@ -1479,17 +1647,25 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           setSavingAssignment(false);
           return;
         }
+        const grantReason = assignmentDescription.trim();
         await AppraisalApi.reassignReview({
           reviewId,
           deadlineDate: deadlineIso,
           reassignedDate: todayIso,
+          reason: grantReason || undefined,
         });
         setAssignedDate(todayDisplay);
+        // Keep UI in sync with DB reassign-description format.
+        if (grantReason) {
+          setAssignmentDescription(grantReason);
+        }
         onAssignmentSaved?.({
           reviewId,
           assignedDate: todayDisplay,
           deadline: deadlineDate,
-          description: assignmentDescription.trim(),
+          description: grantReason
+            ? `[Re-assigned on ${todayIso}]: ${grantReason}`
+            : assignmentDescription.trim(),
         });
         message.success("Access granted with the new deadline");
         return;
@@ -1769,11 +1945,43 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </span>
                 <textarea
                   rows={3}
-                  readOnly={isViewMode || employeeSubmitted || grantAccess}
+                  readOnly={(isViewMode || employeeSubmitted) && !grantAccess}
                   value={assignmentDescription}
                   onChange={(event) => setAssignmentDescription(event.target.value)}
-                  className={`eval-textarea-field w-full font-normal ${isViewMode || employeeSubmitted || grantAccess ? "eval-textarea-readonly !cursor-not-allowed" : "!cursor-text cursor-text"}`}
+                  className={`eval-textarea-field w-full font-normal ${(isViewMode || employeeSubmitted) && !grantAccess ? "eval-textarea-readonly !cursor-not-allowed" : "!cursor-text cursor-text"}`}
+                  placeholder={grantAccess ? "Enter reassignment description..." : undefined}
                 />
+                {(Number(record.reassignCount || 0) >= 1 ||
+                  /\[re-assigned/i.test(record.description || "")) &&
+                  !grantAccess && (
+                  <div className="mt-2.5 rounded-xl border border-sky-200 bg-gradient-to-r from-sky-50 via-white to-sky-50 px-3.5 py-3 shadow-xs">
+                    <p className="text-xs font-medium text-sky-800/90 leading-relaxed">
+                      <span className="font-bold text-sky-950">Note:</span>{" "}
+                      The deadline has passed and the employee did not submit the appraisal, so it has been
+                      reassigned by{" "}
+                      <span className="font-bold text-sky-950">
+                        {appraisalMapping?.assignerName?.trim() ||
+                          record.assignedBy?.trim() ||
+                          "the assigner"}
+                      </span>
+                      {" "}on date:{" "}
+                      <span className="font-bold text-sky-950">
+                        {(() => {
+                          const match = /\[Re-assigned on ([^\]]+)\]/i.exec(
+                            record.description || "",
+                          );
+                          const raw = (match?.[1] || assignedDate || record.assignedOn || "").trim();
+                          if (!raw) return "—";
+                          // Normalize YYYY-MM-DD → DD-MM-YYYY when needed
+                          const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+                          if (iso) return `${iso[3]}-${iso[2]}-${iso[1]}`;
+                          return raw;
+                        })()}
+                      </span>
+                      .
+                    </p>
+                  </div>
+                )}
               </div>
               {((!isViewMode && !employeeSubmitted) || grantAccess) && (
                 <div className="flex items-center justify-end gap-3">
@@ -2729,7 +2937,6 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 space-y-0">
                         <KvRow label="Key Strengths" value={strengths} />
                         <KvRow label="Areas of Improvement" value={improvements} />
-                        <KvRow label="Manager Comments" value={remarks} />
                       </div>
                     ) : (
                       <>
@@ -2786,38 +2993,16 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             </div>
                           )}
                         </div>
-
-                        <div className="eval-reveal-card" id="eval-field-container-remarks">
-                          <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between eval-stagger-item eval-stagger-1">
-                            <span>
-                              Manager Comments <span className="text-red-500">*</span>
-                            </span>
-                            <span className="text-[10px] font-semibold text-[#334155] normal-case tracking-normal">
-                              Guidance &amp; Notes
-                            </span>
-                          </label>
-                          <textarea
-                            id="eval-field-remarks"
-                            rows={2}
-                            value={remarks}
-                            onChange={(e) => {
-                              setRemarks(e.target.value);
-                              clearFieldError("remarks");
-                            }}
-                            className={`eval-textarea-field eval-stagger-item eval-stagger-2 font-normal text-sm text-[#0F172A] ${fieldErrors.remarks ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""}`}
-                          />
-                          {fieldErrors.remarks && (
-                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600 animate-in fade-in slide-in-from-top-1">
-                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                              <span>{fieldErrors.remarks}</span>
-                            </div>
-                          )}
-                        </div>
                       </>
                     )}
 
                     {/* ========== FINAL REVIEW & SUBMISSION SECTION ========== */}
                     <div className="eval-glass-card eval-reveal-card space-y-4 mt-2 p-4 sm:p-5">
+                      {isAwaitingManagerFinal && (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                          Awaiting manager final comment. Manager can update ratings if needed, then add the final comment and complete.
+                        </div>
+                      )}
                       {/* Section Header */}
                       <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
                         <h3 className="text-xs sm:text-sm font-bold text-[#0F172A]">Final Review &amp; Submission</h3>
@@ -2842,6 +3027,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           />
                           <KvRow label="Review Outcome" value={reviewOutcome} />
                           <KvRow label="Performance Action" value={performanceAction} />
+                          <KvRow label="Manager Comments" value={remarks} />
                         </div>
                       ) : (
                         <>
@@ -2957,6 +3143,38 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           }`}
                         />
                       </div>
+
+                      {/* Manager Comments — below Performance Action, above confirm */}
+                      {!hideManagerCommentForAssigner && (
+                        <div id="eval-field-container-remarks">
+                          <label className="block text-xs font-semibold text-[#0F172A] mb-1.5 flex items-center justify-between">
+                            <span>
+                              Manager Comments <span className="text-red-500">*</span>
+                            </span>
+                            <span className="text-[10px] font-semibold text-[#334155] normal-case tracking-normal">
+                              {isAwaitingManagerFinal
+                                ? "Manager final comment"
+                                : "Guidance & Notes"}
+                            </span>
+                          </label>
+                          <textarea
+                            id="eval-field-remarks"
+                            rows={2}
+                            value={remarks}
+                            onChange={(e) => {
+                              setRemarks(e.target.value);
+                              clearFieldError("remarks");
+                            }}
+                            className={`eval-textarea-field font-normal text-sm text-[#0F172A] ${fieldErrors.remarks ? "eval-input-error !border-red-500 !ring-2 !ring-red-100" : ""}`}
+                          />
+                          {fieldErrors.remarks && (
+                            <div className="eval-field-error-msg flex items-center gap-1.5 mt-1.5 text-xs font-semibold text-red-600">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                              <span>{fieldErrors.remarks}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                         </>
                       )}
 
@@ -3094,7 +3312,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
       {showConfirmModal && confirmSubmitState === "success" && (
         <AppraisalMomentCard
-          kind="evaluated"
+          kind={successMomentKind}
           name={record.name || "Employee"}
           quarter={formatQuarterDisplay(record.quarter)}
           financialYear={record.financialYear}
@@ -3142,16 +3360,34 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 {confirmSubmitState === "success"
                   ? isRecordCompleted
                     ? "Review Updated!"
-                    : "Review Submitted!"
+                    : isAssignerForwardModal
+                      ? "Evaluation Forwarded!"
+                      : "Review Submitted!"
                   : isRecordCompleted
                     ? "Update Final Review?"
-                    : "Submit Final Review?"}
+                    : isAssignerForwardModal
+                      ? "Forward Evaluation?"
+                      : "Submit Final Review?"}
               </h3>
               <p className="text-xs text-[#334155] max-w-xs mx-auto leading-relaxed">
                 {confirmSubmitState === "success" ? (
                   <span>
-                    The appraisal has been{" "}
-                    <span className="font-bold text-[#10B981]">successfully finalized and shared</span> with the employee.
+                    {isAssignerForwardModal ? (
+                      <>
+                        The evaluation has been{" "}
+                        <span className="font-bold text-[#10B981]">forwarded to the manager</span> for final review.
+                      </>
+                    ) : (
+                      <>
+                        The appraisal has been{" "}
+                        <span className="font-bold text-[#10B981]">successfully finalized and shared</span> with the employee.
+                      </>
+                    )}
+                  </span>
+                ) : isAssignerForwardModal ? (
+                  <span>
+                    Once submitted, the evaluation will be{" "}
+                    <span className="font-bold text-[#2B3674]">finalized and shared with the manager</span>. This action cannot be undone.
                   </span>
                 ) : (
                   <span>
@@ -3214,10 +3450,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   {confirmSubmitState === "success"
                     ? isRecordCompleted
                       ? "Review Updated!"
-                      : "Review Submitted!"
+                      : isAssignerForwardModal
+                        ? "Forwarded!"
+                        : "Review Submitted!"
                     : isRecordCompleted
                       ? "Yes, Update Review"
-                      : "Yes, Submit Review"}
+                      : isAssignerForwardModal
+                        ? "Yes, Forward Evaluation"
+                        : "Yes, Submit Review"}
                 </span>
               </button>
             </div>

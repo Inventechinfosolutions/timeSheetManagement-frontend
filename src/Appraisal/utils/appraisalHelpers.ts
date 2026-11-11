@@ -114,7 +114,10 @@ export const getQuarterPeriod = (
   return { start: "", end: "" };
 };
 
-/** Assigned quarter start/end from master quarterly (not overview-step fields). */
+/**
+ * Review Period for an assigned appraisal = master quarter start→end for that FY
+ * (not employee overview step fields).
+ */
 export async function resolveAssignedQuarterPeriod(opts: {
   quarter?: string;
   financialYear?: string;
@@ -753,6 +756,8 @@ export const toManagerReviewRecord = (
     "assignerId" in review ? review.assignerId : null,
     "managerName" in review ? review.managerName : null,
   ),
+  assignerId: "assignerId" in review ? review.assignerId || undefined : undefined,
+  managerId: "managerId" in review ? review.managerId || undefined : undefined,
   finalRating:
     review.finalRating == null
       ? ""
@@ -796,6 +801,7 @@ export const toManagerReviewRecord = (
     reviewOutcome: review.reviewOutcome,
     performanceAction: review.performanceAction,
     managerConfirmation: review.managerConfirmation,
+    assignerConfirmation: review.assignerConfirmation,
   },
 });
 

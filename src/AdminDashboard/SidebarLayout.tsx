@@ -114,6 +114,7 @@ const SidebarLayout = ({
       { name: "Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
       { name: "Manager Mapping", icon: Users },
+      { name: "Appraisal Mapping", icon: ClipboardCheck },
       { name: "Notification", icon: Bell },
     ],
     [],

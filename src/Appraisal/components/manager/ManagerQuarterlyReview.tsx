@@ -477,8 +477,13 @@ export const ManagerQuarterlyReview: React.FC = () => {
     { value: QuarterlyReviewStatus.SUBMITTED, label: "Submitted" },
     { value: QuarterlyReviewStatus.REQUESTED_FOR_EDIT, label: "Requested for edit" },
     { value: QuarterlyReviewStatus.ASSIGNED, label: "Assigned" },
+    { value: QuarterlyReviewStatus.REASSIGNED, label: "Re-Assigned" },
     { value: QuarterlyReviewStatus.PERFORMANCE_RECEIVED, label: "Performance Received" },
     { value: QuarterlyReviewStatus.EVALUATION_IN_PROGRESS, label: "Evaluation In Progress" },
+    {
+      value: QuarterlyReviewStatus.AWAITING_MANAGER_FINAL_REVIEW,
+      label: "Awaiting Manager Final Comment",
+    },
     { value: QuarterlyReviewStatus.COMPLETED, label: "Completed" },
   ];
 
@@ -564,7 +569,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
               <span className="manager-review-title-anim">
-                {isAdmin ? "Appraisal Reviews" : "Manager Quarterly Review"}
+                {isAdmin ? "Appraisal Reviews" : "Quarterly Review"}
               </span>
             </h1>
           </div>

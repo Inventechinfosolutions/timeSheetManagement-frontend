@@ -55,6 +55,8 @@ import Requests from "./AdminDashboard/Requests";
 import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashboard";
 import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
 import ManagerMapping from "./ManagerMapping/ManagerMapping";
+import AppraisalMappingPage from "./Appraisal/components/AppraisalMappingPage";
+import AppraisalAssignerEmployeesView from "./Appraisal/components/AppraisalAssignerEmployeesView";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
 import MonthlyAttendanceMatrix from "./AdminDashboard/MonthlyAttendanceMatrix";
 import NotesManagement from "./Notes/NotesManagement";
@@ -84,8 +86,9 @@ const EmployeeTabWrapper = () => {
     case "leave-balance":
       return <LeaveBalance />;
     case "appraisal":
-    case "quarterly-review":
       return <EmployeeAppraisalPage />;
+    case "quarterly-review":
+      return <ManagerQuarterlyReviewPage />;
     case "notes":
     case "employee-notes":
       return <NotesManagement />;
@@ -147,6 +150,10 @@ const AdminTabWrapper = () => {
       return <InboxManagement />;
     case "manager-mapping":
       return <ManagerMapping />;
+    case "appraisal-mapping":
+      return <AppraisalMappingPage />;
+    case "appraisal-assigner-employees":
+      return <AppraisalAssignerEmployeesView />;
     case "manager-employees":
       return <ManagerEmployeesView />;
     case "my-dashboard":
@@ -382,6 +389,10 @@ function AppContent() {
                     path="manager-employees/:managerId"
                     element={<ManagerEmployeesView />}
                   />
+                  <Route
+                    path="appraisal-assigner-employees/:assignerId"
+                    element={<AppraisalAssignerEmployeesView />}
+                  />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>
 
@@ -427,6 +438,10 @@ function AppContent() {
                   <Route
                     path="manager-employees/:managerId"
                     element={<ManagerEmployeesView />}
+                  />
+                  <Route
+                    path="appraisal-assigner-employees/:assignerId"
+                    element={<AppraisalAssignerEmployeesView />}
                   />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>

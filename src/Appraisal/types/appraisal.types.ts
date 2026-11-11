@@ -23,6 +23,7 @@ export interface AssignQuarterlyReviewModalProps {
   onBack?: () => void;
   assignmentType?: AssignmentType | null;
   selectedDepartment?: string;
+  /** Admin/CEO/GM: department list-select. Manager/Employee: appraisal_mapping. */
   isAdmin?: boolean;
   managersOnly?: boolean;
   onAssign?: (data: {
@@ -78,6 +79,7 @@ export interface YearlyQuarterReviewSnapshot {
   reviewOutcome?: string | null;
   performanceAction?: string | null;
   managerConfirmation?: boolean;
+  assignerConfirmation?: boolean;
   description?: string | null;
   performanceId?: number | null;
   performance?: YearlyQuarterPerformanceSnapshot | null;
@@ -104,6 +106,7 @@ export interface ManagerQuarterlyReviewRecord {
   deadline?: string;
   assignedOn: string;
   assignedBy: string;
+  assignerId?: string;
   managerId?: string;
   finalRating: string;
   status: string;
@@ -141,6 +144,7 @@ export interface ManagerQuarterlyReviewRecord {
     reviewOutcome?: string | null;
     performanceAction?: string | null;
     managerConfirmation?: boolean | null;
+    assignerConfirmation?: boolean | null;
   };
 }
 
@@ -388,6 +392,7 @@ export interface RevealedRating {
   reviewOutcome?: string | null;
   performanceAction?: string | null;
   managerConfirmation?: boolean | null;
+  assignerConfirmation?: boolean | null;
   passwordVerified: boolean;
   status?: string;
 }
@@ -480,6 +485,7 @@ export interface ManagerReviewApiRecord {
   reviewOutcome?: string | null;
   performanceAction?: string | null;
   managerConfirmation?: boolean | null;
+  assignerConfirmation?: boolean | null;
   canRequestEdit?: boolean;
   remainingRequestHours?: number;
   canEdit?: boolean;
@@ -654,6 +660,7 @@ export interface EmployeeReviewDetail {
   reviewOutcome?: string | null;
   performanceAction?: string | null;
   managerConfirmation?: boolean | null;
+  assignerConfirmation?: boolean | null;
   performanceDetails?: EmployeePerformanceDetail | null;
 }
 

@@ -24,9 +24,10 @@ const EmployeeLayout = () => {
         return "Request Management";
       case "leave-balance":
         return "Leave Balance";
-      case "quarterly-review":
       case "appraisal":
         return "Appraisal";
+      case "quarterly-review":
+        return "Quarterly Review";
       case "notes":
       case "employee-notes":
         return "Employee Notes";
@@ -46,8 +47,11 @@ const EmployeeLayout = () => {
         navigate("/employee-dashboard/timesheet-view");
         break;
       case "Appraisal":
-      case "Quarterly Review":
+      case "My Appraisal":
         navigate("/employee-dashboard/appraisal");
+        break;
+      case "Quarterly Review":
+        navigate("/employee-dashboard/quarterly-review", { replace: false });
         break;
       case "Account Settings":
         navigate("/employee-dashboard/my-profile");

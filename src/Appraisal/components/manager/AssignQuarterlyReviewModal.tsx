@@ -84,6 +84,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   const teamApplied = useRef(false);
   const yearsLoaded = useRef(false);
   const periodTouched = useRef(false);
+  const closedNoticeRef = useRef(false);
   const [assignError, setAssignError] = useState<string>("");
   const [errorField, setErrorField] = useState<AssignFormField | null>(null);
   const [submitSummary, setSubmitSummary] = useState<AssignSubmitSummary | null>(null);
@@ -104,6 +105,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       setSelectedEmployees([]);
       setTeamMembers([]);
       teamApplied.current = false;
+      closedNoticeRef.current = false;
       setSubmitSummary(null);
       setAssignmentNoticeCount(0);
       setSelectedFinancialYear("");
@@ -185,24 +187,62 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       setEmployeesLoading(false);
       return;
     }
+
+    // Employee / Team Lead assigner: appraisal_mapping only.
+    // Manager: merge manager_mapping + appraisal_mapping (dedupe). Dual eval flow stays on backend.
+    const userType = String(currentUser?.userType || "")
+      .toUpperCase()
+      .replace(/\s+/g, " ");
+    const isEmployeeAssignerRole =
+      userType === "EMPLOYEE" || userType === "TEAM LEAD";
+
     setEmployeesLoading(true);
-    void AppraisalApi.getMappedEmployees(managerId, search)
-      .then((employees) => {
-        setMappedEmployees(employees);
-        if (search?.trim()) return;
-        setTeamMembers(employees);
-        if (
-          assignmentType === AssignmentKind.ALL &&
-          employees.length > 0 &&
-          !teamApplied.current
-        ) {
-          teamApplied.current = true;
-          setSelectedEmployees(employees.map((employee) => employee.employeeId));
+    const applyEmployees = (employees: MappedEmployee[]) => {
+      setMappedEmployees(employees);
+      if (search?.trim()) return;
+      setTeamMembers(employees);
+      if (
+        assignmentType === AssignmentKind.ALL &&
+        employees.length > 0 &&
+        !teamApplied.current
+      ) {
+        teamApplied.current = true;
+        setSelectedEmployees(employees.map((employee) => employee.employeeId));
+      }
+    };
+
+    if (isEmployeeAssignerRole) {
+      void AppraisalApi.getAppraisalMappedEmployees(managerId, search)
+        .then(applyEmployees)
+        .catch(() => setMappedEmployees([]))
+        .finally(() => setEmployeesLoading(false));
+      return;
+    }
+
+    void Promise.all([
+      AppraisalApi.getMappedEmployees(managerId, search).catch(() => [] as MappedEmployee[]),
+      AppraisalApi.getAppraisalMappedEmployees(managerId, search).catch(
+        () => [] as MappedEmployee[],
+      ),
+    ])
+      .then(([fromManagerMapping, fromAppraisalMapping]) => {
+        const byId = new Map<string, MappedEmployee>();
+        for (const emp of [...fromManagerMapping, ...fromAppraisalMapping]) {
+          if (!emp?.employeeId || byId.has(emp.employeeId)) continue;
+          byId.set(emp.employeeId, emp);
         }
+        applyEmployees(Array.from(byId.values()));
       })
       .catch(() => setMappedEmployees([]))
       .finally(() => setEmployeesLoading(false));
-  }, [managerId, assignmentType, isAdmin, selectedDepartment, managersOnly]);
+  }, [
+    managerId,
+    assignmentType,
+    isAdmin,
+    selectedDepartment,
+    managersOnly,
+    currentUser?.userType,
+  ]);
 
   const loadFinancialYears = () => {
     if (yearsLoaded.current) return;
@@ -410,7 +450,12 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       currentUser?.loginId ||
       currentUser?.aliasLoginName ||
       "MANAGER";
-    const assignedBy = isAdmin ? "ADMIN" : "MANAGER";
+    const userType = String(currentUser?.userType || "").toUpperCase();
+    const assignedBy = isAdmin
+      ? "ADMIN"
+      : userType === "EMPLOYEE" || userType === "TEAM LEAD"
+        ? "EMPLOYEE"
+        : "MANAGER";
     if ((!isYearly && !quarter) || !assignerId) return;
 
     setAssignError("");
@@ -445,8 +490,6 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
         setAssignError(readApiError(error));
       });
   };
-
-  const closedNoticeRef = useRef(false);
 
   const closeAssignmentNotice = () => {
     if (closedNoticeRef.current) return;
