@@ -120,7 +120,9 @@ const LeaveManagement = () => {
     currentUser?.userType === UserType.MANAGER ||
     (currentUser?.role &&
       currentUser.role.toUpperCase() === UserType.MANAGER);
-  const isPrivileged = isAdmin || isManager;
+  const ownEmployeeId = currentUser?.employeeId || currentUser?.loginId;
+  const isPrivileged =
+    isAdmin || (isManager && !!employeeId && employeeId !== ownEmployeeId);
 
   const isCancellationAllowed = (toDate: string, status?: string) => {
     if (isPrivileged) return true;

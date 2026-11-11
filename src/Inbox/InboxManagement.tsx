@@ -5,8 +5,10 @@ import {
   markInboxAsRead,
   toggleInboxStar,
   deleteInboxItem,
+  fetchInboxCounts,
   InboxItem,
 } from '../reducers/inbox.reducer';
+import Pagination from '../components/ui/Pagination';
 import {
   Mail,
   MailOpen,
@@ -43,36 +45,55 @@ const canEditNote = (permission?: string): boolean => {
 
 export const InboxManagement: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { items, counts, loading } = useAppSelector((state) => state.inbox);
+  const { items, counts, loading, total } = useAppSelector((state) => state.inbox);
   const [folder, setFolder] = useState<InboxFolder>(InboxFolder.INBOX);
   const [activeTab, setActiveTab] = useState<InboxTab>(InboxTab.ALL);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const pageSize = 5;
   /** Immediate text — drives client-side list filter (same as employee Notes). */
   const [searchInput, setSearchInput] = useState('');
   /** Debounced text — used for API fetch (same as employee Notes). */
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedInboxItem, setSelectedInboxItem] = useState<InboxItem | null>(null);
 
+  // Load unified counts on mount
+  useEffect(() => {
+    dispatch(fetchInboxCounts());
+  }, [dispatch]);
+
   const folderCounts = useMemo(() => {
-    const unread = items.filter((i) => !i.isRead).length;
-    const read = items.filter((i) => i.isRead).length;
-    const total = items.length;
     return {
-      inbox: folder === InboxFolder.INBOX ? total : (counts?.inbox ?? total),
-      unread: folder === InboxFolder.INBOX ? unread : (counts?.unread ?? unread),
-      read: folder === InboxFolder.INBOX ? read : (counts?.read ?? read),
-      sent: folder === InboxFolder.SENT ? total : (counts?.sent ?? 0),
+      inbox: counts?.inbox ?? (folder === InboxFolder.INBOX ? (total || items.length) : 0),
+      unread: counts?.unread ?? 0,
+      read: counts?.read ?? 0,
+      sent: counts?.sent ?? (folder === InboxFolder.SENT ? (total || items.length) : 0),
     };
-  }, [items, folder, counts]);
+  }, [counts, folder, total, items.length]);
   const notesMgr = useNotesManagement({ loadList: false });
 
   useEffect(() => {
+    const isSent = folder === InboxFolder.SENT;
+    const isReadParam = !isSent
+      ? activeTab === InboxTab.UNREAD
+        ? false
+        : activeTab === InboxTab.READ
+        ? true
+        : undefined
+      : undefined;
+
+    const isStarredParam = !isSent && activeTab === InboxTab.STARRED ? true : undefined;
+
     dispatch(
       fetchInbox({
         folder,
+        page: currentPage,
+        limit: pageSize,
         search: debouncedSearch.trim() || undefined,
+        isRead: isReadParam,
+        isStarred: isStarredParam,
       })
     );
-  }, [dispatch, folder, debouncedSearch]);
+  }, [dispatch, folder, activeTab, currentPage, debouncedSearch]);
 
   // Notify layout when user is inside the Note Workspace (create, edit, view) vs List mode in Inbox
   useEffect(() => {
@@ -109,6 +130,7 @@ export const InboxManagement: React.FC = () => {
         .unwrap()
         .then(() => {
           message.success('Marked as read');
+          dispatch(fetchInboxCounts());
         })
         .catch(() => {
           // ignore
@@ -124,6 +146,10 @@ export const InboxManagement: React.FC = () => {
       .unwrap()
       .then(() => {
         message.success(folder === InboxFolder.SENT ? 'Message removed from sent' : 'Message removed from inbox');
+        dispatch(fetchInboxCounts());
+        if (items.length <= 1 && currentPage > 1) {
+          setCurrentPage((prev) => prev - 1);
+        }
         if (selectedInboxItem?.inboxId === inboxId) {
           notesMgr.handleBackToList();
           setSelectedInboxItem(null);
@@ -150,7 +176,8 @@ export const InboxManagement: React.FC = () => {
       try {
         const note = await dispatch(fetchNoteById(item.notesId)).unwrap();
         if (note) {
-          await notesMgr.handleStartView(noteForInboxAccess(item, note));
+          const processedNote = noteForInboxAccess(item, note);
+          await notesMgr.handleStartView(processedNote, processedNote);
           return;
         }
       } catch (err) {
@@ -158,7 +185,8 @@ export const InboxManagement: React.FC = () => {
       }
     }
     if (item.note) {
-      await notesMgr.handleStartView(noteForInboxAccess(item, item.note as Note));
+      const processedNote = noteForInboxAccess(item, item.note as Note);
+      await notesMgr.handleStartView(processedNote, processedNote);
     } else {
       message.error('Failed to load note details');
     }
@@ -174,7 +202,8 @@ export const InboxManagement: React.FC = () => {
       try {
         const note = await dispatch(fetchNoteById(item.notesId)).unwrap();
         if (note) {
-          await notesMgr.handleStartEdit(noteForInboxAccess(item, note));
+          const processedNote = noteForInboxAccess(item, note);
+          await notesMgr.handleStartEdit(processedNote, processedNote);
           return;
         }
       } catch (err) {
@@ -182,7 +211,8 @@ export const InboxManagement: React.FC = () => {
       }
     }
     if (item.note) {
-      await notesMgr.handleStartEdit(noteForInboxAccess(item, item.note as Note));
+      const processedNote = noteForInboxAccess(item, item.note as Note);
+      await notesMgr.handleStartEdit(processedNote, processedNote);
     } else {
       message.error('Failed to load note details for editing');
     }
@@ -296,6 +326,8 @@ export const InboxManagement: React.FC = () => {
             dispatch(
               fetchInbox({
                 folder,
+                page: currentPage,
+                limit: pageSize,
                 search: debouncedSearch.trim() || undefined,
               })
             );
@@ -335,7 +367,10 @@ export const InboxManagement: React.FC = () => {
           activeNote={notesMgr.activeNote}
           excelWorkbook={notesMgr.formData.excelWorkbook}
           canEdit={canEditNote(selectedInboxItem?.permission)}
-          onStartEdit={notesMgr.handleStartEdit}
+          onStartEdit={(n) => {
+            const target = notesMgr.activeNote || n;
+            notesMgr.handleStartEdit(target, target);
+          }}
           onBack={() => {
             notesMgr.handleBackToList();
             setSelectedInboxItem(null);
@@ -403,6 +438,7 @@ export const InboxManagement: React.FC = () => {
             onClick={() => {
               setFolder(InboxFolder.INBOX);
               setActiveTab(InboxTab.ALL);
+              setCurrentPage(1);
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               folder === InboxFolder.INBOX
@@ -424,6 +460,7 @@ export const InboxManagement: React.FC = () => {
             onClick={() => {
               setFolder(InboxFolder.SENT);
               setActiveTab(InboxTab.ALL);
+              setCurrentPage(1);
             }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               folder === InboxFolder.SENT
@@ -450,7 +487,10 @@ export const InboxManagement: React.FC = () => {
           /* Tab Pills (Inbox only) */
           <div className="flex items-center gap-1.5 w-full sm:w-auto bg-slate-100/80 p-1 rounded-xl">
             <button
-              onClick={() => setActiveTab(InboxTab.ALL)}
+              onClick={() => {
+                setActiveTab(InboxTab.ALL);
+                setCurrentPage(1);
+              }}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                 activeTab === InboxTab.ALL
                   ? 'bg-white text-[#4318FF] shadow-xs'
@@ -464,7 +504,10 @@ export const InboxManagement: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab(InboxTab.UNREAD)}
+              onClick={() => {
+                setActiveTab(InboxTab.UNREAD);
+                setCurrentPage(1);
+              }}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                 activeTab === InboxTab.UNREAD
                   ? 'bg-white text-[#4318FF] shadow-xs'
@@ -484,7 +527,10 @@ export const InboxManagement: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab(InboxTab.READ)}
+              onClick={() => {
+                setActiveTab(InboxTab.READ);
+                setCurrentPage(1);
+              }}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                 activeTab === InboxTab.READ
                   ? 'bg-white text-[#4318FF] shadow-xs'
@@ -500,7 +546,10 @@ export const InboxManagement: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab(InboxTab.STARRED)}
+              onClick={() => {
+                setActiveTab(InboxTab.STARRED);
+                setCurrentPage(1);
+              }}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                 activeTab === InboxTab.STARRED
                   ? 'bg-white text-[#4318FF] shadow-xs'
@@ -541,12 +590,13 @@ export const InboxManagement: React.FC = () => {
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
           onDebounce={(val) => {
-            const trimmed = val.trim();
-            setDebouncedSearch((prev) => (prev !== trimmed ? trimmed : prev));
+            setDebouncedSearch(val);
+            setCurrentPage(1);
           }}
           onClear={() => {
             setSearchInput('');
             setDebouncedSearch('');
+            setCurrentPage(1);
           }}
           inputSize="lg"
           containerClassName="w-full sm:max-w-md"
@@ -554,7 +604,12 @@ export const InboxManagement: React.FC = () => {
       </div>
 
       {/* Inbox Items List */}
-      {filteredItems.length === 0 ? (
+      {loading && items.length === 0 ? (
+        <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-slate-100 min-h-[350px] text-center">
+          <div className="w-10 h-10 border-4 border-indigo-200 border-t-[#4318FF] rounded-full animate-spin mb-3" />
+          <p className="text-xs font-semibold text-slate-500">Loading notes...</p>
+        </div>
+      ) : filteredItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center p-12 bg-white rounded-2xl border border-slate-100 min-h-[350px] text-center">
           <div className="w-16 h-16 rounded-3xl bg-indigo-50 flex items-center justify-center text-[#4318FF] mb-4">
             {folder === 'SENT' ? <Send className="w-8 h-8" /> : <MailOpen className="w-8 h-8" />}
@@ -575,7 +630,7 @@ export const InboxManagement: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className={`space-y-3 transition-opacity duration-150 ${loading ? "opacity-60" : "opacity-100"}`}>
           {filteredItems.map((item) => {
             const isSentMode = folder === 'SENT';
             const hasAttachments = item.note?.attachments && item.note.attachments.length > 0;
@@ -771,6 +826,18 @@ export const InboxManagement: React.FC = () => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination Controls */}
+      {total > 0 && (
+        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-2xs mt-4">
+          <Pagination
+            currentPage={currentPage}
+            totalItems={total}
+            pageSize={pageSize}
+            onPageChange={(p) => setCurrentPage(p)}
+          />
         </div>
       )}
 
