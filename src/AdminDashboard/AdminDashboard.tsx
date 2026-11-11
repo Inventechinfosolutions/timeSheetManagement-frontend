@@ -34,7 +34,7 @@ import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { fetchAdminDashboardSummary } from "../reducers/adminDashboard.reducer";
 import { SearchBox } from "../components/ui";
 import { getAllLeaveRequests } from "../reducers/leaveRequest.reducer";
-import { isCeoUser, isGeneralManagerUser, isCeoOrGmUser } from "../utils/roleAccess";
+import { isAdminAccess, isCeoUser, isGeneralManagerUser, isCeoOrGmUser } from "../utils/roleAccess";
 import {
   fetchLockType,
   updateLockType,
@@ -44,6 +44,7 @@ import PendingApprovalsCard from "./dashboard/PendingApprovalsCard";
 import EventsScroller from "./dashboard/EventsScroller";
 import PendingApprovalsTable from "./dashboard/PendingApprovalsTable";
 import DepartmentLockTypeCard, { LockTypeValue } from "./dashboard/DepartmentLockTypeCard";
+import HolidayManagementCard from "./dashboard/HolidayManagementCard";
 import { DashboardScope } from "../types/adminDashboard.types";
 
 const AdminDashboard = () => {
@@ -537,9 +538,9 @@ const AdminDashboard = () => {
     onClick?: () => void;
   }[] = [
         {
-          label: "Total Employees",
+          label: "Total Active Employees",
           value: summary?.totalEmployees ?? dashboardStats.totalEmployees,
-          sub: isManagerView ? "" : "Active workforce",
+          sub: isManagerView ? "" : "in the organisation",
           icon: Users,
           color: "bg-linear-to-r from-[#4318FF] to-[#868CFF]",
           onClick: isManagerView ? () => navigate(`${basePath}/employees`) : undefined,
@@ -640,7 +641,9 @@ const AdminDashboard = () => {
                 ? "CEO Dashboard"
                 : isGm
                   ? "General Manager Dashboard"
-                  : "Admin Dashboard"}
+                  : currentUser?.userType === UserType.RECEPTIONIST
+                    ? "Receptionist Dashboard"
+                    : "Admin Dashboard"}
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             {dayjs().format("dddd, D MMMM YYYY")} ·{" "}
@@ -869,6 +872,16 @@ const AdminDashboard = () => {
         </div>
       )}
 
+      {/* CEO / GM keep the dashboard card; Admin uses sidebar → Holiday Management */}
+      {!isManagerView && isCeoOrGm && (
+        <div className="mb-8">
+          <HolidayManagementCard
+            holidays={holidays || []}
+            onOpen={() => navigate("/admin-dashboard/holiday-management")}
+          />
+        </div>
+      )}
+
       {isCeoOrGm && !isManagerView && (
         <div className="mb-8 bg-white rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3">
@@ -880,7 +893,7 @@ const AdminDashboard = () => {
             </div>
             <button
               type="button"
-              onClick={() => navigate("/admin-dashboard/work-management")}
+              onClick={() => navigate(`${basePath}/requests`)}
               className="text-sm font-semibold text-[#4318FF] hover:underline"
             >
               View all requests

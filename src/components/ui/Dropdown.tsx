@@ -19,6 +19,8 @@ export interface DropdownProps<T = string> {
   placeholder?: string;
   prefixIcon?: React.ReactNode;
   allowClear?: boolean;
+  /** When false, no hover tooltip on the trigger or options. Default true. */
+  showTooltip?: boolean;
   className?: string;
   buttonClassName?: string;
   menuClassName?: string;
@@ -34,6 +36,7 @@ export function Dropdown<T extends string = string>({
   placeholder = "Select...",
   prefixIcon,
   allowClear = false,
+  showTooltip = true,
   className = "",
   buttonClassName = "",
   menuClassName = "",
@@ -67,13 +70,7 @@ export function Dropdown<T extends string = string>({
     }
   };
 
-  return (
-    <div className={`relative ${className}`} ref={containerRef}>
-      <Tooltip
-        title={isFiltered ? currentLabel : undefined}
-        placement="top"
-        mouseEnterDelay={0.3}
-      >
+  const trigger = (
         <div
           onClick={() => !disabled && setIsOpen(!isOpen)}
           className={`flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F7FE] hover:bg-gray-100 rounded-xl text-xs font-bold text-[#2B3674] transition-all border border-transparent cursor-pointer select-none ${
@@ -87,10 +84,10 @@ export function Dropdown<T extends string = string>({
               role="button"
               tabIndex={0}
               onClick={handleClear}
-              className="p-0.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-200/70 transition-colors cursor-pointer ml-0.5 shrink-0"
-              title="Clear filter"
+              aria-label="Clear filter"
+              className="ml-0.5 flex shrink-0 items-center justify-center text-[#4318FF] bg-transparent border-0 transition-opacity hover:opacity-70 cursor-pointer"
             >
-              <X size={12} />
+              <X size={12} strokeWidth={2.5} />
             </span>
           ) : (
             <ChevronDown
@@ -101,7 +98,21 @@ export function Dropdown<T extends string = string>({
             />
           )}
         </div>
-      </Tooltip>
+  );
+
+  return (
+    <div className={`relative ${className}`} ref={containerRef}>
+      {showTooltip ? (
+        <Tooltip
+          title={isFiltered ? currentLabel : undefined}
+          placement="top"
+          mouseEnterDelay={0.3}
+        >
+          {trigger}
+        </Tooltip>
+      ) : (
+        trigger
+      )}
 
       {isOpen && (
         <div
@@ -115,7 +126,7 @@ export function Dropdown<T extends string = string>({
               <button
                 key={String(option.value)}
                 type="button"
-                title={option.label}
+                title={showTooltip ? option.label : undefined}
                 onClick={() => {
                   onChange(option.value);
                   setIsOpen(false);

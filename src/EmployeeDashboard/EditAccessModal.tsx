@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { Modal } from "antd";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { MonthNavigator } from "../components/ui";
 import { AttendanceStatus } from "../enums";
 import { TimesheetEntry } from "../types";
 
@@ -117,33 +117,21 @@ const EditAccessModal = ({
           </span>
         )}
         {onMonthChange && !currentMonthOnly && (
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={() =>
-                onMonthChange(
-                  new Date(monthDate.getFullYear(), monthDate.getMonth() - 1, 1),
-                )
-              }
-              className="p-1.5 rounded-lg hover:bg-[#EEF2FF] text-[#4318FF]"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <span className="text-[11px] font-bold text-[#2B3674] min-w-[110px] text-center">
-              {dayjs(monthDate).format("MMM YYYY")}
-            </span>
-            <button
-              type="button"
-              onClick={() =>
-                onMonthChange(
-                  new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1),
-                )
-              }
-              className="p-1.5 rounded-lg hover:bg-[#EEF2FF] text-[#4318FF]"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+          <MonthNavigator
+            className="shrink-0"
+            month={monthDate.getMonth() + 1}
+            year={monthDate.getFullYear()}
+            onPrev={() =>
+              onMonthChange(
+                new Date(monthDate.getFullYear(), monthDate.getMonth() - 1, 1),
+              )
+            }
+            onNext={() =>
+              onMonthChange(
+                new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1),
+              )
+            }
+          />
         )}
       </div>
 
