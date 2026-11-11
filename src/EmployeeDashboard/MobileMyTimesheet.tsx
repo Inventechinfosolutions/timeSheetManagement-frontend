@@ -174,11 +174,12 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                 entry.status === AttendanceStatus.LOCKED ||
                 entry.firstHalf === AttendanceStatus.LOCKED ||
                 entry.secondHalf === AttendanceStatus.LOCKED;
-              const isBlocked = !!manualBlocker || isDateBlocked(entry.fullDate) || (!isAdmin && !isManager && (isStatusLeave || isStatusLocked || isDeptBlocked));
+              const canOverrideLocks = isAdmin || (isManager && !isManagerView);
+              const isBlocked = !!manualBlocker || isDateBlocked(entry.fullDate) || (!canOverrideLocks && (isStatusLeave || isStatusLocked || isDeptBlocked));
               
               const isEditable =
-                (isAdmin || !readOnly) &&
-                (isAdmin || isEditableMonth(entry.fullDate)) &&
+                (canOverrideLocks || !readOnly) &&
+                (canOverrideLocks || isEditableMonth(entry.fullDate)) &&
                 !isBlocked;
 
               // Styling logic (Matching MobileResponsiveCalendarPage)
@@ -267,7 +268,7 @@ const MobileMyTimesheet: React.FC<MobileMyTimesheetProps> = ({
                     </div>
 
                     {/* Lock Icon for Admin Blockers or Month-end Locks */}
-                    {(isStatusLocked || isBlocked || (!isAdmin && !isEditableMonth(entry.fullDate))) && (
+                    {(isStatusLocked || isBlocked || (!canOverrideLocks && !isEditableMonth(entry.fullDate))) && (
                         <div className="absolute -top-1 -left-1 p-1 rounded-full bg-red-50 text-red-500 border border-red-100 z-10">
                             <Lock size={8} strokeWidth={3} />
                         </div>

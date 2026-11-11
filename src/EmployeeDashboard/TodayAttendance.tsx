@@ -1,29 +1,22 @@
 import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import dayjs from "dayjs";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import {
-  Calendar as CalendarIcon,
-  CheckCircle,
-  TrendingUp,
-  Clock,
-  Briefcase,
-  AlertCircle,
-  MapPin,
-  Laptop,
-  Edit,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Plane, Clock, StickyNote, UserRound } from "lucide-react";
+import { MonthNavigator } from "../components/ui";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { AttendanceStatus, UserType } from "../enums";
 import { isAdminAccess } from "../utils/roleAccess";
 import { fetchEmployeeDashboard } from "../reducers/employeeAttendance.reducer";
 import { getEntity, setCurrentUser } from "../reducers/employeeDetails.reducer";
 import { generateMonthlyEntries } from "../utils/attendanceUtils";
-import AttendanceViewWrapper from "./CalenderViewWrapper";
 import AttendancePieChart from "./AttendancePieChart";
 import WorkTrendsGraph from "./WorkTrendsGraph";
-import AttendanceStatsCards from "./AttendanceStatsCards";
+import AttendanceStatsCards, { LeaveSummary } from "./AttendanceStatsCards";
+import DashboardHero from "./DashboardHero";
+import LeaveBalanceSummary from "./LeaveBalanceSummary";
+import RecentAttendanceList from "./RecentAttendanceList";
+import QuickActions, { QuickAction } from "./QuickActions";
+import OnTrackCard from "./OnTrackCard";
 import { RootState } from "../store";
 
 interface Props {
@@ -79,7 +72,7 @@ const TodayAttendance = ({
 
   const [now] = useState(() => new Date());
   const [calendarDate, setCalendarDate] = useState(new Date());
-
+  const [leaveSummary, setLeaveSummary] = useState<LeaveSummary>({ available: 0, used: 0, lop: 0 });
 
   const fetchDashboardData = useCallback(
     (date: Date) => {
@@ -325,6 +318,73 @@ const TodayAttendance = ({
     }
   };
 
+  const basePath = location.pathname.startsWith("/manager-dashboard")
+    ? "/manager-dashboard"
+    : location.pathname.startsWith("/admin-dashboard")
+      ? "/admin-dashboard"
+      : "/employee-dashboard";
+
+  const goToTab = useCallback(
+    (tab: string, state?: Record<string, unknown>) => navigate(`${basePath}/${tab}`, { state }),
+    [navigate, basePath],
+  );
+
+  const logTodayHours = useCallback(() => {
+    goToTab("my-timesheet", {
+      selectedDate: dayjs(now).format("YYYY-MM-DD"),
+      timestamp: Date.now(),
+    });
+  }, [goToTab, now]);
+
+  const openLeaveBalance = useCallback(() => goToTab("leave-balance"), [goToTab]);
+
+  const handleSummary = useCallback((summary: LeaveSummary) => {
+    setLeaveSummary((prev) =>
+      prev.available === summary.available && prev.used === summary.used && prev.lop === summary.lop
+        ? prev
+        : summary,
+    );
+  }, []);
+
+  const pendingDays = useMemo(
+    () =>
+      currentMonthEntries.filter(
+        (e) => !e.isFuture && !e.isToday && e.status === AttendanceStatus.NOT_UPDATED,
+      ).length,
+    [currentMonthEntries],
+  );
+
+  const quickActions: QuickAction[] = [
+    { label: "Apply Leave", icon: <Plane size={18} />, color: "#7C3AED", tint: "#F3EEFF", onClick: () => goToTab("leave-management") },
+    { label: "Log Hours", icon: <Clock size={18} />, color: "#2563EB", tint: "#EAF2FF", onClick: logTodayHours },
+    { label: "Notes", icon: <StickyNote size={18} />, color: "#10B981", tint: "#E8FBF3", onClick: () => goToTab("notes") },
+    { label: "My Profile", icon: <UserRound size={18} />, color: "#F97316", tint: "#FFF1E8", onClick: () => goToTab("my-profile") },
+  ];
+
+  const monthNavigator = (
+    <MonthNavigator
+      month={calendarDate.getMonth() + 1}
+      year={calendarDate.getFullYear()}
+      onPrev={() => {
+        const prev = new Date(calendarDate);
+        prev.setMonth(prev.getMonth() - 1);
+        setCalendarDate(prev);
+      }}
+      onNext={() => {
+        const next = new Date(calendarDate);
+        next.setMonth(next.getMonth() + 1);
+        setCalendarDate(next);
+      }}
+    />
+  );
+
+  const displayName =
+    (isMyRoute ? currentUser?.aliasLoginName || currentUser?.loginId : null) ||
+    entity?.firstName ||
+    entity?.fullName ||
+    currentUser?.aliasLoginName ||
+    "Employee";
+
   // Only block rendering while actively loading with no data (genuine first fetch).
   // Do NOT block if loading is done — even if records are empty (e.g. future month).
   if (records.length === 0 && loading) {
@@ -332,48 +392,20 @@ const TodayAttendance = ({
   }
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-[#F4F7FE]">
-      {/* Header */}
-      {!viewOnly && (
-        <div className="px-4 md:px-8 pt-4 md:pt-6 pb-2">
-          <div className="bg-white rounded-2xl p-4 md:p-5 shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold text-[#2B3674]">
-                {currentUser?.userType === UserType.MANAGER
-                  ? "Manager Dashboard"
-                  : "Employee Dashboard"}
-              </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Welcome back,{" "}
-                <span className="font-semibold text-[#4318FF]">
-                  {(isMyRoute
-                    ? currentUser?.aliasLoginName || currentUser?.loginId
-                    : null) ||
-                    entity?.firstName ||
-                    entity?.fullName ||
-                    currentUser?.aliasLoginName ||
-                    "Employee"}
-                </span>
-              </p>
-            </div>
+    <div className="flex flex-col h-full w-full overflow-hidden bg-linear-to-b from-[#EEF0FF] via-[#F4F7FE] to-[#F4F7FE]">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-8 pt-4 md:pt-6 pb-6 space-y-5 custom-scrollbar">
+        {!viewOnly && (
+          <DashboardHero
+            name={displayName}
+            title={currentUser?.userType === UserType.MANAGER ? "Manager Dashboard" : "Employee Dashboard"}
+            today={displayEntry.fullDate}
+            onLogHours={logTodayHours}
+            rightSlot={monthNavigator}
+          />
+        )}
 
-            <div className="flex items-center gap-2 px-4 py-2 bg-[#F4F7FE] rounded-xl border border-[#4318FF]/10">
-              <CalendarIcon size={16} className="text-[#4318FF] shrink-0" />
-              <span className="text-sm font-bold text-[#2B3674]">
-                {displayEntry.fullDate.toLocaleDateString("en-US", {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 md:px-8 pb-6 space-y-5 custom-scrollbar">
-        {/* Month Selector Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+        {(viewOnly || showInternDataBanner || showConversionBanner) && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           {/* Historical Intern / Congratulations Alert Badge */}
           <div className="flex-1 min-w-[200px] flex items-center justify-start">
             {showInternDataBanner && (
@@ -397,37 +429,9 @@ const TodayAttendance = ({
             )}
           </div>
 
-          <div className="inline-flex items-center bg-white rounded-full px-3 py-1 shadow-sm border border-gray-100/50 gap-2 self-end">
-            <button
-              onClick={() => {
-                const prev = new Date(calendarDate);
-                prev.setMonth(prev.getMonth() - 1);
-                setCalendarDate(prev);
-              }}
-              className="p-1 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
-            >
-              <ChevronLeft size={16} strokeWidth={2.5} />
-            </button>
-
-            <span className="text-[#1B2559] font-bold min-w-[90px] text-center text-xs md:text-sm selection:bg-none tracking-tight">
-              {calendarDate.toLocaleString("default", {
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
-
-            <button
-              onClick={() => {
-                const next = new Date(calendarDate);
-                next.setMonth(next.getMonth() + 1);
-                setCalendarDate(next);
-              }}
-              className="p-1 hover:bg-gray-50 rounded-full transition-colors text-[#4318FF] hover:scale-110 active:scale-95"
-            >
-              <ChevronRight size={16} strokeWidth={2.5} />
-            </button>
-          </div>
+          {viewOnly && monthNavigator}
         </div>
+        )}
 
         {/* Top Section: Dashboard Cards */}
         <AttendanceStatsCards
@@ -441,68 +445,52 @@ const TodayAttendance = ({
           trends={trends}
           monthlyLeaveBalance={monthlyLeaveBalance}
           loading={leaveLoading}
+          onViewDetails={viewOnly ? undefined : openLeaveBalance}
+          onSummary={handleSummary}
         />
 
         {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-          <div className="w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-5 w-full">
+          <div className="xl:col-span-4">
             <AttendancePieChart
               data={currentMonthEntries}
               currentMonth={calendarDate}
             />
           </div>
-          <div className="w-full">
+          <div className="xl:col-span-5">
             <WorkTrendsGraph
               employeeId={currentEmployeeId}
               currentMonth={calendarDate}
+              entries={currentMonthEntries as any}
+            />
+          </div>
+          <div className="lg:col-span-2 xl:col-span-3">
+            <LeaveBalanceSummary
+              summary={leaveSummary}
+              onViewDetails={viewOnly ? undefined : openLeaveBalance}
             />
           </div>
         </div>
 
-        {!viewOnly && (
-          <div className="flex justify-center">
-            <button
-              onClick={() => handleNavigate(now.getTime())}
-              className="px-8 py-3 rounded-xl text-white font-bold bg-[#4318FF] shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all flex items-center gap-2 transform active:scale-95"
-            >
-              <Edit size={18} />
-              <span>Log Today's Hours</span>
-            </button>
-          </div>
-        )}
-
-        {/* Bottom Section: Calendar/List */}
-        <div className="bg-white rounded-2xl shadow-[0px_8px_24px_rgba(112,144,176,0.1)] border border-gray-100/80 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-bold text-[#2B3674]">
-                Attendance List
-              </h3>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Monthly attendance records
-              </p>
-            </div>
-            <span className="text-xs px-3 py-1.5 bg-[#F4F7FE] rounded-full text-[#4318FF] font-bold border border-[#4318FF]/15">
-              All Statuses
-            </span>
-          </div>
-          <div className="p-4">
-            <AttendanceViewWrapper
-              now={now}
-              currentDate={calendarDate}
+        {/* Activity Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-5 w-full">
+          <div className={viewOnly ? "lg:col-span-2 xl:col-span-12" : "lg:col-span-2 xl:col-span-6"}>
+            <RecentAttendanceList
               entries={currentMonthEntries as any}
-              onMonthChange={(date) => {
-                setCalendarDate(date);
-                dashboardFetchedKey.current = null;
-                fetchDashboardData(date);
-              }}
-              onNavigateToDate={(timestamp) => {
-                handleNavigate(timestamp);
-              }}
-              hideMonthNavigation={true}
-              hideBackButton={true}
+              onRowClick={handleNavigate}
+              onViewAll={viewOnly ? undefined : () => goToTab("my-timesheet")}
             />
           </div>
+          {!viewOnly && (
+            <>
+              <div className="xl:col-span-3">
+                <QuickActions actions={quickActions} />
+              </div>
+              <div className="xl:col-span-3">
+                <OnTrackCard pendingDays={pendingDays} onFix={logTodayHours} />
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -980,6 +980,16 @@ const Header = ({
                                         <div className="flex flex-col gap-1">
                                           <span className="text-xs text-gray-500 font-medium">
                                             {message}
+                                            {update.reviewedBy ? (
+                                              <>
+                                                {" "}
+                                                Reviewed by{" "}
+                                                <span className="font-bold text-[#2B3674]">
+                                                  {update.reviewedBy}
+                                                </span>
+                                                .
+                                              </>
+                                            ) : null}
                                           </span>
                                           <span className="text-[10px] text-gray-400">
                                             {dayjs(update.fromDate).format(

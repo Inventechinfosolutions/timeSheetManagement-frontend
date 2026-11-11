@@ -1,202 +1,128 @@
+import { useMemo } from "react";
 import {
-  BarChart,
-  Bar,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
-  LabelList,
 } from "recharts";
-import { useAppSelector } from "../hooks";
-import { RootState } from "../store";
-import { WorkLocation } from "../enums";
-
-// Interface for the data structure
-// (Ideally imported from reducer, but can keep here or import)
+import { TimesheetEntry } from "../types";
+import { LOCATION_META, LocationKey, getDayLocations } from "./dashboardUtils";
 
 interface Props {
   employeeId?: string;
   currentMonth: Date;
+  entries: TimesheetEntry[];
 }
 
-const WorkTrendsGraph = ({ currentMonth }: Props) => {
-  // Using selector to get data from Redux store, using separate loading state!
-  const { trends, trendsLoading } = useAppSelector(
-    (state: RootState) => state.attendance,
-  );
+const SERIES: LocationKey[] = ["clientVisit", "office", "leave", "wfh"];
 
-  // No need to fetch trends here, as the parent (TodayAttendance) already dispatches it!
-  // This avoids duplicate/conflicting requests.
+const WorkTrendsGraph = ({ currentMonth, entries }: Props) => {
+  const { data, totals } = useMemo(() => {
+    const running: Record<LocationKey, number> = { office: 0, wfh: 0, clientVisit: 0, leave: 0 };
+    const rows = entries
+      .filter((e) => !e.isFuture)
+      .map((entry) => {
+        const parts = getDayLocations(entry);
+        SERIES.forEach((key) => {
+          running[key] += parts[key] || 0;
+        });
+        return {
+          label: entry.fullDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+          ...running,
+        };
+      });
+    return { data: rows, totals: { ...running } };
+  }, [entries]);
 
-  // Use local variable for data to avoid refactoring render code too much,
-  // or just use 'trends' directly in JSX.
-  const data = trends || [];
-
-  if (trendsLoading) {
-    return (
-      <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px]" />
-    );
-  }
+  const hasActivity = SERIES.some((key) => totals[key] > 0);
+  const tickInterval = Math.max(0, Math.ceil(data.length / 5) - 1);
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px]">
-      <div className="flex items-center justify-between mb-6">
-        <h4 className="text-lg font-bold text-[#1B2559]">Work Location Trend</h4>
-
-        <div className="flex items-center gap-2">
-          <span className="text-s font-bold text-[#1B2559]">
-            {currentMonth.toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
-          </span>
+    <div className="bg-white rounded-3xl p-5 shadow-[0_10px_30px_-12px_rgba(67,24,255,0.15)] border border-gray-100/80 flex flex-col h-full min-h-[300px]">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <h4 className="text-base sm:text-lg font-bold text-[#1B2559] tracking-tight">
+            Work Location Trend
+          </h4>
+          <p className="text-[11px] text-[#A3AED0] font-semibold mt-0.5">Cumulative days this month</p>
         </div>
+        <span className="shrink-0 rounded-full bg-[#F4F7FE] px-3 py-1 text-[11px] font-bold text-[#4318FF] ring-1 ring-[#4318FF]/10">
+          {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        </span>
       </div>
 
-      <div className="flex-1 w-full min-h-[300px]">
-        {data.length > 0 ? (
+      <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+        {SERIES.map((key) => (
+          <div key={key} className="flex items-center gap-1.5 text-xs font-semibold text-[#2B3674]">
+            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: LOCATION_META[key].color }} />
+            {LOCATION_META[key].label}
+            <span className="text-[#A3AED0]">{totals[key].toFixed(1)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex-1 w-full min-h-[190px]">
+        {hasActivity ? (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              margin={{ top: 20, right: 30, left: -10, bottom: 20 }}
-              barSize={60}
-              barGap={12}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                vertical={false}
-                horizontal={true}
-                stroke="#E0E5F2"
-              />
+            <AreaChart data={data} margin={{ top: 10, right: 8, left: -24, bottom: 0 }}>
+              <defs>
+                {SERIES.map((key) => (
+                  <linearGradient key={key} id={`trend-${key}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={LOCATION_META[key].color} stopOpacity={0.28} />
+                    <stop offset="100%" stopColor={LOCATION_META[key].color} stopOpacity={0} />
+                  </linearGradient>
+                ))}
+              </defs>
+              <CartesianGrid strokeDasharray="4 4" vertical={false} stroke="#E9EDF7" />
               <XAxis
-                dataKey="month"
+                dataKey="label"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#A3AED0", fontSize: 11, fontWeight: 500 }}
-                dy={10}
+                interval={tickInterval}
+                tick={{ fill: "#A3AED0", fontSize: 11, fontWeight: 600 }}
+                dy={8}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#A3AED0", fontSize: 12, fontWeight: 500 }}
+                allowDecimals
+                tick={{ fill: "#A3AED0", fontSize: 11, fontWeight: 600 }}
               />
-
-              <Legend
-                verticalAlign="top"
-                height={40}
-                iconType="circle"
-                wrapperStyle={{
-                  fontSize: "13px",
-                  fontWeight: 600,
-                  color: "#2B3674",
-                  paddingBottom: "16px",
-                }}
-              />
-
               <Tooltip
-                shared={false}
-                cursor={{ fill: "rgba(0, 0, 0, 0.04)", radius: 10 }}
+                cursor={{ stroke: "#4318FF", strokeWidth: 1, strokeDasharray: "4 4" }}
                 contentStyle={{
                   backgroundColor: "#fff",
-                  borderRadius: "10px",
-                  border: "1px solid #f1f5f9",
-                  boxShadow: "0px 10px 20px -5px rgba(0,0,0,0.1)",
-                  padding: "4px 10px",
+                  borderRadius: "12px",
+                  border: "1px solid #EEF2FF",
+                  boxShadow: "0px 12px 24px -8px rgba(27,37,89,0.18)",
+                  padding: "8px 12px",
                 }}
-                itemStyle={{
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  color: "#1B2559",
-                }}
-                labelStyle={{ display: "none" }}
-                separator=": "
-                formatter={(value: any, name: any) => [
-                  Number(value).toFixed(1),
-                  name,
-                ]}
+                labelStyle={{ fontSize: 11, fontWeight: 700, color: "#A3AED0", marginBottom: 4 }}
+                itemStyle={{ fontSize: 12, fontWeight: 700, padding: 0 }}
+                formatter={(value: any, name: any) => [Number(value).toFixed(1), name]}
               />
-
-              <Bar
-                dataKey="totalLeaves"
-                name="Taken Leave"
-                fill="#F43F5E"
-                radius={[6, 6, 0, 0]}
-                activeBar={{ fill: "#FB7185" }}
-              >
-                <LabelList
-                  dataKey="totalLeaves"
-                  position="top"
-                  style={{ fill: "#A3AED0", fontSize: 10, fontWeight: 700 }}
-                  offset={8}
-                  formatter={(val: any) =>
-                    val && Number(val) > 0 ? Number(val).toFixed(1) : ""
-                  }
+              {SERIES.map((key) => (
+                <Area
+                  key={key}
+                  type="monotone"
+                  dataKey={key}
+                  name={LOCATION_META[key].label}
+                  stroke={LOCATION_META[key].color}
+                  strokeWidth={2.5}
+                  fill={`url(#trend-${key})`}
+                  dot={false}
+                  activeDot={{ r: 5, strokeWidth: 2, stroke: "#fff" }}
                 />
-              </Bar>
-
-              <Bar
-                dataKey="workFromHome"
-                name={WorkLocation.WFH}
-                fill="#06B6D4"
-                radius={[6, 6, 0, 0]}
-                activeBar={{ fill: "#22D3EE" }}
-              >
-                <LabelList
-                  dataKey="workFromHome"
-                  position="top"
-                  style={{ fill: "#A3AED0", fontSize: 10, fontWeight: 700 }}
-                  offset={8}
-                  formatter={(val: any) =>
-                    val && Number(val) > 0 ? Number(val).toFixed(1) : ""
-                  }
-                />
-              </Bar>
-              <Bar
-                dataKey="clientVisits"
-                name={WorkLocation.CLIENT_VISIT}
-                fill="#8B5CF6"
-                radius={[6, 6, 0, 0]}
-                activeBar={{ fill: "#A78BFA" }}
-              >
-                <LabelList
-                  dataKey="clientVisits"
-                  position="top"
-                  style={{ fill: "#A3AED0", fontSize: 10, fontWeight: 700 }}
-                  offset={8}
-                  formatter={(val: any) =>
-                    val && Number(val) > 0 ? Number(val).toFixed(1) : ""
-                  }
-                />
-              </Bar>
-              <Bar
-                dataKey="office"
-                name={WorkLocation.OFFICE}
-                fill="#10B981"
-                radius={[6, 6, 0, 0]}
-                activeBar={{ fill: "#34D399" }}
-              >
-                <LabelList
-                  dataKey="office"
-                  position="top"
-                  style={{ fill: "#A3AED0", fontSize: 10, fontWeight: 700 }}
-                  offset={8}
-                  formatter={(val: any) =>
-                    val && Number(val) > 0 ? Number(val).toFixed(1) : ""
-                  }
-                />
-              </Bar>
-            </BarChart>
+              ))}
+            </AreaChart>
           </ResponsiveContainer>
         ) : (
-          <div className="flex bg-gray-50 flex-col items-center justify-center h-full rounded-xl border-dashed border-2 border-gray-200">
-            <div className="text-gray-400 font-medium text-sm">
-              No activity recorded for this period
-            </div>
-            <div className="text-gray-300 text-xs mt-1">
-              Try navigating to a different month
-            </div>
+          <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/60">
+            <div className="text-sm font-medium text-gray-400">No activity recorded for this period</div>
+            <div className="mt-1 text-xs text-gray-300">Try navigating to a different month</div>
           </div>
         )}
       </div>

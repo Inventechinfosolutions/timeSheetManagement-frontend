@@ -129,10 +129,7 @@ export async function resolveAssignedQuarterPeriod(opts: {
   const fromYearMatch = String(opts.financialYear || "").match(/^(\d{4})/);
   const fromYear = fromYearMatch ? parseInt(fromYearMatch[1], 10) : NaN;
 
-  if (
-    opts.reviewPeriod === ReviewPeriod.YEARLY ||
-    quarterKey === "YEARLY"
-  ) {
+  if (opts.reviewPeriod === ReviewPeriod.YEARLY || quarterKey === "YEARLY") {
     return getQuarterPeriod("YEARLY", opts.financialYear, ReviewPeriod.YEARLY);
   }
 
@@ -154,7 +151,7 @@ export async function resolveAssignedQuarterPeriod(opts: {
   }
 
   return getQuarterPeriod(quarterKey || opts.quarter, opts.financialYear, opts.reviewPeriod);
-};
+}
 
 export const formatStoredFileSize = (bytes: number): string => {
   if (!bytes) {

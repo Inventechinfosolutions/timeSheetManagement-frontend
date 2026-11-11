@@ -18,7 +18,7 @@ import EmployeeLayout from "./navigation/EmployeeLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { UserType } from "./enums";
 import { useAppSelector } from "./hooks";
-import { isCeoOrGmUser } from "./utils/roleAccess";
+import { isAdminAccess, isCeoOrGmUser } from "./utils/roleAccess";
 
 // Lazy load authentication components
 const EmployeeActivation = lazy(() => import("./Login/EmployeeActivation"));
@@ -65,6 +65,7 @@ import InboxManagement from "./Inbox/InboxManagement";
 import EmployeeAppraisalPage from "./Appraisal/pages/EmployeeAppraisalPage";
 import AttendenceEditRequests from "./AdminDashboard/AttendenceEditRequests";
 import LeaveCalculationManagement from "./AdminDashboard/LeaveCalculationManagement";
+import HolidayManagementPage from "./AdminDashboard/HolidayManagementPage";
 
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -108,6 +109,9 @@ const AdminTabWrapper = () => {
   const isCeo = isCeoOrGmUser(currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isManagerDashboard = pathname.includes("/manager-dashboard");
+  const dashboardHome = pathname.startsWith("/manager-dashboard")
+    ? "/manager-dashboard"
+    : "/admin-dashboard";
 
   if (isCeo && tab && CEO_BLOCKED_ADMIN_TABS.includes(tab)) {
     return <Navigate to="/admin-dashboard" replace />;
@@ -179,6 +183,11 @@ const AdminTabWrapper = () => {
       );
     case "edit-access":
       return <AttendenceEditRequests />;
+    case "holiday-management":
+      if (!isAdminAccess(currentUser) && !isReceptionist) {
+        return <Navigate to={dashboardHome} replace />;
+      }
+      return <HolidayManagementPage />;
     default:
       return (
         <Navigate

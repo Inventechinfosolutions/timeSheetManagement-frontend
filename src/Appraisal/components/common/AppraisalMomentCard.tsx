@@ -56,8 +56,9 @@ const MOMENTS: Record<
     greeting: "Well done,",
     headline: "Appraisal submitted",
     badge: "SUBMITTED",
-    quote: "Your final review is locked and sent to your manager for review.",
-    lines: ["Sent to", "your manager", "for review"],
+    quote:
+      "Your self-assessment has been submitted successfully and sent to your Team Lead for review.",
+    lines: ["Sent to", "your Team Lead", "for review"],
   },
   evaluated: {
     score: 5,
