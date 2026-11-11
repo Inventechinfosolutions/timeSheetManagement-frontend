@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { DatePicker, Select, message } from "antd";
 import dayjs from "dayjs";
 import { ArrowLeft, CalendarDays, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../hooks";
+import { UserType } from "../enums";
 import {
   createBulkHolidays,
   fetchHolidays,
@@ -110,7 +112,8 @@ const HolidayDateInput = ({
         suffixIcon={null}
         defaultPickerValue={year ? dayjs(`${year}-01-01`) : undefined}
         disabledDate={year ? (current) => !current || current.year() !== year : undefined}
-        popupStyle={{ zIndex: 1300 }}
+        popupStyle={{ zIndex: 3100 }}
+        getPopupContainer={() => document.body}
         onChange={(picked) => {
           if (!picked) return;
           focused.current = false;
@@ -127,6 +130,8 @@ const HolidayDateInput = ({
 const HolidayManagementPage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const canEditHolidays = currentUser?.userType !== UserType.RECEPTIONIST;
   const currentYear = dayjs().year();
   const { holidays, loading } = useAppSelector(
     (state) => state.masterHolidays || { holidays: [], loading: false },
@@ -179,6 +184,7 @@ const HolidayManagementPage = () => {
   };
 
   const openAdd = () => {
+    if (!canEditHolidays) return;
     setEditingId(null);
     setAddYear(year);
     setDraftYear(year);
@@ -261,7 +267,7 @@ const HolidayManagementPage = () => {
   };
 
   const acceptDrafts = async () => {
-    if (ready.length === 0) return;
+    if (!canEditHolidays || ready.length === 0) return;
     setSaving(true);
     try {
       await dispatch(
@@ -278,6 +284,7 @@ const HolidayManagementPage = () => {
   };
 
   const startEdit = (holiday: { id: number; dateValue: string; name: string }) => {
+    if (!canEditHolidays) return;
     setEditingId(holiday.id);
     setEditDate(holiday.dateValue);
     setEditName(holiday.name);
@@ -285,7 +292,7 @@ const HolidayManagementPage = () => {
   };
 
   const handleUpdate = async () => {
-    if (editingId == null) return;
+    if (!canEditHolidays || editingId == null) return;
     const name = editName.trim();
     if (!editDate || !name) {
       message.error("Date and holiday name are required");
@@ -334,7 +341,9 @@ const HolidayManagementPage = () => {
           <div>
             <h1 className="text-2xl font-bold text-[#2B3674]">Holiday Management</h1>
             <p className="text-sm text-[#A3AED0]">
-              Add or update master holidays. Timesheets and leave use this list.
+              {canEditHolidays
+                ? "Add or update master holidays. Timesheets and leave use this list."
+                : "View master holidays used by timesheets and leave."}
             </p>
           </div>
         </div>
@@ -355,14 +364,16 @@ const HolidayManagementPage = () => {
               title: "",
             }))}
           />
-          <button
-            type="button"
-            onClick={openAdd}
-            className="cursor-pointer inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#4318FF] px-3 text-sm font-bold text-white hover:bg-[#3311CC]"
-          >
-            <Plus size={16} />
-            Add
-          </button>
+          {canEditHolidays && (
+            <button
+              type="button"
+              onClick={openAdd}
+              className="cursor-pointer inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#4318FF] px-3 text-sm font-bold text-white hover:bg-[#3311CC]"
+            >
+              <Plus size={16} />
+              Add
+            </button>
+          )}
         </div>
       </div>
 
@@ -374,27 +385,31 @@ const HolidayManagementPage = () => {
                 <th className="px-5 py-4 font-semibold w-[90px]">SL No</th>
                 <th className="px-5 py-4 font-semibold w-[240px]">Date</th>
                 <th className="px-5 py-4 font-semibold">Holiday</th>
-                <th className="px-5 py-4 font-semibold text-right w-[200px]">Action</th>
+                {canEditHolidays && (
+                  <th className="px-5 py-4 font-semibold text-right w-[200px]">Action</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {loading && rows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-5 py-10 text-center text-[#A3AED0]">
+                  <td colSpan={canEditHolidays ? 4 : 3} className="px-5 py-10 text-center text-[#A3AED0]">
                     <Loader2 className="inline animate-spin mr-2" size={16} />
                     Loading holidays
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-5 py-10 text-center text-[#A3AED0]">
+                  <td colSpan={canEditHolidays ? 4 : 3} className="px-5 py-10 text-center text-[#A3AED0]">
                     <CalendarDays size={22} className="inline mr-2 text-[#4318FF]" />
-                    No holidays for {year}. Use Add to create one.
+                    {canEditHolidays
+                      ? `No holidays for ${year}. Use Add to create one.`
+                      : `No holidays for ${year}.`}
                   </td>
                 </tr>
               ) : (
                 rows.map((holiday, index) => {
-                  const isEditing = editingId === holiday.id;
+                  const isEditing = canEditHolidays && editingId === holiday.id;
                   return (
                     <tr
                       key={holiday.id}
@@ -432,6 +447,7 @@ const HolidayManagementPage = () => {
                           <span className="font-medium text-[#2B3674]">{holiday.name}</span>
                         )}
                       </td>
+                      {canEditHolidays && (
                       <td className="px-5 py-4 text-right align-middle whitespace-nowrap">
                         {isEditing ? (
                           <div className="inline-flex h-10 items-center justify-end gap-2">
@@ -462,6 +478,7 @@ const HolidayManagementPage = () => {
                           </button>
                         )}
                       </td>
+                      )}
                     </tr>
                   );
                 })
@@ -471,211 +488,217 @@ const HolidayManagementPage = () => {
         </div>
       </div>
 
-      {addOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#1B2559]/40 p-4">
-          <div
-            className={`flex max-h-[90vh] w-full flex-col rounded-2xl bg-white shadow-[0px_18px_40px_rgba(112,144,176,0.18)] ${
-              addStep === "year" ? "max-w-md" : "max-w-3xl"
-            }`}
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-[#2B3674]">Add holidays</h2>
-                  {addStep === "rows" && (
-                    <span className="rounded-[6px] bg-[#EEF2FF] px-2.5 py-1 text-[11px] font-black text-[#1055E8]">
-                      {addYear}
-                    </span>
+      {canEditHolidays && addOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-[#1B2559]/40 p-4 sm:p-6">
+            <div
+              className={`flex max-h-[min(75vh,560px)] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0px_18px_40px_rgba(112,144,176,0.18)] ${
+                addStep === "year" ? "max-w-md" : "max-w-3xl"
+              }`}
+            >
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-100 px-5 py-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-[#2B3674]">Add holidays</h2>
+                    {addStep === "rows" && (
+                      <span className="rounded-[6px] bg-[#EEF2FF] px-2.5 py-1 text-[11px] font-black text-[#1055E8]">
+                        {addYear}
+                      </span>
+                    )}
+                  </div>
+                  {addStep === "year" && (
+                    <p className="text-sm text-[#A3AED0]">Select the year, then continue.</p>
                   )}
                 </div>
-                {addStep === "year" && (
-                  <p className="text-sm text-[#A3AED0]">Select the year, then continue.</p>
-                )}
+                <div className="flex items-center gap-2">
+                  {addStep === "rows" && (
+                    <button
+                      type="button"
+                      onClick={() => setDrafts((current) => [...current, blankRow()])}
+                      className="cursor-pointer inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#4318FF] px-3 text-sm font-bold text-white hover:bg-[#3311CC]"
+                    >
+                      <Plus size={16} />
+                      Add
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={closeAdd}
+                    aria-label="Close"
+                    className="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#4318FF] text-[#4318FF] hover:bg-[#F4F7FE]"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
+
+              {addStep === "year" ? (
+                <div className="flex min-h-0 flex-1 items-center justify-center px-5 py-8">
+                  <div className="flex flex-col items-center">
+                    <label className="mb-2 text-sm font-semibold text-[#2B3674]" htmlFor="add-holiday-year">
+                      Year
+                    </label>
+                    <Select
+                      id="add-holiday-year"
+                      value={addYear}
+                      onChange={(value) => setAddYear(value)}
+                      className="h-10 w-[160px]"
+                      popupMatchSelectWidth={160}
+                      getPopupContainer={() => document.body}
+                      styles={{ popup: { root: { zIndex: 3100 } } }}
+                      options={YEAR_OPTIONS.map((option) => ({
+                        value: option,
+                        label: String(option),
+                        title: "",
+                      }))}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-3">
+                  <div className="mb-2 hidden grid-cols-[48px_180px_minmax(0,1fr)_40px] gap-3 px-1 text-sm font-semibold text-[#2B3674] md:grid">
+                    <span className="text-center">SL No</span>
+                    <span>Date</span>
+                    <span>Holiday name</span>
+                  </div>
+                  <div className="space-y-3">
+                    {drafts.map((row, index) => (
+                      <div
+                        key={row.key}
+                        className="grid grid-cols-1 items-center gap-3 md:grid-cols-[48px_180px_minmax(0,1fr)_40px]"
+                      >
+                        <span className="text-center text-sm font-semibold text-[#2B3674]">{index + 1}</span>
+                        <HolidayDateInput
+                          value={row.date}
+                          year={addYear}
+                          subtle
+                          onChange={(isoDate) => updateDraft(row.key, { date: isoDate })}
+                        />
+                        <input
+                          value={row.name}
+                          maxLength={100}
+                          onChange={(e) => updateDraft(row.key, { name: e.target.value })}
+                          className="h-10 w-full rounded-lg border border-black/30 bg-white px-3 text-base text-[#2B3674] focus:outline-none focus:ring-2 focus:ring-black/10"
+                        />
+                        <button
+                          type="button"
+                          aria-label="Remove row"
+                          onClick={() =>
+                            setDrafts((current) => current.filter((item) => item.key !== row.key))
+                          }
+                          className="cursor-pointer inline-flex h-10 w-10 items-center justify-center rounded-lg text-[#E31A1A] hover:bg-[#FEE2E2]"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex shrink-0 justify-end gap-2 border-t border-gray-100 bg-white px-5 py-3">
                 {addStep === "rows" && (
                   <button
                     type="button"
-                    onClick={() => setDrafts((current) => [...current, blankRow()])}
-                    className="cursor-pointer inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#4318FF] px-3 text-sm font-bold text-white hover:bg-[#3311CC]"
+                    onClick={() => setAddStep("year")}
+                    className="cursor-pointer h-10 rounded-lg border border-[#4318FF] bg-white px-4 text-sm font-semibold text-[#4318FF] hover:bg-[#F4F7FE]"
                   >
-                    <Plus size={16} />
-                    Add
+                    Back
                   </button>
                 )}
                 <button
                   type="button"
-                  onClick={closeAdd}
-                  aria-label="Close"
-                  className="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#4318FF] text-[#4318FF] hover:bg-[#F4F7FE]"
+                  onClick={addStep === "year" ? continueToRows : reviewDrafts}
+                  className="cursor-pointer h-10 rounded-lg bg-[#4318FF] px-5 text-sm font-bold text-white hover:bg-[#3311CC]"
                 >
-                  <X size={16} />
+                  {addStep === "year" ? "Next" : "Save"}
                 </button>
               </div>
             </div>
+          </div>,
+          document.body,
+        )}
 
-            {addStep === "year" ? (
-              <div className="flex flex-1 items-center justify-center px-5 py-10">
-                <div className="flex flex-col items-center">
-                  <label className="mb-2 text-sm font-semibold text-[#2B3674]" htmlFor="add-holiday-year">
-                    Year
-                  </label>
-                  <Select
-                    id="add-holiday-year"
-                    value={addYear}
-                    onChange={(value) => setAddYear(value)}
-                    className="h-10 w-[160px]"
-                    popupMatchSelectWidth={160}
-                    options={YEAR_OPTIONS.map((option) => ({
-                      value: option,
-                      label: String(option),
-                      title: "",
-                    }))}
-                  />
+      {canEditHolidays && previewOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-[#1B2559]/40 p-4 sm:p-6">
+            <div className="flex max-h-[min(75vh,560px)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-[0px_18px_40px_rgba(112,144,176,0.18)]">
+              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-100 px-5 py-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-bold text-[#2B3674]">Confirm holidays</h2>
+                    <span className="rounded-[6px] bg-[#EEF2FF] px-2.5 py-1 text-[11px] font-black text-[#1055E8]">
+                      {addYear}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#A3AED0]">
+                    Total {ready.length} holiday{ready.length === 1 ? "" : "s"}
+                  </p>
                 </div>
+                <button
+                  type="button"
+                  aria-label="Edit holidays"
+                  onClick={() => {
+                    setPreviewOpen(false);
+                    setAddStep("rows");
+                    setAddOpen(true);
+                  }}
+                  className="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#4318FF] text-[#4318FF] hover:bg-[#F4F7FE]"
+                >
+                  <Pencil size={16} />
+                </button>
               </div>
-            ) : (
-              <div className="max-h-[620px] overflow-y-auto px-5 py-4">
-                <div className="mb-2 hidden grid-cols-[48px_180px_minmax(0,1fr)_40px] gap-3 px-1 text-sm font-semibold text-[#2B3674] md:grid">
+
+              <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-3">
+                <div className="mb-2 hidden grid-cols-[48px_120px_minmax(0,1fr)] gap-3 px-3 text-sm font-semibold text-[#2B3674] md:grid">
                   <span className="text-center">SL No</span>
                   <span>Date</span>
                   <span>Holiday name</span>
                 </div>
                 <div className="space-y-3">
-                  {drafts.map((row, index) => (
+                  {ready.map((row, index) => (
                     <div
                       key={row.key}
-                      className="grid grid-cols-1 items-center gap-3 md:grid-cols-[48px_180px_minmax(0,1fr)_40px]"
+                      className="grid grid-cols-1 items-center gap-3 rounded-lg border border-black/15 px-3 py-3 md:grid-cols-[48px_120px_minmax(0,1fr)]"
                     >
                       <span className="text-center text-sm font-semibold text-[#2B3674]">{index + 1}</span>
-                      <HolidayDateInput
-                        value={row.date}
-                        year={addYear}
-                        subtle
-                        onChange={(isoDate) => updateDraft(row.key, { date: isoDate })}
-                      />
-                      <input
-                        value={row.name}
-                        maxLength={100}
-                        onChange={(e) => updateDraft(row.key, { name: e.target.value })}
-                        className="h-10 w-full rounded-lg border border-black/30 bg-white px-3 text-base text-[#2B3674] focus:outline-none focus:ring-2 focus:ring-black/10"
-                      />
-                      <button
-                        type="button"
-                        aria-label="Remove row"
-                        onClick={() =>
-                          setDrafts((current) => current.filter((item) => item.key !== row.key))
-                        }
-                        className="cursor-pointer inline-flex h-10 w-10 items-center justify-center rounded-lg text-[#E31A1A] hover:bg-[#FEE2E2]"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <span className="whitespace-nowrap font-semibold text-[#2B3674]">
+                        {dayjs(row.date).format(DATE_FORMAT)}
+                      </span>
+                      <span className="min-w-0 break-all font-medium text-[#2B3674]">{row.name}</span>
                     </div>
                   ))}
                 </div>
+                <p className="mt-4 rounded-lg bg-[#F4F7FE] px-3 py-3 text-sm text-[#2B3674]">
+                  Once saved, a holiday can be edited, but it cannot be deleted.
+                </p>
               </div>
-            )}
 
-            <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4">
-              {addStep === "rows" && (
+              <div className="flex shrink-0 justify-end gap-2 border-t border-gray-100 bg-white px-5 py-3">
                 <button
                   type="button"
-                  onClick={() => setAddStep("year")}
+                  onClick={() => {
+                    setPreviewOpen(false);
+                    setAddStep("rows");
+                    setAddOpen(true);
+                  }}
                   className="cursor-pointer h-10 rounded-lg border border-[#4318FF] bg-white px-4 text-sm font-semibold text-[#4318FF] hover:bg-[#F4F7FE]"
                 >
                   Back
                 </button>
-              )}
-              <button
-                type="button"
-                onClick={addStep === "year" ? continueToRows : reviewDrafts}
-                className="cursor-pointer h-10 rounded-lg bg-[#4318FF] px-5 text-sm font-bold text-white hover:bg-[#3311CC]"
-              >
-                {addStep === "year" ? "Next" : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {previewOpen && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#1B2559]/40 p-4">
-          <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-[0px_18px_40px_rgba(112,144,176,0.18)]">
-            <div className="flex items-center justify-between gap-3 border-b border-gray-100 px-5 py-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg font-bold text-[#2B3674]">Confirm holidays</h2>
-                  <span className="rounded-[6px] bg-[#EEF2FF] px-2.5 py-1 text-[11px] font-black text-[#1055E8]">
-                    {addYear}
-                  </span>
-                </div>
-                <p className="text-sm text-[#A3AED0]">
-                  Total {ready.length} holiday{ready.length === 1 ? "" : "s"}
-                </p>
+                <button
+                  type="button"
+                  onClick={acceptDrafts}
+                  disabled={saving}
+                  className="cursor-pointer h-10 rounded-lg bg-[#4318FF] px-5 text-sm font-bold text-white hover:bg-[#3311CC] disabled:opacity-50"
+                >
+                  {saving ? "Saving..." : "Confirm"}
+                </button>
               </div>
-              <button
-                type="button"
-                aria-label="Edit holidays"
-                onClick={() => {
-                  setPreviewOpen(false);
-                  setAddStep("rows");
-                  setAddOpen(true);
-                }}
-                className="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#4318FF] text-[#4318FF] hover:bg-[#F4F7FE]"
-              >
-                <Pencil size={16} />
-              </button>
             </div>
-
-            <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-4">
-              <div className="mb-2 hidden grid-cols-[48px_120px_minmax(0,1fr)] gap-3 px-3 text-sm font-semibold text-[#2B3674] md:grid">
-                <span className="text-center">SL No</span>
-                <span>Date</span>
-                <span>Holiday name</span>
-              </div>
-              <div className="space-y-3">
-                {ready.map((row, index) => (
-                  <div
-                    key={row.key}
-                    className="grid grid-cols-1 items-center gap-3 rounded-lg border border-black/15 px-3 py-3 md:grid-cols-[48px_120px_minmax(0,1fr)]"
-                  >
-                    <span className="text-center text-sm font-semibold text-[#2B3674]">{index + 1}</span>
-                    <span className="whitespace-nowrap font-semibold text-[#2B3674]">
-                      {dayjs(row.date).format(DATE_FORMAT)}
-                    </span>
-                    <span className="min-w-0 break-all font-medium text-[#2B3674]">{row.name}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-4 rounded-lg bg-[#F4F7FE] px-3 py-3 text-sm text-[#2B3674]">
-                Once saved, a holiday can be edited, but it cannot be deleted.
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-2 border-t border-gray-100 px-5 py-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setPreviewOpen(false);
-                  setAddStep("rows");
-                  setAddOpen(true);
-                }}
-                className="cursor-pointer h-10 rounded-lg border border-[#4318FF] bg-white px-4 text-sm font-semibold text-[#4318FF] hover:bg-[#F4F7FE]"
-              >
-                Back
-              </button>
-              <button
-                type="button"
-                onClick={acceptDrafts}
-                disabled={saving}
-                className="cursor-pointer h-10 rounded-lg bg-[#4318FF] px-5 text-sm font-bold text-white hover:bg-[#3311CC] disabled:opacity-50"
-              >
-                {saving ? "Saving..." : "Confirm"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

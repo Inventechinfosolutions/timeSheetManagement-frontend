@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { CalendarCheck, MapPin, ArrowRight } from "lucide-react";
+import { CalendarCheck, MapPin, ArrowRight, Filter } from "lucide-react";
 import { TimesheetEntry } from "../types";
+import { Dropdown } from "../components/ui";
 import { formatHours, getPrimaryLocationLabel, getStatusBadge } from "./dashboardUtils";
 
 interface Props {
@@ -10,7 +11,18 @@ interface Props {
   limit?: number;
 }
 
-const STATUS_FILTERS = ["All Status", "Present", "WFH", "Client Visit", "Half Day", "Leave", "Absent", "Not Updated", "Weekend", "Holiday"];
+const STATUS_OPTIONS = [
+  "All Status",
+  "Present",
+  "WFH",
+  "Client Visit",
+  "Half Day",
+  "Leave",
+  "Absent",
+  "Not Updated",
+  "Weekend",
+  "Holiday",
+].map((s) => ({ value: s, label: s }));
 
 const RecentAttendanceList = ({ entries, onRowClick, onViewAll, limit = 6 }: Props) => {
   const [statusFilter, setStatusFilter] = useState("All Status");
@@ -37,17 +49,18 @@ const RecentAttendanceList = ({ entries, onRowClick, onViewAll, limit = 6 }: Pro
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <select
+          <Dropdown
+            options={STATUS_OPTIONS}
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="cursor-pointer rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-[#2B3674] outline-none transition-colors hover:border-[#4318FF]/40 focus:border-[#4318FF]"
-          >
-            {STATUS_FILTERS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+            onChange={setStatusFilter}
+            defaultValue="All Status"
+            prefixIcon={<Filter size={13} />}
+            allowClear
+            showTooltip={false}
+            className="shrink-0"
+            maxLabelWidth="max-w-[110px]"
+            menuClassName="w-full"
+          />
           {onViewAll && (
             <button
               type="button"

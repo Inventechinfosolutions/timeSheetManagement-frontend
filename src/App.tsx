@@ -96,7 +96,7 @@ const EmployeeTabWrapper = () => {
 };
 
 const CEO_BLOCKED_ADMIN_TABS = ["registration", "employees", "leave-calculation"];
-const RECEPTIONIST_BLOCKED_ADMIN_TABS = ["leave-calculation", "holiday-management"];
+const RECEPTIONIST_BLOCKED_ADMIN_TABS = ["leave-calculation"];
 
 const AdminTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -165,7 +165,7 @@ const AdminTabWrapper = () => {
     case "edit-access":
       return <AttendenceEditRequests />;
     case "holiday-management":
-      if (!isAdminAccess(currentUser)) {
+      if (!isAdminAccess(currentUser) && !isReceptionist) {
         return <Navigate to={dashboardHome} replace />;
       }
       return <HolidayManagementPage />;

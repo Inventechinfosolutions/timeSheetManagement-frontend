@@ -108,8 +108,9 @@ const SidebarLayout = ({
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Request Management", icon: Calendar },
       { name: "Leave Management", icon: CalendarCheck },
-      { name: "Appraisal", icon: ClipboardCheck },
+      { name: "Holiday Management", icon: CalendarDays },
       { name: "Access Ticket", icon: Unlock },
+      { name: "Appraisal", icon: ClipboardCheck },
       { name: "Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
       { name: "Manager Mapping", icon: Users },
@@ -119,31 +120,27 @@ const SidebarLayout = ({
   );
 
   // Receptionist: hide Request Management and Leave Management from sidebar
-  // Admin: hide Notes and Inbox; add Holiday Management (CEO/GM keep dashboard card)
+  // Admin: hide Notes and Inbox; Holiday Management in sidebar (CEO/GM keep dashboard card)
   const visibleAdminSidebarItems = useMemo(() => {
     let items =
       title === "Receptionist"
         ? adminSidebarItems.filter(
-            (i) => i.name !== "Request Management" && i.name !== "Leave Management",
+            (i) =>
+              i.name !== "Request Management" &&
+              i.name !== "Leave Management",
           )
         : title === "Admin"
           ? adminSidebarItems.filter(
               (i) => i.name !== "Notes" && i.name !== "Inbox",
             )
-          : adminSidebarItems;
+          : adminSidebarItems.filter((i) => i.name !== "Holiday Management");
 
-    if (title === "Admin") {
-      const leaveIdx = items.findIndex((i) => i.name === "Leave Management");
-      const holidayItem = { name: "Holiday Management", icon: CalendarDays };
-      if (leaveIdx >= 0) {
-        items = [
-          ...items.slice(0, leaveIdx + 1),
-          holidayItem,
-          ...items.slice(leaveIdx + 1),
-        ];
-      } else {
-        items = [...items, holidayItem];
-      }
+    if (title === "Receptionist") {
+      return items.map((item) =>
+        item.name === "Admin Dashboard"
+          ? { ...item, name: "Receptionist Dashboard" }
+          : item,
+      );
     }
     if (title === "CEO" || title === "General Manager") {
       return items
@@ -193,7 +190,9 @@ const SidebarLayout = ({
             ? "CEO Dashboard"
             : title === "General Manager"
               ? "General Manager Dashboard"
-              : "Admin Dashboard";
+              : title === "Receptionist"
+                ? "Receptionist Dashboard"
+                : "Admin Dashboard";
     }
   }, [tab, activeTab, title]);
 

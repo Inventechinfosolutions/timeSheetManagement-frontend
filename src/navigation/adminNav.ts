@@ -18,6 +18,7 @@ export const ADMIN_HOME_PATH = "/admin-dashboard";
 
 export const ADMIN_HOME_LABELS = [
   "Admin Dashboard",
+  "Receptionist Dashboard",
   "CEO Dashboard",
   "General Manager Dashboard",
 ] as const;
@@ -79,18 +80,18 @@ export const ADMIN_NAV: AdminNavItem[] = [
     pathIncludes: ["/admin-dashboard/holiday-management"],
   },
   {
-    label: "Appraisal",
-    path: "/admin-dashboard/appraisal",
-    tabs: ["appraisal", "quarterly-review"],
-    labelAliases: ["Quarterly Review"],
-    pathIncludes: ["/admin-dashboard/appraisal", "/admin-dashboard/quarterly-review"],
-  },
-  {
     label: "Access Ticket",
     path: "/admin-dashboard/edit-access",
     tabs: ["edit-access"],
     labelAliases: ["Edit Access"],
     pathIncludes: ["/admin-dashboard/edit-access"],
+  },
+  {
+    label: "Appraisal",
+    path: "/admin-dashboard/appraisal",
+    tabs: ["appraisal", "quarterly-review"],
+    labelAliases: ["Quarterly Review"],
+    pathIncludes: ["/admin-dashboard/appraisal", "/admin-dashboard/quarterly-review"],
   },
   {
     label: "Notes",
@@ -140,16 +141,21 @@ for (const item of ADMIN_NAV) {
   }
 }
 
-export function resolveAdminHomeLabel(isCeo: boolean, isGm: boolean): string {
-  if (isCeo) return "CEO Dashboard";
-  if (isGm) return "General Manager Dashboard";
+export function resolveAdminHomeLabel(opts: {
+  isCeo?: boolean;
+  isGm?: boolean;
+  isReceptionist?: boolean;
+}): string {
+  if (opts.isCeo) return "CEO Dashboard";
+  if (opts.isGm) return "General Manager Dashboard";
+  if (opts.isReceptionist) return "Receptionist Dashboard";
   return "Admin Dashboard";
 }
 
 export function resolveAdminActiveLabel(
   pathname: string,
   tab: string | undefined,
-  opts: { isCeo: boolean; isGm: boolean },
+  opts: { isCeo: boolean; isGm: boolean; isReceptionist?: boolean },
 ): string {
   for (const { needle, label } of PATH_MATCHERS) {
     if (pathname.includes(needle)) return label;
@@ -157,7 +163,7 @@ export function resolveAdminActiveLabel(
   if (tab && TAB_TO_LABEL.has(tab)) {
     return TAB_TO_LABEL.get(tab)!;
   }
-  return resolveAdminHomeLabel(opts.isCeo, opts.isGm);
+  return resolveAdminHomeLabel(opts);
 }
 
 export function resolveAdminNavigatePath(tabName: string): string | null {
