@@ -110,7 +110,7 @@ const SidebarLayout = ({
       { name: "Leave Management", icon: CalendarCheck },
       { name: "Holiday Management", icon: CalendarDays },
       { name: "Access Ticket", icon: Unlock },
-      { name: "Appraisal", icon: ClipboardCheck },
+      { name: "Quarterly Review", icon: ClipboardCheck },
       { name: "Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
       { name: "Manager Mapping", icon: Users },
