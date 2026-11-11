@@ -1,7 +1,6 @@
 import { useMemo, useCallback, useState, useEffect, useRef } from "react";
 import dayjs from "dayjs";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
-import { Plane, Clock, StickyNote, UserRound } from "lucide-react";
 import { MonthNavigator } from "../components/ui";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { AttendanceStatus, UserType } from "../enums";
@@ -17,7 +16,21 @@ import LeaveBalanceSummary from "./LeaveBalanceSummary";
 import RecentAttendanceList from "./RecentAttendanceList";
 import QuickActions, { QuickAction } from "./QuickActions";
 import OnTrackCard from "./OnTrackCard";
+import { Plane, Clock, StickyNote, UserRound } from "lucide-react";
+import AppraisalDashboardCard, {
+  AppraisalDashPhase,
+  resolveAppraisalPhase,
+} from "./AppraisalDashboardCard";
+import { AppraisalApi } from "../Appraisal/reducers/appraisal.reducer";
+import { formatAppraisalDisplayDate } from "../Appraisal/utils/appraisalHelpers";
 import { RootState } from "../store";
+
+type LatestAppraisalSummary = {
+  phase: AppraisalDashPhase;
+  quarter?: string;
+  financialYear?: string;
+  deadline?: string;
+};
 
 interface Props {
   setActiveTab?: (tab: string) => void;
@@ -73,6 +86,7 @@ const TodayAttendance = ({
   const [now] = useState(() => new Date());
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [leaveSummary, setLeaveSummary] = useState<LeaveSummary>({ available: 0, used: 0, lop: 0 });
+  const [latestAppraisal, setLatestAppraisal] = useState<LatestAppraisalSummary | null>(null);
 
   const fetchDashboardData = useCallback(
     (date: Date) => {
@@ -95,6 +109,42 @@ const TodayAttendance = ({
     },
     [dispatch, currentEmployeeId],
   );
+
+  useEffect(() => {
+    if (viewOnly || !currentEmployeeId || currentEmployeeId === "Admin") {
+      setLatestAppraisal(null);
+      return;
+    }
+    let cancelled = false;
+    // Quarterly-review dashboard returns assignments even when performance is not started
+    void AppraisalApi.getEmployeeDashboard(String(currentEmployeeId))
+      .then((result) => {
+        if (cancelled) return;
+        const rows = [...(result.reviews || [])].sort((a, b) => {
+          const aTime = new Date(a.assignedDate || a.dueDate || 0).getTime();
+          const bTime = new Date(b.assignedDate || b.dueDate || 0).getTime();
+          if (bTime !== aTime) return bTime - aTime;
+          return Number(b.id || 0) - Number(a.id || 0);
+        });
+        const latest = rows[0];
+        if (!latest) {
+          setLatestAppraisal(null);
+          return;
+        }
+        setLatestAppraisal({
+          phase: resolveAppraisalPhase(latest.submissionStatus),
+          quarter: String(latest.quarter || ""),
+          financialYear: latest.financialYear || "",
+          deadline: formatAppraisalDisplayDate(latest.dueDate),
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setLatestAppraisal(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [viewOnly, currentEmployeeId]);
 
   useEffect(() => {
     if (viewOnly) return;
@@ -473,8 +523,8 @@ const TodayAttendance = ({
         </div>
 
         {/* Activity Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-5 w-full">
-          <div className={viewOnly ? "lg:col-span-2 xl:col-span-12" : "lg:col-span-2 xl:col-span-6"}>
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-5 w-full items-stretch">
+          <div className={viewOnly ? "lg:col-span-2 xl:col-span-12" : "lg:col-span-2 xl:col-span-7"}>
             <RecentAttendanceList
               entries={currentMonthEntries as any}
               onRowClick={handleNavigate}
@@ -482,16 +532,25 @@ const TodayAttendance = ({
             />
           </div>
           {!viewOnly && (
-            <>
-              <div className="xl:col-span-3">
-                <QuickActions actions={quickActions} />
-              </div>
-              <div className="xl:col-span-3">
+            <div className="xl:col-span-5 h-full min-h-[260px]">
+              {latestAppraisal ? (
+                <AppraisalDashboardCard
+                  phase={latestAppraisal.phase}
+                  quarter={latestAppraisal.quarter}
+                  financialYear={latestAppraisal.financialYear}
+                  deadline={latestAppraisal.deadline}
+                  onOpen={() => goToTab("appraisal")}
+                />
+              ) : (
                 <OnTrackCard pendingDays={pendingDays} onFix={logTodayHours} />
-              </div>
-            </>
+              )}
+            </div>
           )}
         </div>
+
+        {!viewOnly && (
+          <QuickActions actions={quickActions} landscape />
+        )}
       </div>
     </div>
   );

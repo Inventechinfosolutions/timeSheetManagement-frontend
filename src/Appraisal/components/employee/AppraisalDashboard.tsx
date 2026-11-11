@@ -140,6 +140,32 @@ const renderStatusBadge = (status: string, reassignCount?: number) => {
       </span>
     );
   }
+  if (effective === "REQUESTED_FOR_EDIT") {
+    return (
+      <span
+        className="qr-status-badge qr-status-in-progress"
+        title="Edit request sent. Waiting for reviewer approval — access is not granted yet."
+      >
+        <Clock className="w-3 h-3 text-sky-600 mr-0.5 inline" />
+        Requested For Edit
+      </span>
+    );
+  }
+  if (
+    effective === "EDIT_GRANTED" ||
+    effective === "APPROVED_FOR_EDITING" ||
+    effective === "ALLOWED_TO_EDIT"
+  ) {
+    return (
+      <span
+        className="qr-status-badge qr-status-in-progress"
+        title="Edit access granted. Update your answers and resubmit. Until you resubmit, your old submitted data stays as is."
+      >
+        <KeyRound className="w-3 h-3 text-sky-600 mr-0.5 inline" />
+        Edit Granted
+      </span>
+    );
+  }
   const normalized = effective.toLowerCase().replace(/_/g, " ");
   let badgeClass = "qr-status-not-started";
 
@@ -1052,13 +1078,31 @@ export const AppraisalDashboard: React.FC = () => {
       return hidden;
     }
 
-    const isPending =
-      statusUpper === "REQUESTED_FOR_EDIT" ||
-      accessRequests.some(
-        (req) =>
-          req.assignmentId === assignment.id ||
-          (req.quarter === assignment.quarter && req.financialYear === assignment.financialYear)
-      );
+    // Waiting for reviewer approval — access NOT granted yet
+    if (statusUpper === "REQUESTED_FOR_EDIT") {
+      return {
+        visible: true,
+        eligible: true,
+        alreadyRequested: true,
+        remainingHours: 0,
+        tooltip: `Edit request sent to ${assignment.assignedBy}. Waiting for approval — access is not granted yet.`,
+      };
+    }
+
+    // Edit already granted — use pencil to edit; hide redundant access key
+    if (
+      statusUpper === "EDIT_GRANTED" ||
+      statusUpper === "APPROVED_FOR_EDITING" ||
+      statusUpper === "ALLOWED_TO_EDIT"
+    ) {
+      return hidden;
+    }
+
+    const isPending = accessRequests.some(
+      (req) =>
+        req.assignmentId === assignment.id ||
+        (req.quarter === assignment.quarter && req.financialYear === assignment.financialYear),
+    );
 
     if (isPending) {
       return {
@@ -1720,9 +1764,15 @@ export const AppraisalDashboard: React.FC = () => {
                                             }`}
                                           title={elig.tooltip}
                                           aria-label={
-                                            elig.alreadyRequested
-                                              ? `Access request submitted for ${assignment.quarter}. Click to view.`
-                                              : `Request access for ${assignment.quarter}`
+                                            ["EDIT_GRANTED", "APPROVED_FOR_EDITING", "ALLOWED_TO_EDIT"].includes(
+                                              assignment.status.toUpperCase(),
+                                            )
+                                              ? `Edit access granted for ${assignment.quarter}. Edit and resubmit.`
+                                              : assignment.status.toUpperCase() === "REQUESTED_FOR_EDIT"
+                                                ? `Edit request pending approval for ${assignment.quarter}.`
+                                                : elig.alreadyRequested
+                                                  ? `Access request submitted for ${assignment.quarter}. Click to view.`
+                                                  : `Request access for ${assignment.quarter}`
                                           }
                                         >
                                           <KeyRound className="w-4 h-4" />
@@ -1881,9 +1931,15 @@ export const AppraisalDashboard: React.FC = () => {
                                   }`}
                                 title={elig.tooltip}
                                 aria-label={
-                                  elig.alreadyRequested
-                                    ? `Access request submitted for ${assignment.quarter}. Click to view.`
-                                    : `Request access for ${assignment.quarter}`
+                                  ["EDIT_GRANTED", "APPROVED_FOR_EDITING", "ALLOWED_TO_EDIT"].includes(
+                                    assignment.status.toUpperCase(),
+                                  )
+                                    ? `Edit access granted for ${assignment.quarter}. Edit and resubmit.`
+                                    : assignment.status.toUpperCase() === "REQUESTED_FOR_EDIT"
+                                      ? `Edit request pending approval for ${assignment.quarter}.`
+                                      : elig.alreadyRequested
+                                        ? `Access request submitted for ${assignment.quarter}. Click to view.`
+                                        : `Request access for ${assignment.quarter}`
                                 }
                               >
                                 <KeyRound className="w-3.5 h-3.5" />
