@@ -3,8 +3,6 @@ import dayjs from "dayjs";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Tooltip } from "antd";
 import {
-  ChevronLeft,
-  ChevronRight,
   Download,
   X,
   Calendar as CalendarIcon,
@@ -12,6 +10,7 @@ import {
   ShieldBan,
   ArrowLeft,
 } from "lucide-react";
+import { MonthNavigator } from "../components/ui";
 import { saveAs } from "file-saver";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { RootState } from "../store";
@@ -148,6 +147,12 @@ const Calendar = ({
     (isMyRoute
       ? currentUser?.employeeId || currentUser?.loginId
       : entity?.employeeId || currentUser?.employeeId || currentUser?.loginId);
+  const isManagerView = !!(
+    isManager &&
+    currentEmployeeId &&
+    currentEmployeeId === (currentUser?.employeeId || currentUser?.loginId)
+  );
+  const canOverrideLocks = isAdmin || (isManager && !isManagerView);
 
   // const holidaysFetched = useRef(false);
   const attendanceFetchedKey = useRef<string | null>(null);
@@ -309,16 +314,15 @@ const Calendar = ({
       return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
     });
     if (
-      !isAdmin &&
-      !isManager &&
+      !canOverrideLocks &&
       isLockedAttendance(recordForDay) &&
       !approvedDates.includes(dateStr)
     ) {
       return true;
     }
 
-    // 1. Month Lock (Skip for Admin/Manager)
-    if (!isAdmin && !isManager && !isEditableMonth(d)) return true;
+    // Past months stay locked on a manager's own sheet.
+    if (!canOverrideLocks && !isEditableMonth(d)) return true;
 
     // 2. Manual Blockers
     const isManualBlocked = blockers.some((b) => {
@@ -332,7 +336,7 @@ const Calendar = ({
 
     // 3. Restricted Activity (Mixed Combinations / Leave / WFH)
     // If the record exists and has non-office activity, it's blocked for editing
-    if (!isAdmin && !isManager) {
+    if (!canOverrideLocks) {
       const dateStr = dayjs(d).format("YYYY-MM-DD");
       const entry = records.find((r) => {
         const rDate = new Date(r.workingDate);
@@ -378,15 +382,14 @@ const Calendar = ({
       return dayjs(rDate).format("YYYY-MM-DD") === dateStr;
     });
     if (
-      !isAdmin &&
-      !isManager &&
+      !canOverrideLocks &&
       isLockedAttendance(recordForDay) &&
       !approvedDates.includes(dateStr)
     ) {
       return "Date is Locked. Raise an Access Request to update it.";
     }
 
-    if (!isAdmin && !isManager && !isEditableMonth(d)) return "Month is Locked";
+    if (!canOverrideLocks && !isEditableMonth(d)) return "Month is Locked";
 
     // 2. Manual Blocker
     const blocker = getBlocker(date);
@@ -396,7 +399,7 @@ const Calendar = ({
     }
 
     // 3. Restricted Activity
-    if (!isAdmin && !isManager) {
+    if (!canOverrideLocks) {
       const dateStr = dayjs(d).format("YYYY-MM-DD");
       const entry = records.find((r) => {
         const rDate = new Date(r.workingDate);
@@ -547,44 +550,13 @@ const Calendar = ({
               )}
 
               {!hideMonthNavigation && (
-                <div
-                  className={`flex items-center gap-1 ${
-                    isSidebar
-                      ? "bg-transparent p-0"
-                      : "bg-[#F4F7FE] p-1 rounded-xl border border-transparent hover:border-gray-200 transition-colors"
-                  }`}
-                >
-                  <button
-                    onClick={handlePrevMonth}
-                    className={`p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all text-[#A3AED0] hover:text-[#4318FF] active:scale-90 ${
-                      isSidebar ? "p-1" : ""
-                    }`}
-                  >
-                    <ChevronLeft size={20} strokeWidth={2.5} />
-                  </button>
-                  <span
-                    className={`${
-                      isSidebar
-                        ? "text-sm min-w-[90px]"
-                        : "text-sm font-extrabold min-w-[120px] md:min-w-[140px]"
-                    } text-[#2B3674] text-center select-none`}
-                  >
-                    {currentMonthName}
-                  </span>
-                  <button
-                    onClick={handleNextMonth}
-                    disabled={!canNavigateToNextMonth}
-                    className={`p-1.5 rounded-lg transition-all active:scale-90 ${
-                      isSidebar ? "p-1" : ""
-                    } ${
-                      !canNavigateToNextMonth
-                        ? "text-gray-300 cursor-not-allowed"
-                        : "text-[#A3AED0] hover:text-[#4318FF] hover:bg-white hover:shadow-sm"
-                    }`}
-                  >
-                    <ChevronRight size={20} strokeWidth={2.5} />
-                  </button>
-                </div>
+                <MonthNavigator
+                  month={displayDate.getMonth() + 1}
+                  year={displayDate.getFullYear()}
+                  onPrev={handlePrevMonth}
+                  onNext={handleNextMonth}
+                  nextDisabled={!canNavigateToNextMonth}
+                />
               )}
             </div>
           </div>
@@ -966,15 +938,20 @@ const Calendar = ({
                 <div
                   key={day}
                   onClick={() => {
-                    if (isBlocked && (isAdmin || isManager) && onBlockedClick) {
-                      onBlockedClick();
-                      return;
-                    }
                     const targetDate = new Date(
                       displayDate.getFullYear(),
                       displayDate.getMonth(),
                       day,
                     );
+                    if (
+                      isBlocked &&
+                      (isAdmin || isManager) &&
+                      getBlocker(targetDate) &&
+                      onBlockedClick
+                    ) {
+                      onBlockedClick();
+                      return;
+                    }
                     const timestamp = targetDate.getTime();
 
                     if (onNavigateToDate) {

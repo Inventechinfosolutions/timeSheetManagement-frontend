@@ -34,7 +34,11 @@ import { AppraisalApi, formatAppraisalDisplayDate, readApiError, RevealedRating 
 import { Dropdown } from "../../../components/ui";
 import { DatePicker as AntDatePicker, ConfigProvider, message } from "antd";
 import dayjs from "dayjs";
-import { getRatingTierConfig, formatQuarterDisplay } from "../../utils/appraisalHelpers";
+import {
+  getRatingTierConfig,
+  formatQuarterDisplay,
+  resolveAssignedQuarterPeriod,
+} from "../../utils/appraisalHelpers";
 import { ENVIRONMENT_SCORES } from "../../constants/appraisal.constants";
 import AppraisalMomentCard from "../common/AppraisalMomentCard";
 import { renderAnimatedEmojiIcon } from "../employee/steps/CompanyEnvironmentStep";
@@ -229,7 +233,25 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const [activeView, setActiveView] = useState<"review" | "matrix">(initialActiveView || "review");
   const [matrixLoading, setMatrixLoading] = useState(false);
   const [loadedReviewStatus, setLoadedReviewStatus] = useState("");
+  const [assignedReviewPeriod, setAssignedReviewPeriod] = useState<{ start: string; end: string }>({
+    start: "",
+    end: "",
+  });
   const panelTopRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void resolveAssignedQuarterPeriod({
+      quarter: record.quarter,
+      financialYear: record.financialYear,
+      reviewPeriod: record.reviewPeriod,
+    }).then((period) => {
+      if (!cancelled) setAssignedReviewPeriod(period);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [record.quarter, record.financialYear, record.reviewPeriod]);
 
   const scrollToTop = () => {
     if (panelTopRef.current) {
@@ -998,12 +1020,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     );
   };
 
-  // System-calculated average from all 8 evaluation parameters — this IS the final rating
+  // System-calculated average from evaluation parameters — this IS the final rating (2 dp, matches DB)
   const calculatedAverage = useMemo(() => {
     const vals = EVALUATION_PARAMETERS.map((p) => scores[p.key] || 0).filter((v) => v > 0);
     if (vals.length === 0) return null;
     const sum = vals.reduce((a, b) => a + b, 0);
-    return Math.round((sum / vals.length) * 10) / 10;
+    return Number((sum / vals.length).toFixed(2));
   }, [scores]);
 
   // averageScore = auto-computed (no manual entry required)
@@ -1808,7 +1830,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 <div className="eval-stagger-item eval-stagger-3 space-y-0">
                   <KvRow
                     label="Review Period"
-                    value={`${formData.reviewPeriodStart || "—"} to ${formData.reviewPeriodEnd || "—"}`}
+                    value={`${assignedReviewPeriod.start || "—"} to ${assignedReviewPeriod.end || "—"}`}
                   />
                   <KvRow
                     label="Overall Performance Summary"
@@ -2637,7 +2659,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             title="Auto-calculated from evaluation parameters"
                             aria-label="Auto-calculated final rating"
                           >
-                            {averageScore !== null ? averageScore.toFixed(1) : "—"}
+                            {averageScore !== null ? averageScore.toFixed(2) : "—"}
                           </div>
                           {fieldErrors.finalScore ? (
                             <span className="text-[11px] font-semibold text-red-600">{fieldErrors.finalScore}</span>
@@ -2691,9 +2713,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               className="text-base font-bold leading-none transition-colors duration-300"
                               style={currentTier ? { color: currentTier.badgeTextHex } : { color: "#0F172A" }}
                             >
-                              {averageScore !== null ? averageScore.toFixed(1) : "—"}
+                              {averageScore !== null ? averageScore.toFixed(2) : "—"}
                             </span>
-                            <span className="text-[9px] font-bold text-[#334155] mt-0.5">/ 5.0</span>
+                            <span className="text-[9px] font-bold text-[#334155] mt-0.5">/ 5.00</span>
                           </div>
                         </div>
                       </div>
@@ -2802,7 +2824,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         {calculatedAverage !== null && (
                           <span className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-[11px] font-semibold text-[#0F172A]">
                             <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                            Avg: {calculatedAverage.toFixed(1)} / 5.0
+                            Avg: {calculatedAverage.toFixed(2)} / 5.00
                           </span>
                         )}
                       </div>

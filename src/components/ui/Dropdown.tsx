@@ -21,6 +21,8 @@ export interface DropdownProps<T = string> {
   placeholder?: string;
   prefixIcon?: React.ReactNode;
   allowClear?: boolean;
+  /** When false, no hover tooltip on the trigger or options. Default true. */
+  showTooltip?: boolean;
   className?: string;
   buttonClassName?: string;
   menuClassName?: string;
@@ -40,6 +42,7 @@ export function Dropdown<T extends string = string>({
   placeholder = "Select...",
   prefixIcon,
   allowClear = false,
+  showTooltip = true,
   className = "",
   buttonClassName = "",
   menuClassName = "",
@@ -112,52 +115,61 @@ export function Dropdown<T extends string = string>({
     }
   };
 
+  const trigger = (
+    <div
+      onClick={() => {
+        if (disabled) return;
+        if (isOpen) {
+          setIsOpen(false);
+          return;
+        }
+        placeMenu();
+        onOpen?.();
+        setIsOpen(true);
+      }}
+      className={`flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F7FE] hover:bg-gray-100 rounded-xl text-xs font-medium text-[#1E293B] transition-all border border-transparent cursor-pointer select-none ${
+        disabled && !buttonClassName.includes("opacity-") ? "opacity-50 cursor-not-allowed" : disabled ? "cursor-not-allowed" : ""
+      } ${buttonClassName}`}
+    >
+      {prefixIcon && <span className="text-[#4318FF] shrink-0">{prefixIcon}</span>}
+      <span className={`${maxLabelWidth} truncate flex-1 min-w-0 text-left`}>{currentLabel}</span>
+      <span className="ml-auto inline-flex items-center gap-1 shrink-0">
+        {allowClear && isFiltered && !disabled ? (
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={handleClear}
+            aria-label="Clear filter"
+            title="Clear filter"
+            className="p-0.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-200/70 transition-colors cursor-pointer shrink-0"
+          >
+            <X size={12} strokeWidth={2.5} />
+          </span>
+        ) : null}
+        <ChevronDown
+          size={12}
+          className={`text-gray-400 shrink-0 transition-transform cursor-pointer ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </span>
+    </div>
+  );
+
   return (
     <div className={`relative ${className}`} ref={containerRef}>
-      <Tooltip
-        title={isFiltered ? currentLabel : undefined}
-        placement="top"
-        mouseEnterDelay={0.3}
-        className={className.includes("w-full") ? "!flex !w-full" : ""}
-      >
-        <div
-          onClick={() => {
-            if (disabled) return;
-            if (isOpen) {
-              setIsOpen(false);
-              return;
-            }
-            placeMenu();
-            onOpen?.();
-            setIsOpen(true);
-          }}
-          className={`flex items-center gap-1.5 px-3 py-1.5 bg-[#F4F7FE] hover:bg-gray-100 rounded-xl text-xs font-medium text-[#1E293B] transition-all border border-transparent cursor-pointer select-none ${
-            disabled && !buttonClassName.includes("opacity-") ? "opacity-50 cursor-not-allowed" : disabled ? "cursor-not-allowed" : ""
-          } ${buttonClassName}`}
+      {showTooltip ? (
+        <Tooltip
+          title={isFiltered ? currentLabel : undefined}
+          placement="top"
+          mouseEnterDelay={0.3}
+          className={className.includes("w-full") ? "!flex !w-full" : ""}
         >
-          {prefixIcon && <span className="text-[#4318FF] shrink-0">{prefixIcon}</span>}
-          <span className={`${maxLabelWidth} truncate flex-1 min-w-0 text-left`}>{currentLabel}</span>
-          <span className="ml-auto inline-flex items-center gap-1 shrink-0">
-            {allowClear && isFiltered && !disabled ? (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={handleClear}
-                className="p-0.5 rounded-full text-gray-400 hover:text-gray-700 hover:bg-gray-200/70 transition-colors cursor-pointer shrink-0"
-                title="Clear filter"
-              >
-                <X size={12} />
-              </span>
-            ) : null}
-            <ChevronDown
-              size={12}
-              className={`text-gray-400 shrink-0 transition-transform cursor-pointer ${
-                isOpen ? "rotate-180" : ""
-              }`}
-            />
-          </span>
-        </div>
-      </Tooltip>
+          {trigger}
+        </Tooltip>
+      ) : (
+        trigger
+      )}
 
       {isOpen &&
         createPortal(
@@ -180,7 +192,7 @@ export function Dropdown<T extends string = string>({
               <button
                 key={String(option.value)}
                 type="button"
-                title={option.label}
+                title={showTooltip ? option.label : undefined}
                 onClick={() => {
                   onChange(option.value);
                   setIsOpen(false);

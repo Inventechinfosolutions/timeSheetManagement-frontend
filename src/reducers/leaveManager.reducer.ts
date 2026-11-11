@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 import {
+    LeaveApprovalType,
     LeaveCalculationType,
     LeaveManagerState,
     SaveLeaveEntriesPayload,
@@ -40,6 +41,21 @@ export const updateLeaveCalculationType = createAsyncThunk(
             return response.data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to update leave calculation type');
+        }
+    }
+);
+
+export const updateLeaveApproval = createAsyncThunk(
+    'leaveManager/updateLeaveApproval',
+    async (
+        { id, leaveApproval }: { id: number; leaveApproval: LeaveApprovalType },
+        { rejectWithValue }
+    ) => {
+        try {
+            const response = await axios.patch(`${API_URL}/departments/${id}/leave-approval`, { leaveApproval });
+            return response.data;
+        } catch (error: any) {
+            return rejectWithValue(error.response?.data?.message || 'Failed to update manager leave approval');
         }
     }
 );
@@ -97,6 +113,11 @@ const leaveManagerSlice = createSlice({
             if (state.employees && state.employees.department === action.payload.departmentName) {
                 state.employees.leaveCalculationType = action.payload.leaveCalculationType;
             }
+        });
+
+        builder.addCase(updateLeaveApproval.fulfilled, (state, action) => {
+            const dept = state.departments.find((d) => d.id === action.payload.id);
+            if (dept) dept.leaveApproval = action.payload.leaveApproval;
         });
 
         builder

@@ -4,149 +4,36 @@ import { useAppDispatch, useAppSelector } from "../hooks";
 import { fetchUnreadNotifications } from "../reducers/leaveNotification.reducer";
 import { UserType } from "../enums";
 import { isCeoUser, isGeneralManagerUser } from "../utils/roleAccess";
+import {
+  ADMIN_HOME_PATH,
+  resolveAdminActiveLabel,
+  resolveAdminNavigatePath,
+} from "./adminNav";
 
 const AdminLayout = () => {
   const { tab } = useParams<{ tab: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const dispatch = useAppDispatch();
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isCeo = isCeoUser(currentUser);
   const isGm = isGeneralManagerUser(currentUser);
 
-  // Determine active tab based on path parameter or current URL
-  const getActiveTab = () => {
-    // Check specific paths first for sub-routes that might not resolve via simple 'tab' param
-    const path = location.pathname;
+  const getActiveTab = () =>
+    resolveAdminActiveLabel(location.pathname, tab, {
+      isCeo,
+      isGm,
+      isReceptionist,
+    });
 
-    if (
-      path.includes("/admin-dashboard/employee-details/") ||
-      path.includes("/admin-dashboard/view-attendance/")
-    ) {
-      return "Employee Directory";
-    }
-    if (
-      path.includes("/admin-dashboard/timesheet/") ||
-      path.includes("/admin-dashboard/timesheet-view/") ||
-      path.includes("/admin-dashboard/working-details/")
-    ) {
-      return "Employee Timesheet";
-    }
-    if (path.includes("/admin-dashboard/working-details/")) {
-      return "Working Details";
-    }
-    if (path.includes("/admin-dashboard/work-management")) {
-      return "Request Management";
-    }
-    if (path.includes("/admin-dashboard/leave-calculation")) {
-      return "Leave Management";
-    }
-    if (path.includes("/admin-dashboard/leave-balance")) {
-      return "Leave Balance";
-    }
-    if (path.includes("/admin-dashboard/notes")) {
-      return "Notes";
-    }
-    if (
-      path.includes("/admin-dashboard/appraisal") ||
-      path.includes("/admin-dashboard/quarterly-review") ||
-      path.includes("/admin-dashboard/my-appraisal") ||
-      path.includes("/admin-dashboard/my-quarterly-review")
-    ) {
-      return "Quarterly Review";
-    }
-    if (path.includes("/admin-dashboard/inbox")) {
-      return "Inbox";
-    }
-    if (path.includes("/admin-dashboard/edit-access")) {
-      return "Access Ticket";
-    }
-    if (
-      path.includes("/admin-dashboard/manager-mapping") ||
-      path.includes("/admin-dashboard/manager-employees/")
-    ) {
-      return "Manager Mapping";
-    }
-
-    switch (tab) {
-      case "registration":
-        return "User & Role Management";
-      case "employees":
-      case "employee-details":
-        return "Employee Directory";
-      case "requests":
-        return "Notification";
-      case "timesheet-list":
-      case "timesheet-view":
-      case "working-details":
-      case "attendance-matrix":
-        return "Employee Timesheet";
-      case "work-management":
-        return "Request Management";
-      case "leave-calculation":
-        return "Leave Management";
-      case "leave-balance":
-        return "Leave Balance";
-      case "manager-mapping":
-        return "Manager Mapping";
-      case "appraisal":
-      case "my-appraisal":
-      case "my-quarterly-review":
-      case "quarterly-review":
-        return "Quarterly Review";
-      case "notes":
-        return "Notes";
-      case "inbox":
-        return "Inbox";
-      case "edit-access":
-        return "Access Ticket";
-      default:
-        return isCeo
-          ? "CEO Dashboard"
-          : isGm
-            ? "General Manager Dashboard"
-            : "Admin Dashboard";
-    }
-  };
-
-  const dispatch = useAppDispatch();
   const handleTabChange = (tabName: string) => {
-    if (
-      tabName === "Admin Dashboard" ||
-      tabName === "CEO Dashboard" ||
-      tabName === "General Manager Dashboard"
-    ) {
+    const path = resolveAdminNavigatePath(tabName);
+    if (!path) return;
+    if (path === ADMIN_HOME_PATH) {
       dispatch(fetchUnreadNotifications());
-      navigate("/admin-dashboard");
-    } else if (tabName === "User & Role Management") {
-      navigate("/admin-dashboard/registration");
-    } else if (tabName === "Employee Directory") {
-      navigate("/admin-dashboard/employees");
-    } else if (tabName === "Employee Timesheet") {
-      navigate("/admin-dashboard/timesheet-list");
-    } else if (tabName === "Timesheet") {
-      navigate("/admin-dashboard/timesheet-list");
-    } else if (tabName === "Working Details") {
-      navigate("/admin-dashboard/working-details");
-    } else if (tabName === "Notification") {
-      navigate("/admin-dashboard/requests");
-    } else if (tabName === "Request Management") {
-      navigate("/admin-dashboard/work-management");
-    } else if (tabName === "Leave Management") {
-      navigate("/admin-dashboard/leave-calculation");
-    } else if (tabName === "Leave Balance") {
-      navigate("/admin-dashboard/leave-balance");
-    } else if (tabName === "Manager Mapping") {
-      navigate("/admin-dashboard/manager-mapping");
-    } else if (tabName === "Appraisal" || tabName === "Quarterly Review") {
-      navigate("/admin-dashboard/quarterly-review");
-    } else if (tabName === "Notes") {
-      navigate("/admin-dashboard/notes");
-    } else if (tabName === "Inbox") {
-      navigate("/admin-dashboard/inbox");
-    } else if (tabName === "Access Ticket" || tabName === "Edit Access") {
-      navigate("/admin-dashboard/edit-access");
     }
+    navigate(path);
   };
 
   return (

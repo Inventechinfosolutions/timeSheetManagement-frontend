@@ -7,6 +7,19 @@ interface ScrollNavigatorProps {
   enabled?: boolean;
 }
 
+/** True only for a box the user can actually scroll up and down. */
+const isVerticalScroller = (el: HTMLElement) => {
+  if (el.classList.contains("note-table-scroll")) return false;
+  const oy = getComputedStyle(el).overflowY;
+  if (oy !== "auto" && oy !== "scroll") return false;
+  return el.scrollHeight > el.clientHeight + 40;
+};
+
+const getMainScroller = (targetRef?: React.RefObject<HTMLElement | null>) =>
+  targetRef?.current ||
+  (document.querySelector("main.custom-scrollbar") as HTMLElement | null) ||
+  (document.querySelector("main") as HTMLElement | null);
+
 export const ScrollNavigator: React.FC<ScrollNavigatorProps> = ({
   targetRef,
   enabled = true,
@@ -17,24 +30,15 @@ export const ScrollNavigator: React.FC<ScrollNavigatorProps> = ({
   const [scrollProgress, setScrollProgress] = useState(0);
   const boundElRef = useRef<HTMLElement | Window | null>(null);
 
-  /** Prefer nested note workspace if it still scrolls; otherwise use main / window. */
+  /**
+   * The page scrollbar is `main`. Sideways table boxes are ignored, otherwise
+   * "top" moves an inner box and the note stays in the middle.
+   */
   const getScrollElement = useCallback((): HTMLElement | Window => {
-    const main =
-      targetRef?.current ||
-      (document.querySelector("main.custom-scrollbar") as HTMLElement | null) ||
-      (document.querySelector("main") as HTMLElement | null);
-
-    if (main) {
-      const nested = main.querySelector(".a4-page-workspace") as HTMLElement | null;
-      if (nested && nested.scrollHeight > nested.clientHeight + 40) {
-        return nested;
-      }
-      if (main.scrollHeight > main.clientHeight + 40) {
-        return main;
-      }
-      return main;
-    }
-    return window;
+    const main = getMainScroller(targetRef);
+    if (!main) return window;
+    if (isVerticalScroller(main)) return main;
+    return main;
   }, [targetRef]);
 
   const updateScrollState = useCallback(() => {
@@ -134,32 +138,46 @@ export const ScrollNavigator: React.FC<ScrollNavigatorProps> = ({
       else updateScrollState();
     }, 800);
 
+    const onSelection = () => {
+      const next = getScrollElement();
+      if (next !== scrollEl) attach(next);
+      else updateScrollState();
+    };
+    document.addEventListener("selectionchange", onSelection);
+
     return () => {
       detach();
       mutationObserver?.disconnect();
       window.clearInterval(poll);
+      document.removeEventListener("selectionchange", onSelection);
     };
   }, [getScrollElement, updateScrollState, targetRef, enabled]);
 
   const scrollToTop = () => {
-    const el = boundElRef.current || getScrollElement();
+    const main = getMainScroller(targetRef);
+    const el = main || boundElRef.current || getScrollElement();
     if (el instanceof Window) {
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } else {
-      el.scrollTo({ top: 0, behavior: "smooth" });
+      return;
     }
+    el.scrollTo({ top: 0, behavior: "smooth" });
+    // Clear any inner page box that was still sitting mid-way
+    el.querySelectorAll<HTMLElement>(".page, .a4-page-workspace, .a4-page").forEach((inner) => {
+      if (inner.scrollTop > 0) inner.scrollTo({ top: 0, behavior: "smooth" });
+    });
   };
 
   const scrollToBottom = () => {
-    const el = boundElRef.current || getScrollElement();
+    const main = getMainScroller(targetRef);
+    const el = main || boundElRef.current || getScrollElement();
     if (el instanceof Window) {
       window.scrollTo({
         top: document.documentElement.scrollHeight,
         behavior: "smooth",
       });
-    } else {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      return;
     }
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   };
 
   if (!enabled || !isVisible) return null;

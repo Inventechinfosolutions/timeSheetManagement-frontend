@@ -19,6 +19,7 @@ import {
   Inbox,
   ClipboardCheck,
   CalendarCheck,
+  CalendarDays,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -27,6 +28,8 @@ import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
 import { fetchNotes } from "../reducers/notes.reducer";
 import { useAppSelector } from "../hooks";
+import { sidebarLabelTextClass } from "../utils/sidebarLabel";
+import { resolveAdminLabelFromTab } from "../navigation/adminNav";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import ScrollNavigator from "../components/ScrollNavigator";
 import Header from "../components/Header";
@@ -53,6 +56,11 @@ const SidebarLayout = ({
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const unreadInboxCount = useAppSelector((state) => state.inbox?.unreadCount || 0);
+  const { entity } = useAppSelector((state) => state.employeeDetails);
+  const { currentUser } = useAppSelector((state) => state.user);
+  const sidebarEmployeeId =
+    entity?.employeeId || currentUser?.employeeId || currentUser?.loginId || title;
+  const sidebarRoleLabel = title;
 
   useEffect(() => {
     dispatch(fetchInboxUnreadCount());
@@ -100,8 +108,9 @@ const SidebarLayout = ({
       { name: "Employee Timesheet", icon: AlarmClock },
       { name: "Request Management", icon: Calendar },
       { name: "Leave Management", icon: CalendarCheck },
-      { name: "Quarterly Review", icon: ClipboardCheck },
+      { name: "Holiday Management", icon: CalendarDays },
       { name: "Access Ticket", icon: Unlock },
+      { name: "Appraisal", icon: ClipboardCheck },
       { name: "Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
       { name: "Manager Mapping", icon: Users },
@@ -111,13 +120,28 @@ const SidebarLayout = ({
   );
 
   // Receptionist: hide Request Management and Leave Management from sidebar
+  // Admin: hide Notes and Inbox; Holiday Management in sidebar (CEO/GM keep dashboard card)
   const visibleAdminSidebarItems = useMemo(() => {
-    const items =
+    let items =
       title === "Receptionist"
         ? adminSidebarItems.filter(
-            (i) => i.name !== "Request Management" && i.name !== "Leave Management",
+            (i) =>
+              i.name !== "Request Management" &&
+              i.name !== "Leave Management",
           )
-        : adminSidebarItems;
+        : title === "Admin"
+          ? adminSidebarItems.filter(
+              (i) => i.name !== "Notes" && i.name !== "Inbox",
+            )
+          : adminSidebarItems.filter((i) => i.name !== "Holiday Management");
+
+    if (title === "Receptionist") {
+      return items.map((item) =>
+        item.name === "Admin Dashboard"
+          ? { ...item, name: "Receptionist Dashboard" }
+          : item,
+      );
+    }
     if (title === "CEO" || title === "General Manager") {
       return items
         .filter((item) => item.name !== "Employee Directory" && item.name !== "Leave Management")
@@ -139,36 +163,15 @@ const SidebarLayout = ({
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
     if (activeTab && activeTab !== "Dashboard") return activeTab;
+    // Shared admin nav config (label/path/tab in one place)
+    const fromAdminNav = resolveAdminLabelFromTab(tab);
+    if (fromAdminNav) return fromAdminNav;
+
+    // Manager workspace tabs (not in admin nav)
     switch (tab) {
-      case "registration":
-        return "User & Role Management";
-      case "employees":
-        return "Employee Directory";
-      case "timesheet-list":
-      case "working-details":
-        return "Employee Timesheet";
-      case "requests":
-        return "Notification";
-      case "manager-mapping":
-        return "Manager Mapping";
-      case "leave-balance":
-        return "Leave Balance";
-      case "work-management":
-        return "Request Management";
-      case "leave-calculation":
-        return "Leave Management";
-      case "quarterly-review":
-      case "appraisal":
       case "my-appraisal":
       case "my-quarterly-review":
-        return "Quarterly Review";
-      case "edit-access":
-        return "Access Ticket";
-
-      case "notes":
-        return "Notes";
-      case "inbox":
-        return "Inbox";
+        return "My Appraisal";
       case "my-dashboard":
         return "My Dashboard";
       case "my-timesheet":
@@ -184,7 +187,9 @@ const SidebarLayout = ({
             ? "CEO Dashboard"
             : title === "General Manager"
               ? "General Manager Dashboard"
-              : "Admin Dashboard";
+              : title === "Receptionist"
+                ? "Receptionist Dashboard"
+                : "Admin Dashboard";
     }
   }, [tab, activeTab, title]);
 
@@ -253,13 +258,13 @@ const SidebarLayout = ({
 
   const navItemClass = (isActive: boolean, expanded = true) =>
     [
-      "w-full flex items-center cursor-pointer transition-all duration-300 relative group rounded-xl",
+      "w-full min-w-0 flex items-center cursor-pointer transition-all duration-300 relative group rounded-xl overflow-hidden",
       isActive
         ? expanded
           ? "bg-white/95 text-[#2B3674] font-semibold shadow-[0_4px_20px_rgba(0,0,0,0.12)]"
           : "md:justify-center"
         : "text-white/80 hover:bg-white/10 hover:text-white",
-      expanded ? "gap-3 px-3 py-2.5" : "md:justify-center md:px-0 py-2",
+      expanded ? "gap-2.5 px-3 py-2.5" : "md:justify-center md:px-0 py-2",
     ].join(" ");
 
   const navIconWrapClass = (isActive: boolean, expanded = true) =>
@@ -335,14 +340,19 @@ const SidebarLayout = ({
             <div className="p-2.5 bg-white/20 backdrop-blur-sm rounded-xl border border-white/10">
               <AlarmClock className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-white tracking-tight">
-              {title}
-            </span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xl font-bold text-white tracking-tight truncate">
+                {sidebarEmployeeId}
+              </span>
+              <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest">
+                {sidebarRoleLabel}
+              </span>
+            </div>
           </div>
 
           {/* Branding & Lock Toggle - Desktop Only */}
           <div className="hidden md:flex h-14 items-center justify-between px-0 relative mb-0">
-            {/* Logo Area */}
+            {/* Logo Area — same pattern as Employee: ID + role */}
             <div
               className={`flex items-center gap-3 transition-all duration-300 overflow-hidden h-full
                         ${isOpen
@@ -363,10 +373,10 @@ const SidebarLayout = ({
                         `}
               >
                 <span className="text-lg font-bold text-white tracking-tight whitespace-nowrap">
-                  {title}
+                  {sidebarEmployeeId}
                 </span>
                 <span className="text-[10px] font-medium text-blue-100 uppercase tracking-widest whitespace-nowrap">
-                  Management
+                  {sidebarRoleLabel}
                 </span>
               </div>
             </div>
@@ -460,16 +470,18 @@ const SidebarLayout = ({
                                 <Icon className={navIconClass(isActive, isOpen)} />
                               </div>
                               <span
-                                className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10 flex-1 flex items-center justify-between
+                                className={`min-w-0 transition-all duration-300 relative z-10 flex-1 flex items-center justify-between overflow-hidden
                                                             ${isOpen
-                                    ? "opacity-100 translate-x-0 w-auto"
+                                    ? "opacity-100 translate-x-0"
                                     : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                                   }
                                                         `}
                               >
-                                <span>{item.name}</span>
+                                <span className={`whitespace-nowrap ${sidebarLabelTextClass(item.name)}`}>
+                                  {item.name}
+                                </span>
                                 {item.name === "Inbox" && unreadInboxCount > 0 && isOpen && (
-                                  <span className="ml-2 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
+                                  <span className="ml-2 shrink-0 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
                                     {unreadInboxCount}
                                   </span>
                                 )}
@@ -509,16 +521,18 @@ const SidebarLayout = ({
                         <Icon className={navIconClass(isActive, isOpen)} />
                       </div>
                       <span
-                        className={`text-sm whitespace-nowrap transition-all duration-300 relative z-10 flex-1 flex items-center justify-between
+                        className={`min-w-0 transition-all duration-300 relative z-10 flex-1 flex items-center justify-between overflow-hidden
                                             ${isOpen
-                            ? "opacity-100 translate-x-0 w-auto"
+                            ? "opacity-100 translate-x-0"
                             : "opacity-0 -translate-x-4 w-0 overflow-hidden absolute"
                           }
                                         `}
                       >
-                        <span>{item.name}</span>
+                        <span className={`whitespace-nowrap ${sidebarLabelTextClass(item.name)}`}>
+                          {item.name}
+                        </span>
                         {item.name === "Inbox" && unreadInboxCount > 0 && isOpen && (
-                          <span className="ml-2 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
+                          <span className="ml-2 shrink-0 px-2 py-0.5 bg-[#4318FF] text-white text-[10px] font-bold rounded-full shadow-xs animate-pulse">
                             {unreadInboxCount}
                           </span>
                         )}

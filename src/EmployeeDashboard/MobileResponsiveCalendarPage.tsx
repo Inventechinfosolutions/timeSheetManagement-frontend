@@ -2,9 +2,8 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import dayjs from "dayjs";
 import { useLocation } from "react-router-dom";
 
+import { MonthNavigator } from "../components/ui";
 import {
-  ChevronLeft,
-  ChevronRight,
   Download,
   X,
   Loader2,
@@ -83,6 +82,12 @@ const MobileResponsiveCalendarPage = ({
     (isMyRoute
       ? currentUser?.employeeId || currentUser?.loginId
       : entity?.employeeId || currentUser?.employeeId || currentUser?.loginId);
+  const isManagerView = !!(
+    isManager &&
+    currentEmployeeId &&
+    currentEmployeeId === (currentUser?.employeeId || currentUser?.loginId)
+  );
+  const canOverrideLocks = isAdmin || (isManager && !isManagerView);
 
   const attendanceFetchedKey = useRef<string | null>(null);
 
@@ -280,34 +285,19 @@ const MobileResponsiveCalendarPage = ({
 
         {/* Month Navigator */}
         {!hideMonthNavigation && (
-        <div className="flex items-center justify-center gap-2 bg-white/50 p-1 rounded-lg backdrop-blur-sm">
-          <button
-            onClick={handlePrevMonth}
-            className="p-1 hover:bg-white rounded-md text-[#2B3674]"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <span className="text-sm font-bold text-[#2B3674] min-w-[100px] text-center">
-            {currentMonthName}
-          </span>
-          <button
-            onClick={handleNextMonth}
-            disabled={
-              currentDate.getFullYear() > now.getFullYear() ||
-              (currentDate.getFullYear() === now.getFullYear() &&
-                currentDate.getMonth() >= now.getMonth())
-            }
-            className={`p-1 rounded-md text-[#2B3674] ${
-              currentDate.getFullYear() > now.getFullYear() ||
-              (currentDate.getFullYear() === now.getFullYear() &&
-                currentDate.getMonth() >= now.getMonth())
-                ? "opacity-30 cursor-not-allowed"
-                : "hover:bg-white"
-            }`}
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
+          <div className="flex justify-center">
+            <MonthNavigator
+              month={currentDate.getMonth() + 1}
+              year={currentDate.getFullYear()}
+              onPrev={handlePrevMonth}
+              onNext={handleNextMonth}
+              nextDisabled={
+                currentDate.getFullYear() > now.getFullYear() ||
+                (currentDate.getFullYear() === now.getFullYear() &&
+                  currentDate.getMonth() >= now.getMonth())
+              }
+            />
+          </div>
         )}
       </div>
 
@@ -343,7 +333,7 @@ const MobileResponsiveCalendarPage = ({
             if (dayOfWeek === 0) isDeptBlocked = true;
 
             const isStatusLocked = entry?.status === AttendanceStatus.LOCKED;
-            const isBlocked = !!manualBlocker || (!isAdmin && !isManager && (entry?.status === AttendanceStatus.LEAVE || isDeptBlocked || !!holiday));
+            const isBlocked = !!manualBlocker || (!canOverrideLocks && (entry?.status === AttendanceStatus.LEAVE || isStatusLocked || isDeptBlocked || !!holiday));
             
             const isToday =
               day === now.getDate() &&
@@ -418,7 +408,7 @@ const MobileResponsiveCalendarPage = ({
               <div
                 key={day}
                 onClick={() => {
-                  if (isBlocked && (isAdmin || isManager) && onBlockedClick) {
+                  if (isBlocked && manualBlocker && (isAdmin || isManager) && onBlockedClick) {
                     onBlockedClick();
                     return;
                   }

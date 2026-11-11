@@ -1,13 +1,12 @@
 import { useState } from "react";
 import {
   Clock,
-  ChevronLeft,
-  ChevronRight,
   CalendarCheck,
   AlertTriangle,
   Download,
   X,
 } from "lucide-react";
+import { MonthNavigator } from "../../../components/ui";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { TimesheetEntry } from "../../../types";
@@ -109,26 +108,12 @@ const EmployeeTimesheetView = ({
           </h2>
         </div>
 
-        <div className="flex items-center justify-between md:justify-center gap-4 text-sm font-bold text-[#2B3674] bg-white px-4 py-1.5 rounded-lg shadow-sm border border-gray-100 w-full md:w-auto">
-          <button
-            onClick={onPrevMonth}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-[#00A3C4]"
-          >
-            <ChevronLeft size={20} />
-          </button>
-          <span className="min-w-[120px] text-center">
-            {displayDate.toLocaleDateString("en-US", {
-              month: "long",
-              year: "numeric",
-            })}
-          </span>
-          <button
-            onClick={onNextMonth}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors text-gray-500 hover:text-[#00A3C4]"
-          >
-            <ChevronRight size={20} />
-          </button>
-        </div>
+        <MonthNavigator
+          month={displayDate.getMonth() + 1}
+          year={displayDate.getFullYear()}
+          onPrev={onPrevMonth}
+          onNext={onNextMonth}
+        />
       </header>
 
       <div className="p-8">
