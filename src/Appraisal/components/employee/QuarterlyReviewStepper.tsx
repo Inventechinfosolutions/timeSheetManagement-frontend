@@ -327,8 +327,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   const [showSubmitConfirmModal, setShowSubmitConfirmModal] = useState<boolean>(false);
   const [pendingSubmitData, setPendingSubmitData] = useState<ReviewFormData | null>(null);
   const [isSubmittingModal, setIsSubmittingModal] = useState<boolean>(false);
-  /** EMPLOYEE appraisal-mapping assigner → "Team lead"; otherwise "manager". */
-  const [reviewerLabel, setReviewerLabel] = useState<"manager" | "Team lead">("manager");
+  /** EMPLOYEE / Team Lead assigner → "Team Lead"; otherwise "manager". */
+  const [reviewerLabel, setReviewerLabel] = useState<"manager" | "Team Lead">("manager");
   const initialFormDataRef = useRef<ReviewFormData>(initialFormData || emptyReviewFormData);
   const dispatch = useAppDispatch();
 
@@ -340,7 +340,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     const assignedByRole = String(assignment.assignedBy || "").trim().toUpperCase();
     // Fast path when assignedBy is still the role enum (not a person name)
     if (assignedByRole === "EMPLOYEE" || assignedByRole === "TEAM LEAD") {
-      setReviewerLabel("Team lead");
+      setReviewerLabel("Team Lead");
       return;
     }
     if (assignedByRole === "MANAGER" || assignedByRole === "ADMIN") {
@@ -357,7 +357,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       .then((mapping) => {
         if (cancelled) return;
         setReviewerLabel(
-          mapping?.assignerType === "EMPLOYEE" ? "Team lead" : "manager",
+          mapping?.assignerType === "EMPLOYEE" ? "Team Lead" : "manager",
         );
       })
       .catch(() => {

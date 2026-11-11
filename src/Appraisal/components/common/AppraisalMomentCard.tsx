@@ -25,9 +25,9 @@ interface AppraisalMomentCardProps {
   score?: number;
   /**
    * Who receives the employee submission for review.
-   * EMPLOYEE assigner (appraisal mapping) → "Team lead"; otherwise "manager".
+   * EMPLOYEE assigner (appraisal mapping) → "Team Lead"; otherwise "manager".
    */
-  reviewerLabel?: "manager" | "Team lead";
+  reviewerLabel?: "manager" | "Team Lead";
   onClose: () => void;
 }
 
@@ -48,7 +48,7 @@ const MOMENTS: Record<
     headline: "Review assigned",
     badge: "ASSIGNED",
     quote:
-      "Employees will receive the assignment email. They can fill their self-review and you'll be notified when they submit the final review.",
+      "Employees will receive the assignment email. They can fill their self-review and you'll be notified when they submit their review.",
     lines: ["The review", "is open", "for your team"],
   },
   submitted: {
@@ -139,7 +139,7 @@ const AppraisalMomentCard: React.FC<AppraisalMomentCardProps> = ({
   const greeting = moment.greeting;
   const headline = moment.headline;
   const badge = useRatingTier ? tier.badge : moment.badge;
-  const submittedQuote = `Your final review is locked and sent to your ${reviewerLabel} for review.`;
+  const submittedQuote = `Your self-assessment has been submitted successfully and sent to your ${reviewerLabel} for review.`;
   const submittedLines = ["Sent to", `your ${reviewerLabel}`, "for review"];
   const quote =
     managerCopy?.quote ??
