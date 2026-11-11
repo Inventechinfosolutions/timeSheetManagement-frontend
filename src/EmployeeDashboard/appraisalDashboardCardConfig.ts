@@ -4,7 +4,7 @@
  *
  * Order (product flow):
  * 1. not_started / in_progress (draft)
- * 2. submitted (+ evaluation in progress, resubmitted → same plan)
+ * 2. submitted / evaluation_in_progress (same layout; badge+title differ)
  * 3. locked
  * 4. requested_for_edit
  * 5. edit_granted
@@ -15,6 +15,7 @@ export type AppraisalDashPhase =
   | "not_started"
   | "in_progress"
   | "submitted"
+  | "evaluation_in_progress"
   | "locked"
   | "requested_for_edit"
   | "edit_granted"
@@ -24,7 +25,7 @@ export type AppraisalDashBodyKind = "quote" | "alert" | "none";
 export type AppraisalDashTheme = "purple" | "rose";
 export type AppraisalDashLayout = "standard" | "completed";
 export type AppraisalDashCtaIcon = "play" | "arrow" | "eye";
-export type AppraisalDashHero = "clipboard" | "review" | "medal";
+export type AppraisalDashHero = "clipboard" | "review" | "medal" | "shield";
 export type AppraisalDashPhaseIcon =
   | "play"
   | "clock"
@@ -50,6 +51,7 @@ export type AppraisalDashPhaseConfig = {
   alertIcon: AppraisalDashAlertIcon | null;
   sideArt: AppraisalDashSideArt;
   showStatusBar: boolean;
+  showDeadline: boolean;
   stepIndex: number;
   ctaIcon: AppraisalDashCtaIcon;
   hero: AppraisalDashHero;
@@ -94,6 +96,7 @@ export const APPRAISAL_DASH_PHASE_CONFIG: Record<
     alertIcon: null,
     sideArt: "steps",
     showStatusBar: false,
+    showDeadline: true,
     stepIndex: 0,
     ctaIcon: "play",
     hero: "clipboard",
@@ -115,6 +118,7 @@ export const APPRAISAL_DASH_PHASE_CONFIG: Record<
     alertIcon: null,
     sideArt: "steps",
     showStatusBar: false,
+    showDeadline: true,
     stepIndex: 0,
     ctaIcon: "arrow",
     hero: "clipboard",
@@ -136,6 +140,7 @@ export const APPRAISAL_DASH_PHASE_CONFIG: Record<
     alertIcon: null,
     sideArt: "steps",
     showStatusBar: true,
+    showDeadline: false,
     stepIndex: 2,
     ctaIcon: "arrow",
     hero: "review",
@@ -145,11 +150,32 @@ export const APPRAISAL_DASH_PHASE_CONFIG: Record<
       "SUBMITTED",
       "RE_SUBMITTED",
       "RESUBMITTED",
-      "UNDER_REVIEW",
-      "EVALUATION_IN_PROGRESS",
       "AWAITING_MANAGER_FINAL_REVIEW",
       "PERFORMANCE_RECEIVED",
     ],
+  },
+  // Same card layout as submitted — only eyebrow + title use Evaluation In Progress
+  evaluation_in_progress: {
+    eyebrow: "Appraisal · Evaluation In Progress",
+    title: "Evaluation In Progress",
+    subtitle: "Your self-assessment is with your reviewer. Track progress below.",
+    cta: "View Status",
+    gradient: PURPLE_GRADIENT,
+    shadow: PURPLE_SHADOW,
+    theme: "purple",
+    layout: "standard",
+    bodyKind: "quote",
+    quote: QUOTE_SUBMITTED,
+    alertText: null,
+    alertIcon: null,
+    sideArt: "steps",
+    showStatusBar: true,
+    showDeadline: false,
+    stepIndex: 2,
+    ctaIcon: "arrow",
+    hero: "review",
+    phaseIcon: "send",
+    apiStatuses: ["EVALUATION_IN_PROGRESS", "UNDER_REVIEW"],
   },
   locked: {
     eyebrow: "Appraisal · Locked",
@@ -167,6 +193,7 @@ export const APPRAISAL_DASH_PHASE_CONFIG: Record<
     alertIcon: "warning",
     sideArt: "lock",
     showStatusBar: false,
+    showDeadline: true,
     stepIndex: 0,
     ctaIcon: "eye",
     hero: "clipboard",
@@ -189,6 +216,7 @@ export const APPRAISAL_DASH_PHASE_CONFIG: Record<
     alertIcon: null,
     sideArt: "steps",
     showStatusBar: false,
+    showDeadline: true,
     stepIndex: 0,
     ctaIcon: "eye",
     hero: "clipboard",
@@ -211,6 +239,7 @@ export const APPRAISAL_DASH_PHASE_CONFIG: Record<
     alertIcon: null,
     sideArt: "steps",
     showStatusBar: false,
+    showDeadline: true,
     stepIndex: 0,
     ctaIcon: "arrow",
     hero: "clipboard",
@@ -219,8 +248,8 @@ export const APPRAISAL_DASH_PHASE_CONFIG: Record<
   },
   completed: {
     eyebrow: "Appraisal · Completed",
-    title: "You're on track!",
-    subtitle: "Appraisal finalized. Open it anytime to review your rating.",
+    title: "Appraisal completed",
+    subtitle: "Your review is finalized. Open anytime to see your rating and feedback.",
     cta: "Open Appraisal",
     gradient: PURPLE_GRADIENT,
     shadow: PURPLE_SHADOW,
@@ -232,9 +261,10 @@ export const APPRAISAL_DASH_PHASE_CONFIG: Record<
     alertIcon: null,
     sideArt: "none",
     showStatusBar: false,
+    showDeadline: false,
     stepIndex: 3,
     ctaIcon: "eye",
-    hero: "medal",
+    hero: "shield",
     phaseIcon: "trophy",
     apiStatuses: ["COMPLETED", "REVIEWED"],
   },

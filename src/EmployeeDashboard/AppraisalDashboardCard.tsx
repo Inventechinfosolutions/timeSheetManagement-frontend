@@ -14,7 +14,10 @@ import {
   AlertTriangle,
   KeyRound,
 } from "lucide-react";
-import { StepsIllustration } from "../Appraisal/components/employee/RevealedRatingModal";
+import {
+  BronzeShieldIllustration,
+  StepsIllustration,
+} from "../Appraisal/components/employee/RevealedRatingModal";
 import AppraisalLockedLockIcon from "./AppraisalLockedLockIcon";
 import {
   APPRAISAL_DASH_STEPS,
@@ -163,6 +166,16 @@ const PhaseIcon = ({ kind }: { kind: AppraisalDashPhaseIcon }) => {
 };
 
 const HeroArt = ({ kind }: { kind: AppraisalDashHero }) => {
+  if (kind === "shield") {
+    return (
+      <div className="appr-dash-scene relative mx-auto flex h-[140px] w-[160px] items-center justify-center overflow-visible">
+        <span className="appr-dash-orb absolute left-1/2 top-10 h-20 w-20 -translate-x-1/2 rounded-full bg-amber-300/30 blur-2xl" />
+        <div className="appr-dash-medal relative scale-[0.92] origin-center [&_svg]:!h-[132px] [&_svg]:!w-[148px]">
+          <BronzeShieldIllustration />
+        </div>
+      </div>
+    );
+  }
   if (kind === "medal") return <MedalHero3D />;
   if (kind === "review") return <ReviewHero3D />;
   return <ClipboardHero3D />;
@@ -299,12 +312,16 @@ const AppraisalDashboardCard = ({
         <Sparkles size={10} className="appr-dash-spark appr-dash-spark-delay absolute right-16 top-8 text-white/40" />
 
         <div className="relative flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/95 shadow-sm ring-1 ring-white/20 backdrop-blur-md">
+          <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white/95 shadow-sm ring-1 ring-white/20 backdrop-blur-md">
               <PhaseIcon kind={meta.phaseIcon} />
               {meta.eyebrow}
             </div>
-            {period ? <p className="truncate text-[11px] font-semibold text-white/70">{period}</p> : null}
+            {period ? (
+              <span className="appr-dash-period-badge inline-flex max-w-full items-center truncate rounded-full px-2.5 py-1 text-[11px] font-extrabold tracking-wide text-white">
+                {period}
+              </span>
+            ) : null}
           </div>
           {meta.layout !== "completed" ? <HeroArt kind={meta.hero} /> : null}
         </div>
@@ -312,14 +329,14 @@ const AppraisalDashboardCard = ({
         {meta.layout === "completed" ? (
           <div className="relative mt-1 flex flex-1 flex-col items-center justify-center text-center">
             <HeroArt kind={meta.hero} />
-            <h4 className="mt-1 text-lg font-extrabold tracking-tight">{meta.title}</h4>
-            <p className="mt-1 max-w-[220px] text-xs font-medium leading-relaxed text-white/75">{meta.subtitle}</p>
+            <h4 className="mt-0.5 text-lg font-extrabold tracking-tight">{meta.title}</h4>
+            <p className="mt-1 max-w-[240px] text-xs font-medium leading-relaxed text-white/75">{meta.subtitle}</p>
           </div>
         ) : (
           <div className="relative mt-3 flex flex-1 flex-col">
             <h4 className="text-lg font-extrabold tracking-tight">{meta.title}</h4>
             <p className="mt-1 text-xs font-medium leading-relaxed text-white/75">{meta.subtitle}</p>
-            {deadline ? (
+            {meta.showDeadline && deadline ? (
               <p className="mt-2 text-[10px] font-bold uppercase tracking-wide text-white/55">
                 Deadline · {deadline}
               </p>

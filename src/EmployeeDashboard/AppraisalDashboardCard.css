@@ -132,6 +132,33 @@
   animation: appr-ribbon-sway 3.6s ease-in-out infinite;
 }
 
+/* FY / quarter period — bold highlighted 3D badge */
+.appr-dash-period-badge {
+  position: relative;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.12) 48%, rgba(167, 139, 250, 0.35) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 -1px 0 rgba(30, 27, 107, 0.25) inset,
+    0 6px 14px rgba(15, 23, 42, 0.28),
+    0 2px 4px rgba(15, 23, 42, 0.18);
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transform: translateZ(12px);
+  letter-spacing: 0.02em;
+}
+
+.appr-dash-period-badge::before {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 45%;
+  border-radius: 9999px 9999px 40% 40%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), transparent);
+  pointer-events: none;
+}
+
 .appr-dash-cta {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
