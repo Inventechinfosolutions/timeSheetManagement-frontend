@@ -1,10 +1,14 @@
 export type LeaveCalculationType = 'AUTO' | 'MANUAL';
 
+/** AUTO = department manager can approve his own requests (GM can too); MANUAL = GM only. */
+export type LeaveApprovalType = 'AUTO' | 'MANUAL';
+
 export interface LeaveDepartment {
   id: number;
   departmentName: string;
   departmentCode: string;
   leaveCalculationType: LeaveCalculationType;
+  leaveApproval: LeaveApprovalType;
   employeeCount: number;
   manualEntriesCount: number;
 }

@@ -23,7 +23,7 @@ import {
 import EmployeeTimeSheetMobileCard from "./EmployeeTimeSheetMobileCard";
 import Toast from "../components/Toast";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
-import { SearchBox } from "../components/ui";
+import { MonthNavigator, SearchBox } from "../components/ui";
 import { MonthStatus, UserType } from "../enums";
 import { isAdminAccess, isCeoOrGmUser } from "../utils/roleAccess";
 
@@ -295,27 +295,12 @@ const AdminEmployeeTimesheetList = () => {
         {/* Filters Row */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
           {/* Month/Year Selector */}
-          <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-transparent">
-            <button
-              onClick={handlePreviousMonth}
-              className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
-              title="Previous Month"
-            >
-              <ChevronLeft size={16} className="text-[#2B3674]" />
-            </button>
-            <div className="min-w-[110px] text-center">
-              <span className="text-sm font-bold text-[#2B3674]">
-                {getMonthYearDisplay()}
-              </span>
-            </div>
-            <button
-              onClick={handleNextMonth}
-              className="p-1.5 rounded-lg hover:bg-gray-50 transition-all active:scale-95"
-              title="Next Month"
-            >
-              <ChevronRight size={16} className="text-[#2B3674]" />
-            </button>
-          </div>
+          <MonthNavigator
+            month={selectedMonth}
+            year={selectedYear}
+            onPrev={handlePreviousMonth}
+            onNext={handleNextMonth}
+          />
 
           <button
             onClick={handleOpenDownloadModal}

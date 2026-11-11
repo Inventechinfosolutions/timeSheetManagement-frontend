@@ -1,12 +1,12 @@
-import { useMemo } from "react";
+import { ReactNode, useEffect, useMemo } from "react";
 import dayjs from "dayjs";
 import {
-  Calendar as CalendarIcon,
-  TrendingUp,
+  CalendarDays,
+  CalendarClock,
   CheckCircle,
   Ban,
-  Clock,
-  ClipboardList,
+  Briefcase,
+  ArrowRight,
   Info,
 } from "lucide-react";
 import { Tooltip } from "antd";
@@ -33,7 +33,81 @@ interface Props {
     ytdLop: number;
   } | null;
   loading?: boolean;
+  onViewDetails?: () => void;
+  onSummary?: (summary: LeaveSummary) => void;
 }
+
+export interface LeaveSummary {
+  available: number;
+  used: number;
+  lop: number;
+}
+
+const Sparkline = ({ color, id }: { color: string; id: string }) => (
+  <svg viewBox="0 0 120 40" className="h-8 w-20 xl:w-24" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+        <stop offset="100%" stopColor={color} stopOpacity="0" />
+      </linearGradient>
+    </defs>
+    <path
+      d="M0 32 C 15 30 22 18 36 22 S 58 34 72 20 S 98 6 120 10 L 120 40 L 0 40 Z"
+      fill={`url(#${id})`}
+    />
+    <path
+      d="M0 32 C 15 30 22 18 36 22 S 58 34 72 20 S 98 6 120 10"
+      fill="none"
+      stroke={color}
+      strokeWidth="2.2"
+      strokeLinecap="round"
+    />
+  </svg>
+);
+
+interface StatCardProps {
+  label: ReactNode;
+  value: ReactNode;
+  unit: string;
+  hint: string;
+  icon: ReactNode;
+  color: string;
+  tint: string;
+  id: string;
+}
+
+const StatCard = ({ label, value, unit, hint, icon, color, tint, id }: StatCardProps) => (
+  <div
+    className="group relative flex flex-col justify-between overflow-hidden rounded-[20px] border border-white bg-white px-4 py-3 shadow-[0_10px_30px_-12px_rgba(67,24,255,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-14px_rgba(67,24,255,0.28)]"
+    style={{ backgroundImage: `linear-gradient(160deg, ${tint} 0%, #ffffff 65%)` }}
+  >
+    <div className="flex items-center gap-2.5">
+      <div
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-110"
+        style={{ backgroundColor: `${color}1A`, color }}
+      >
+        {icon}
+      </div>
+      <div className="flex min-w-0 items-center gap-1.5 truncate text-[12px] font-semibold text-[#2B3674]">
+        {label}
+      </div>
+    </div>
+    <div className="mt-2 flex items-end justify-between gap-2">
+      <div className="min-w-0">
+        <div className="flex items-baseline gap-1.5">
+          <span className="text-2xl font-extrabold leading-none tracking-tight text-[#1B2559]">{value}</span>
+          <span className="text-xs font-medium text-[#707EAE]">{unit}</span>
+        </div>
+        <div className="mt-1 truncate text-[10px] font-bold uppercase tracking-wider text-[#A3AED0]">
+          {hint}
+        </div>
+      </div>
+      <div className="shrink-0 opacity-90">
+        <Sparkline color={color} id={id} />
+      </div>
+    </div>
+  </div>
+);
 
 const ENTITLEMENT = {
   FULL_TIMER: 18,
@@ -51,6 +125,8 @@ const AttendanceStatsCards = ({
   trends = [],
   monthlyLeaveBalance,
   loading = false,
+  onViewDetails,
+  onSummary,
 }: Props) => {
   // @ts-ignore
   const { holidays } = useAppSelector(
@@ -454,6 +530,16 @@ const AttendanceStatsCards = ({
       .reduce((acc, r) => acc + Number(r.totalHours || 0), 0);
   }, [month, year, attendanceRecords]);
 
+  const usedValue = Number(isInternThisMonth ? paidUsed : approvedUsed) || 0;
+
+  useEffect(() => {
+    onSummary?.({
+      available: Number(balanceMonthly) || 0,
+      used: usedValue,
+      lop: Number(finalLOP) || 0,
+    });
+  }, [onSummary, balanceMonthly, usedValue, finalLOP]);
+
   return (
     <div
       className={`grid ${
@@ -489,12 +575,16 @@ const AttendanceStatsCards = ({
       </div> */}
 
       {/* Card 2 - Entitlement */}
-      <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px] w-full">
-        <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-blue-50 text-[#4318FF] transition-colors group-hover:bg-blue-100">
-          <TrendingUp size={20} strokeWidth={2.5} />
-        </div>
-        <div className="w-full">
-          <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1 flex items-center gap-1.5">
+      <StatCard
+        id="spark-quota"
+        color="#7C3AED"
+        tint="#F3EEFF"
+        icon={<CalendarDays size={16} strokeWidth={2.4} />}
+        unit="Days"
+        hint="Yearly entitlement"
+        value={entitlement}
+        label={
+          <>
             <span>Annual Leave Quota</span>
             {isConversionMonth && (
               <Tooltip
@@ -529,102 +619,79 @@ const AttendanceStatsCards = ({
                 </span>
               </Tooltip>
             )}
-          </div>
-          <div className="flex flex-col w-full">
-            <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
-              {entitlement}
-            </span>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Card 3 - Carry Over (Full-timers only) */}
       {!isInternThisMonth && (
-        <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-          <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-indigo-50 text-[#7551FF] transition-colors group-hover:bg-indigo-100">
-            <TrendingUp size={20} strokeWidth={2.5} />
-          </div>
-          <div className="w-full">
-            <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-              Carry Forward
-            </div>
-            <div className="flex flex-col">
-              <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
-                {(Number(dynamicCarryOver) || 0).toFixed(1)}
-              </span>
-              <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
-                From Previous Months
-              </span>
-            </div>
-          </div>
-        </div>
+        <StatCard
+          id="spark-carry"
+          color="#3B82F6"
+          tint="#EAF2FF"
+          icon={<CalendarClock size={16} strokeWidth={2.4} />}
+          label="Carry Forward"
+          value={(Number(dynamicCarryOver) || 0).toFixed(1)}
+          unit="Days"
+          hint="From previous months"
+        />
       )}
 
       {/* Card 4 - Leaves Taken */}
-      <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-        <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-green-50 text-[#05CD99] transition-colors group-hover:bg-green-100">
-          <CheckCircle size={20} strokeWidth={2.5} />
-        </div>
-        <div className="w-full">
-          <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-            Leave Used
-          </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
-              {(Number(isInternThisMonth ? paidUsed : approvedUsed) || 0).toFixed(1)}
-            </span>
-            <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
-              Approved
-            </span>
-          </div>
-        </div>
-      </div>
+      <StatCard
+        id="spark-used"
+        color="#10B981"
+        tint="#E8FBF3"
+        icon={<CheckCircle size={16} strokeWidth={2.4} />}
+        label="Leave Used"
+        value={usedValue.toFixed(1)}
+        unit={usedValue === 1 ? "Day" : "Days"}
+        hint="Approved"
+      />
 
       {/* Card 5 - LOP */}
-      <div className="bg-white rounded-[20px] p-4 shadow-lg shadow-gray-200/50 border border-gray-100 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-        <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-red-50 text-[#EE5D50] transition-colors group-hover:bg-red-100">
-          <Ban size={20} strokeWidth={2.5} />
-        </div>
-        <div className="w-full">
-          <div className="text-[#A3AED0] font-bold text-[10px] uppercase tracking-wider mb-1">
-            LOP
-          </div>
-          <div className="flex flex-col">
-            <span className="text-2xl font-extrabold text-[#1B2559] tracking-tight">
-              {finalLOP}
-            </span>
-            <span className="text-[9px] font-bold text-[#A3AED0] uppercase mt-1">
-              Loss of Pay
-            </span>
-          </div>
-        </div>
-      </div>
+      <StatCard
+        id="spark-lop"
+        color="#F97316"
+        tint="#FFF1E8"
+        icon={<Ban size={16} strokeWidth={2.4} />}
+        label="LOP"
+        value={finalLOP}
+        unit="Days"
+        hint="Loss of pay"
+      />
 
       {/* Card 7 - Balance */}
-      <div className="bg-linear-to-br from-[#4318FF] to-[#3B15E0] rounded-[20px] p-4 shadow-lg shadow-blue-500/30 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
-        <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/20 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500"></div>
-        <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/30 backdrop-blur-md border border-white/20 text-white shadow-inner z-10">
-          <ClipboardList size={20} strokeWidth={2.5} />
-        </div>
-        <div className="w-full z-10">
-          <div className="text-white/90 font-bold text-[10px] uppercase tracking-wider mb-1">
-            Available Leave Balance
+      <div className={`group relative ${isInternThisMonth ? "" : "col-span-2 sm:col-span-1"} flex flex-col justify-between overflow-hidden rounded-[20px] bg-linear-to-br from-[#5B2EFF] via-[#6D3BFF] to-[#9A4DFF] px-4 py-3 text-white shadow-[0_18px_40px_-14px_rgba(91,46,255,0.6)] transition-all duration-300 hover:-translate-y-0.5`}>
+        <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-linear-to-br from-amber-200 via-orange-300 to-pink-400 opacity-80 blur-[1px]" />
+        <svg
+          className="pointer-events-none absolute bottom-0 right-0 h-14 w-full opacity-30"
+          viewBox="0 0 200 60"
+          preserveAspectRatio="none"
+        >
+          <path d="M0 45 C 40 25 80 55 120 35 S 180 20 200 30 L 200 60 L 0 60 Z" fill="white" />
+        </svg>
+        <div className="relative z-10 flex items-center gap-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/25 bg-white/20 shadow-inner backdrop-blur-md">
+            <Briefcase size={16} strokeWidth={2.4} />
           </div>
-          <div className="flex flex-col">
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-extrabold text-white tracking-tight">
-                {balanceMonthly.toFixed(1)}
-              </span>
-              <span className="text-[10px] font-bold text-white/60 uppercase">
-                This Month
-              </span>
-            </div>
-            {!isInternThisMonth && (
-              <div className="flex items-baseline gap-2 mt-0.5">
-                {/* <span className="text-[10px] font-medium text-white/60">
-                  Total Annual: {balance.toFixed(1)}
-                </span> */}
-              </div>
+          <div className="truncate text-[12px] font-semibold text-white/90">Available Leave Balance</div>
+        </div>
+        <div className="relative z-10 mt-2">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-extrabold leading-none tracking-tight">{balanceMonthly.toFixed(1)}</span>
+            <span className="text-xs font-medium text-white/75">Days</span>
+          </div>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-white/70">This Month</span>
+            {onViewDetails && (
+              <button
+                type="button"
+                onClick={onViewDetails}
+                className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold ring-1 ring-white/30 backdrop-blur-sm transition-colors hover:bg-white/30"
+              >
+                View Details <ArrowRight size={12} />
+              </button>
             )}
           </div>
         </div>

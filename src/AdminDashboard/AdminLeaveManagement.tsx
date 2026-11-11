@@ -118,6 +118,8 @@ const AdminLeaveManagement = () => {
   };
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isCeo = isCeoOrGmUser(currentUser);
+  /** Admin / CEO / GM keep Department column; manager/employee views use a dept badge instead. */
+  const showDepartmentColumn = isAdminAccess(currentUser) || isReceptionist;
   const {
     entities = [] as LeaveRequest[],
     totalItems,
@@ -2396,14 +2398,19 @@ const AdminLeaveManagement = () => {
                       <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                         Type
                       </th>
-                      <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
-                        Department
-                      </th>
+                      {showDepartmentColumn && (
+                        <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                          Department
+                        </th>
+                      )}
                       <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                         Date Range
                       </th>
                       <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
                         Submitted
+                      </th>
+                      <th className="px-4 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap">
+                        Reviewed By
                       </th>
                       <th className="px-3 py-4 text-[13px] font-bold uppercase tracking-wider text-center whitespace-nowrap sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] bg-[#4318FF] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.15)]">
                         Status
@@ -2417,7 +2424,7 @@ const AdminLeaveManagement = () => {
                     {entities.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={9}
+                          colSpan={showDepartmentColumn ? 10 : 9}
                           className="py-8 text-center text-gray-400"
                         >
                           <div className="flex flex-col items-center justify-center gap-3">
@@ -2444,27 +2451,27 @@ const AdminLeaveManagement = () => {
                             </td>
                             <td className="py-4 px-4 text-[#2B3674] text-sm font-bold whitespace-nowrap">
                               {item.fullName || "User"} (
-                                {(() => {
-                                  const internId = (item as any).internId || selectedEmployee?.internId;
-                                  const convDate = ((item as any).conversionDate || selectedEmployee?.conversionDate)
-                                    ? dayjs((item as any).conversionDate || selectedEmployee?.conversionDate)
-                                    : null;
-                                  const leaveDate = item.fromDate
-                                    ? dayjs(item.fromDate)
-                                    : null;
-                                  // Show intern ID for leaves submitted before conversion date
-                                  if (
-                                    internId &&
-                                    convDate &&
-                                    convDate.isValid() &&
-                                    leaveDate &&
-                                    leaveDate.isBefore(convDate, "day")
-                                  ) {
-                                    return internId;
-                                  }
-                                  return item.employeeId;
-                                })()}
-                                )
+                              {(() => {
+                                const internId = (item as any).internId || selectedEmployee?.internId;
+                                const convDate = ((item as any).conversionDate || selectedEmployee?.conversionDate)
+                                  ? dayjs((item as any).conversionDate || selectedEmployee?.conversionDate)
+                                  : null;
+                                const leaveDate = item.fromDate
+                                  ? dayjs(item.fromDate)
+                                  : null;
+                                // Show intern ID for leaves submitted before conversion date
+                                if (
+                                  internId &&
+                                  convDate &&
+                                  convDate.isValid() &&
+                                  leaveDate &&
+                                  leaveDate.isBefore(convDate, "day")
+                                ) {
+                                  return internId;
+                                }
+                                return item.employeeId;
+                              })()}
+                              )
                             </td>
                             <td className="py-4 px-4 text-center whitespace-nowrap">
                               <div className="flex items-center justify-center gap-2">
@@ -2631,11 +2638,13 @@ const AdminLeaveManagement = () => {
                                 })()}
                               </span>
                             </td>
-                            <td className="py-4 px-4 text-center whitespace-nowrap">
-                              <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
-                                {item.department || "N/A"}
-                              </span>
-                            </td>
+                            {showDepartmentColumn && (
+                              <td className="py-4 px-4 text-center whitespace-nowrap">
+                                <span className="text-xs font-bold text-gray-500 bg-gray-100/50 px-2 py-1 rounded-md">
+                                  {item.department || "N/A"}
+                                </span>
+                              </td>
+                            )}
                             <td className="py-4 px-4 text-center whitespace-nowrap">
                               <span className="text-sm font-bold text-[#2B3674]">
                                 {dayjs(item.fromDate).format("DD MMM")} -{" "}
@@ -2658,6 +2667,11 @@ const AdminLeaveManagement = () => {
                                     "DD MMM - YYYY",
                                   )
                                   : "-"}
+                            </td>
+                            <td className="py-4 px-4 text-center whitespace-nowrap">
+                              <span className="text-xs font-bold text-[#2B3674]">
+                                {item.reviewedBy || "—"}
+                              </span>
                             </td>
                             <td
                               className={`py-4 px-3 text-center sticky right-[140px] w-[260px] min-w-[260px] max-w-[260px] z-10 shadow-[-8px_0_12px_-4px_rgba(0,0,0,0.08)] ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} group-hover:bg-gray-100`}
@@ -3444,7 +3458,7 @@ const AdminLeaveManagement = () => {
                     className={`w-full px-5 py-3 rounded-2xl bg-[#F4F7FE] border ${errors.description
                         ? "border-red-500"
                         : "border-gray-400"
-                      } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none`}
+                      } focus:bg-white focus:border-[#4318FF] focus:ring-4 focus:ring-blue-500/10 outline-none transition-all font-medium text-[#2B3674] placeholder:font-medium placeholder:text-gray-400 resize-none overflow-hidden field-sizing-content`}
                     value={formData.description}
                     onChange={(e) => {
                       setFormData({
@@ -4049,7 +4063,7 @@ const AdminLeaveManagement = () => {
                 setModifyErrors({ ...modifyErrors, description: "" });
               }}
               rows={3}
-              className={`w-full px-5 py-3 rounded-xl bg-white border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none ${modifyErrors.description ? "border-red-500" : "border-gray-200"
+              className={`w-full px-5 py-3 rounded-xl bg-white border text-gray-700 focus:border-[#4318FF] focus:ring-1 focus:ring-[#4318FF] outline-none transition-all font-medium text-[#2B3674] placeholder:text-gray-400 resize-none overflow-hidden field-sizing-content ${modifyErrors.description ? "border-red-500" : "border-gray-200"
                 }`}
               placeholder="Please provide details about your request..."
             />

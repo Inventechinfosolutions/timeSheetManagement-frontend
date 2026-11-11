@@ -138,29 +138,29 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
   };
 
   const renderHeader = () => (
-    <div className="w-full flex flex-row items-center justify-between gap-2 mb-6">
+    <div className="w-full flex flex-row items-center justify-between gap-2 mb-4">
       <div>
         <h4 className="text-base sm:text-lg font-bold text-[#1B2559] tracking-tight">
-          Attendance Breakdown
+          Attendance Overview
         </h4>
-        <p className="text-[11px] text-[#A3AED0] font-bold uppercase tracking-wider mt-0.5">Live Data</p>
+        <p className="text-[11px] text-[#A3AED0] font-semibold mt-0.5">
+          {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+        </p>
       </div>
 
-      <div className="flex items-center gap-1.5 bg-[#F4F7FE] px-3 py-1.5 rounded-xl border border-gray-50/50">
-        <span className="text-xs font-bold text-[#4318FF]">
-          {currentMonth.toLocaleDateString("en-US", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-600 ring-1 ring-emerald-100">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
         </span>
-      </div>
+        Live
+      </span>
     </div>
   );
 
   if (chartData.length === 0) {
     return (
-      <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px]">
+      <div className="bg-white rounded-3xl p-5 shadow-[0_10px_30px_-12px_rgba(67,24,255,0.15)] border border-gray-100/80 flex flex-col h-full min-h-[340px]">
         {renderHeader()}
         <div className="flex-1 flex flex-col items-center justify-center text-gray-400 gap-2">
           <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-2">
@@ -173,7 +173,14 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
   }
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 flex flex-col h-full min-h-[400px]">
+    <div className="@container relative overflow-hidden bg-white rounded-3xl p-5 shadow-[0_10px_30px_-12px_rgba(67,24,255,0.15)] border border-gray-100/80 flex flex-col h-full min-h-[300px]">
+      <svg
+        className="pointer-events-none absolute bottom-0 left-0 h-16 w-full opacity-[0.07]"
+        viewBox="0 0 400 60"
+        preserveAspectRatio="none"
+      >
+        <path d="M0 40 C 80 10 160 60 240 30 S 360 20 400 35 L 400 60 L 0 60 Z" fill="#4318FF" />
+      </svg>
       <style>{`
         .recharts-pie-sector:focus,
         .recharts-sector:focus,
@@ -195,10 +202,10 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
       {renderHeader()}
       
       {/* Side-by-Side Flex Container */}
-      <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-6 w-full mt-2">
+      <div className="relative flex-1 flex flex-col @sm:flex-row items-center justify-between gap-4 w-full">
         
         {/* Left Side: Donut Chart */}
-        <div className="h-[220px] w-full sm:w-[45%] relative flex items-center justify-center">
+        <div className="h-[170px] w-full @sm:w-[46%] relative flex items-center justify-center">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -273,7 +280,7 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
         </div>
 
         {/* Right Side: Vertical Legend Cards */}
-        <div className="w-full sm:w-[50%] flex flex-col gap-2.5">
+        <div className="w-full @sm:w-[52%] flex flex-col gap-2">
           {chartData.map((item, index) => {
             const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : "0.0";
             const isHovered = activeIndex === index;
@@ -290,7 +297,7 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
             return (
               <div
                 key={item.name}
-                className="flex items-center justify-between py-2.5 px-4 rounded-xl cursor-pointer select-none transition-all duration-200"
+                className="flex items-center justify-between gap-2 py-2 px-3 rounded-xl cursor-pointer select-none transition-all duration-200"
                 style={{ 
                   backgroundColor: bgColor,
                   border: isHovered ? `1px solid ${item.color}` : "1px solid transparent",
