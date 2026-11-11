@@ -154,10 +154,10 @@ export const APPRAISAL_DASH_PHASE_CONFIG: Record<
       "PERFORMANCE_RECEIVED",
     ],
   },
-  // Same card layout as submitted — only eyebrow + title use Evaluation In Progress
+  // API status EVALUATION_IN_PROGRESS → card shows Under Review (matches progress step)
   evaluation_in_progress: {
-    eyebrow: "Appraisal · Evaluation In Progress",
-    title: "Evaluation In Progress",
+    eyebrow: "Appraisal · Under Review",
+    title: "Under Review",
     subtitle: "Your self-assessment is with your reviewer. Track progress below.",
     cta: "View Status",
     gradient: PURPLE_GRADIENT,

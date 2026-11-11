@@ -22,7 +22,10 @@ import AppraisalDashboardCard, {
   resolveAppraisalPhase,
 } from "./AppraisalDashboardCard";
 import { AppraisalApi } from "../Appraisal/reducers/appraisal.reducer";
-import { formatAppraisalDisplayDate } from "../Appraisal/utils/appraisalHelpers";
+import {
+  formatAppraisalDisplayDate,
+  toPerformanceAssignment,
+} from "../Appraisal/utils/appraisalHelpers";
 import { RootState } from "../store";
 
 type LatestAppraisalSummary = {
@@ -116,26 +119,58 @@ const TodayAttendance = ({
       return;
     }
     let cancelled = false;
-    // Quarterly-review dashboard returns assignments even when performance is not started
-    void AppraisalApi.getEmployeeDashboard(String(currentEmployeeId))
-      .then((result) => {
+    const employeeId = String(currentEmployeeId);
+    // Performance list = same status as Appraisal History. Dashboard = fallback if not started yet.
+    void Promise.all([
+      AppraisalApi.getEmployeeDashboard(employeeId),
+      AppraisalApi.getEmployeeReviews(employeeId, { limit: 50, page: 1 }).catch(() => ({
+        data: [] as Awaited<ReturnType<typeof AppraisalApi.getEmployeeReviews>>["data"],
+        meta: {
+          totalItems: 0,
+          itemCount: 0,
+          itemsPerPage: 50,
+          totalPages: 0,
+          currentPage: 1,
+        },
+      })),
+    ])
+      .then(([dashboard, reviewsResult]) => {
         if (cancelled) return;
-        const rows = [...(result.reviews || [])].sort((a, b) => {
+
+        const performanceRows = [...(reviewsResult.data || [])].sort((a, b) => {
+          const aTime = new Date(a.assignedDate || a.deadlineDate || 0).getTime();
+          const bTime = new Date(b.assignedDate || b.deadlineDate || 0).getTime();
+          if (bTime !== aTime) return bTime - aTime;
+          return Number(b.id || 0) - Number(a.id || 0);
+        });
+
+        if (performanceRows.length > 0) {
+          const latestPerf = toPerformanceAssignment(performanceRows[0]);
+          setLatestAppraisal({
+            phase: resolveAppraisalPhase(latestPerf.status),
+            quarter: String(latestPerf.quarter || ""),
+            financialYear: latestPerf.financialYear || "",
+            deadline: latestPerf.deadline || "",
+          });
+          return;
+        }
+
+        const dashRows = [...(dashboard.reviews || [])].sort((a, b) => {
           const aTime = new Date(a.assignedDate || a.dueDate || 0).getTime();
           const bTime = new Date(b.assignedDate || b.dueDate || 0).getTime();
           if (bTime !== aTime) return bTime - aTime;
           return Number(b.id || 0) - Number(a.id || 0);
         });
-        const latest = rows[0];
-        if (!latest) {
+        const latestDash = dashRows[0];
+        if (!latestDash) {
           setLatestAppraisal(null);
           return;
         }
         setLatestAppraisal({
-          phase: resolveAppraisalPhase(latest.submissionStatus),
-          quarter: String(latest.quarter || ""),
-          financialYear: latest.financialYear || "",
-          deadline: formatAppraisalDisplayDate(latest.dueDate),
+          phase: resolveAppraisalPhase(latestDash.submissionStatus),
+          quarter: String(latestDash.quarter || ""),
+          financialYear: latestDash.financialYear || "",
+          deadline: formatAppraisalDisplayDate(latestDash.dueDate),
         });
       })
       .catch(() => {
