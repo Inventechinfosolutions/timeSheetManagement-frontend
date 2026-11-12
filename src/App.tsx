@@ -63,7 +63,7 @@ import EmployeeAppraisalPage from "./Appraisal/pages/EmployeeAppraisalPage";
 import AttendenceEditRequests from "./AdminDashboard/AttendenceEditRequests";
 import LeaveCalculationManagement from "./AdminDashboard/LeaveCalculationManagement";
 import HolidayManagementPage from "./AdminDashboard/HolidayManagementPage";
-
+import YearHoliday from "./EmployeeDashboard/YearHoliday";
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
 
@@ -90,6 +90,9 @@ const EmployeeTabWrapper = () => {
       return <NotesManagement />;
     case "inbox":
       return <InboxManagement />;
+       // NEW MASTER HOLIDAYS PAGE
+  case "master-holidays":
+    return <YearHoliday />;
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
