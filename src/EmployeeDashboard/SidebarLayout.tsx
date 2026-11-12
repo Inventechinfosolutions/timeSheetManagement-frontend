@@ -2,7 +2,6 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import {
   LayoutGrid,
   Calendar,
-  User,
   Lock,
   AlarmClock,
   Unlock,
@@ -142,7 +141,6 @@ const SidebarLayout = ({
     { name: "Request Management", icon: Calendar },
     { name: "Employee Notes", icon: FileText },
     { name: "Inbox", icon: Inbox },
-    { name: "Account Settings", icon: User },
     //{ name: 'Change Password', icon: Lock },
   ];
 
