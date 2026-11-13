@@ -10,7 +10,6 @@ import {
   Calendar,
   Eye,
   LayoutGrid,
-  User,
   ClipboardList,
   ChevronDown,
   ChevronRight,
@@ -82,7 +81,6 @@ const SidebarLayout = ({
           { name: "Notes", icon: FileText },
           { name: "Inbox", icon: Inbox },
           { name: "Request Management ", icon: Calendar },
-          { name: "Account Settings", icon: User },
         ],
       },
       {

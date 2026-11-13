@@ -1,4 +1,5 @@
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Modal } from "antd";
 import dayjs from "dayjs";
 import {
   LogOut,
@@ -9,6 +10,7 @@ import {
   Check,
   RotateCcw,
   X,
+  Info,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { logoutUser } from "../reducers/user.reducer";
@@ -93,6 +95,7 @@ const Header = ({
 
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [isProfilePhotoOpen, setIsProfilePhotoOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "detail">("list");
   const notificationRef = useRef<HTMLDivElement>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -321,17 +324,6 @@ const Header = ({
         </div>
 
         <div className="flex items-center gap-1.5 md:gap-3 ml-auto">
-          <Link
-            to="/about"
-            className={`px-3 py-1.5 rounded-xl font-bold text-sm md:text-[15px] transition-all duration-200 
-                ${location.pathname === "/about"
-                ? "bg-white text-[#4318FF] shadow-lg"
-                : "text-white hover:bg-white/10"
-              }`}
-          >
-            About
-          </Link>
-
           {/* Notification Bell */}
           {!hideNotifications && (
             <div className="relative" ref={notificationRef}>
@@ -1148,23 +1140,41 @@ const Header = ({
           {/* Profile Dropdown */}
           {!hideProfile && (
             <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-1.5 md:gap-2 pl-2 pr-2 md:px-3 py-1.5 hover:bg-white/10 rounded-xl transition-all group"
-              >
-                <div className="flex items-center gap-1.5 md:gap-2">
-                  <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-bold text-sm shadow-inner ring-1 ring-white/30 overflow-hidden">
-                    {loggedInUserProfileImageUrl && !imageError ? (
-                      <img
-                        src={loggedInUserProfileImageUrl}
-                        alt="Avatar"
-                        className="w-full h-full object-cover"
-                        onError={() => setImageError(true)}
-                      />
-                    ) : (
-                      <span>{avatarLetter}</span>
-                    )}
-                  </div>
+              <div className="flex items-center gap-1.5 md:gap-2 pl-1 pr-2 md:px-2 py-1.5 hover:bg-white/10 rounded-xl transition-all group">
+                <button
+                  type="button"
+                  title={
+                    loggedInUserProfileImageUrl && !imageError
+                      ? "View profile photo"
+                      : "Profile"
+                  }
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (loggedInUserProfileImageUrl && !imageError) {
+                      setIsDropdownOpen(false);
+                      setIsProfilePhotoOpen(true);
+                      return;
+                    }
+                    setIsDropdownOpen((open) => !open);
+                  }}
+                  className="w-8 h-8 md:w-9 md:h-9 shrink-0 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-bold text-sm shadow-inner ring-1 ring-white/30 overflow-hidden cursor-pointer hover:ring-2 hover:ring-white/60 transition-all"
+                >
+                  {loggedInUserProfileImageUrl && !imageError ? (
+                    <img
+                      src={loggedInUserProfileImageUrl}
+                      alt="Avatar"
+                      className="w-full h-full object-cover"
+                      onError={() => setImageError(true)}
+                    />
+                  ) : (
+                    <span>{avatarLetter}</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-1.5 md:gap-2 min-w-0 cursor-pointer"
+                >
                   <div className="flex flex-col items-start translate-y-[1px]">
                     <span className="text-[12px] md:text-sm font-bold text-white transition-colors leading-none">
                       {isCeo
@@ -1196,8 +1206,8 @@ const Header = ({
                     className={`text-blue-100 transition-transform ${isDropdownOpen ? "rotate-180" : ""
                       }`}
                   />
-                </div>
-              </button>
+                </button>
+              </div>
 
               {/* Dropdown Menu */}
               {isDropdownOpen && (
@@ -1270,14 +1280,14 @@ const Header = ({
                   {!isAdminOrReceptionist && (
                     <button
                       onClick={handleProfileClick}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left cursor-pointer"
                     >
                       <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
                         <User size={16} className="text-[#667eea]" />
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-[#1B2559]">
-                          Account Settings
+                          My Profile
                         </p>
                         <p className="text-xs text-gray-400">
                           View your profile
@@ -1286,10 +1296,27 @@ const Header = ({
                     </button>
                   )}
 
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      navigate("/about");
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left cursor-pointer"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
+                      <Info size={16} className="text-[#4318FF]" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-[#1B2559]">About</p>
+                      <p className="text-xs text-gray-400">About Worksphere</p>
+                    </div>
+                  </button>
+
                   <div className="border-t border-gray-100 mt-1 pt-1">
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 transition-colors text-left group"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 transition-colors text-left group cursor-pointer"
                     >
                       <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center group-hover:bg-red-100">
                         <LogOut size={16} className="text-red-600" />
@@ -1306,6 +1333,26 @@ const Header = ({
                   </div>
                 </div>
               )}
+
+              <Modal
+                open={isProfilePhotoOpen}
+                onCancel={() => setIsProfilePhotoOpen(false)}
+                footer={null}
+                centered
+                width={480}
+                className="profile-modal"
+                destroyOnClose
+              >
+                <div className="flex flex-col items-center gap-4 py-4 px-2">
+                  <div className="w-72 h-72 md:w-80 md:h-80 rounded-3xl overflow-hidden shadow-2xl border-4 border-gray-50">
+                    <img
+                      src={loggedInUserProfileImageUrl || ""}
+                      alt="Profile preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              </Modal>
             </div>
           )}
         </div>
