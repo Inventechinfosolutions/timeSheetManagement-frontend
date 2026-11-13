@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DatePicker, Select, message } from "antd";
 import dayjs from "dayjs";
-import { ArrowLeft, CalendarDays, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { CalendarDays, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "../hooks";
 import { UserType } from "../enums";
 import {
@@ -129,7 +128,6 @@ const HolidayDateInput = ({
 
 const HolidayManagementPage = () => {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const canEditHolidays = currentUser?.userType !== UserType.RECEPTIONIST;
   const currentYear = dayjs().year();
@@ -157,6 +155,21 @@ const HolidayManagementPage = () => {
   useEffect(() => {
     dispatch(fetchHolidays());
   }, [dispatch]);
+
+  // Toasts must sit above Add/Confirm portals (z-[3000])
+  useEffect(() => {
+    message.config({ top: 80, duration: 3, maxCount: 3 });
+    const styleId = "holiday-mgmt-message-z";
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement("style");
+      style.id = styleId;
+      style.textContent = `.ant-message { z-index: 5000 !important; }`;
+      document.head.appendChild(style);
+    }
+    return () => {
+      document.getElementById(styleId)?.remove();
+    };
+  }, []);
 
   const rows = useMemo(() => {
     return (holidays || [])
@@ -231,7 +244,7 @@ const HolidayManagementPage = () => {
   const reviewDrafts = () => {
     const filled = drafts.filter((row) => row.date || row.name.trim());
     if (filled.length === 0) {
-      message.error("Add at least one holiday");
+      message.error("Please fill at least one holiday date and name before saving");
       return;
     }
     const seen = new Set<string>();
@@ -239,7 +252,7 @@ const HolidayManagementPage = () => {
     for (const row of filled) {
       const name = row.name.trim();
       if (!row.date || !name) {
-        message.error("Each row needs a date and a holiday name");
+        message.error("Each filled row needs both a date and a holiday name");
         return;
       }
       if (name.length > 100) {
@@ -327,48 +340,55 @@ const HolidayManagementPage = () => {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-5">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => navigate("/admin-dashboard")}
-            className="cursor-pointer p-2 rounded-lg bg-white border border-gray-200 text-[#2B3674] hover:bg-[#F4F7FE]"
-            aria-label="Back to dashboard"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-[#2B3674]">Holiday Management</h1>
-            <p className="text-sm text-[#A3AED0]">
+    <div className="p-4 md:p-6 bg-[#F4F7FE] font-sans min-h-full space-y-5">
+      {/* Header — no outer card */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-start gap-3.5 min-w-0">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7551FF] to-[#4318FF] text-white shadow-lg shadow-[#4318FF]/30">
+            <CalendarDays size={22} strokeWidth={2.25} />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#1B2559]">
+              Holiday Management
+            </h1>
+            <p className="mt-1 text-xs sm:text-sm font-medium text-[#707EAE]">
               {canEditHolidays
                 ? "Add or update master holidays. Timesheets and leave use this list."
                 : "View master holidays used by timesheets and leave."}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-[#2B3674]" htmlFor="holiday-year">
-            Year
-          </label>
-          <Select
-            id="holiday-year"
-            value={year}
-            disabled={addOpen || previewOpen}
-            onChange={(value) => setYear(value)}
-            className="h-9 w-[110px]"
-            popupMatchSelectWidth={120}
-            options={YEAR_OPTIONS.map((option) => ({
-              value: option,
-              label: String(option),
-              title: "",
-            }))}
-          />
+
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 ring-1 ring-[#E0E5F2]">
+            <label
+              className="text-[11px] font-black uppercase tracking-wider text-[#707EAE]"
+              htmlFor="holiday-year"
+            >
+              Year
+            </label>
+            <Select
+              id="holiday-year"
+              value={year}
+              disabled={addOpen || previewOpen}
+              onChange={(value) => setYear(value)}
+              className="h-8 w-[100px]"
+              popupMatchSelectWidth={120}
+              options={YEAR_OPTIONS.map((option) => ({
+                value: option,
+                label: String(option),
+                title: "",
+              }))}
+            />
+          </div>
+          <span className="inline-flex items-center rounded-full bg-[#EEF2FF] px-3 py-1.5 text-[11px] font-bold text-[#4318FF] ring-1 ring-[#4318FF]/15">
+            {rows.length} {rows.length === 1 ? "holiday" : "holidays"}
+          </span>
           {canEditHolidays && (
             <button
               type="button"
               onClick={openAdd}
-              className="cursor-pointer inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#4318FF] px-3 text-sm font-bold text-white hover:bg-[#3311CC]"
+              className="cursor-pointer inline-flex h-10 items-center gap-1.5 rounded-2xl bg-gradient-to-r from-[#7551FF] to-[#4318FF] px-4 text-sm font-bold text-white shadow-lg shadow-[#4318FF]/30 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all"
             >
               <Plus size={16} />
               Add
@@ -377,34 +397,55 @@ const HolidayManagementPage = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Table card */}
+      <div className="bg-white rounded-3xl shadow-[0_18px_40px_-16px_rgba(67,24,255,0.15)] border border-white/60 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-base">
-            <thead className="bg-[#4318FF] text-white">
-              <tr className="text-left text-base tracking-wide text-white">
-                <th className="px-5 py-4 font-semibold w-[90px]">SL No</th>
-                <th className="px-5 py-4 font-semibold w-[240px]">Date</th>
-                <th className="px-5 py-4 font-semibold">Holiday</th>
+          <table className="w-full text-sm sm:text-base border-separate border-spacing-0">
+            <thead>
+              <tr className="bg-gradient-to-r from-[#5B2EFF] to-[#4318FF] text-white">
+                <th className="px-5 py-4 text-left text-[12px] font-bold uppercase tracking-wider w-[90px]">
+                  SL No
+                </th>
+                <th className="px-5 py-4 text-left text-[12px] font-bold uppercase tracking-wider w-[240px]">
+                  Date
+                </th>
+                <th className="px-5 py-4 text-left text-[12px] font-bold uppercase tracking-wider">
+                  Holiday
+                </th>
                 {canEditHolidays && (
-                  <th className="px-5 py-4 font-semibold text-right w-[200px]">Action</th>
+                  <th className="px-5 py-4 text-right text-[12px] font-bold uppercase tracking-wider w-[200px]">
+                    Action
+                  </th>
                 )}
               </tr>
             </thead>
             <tbody>
               {loading && rows.length === 0 ? (
                 <tr>
-                  <td colSpan={canEditHolidays ? 4 : 3} className="px-5 py-10 text-center text-[#A3AED0]">
-                    <Loader2 className="inline animate-spin mr-2" size={16} />
+                  <td
+                    colSpan={canEditHolidays ? 4 : 3}
+                    className="px-5 py-16 text-center text-[#A3AED0] font-semibold"
+                  >
+                    <Loader2 className="inline animate-spin mr-2 text-[#4318FF]" size={18} />
                     Loading holidays
                   </td>
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={canEditHolidays ? 4 : 3} className="px-5 py-10 text-center text-[#A3AED0]">
-                    <CalendarDays size={22} className="inline mr-2 text-[#4318FF]" />
-                    {canEditHolidays
-                      ? `No holidays for ${year}. Use Add to create one.`
-                      : `No holidays for ${year}.`}
+                  <td
+                    colSpan={canEditHolidays ? 4 : 3}
+                    className="px-5 py-16 text-center"
+                  >
+                    <div className="inline-flex flex-col items-center gap-3">
+                      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F4F7FE] text-[#4318FF] ring-1 ring-[#4318FF]/10">
+                        <CalendarDays size={24} />
+                      </span>
+                      <p className="text-sm font-semibold text-[#707EAE]">
+                        {canEditHolidays
+                          ? `No holidays for ${year}. Use Add to create one.`
+                          : `No holidays for ${year}.`}
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (
@@ -413,9 +454,11 @@ const HolidayManagementPage = () => {
                   return (
                     <tr
                       key={holiday.id}
-                      className="border-b border-gray-50 last:border-0 hover:bg-[#F4F7FE]/50"
+                      className={`border-b border-[#F4F7FE] last:border-0 transition-colors ${
+                        index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"
+                      } hover:bg-[#F1F4FF]`}
                     >
-                      <td className="px-5 py-4 align-middle font-semibold text-[#2B3674]">
+                      <td className="px-5 py-4 align-middle font-bold text-[#475569]">
                         {index + 1}
                       </td>
                       <td className="px-5 py-4 align-middle">
@@ -430,8 +473,10 @@ const HolidayManagementPage = () => {
                             className="w-full"
                           />
                         ) : (
-                          <span className="font-semibold text-[#2B3674]">
-                            {holiday.dateValue ? dayjs(holiday.dateValue).format("DD MMM YYYY") : "—"}
+                          <span className="inline-flex items-center rounded-full bg-[#F4F7FE] px-3 py-1 text-xs font-bold text-[#4318FF] ring-1 ring-[#4318FF]/10">
+                            {holiday.dateValue
+                              ? dayjs(holiday.dateValue).format("DD MMM YYYY")
+                              : "—"}
                           </span>
                         )}
                       </td>
@@ -441,43 +486,43 @@ const HolidayManagementPage = () => {
                             value={editName}
                             maxLength={100}
                             onChange={(e) => setEditName(e.target.value)}
-                            className="box-border h-10 w-full rounded-lg border border-[#4318FF] bg-white px-3 text-base leading-10 text-[#2B3674] focus:outline-none focus:ring-2 focus:ring-[#4318FF]/20"
+                            className="box-border h-10 w-full rounded-xl border border-[#4318FF]/40 bg-white px-3 text-sm font-semibold leading-10 text-[#2B3674] focus:outline-none focus:ring-2 focus:ring-[#4318FF]/20"
                           />
                         ) : (
-                          <span className="font-medium text-[#2B3674]">{holiday.name}</span>
+                          <span className="font-bold text-[#1B2559]">{holiday.name}</span>
                         )}
                       </td>
                       {canEditHolidays && (
-                      <td className="px-5 py-4 text-right align-middle whitespace-nowrap">
-                        {isEditing ? (
-                          <div className="inline-flex h-10 items-center justify-end gap-2">
+                        <td className="px-5 py-4 text-right align-middle whitespace-nowrap">
+                          {isEditing ? (
+                            <div className="inline-flex h-10 items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={handleUpdate}
+                                disabled={saving}
+                                className="cursor-pointer h-10 rounded-xl bg-gradient-to-r from-[#7551FF] to-[#4318FF] px-4 text-sm font-bold text-white shadow-md shadow-[#4318FF]/25 hover:shadow-lg disabled:opacity-50 active:scale-95 transition-all"
+                              >
+                                {saving ? "Saving..." : "Save"}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingId(null)}
+                                className="cursor-pointer h-10 rounded-xl border border-[#E0E5F2] bg-white px-4 text-sm font-bold text-[#2B3674] hover:bg-[#F4F7FE] active:scale-95 transition-all"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
                             <button
                               type="button"
-                              onClick={handleUpdate}
-                              disabled={saving}
-                              className="cursor-pointer h-10 rounded-lg bg-[#4318FF] px-3 text-sm font-bold text-white hover:bg-[#3311CC] disabled:opacity-50"
+                              onClick={() => startEdit(holiday)}
+                              className="cursor-pointer inline-flex items-center gap-1.5 rounded-xl bg-[#F4F7FE] px-3 py-2 text-sm font-bold text-[#4318FF] ring-1 ring-[#4318FF]/10 hover:bg-[#EEF2FF] hover:ring-[#4318FF]/25 active:scale-95 transition-all"
                             >
-                              {saving ? "Saving..." : "Save"}
+                              <Pencil size={15} />
+                              Edit
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditingId(null)}
-                              className="cursor-pointer h-10 rounded-lg border border-[#4318FF] bg-white px-3 text-sm font-semibold text-[#4318FF] hover:bg-[#F4F7FE]"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => startEdit(holiday)}
-                            className="cursor-pointer inline-flex items-center gap-1.5 text-base font-semibold text-[#4318FF] hover:underline"
-                          >
-                            <Pencil size={16} />
-                            Edit
-                          </button>
-                        )}
-                      </td>
+                          )}
+                        </td>
                       )}
                     </tr>
                   );
@@ -490,32 +535,42 @@ const HolidayManagementPage = () => {
 
       {canEditHolidays && addOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-[#1B2559]/40 p-4 sm:p-6">
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-[#1B2559]/45 backdrop-blur-md p-4 sm:p-6">
             <div
-              className={`flex max-h-[min(75vh,560px)] w-full flex-col overflow-hidden rounded-2xl bg-white shadow-[0px_18px_40px_rgba(112,144,176,0.18)] ${
+              className={`relative flex max-h-[min(75vh,560px)] w-full flex-col overflow-hidden rounded-3xl border border-white/60 bg-white shadow-[0_24px_80px_-20px_rgba(67,24,255,0.35)] ${
                 addStep === "year" ? "max-w-md" : "max-w-3xl"
               }`}
             >
-              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-100 px-5 py-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-[#2B3674]">Add holidays</h2>
-                    {addStep === "rows" && (
-                      <span className="rounded-[6px] bg-[#EEF2FF] px-2.5 py-1 text-[11px] font-black text-[#1055E8]">
-                        {addYear}
-                      </span>
+              <div className="pointer-events-none absolute -top-16 right-0 h-36 w-36 rounded-full bg-[#4318FF]/12 blur-3xl" />
+              <div className="relative flex shrink-0 items-center justify-between gap-3 border-b border-[#E0E5F2]/80 px-5 py-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7551FF] to-[#4318FF] text-white shadow-md shadow-[#4318FF]/25">
+                    <Plus size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-black tracking-tight text-[#1B2559]">
+                        Add holidays
+                      </h2>
+                      {addStep === "rows" && (
+                        <span className="rounded-full bg-[#EEF2FF] px-2.5 py-1 text-[11px] font-black text-[#4318FF] ring-1 ring-[#4318FF]/15">
+                          {addYear}
+                        </span>
+                      )}
+                    </div>
+                    {addStep === "year" && (
+                      <p className="text-xs font-medium text-[#707EAE] mt-0.5">
+                        Select the year, then continue.
+                      </p>
                     )}
                   </div>
-                  {addStep === "year" && (
-                    <p className="text-sm text-[#A3AED0]">Select the year, then continue.</p>
-                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {addStep === "rows" && (
                     <button
                       type="button"
                       onClick={() => setDrafts((current) => [...current, blankRow()])}
-                      className="cursor-pointer inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#4318FF] px-3 text-sm font-bold text-white hover:bg-[#3311CC]"
+                      className="cursor-pointer inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#7551FF] to-[#4318FF] px-3 text-sm font-bold text-white shadow-md shadow-[#4318FF]/25 hover:shadow-lg active:scale-95 transition-all"
                     >
                       <Plus size={16} />
                       Add
@@ -525,7 +580,7 @@ const HolidayManagementPage = () => {
                     type="button"
                     onClick={closeAdd}
                     aria-label="Close"
-                    className="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#4318FF] text-[#4318FF] hover:bg-[#F4F7FE]"
+                    className="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#A3AED0] hover:bg-red-50 hover:text-red-500 transition-colors"
                   >
                     <X size={16} />
                   </button>
@@ -596,12 +651,12 @@ const HolidayManagementPage = () => {
                 </div>
               )}
 
-              <div className="flex shrink-0 justify-end gap-2 border-t border-gray-100 bg-white px-5 py-3">
+              <div className="relative flex shrink-0 justify-end gap-2 border-t border-[#E0E5F2]/80 bg-[#F4F7FE]/50 px-5 py-4">
                 {addStep === "rows" && (
                   <button
                     type="button"
                     onClick={() => setAddStep("year")}
-                    className="cursor-pointer h-10 rounded-lg border border-[#4318FF] bg-white px-4 text-sm font-semibold text-[#4318FF] hover:bg-[#F4F7FE]"
+                    className="cursor-pointer h-10 rounded-xl border border-[#E0E5F2] bg-white px-4 text-sm font-bold text-[#2B3674] hover:bg-[#EEF2FF] active:scale-95 transition-all"
                   >
                     Back
                   </button>
@@ -609,7 +664,7 @@ const HolidayManagementPage = () => {
                 <button
                   type="button"
                   onClick={addStep === "year" ? continueToRows : reviewDrafts}
-                  className="cursor-pointer h-10 rounded-lg bg-[#4318FF] px-5 text-sm font-bold text-white hover:bg-[#3311CC]"
+                  className="cursor-pointer h-10 rounded-xl bg-gradient-to-r from-[#7551FF] to-[#4318FF] px-5 text-sm font-bold text-white shadow-lg shadow-[#4318FF]/25 hover:shadow-xl active:scale-95 transition-all"
                 >
                   {addStep === "year" ? "Next" : "Save"}
                 </button>
@@ -621,19 +676,27 @@ const HolidayManagementPage = () => {
 
       {canEditHolidays && previewOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-[#1B2559]/40 p-4 sm:p-6">
-            <div className="flex max-h-[min(75vh,560px)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-[0px_18px_40px_rgba(112,144,176,0.18)]">
-              <div className="flex shrink-0 items-center justify-between gap-3 border-b border-gray-100 px-5 py-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold text-[#2B3674]">Confirm holidays</h2>
-                    <span className="rounded-[6px] bg-[#EEF2FF] px-2.5 py-1 text-[11px] font-black text-[#1055E8]">
-                      {addYear}
-                    </span>
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-[#1B2559]/45 backdrop-blur-md p-4 sm:p-6">
+            <div className="relative flex max-h-[min(75vh,560px)] w-full max-w-3xl flex-col overflow-hidden rounded-3xl border border-white/60 bg-white shadow-[0_24px_80px_-20px_rgba(67,24,255,0.35)]">
+              <div className="pointer-events-none absolute -top-16 right-0 h-36 w-36 rounded-full bg-[#4318FF]/12 blur-3xl" />
+              <div className="relative flex shrink-0 items-center justify-between gap-3 border-b border-[#E0E5F2]/80 px-5 py-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[#7551FF] to-[#4318FF] text-white shadow-md shadow-[#4318FF]/25">
+                    <CalendarDays size={18} />
                   </div>
-                  <p className="text-sm text-[#A3AED0]">
-                    Total {ready.length} holiday{ready.length === 1 ? "" : "s"}
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-black tracking-tight text-[#1B2559]">
+                        Confirm holidays
+                      </h2>
+                      <span className="rounded-full bg-[#EEF2FF] px-2.5 py-1 text-[11px] font-black text-[#4318FF] ring-1 ring-[#4318FF]/15">
+                        {addYear}
+                      </span>
+                    </div>
+                    <p className="text-xs font-medium text-[#707EAE] mt-0.5">
+                      Total {ready.length} holiday{ready.length === 1 ? "" : "s"}
+                    </p>
+                  </div>
                 </div>
                 <button
                   type="button"
@@ -643,38 +706,42 @@ const HolidayManagementPage = () => {
                     setAddStep("rows");
                     setAddOpen(true);
                   }}
-                  className="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[#4318FF] text-[#4318FF] hover:bg-[#F4F7FE]"
+                  className="cursor-pointer inline-flex h-9 w-9 items-center justify-center rounded-xl bg-[#F4F7FE] text-[#4318FF] ring-1 ring-[#4318FF]/15 hover:bg-[#EEF2FF] transition-colors"
                 >
                   <Pencil size={16} />
                 </button>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-3">
-                <div className="mb-2 hidden grid-cols-[48px_120px_minmax(0,1fr)] gap-3 px-3 text-sm font-semibold text-[#2B3674] md:grid">
+              <div className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-4">
+                <div className="mb-2 hidden grid-cols-[48px_120px_minmax(0,1fr)] gap-3 px-3 text-[11px] font-black uppercase tracking-wider text-[#707EAE] md:grid">
                   <span className="text-center">SL No</span>
                   <span>Date</span>
                   <span>Holiday name</span>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {ready.map((row, index) => (
                     <div
                       key={row.key}
-                      className="grid grid-cols-1 items-center gap-3 rounded-lg border border-black/15 px-3 py-3 md:grid-cols-[48px_120px_minmax(0,1fr)]"
+                      className="grid grid-cols-1 items-center gap-3 rounded-2xl border border-[#E0E5F2] bg-[#F4F7FE]/60 px-3 py-3 md:grid-cols-[48px_120px_minmax(0,1fr)]"
                     >
-                      <span className="text-center text-sm font-semibold text-[#2B3674]">{index + 1}</span>
-                      <span className="whitespace-nowrap font-semibold text-[#2B3674]">
+                      <span className="text-center text-sm font-bold text-[#475569]">
+                        {index + 1}
+                      </span>
+                      <span className="inline-flex w-fit whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-xs font-bold text-[#4318FF] ring-1 ring-[#4318FF]/10">
                         {dayjs(row.date).format(DATE_FORMAT)}
                       </span>
-                      <span className="min-w-0 break-all font-medium text-[#2B3674]">{row.name}</span>
+                      <span className="min-w-0 break-all font-bold text-[#1B2559]">
+                        {row.name}
+                      </span>
                     </div>
                   ))}
                 </div>
-                <p className="mt-4 rounded-lg bg-[#F4F7FE] px-3 py-3 text-sm text-[#2B3674]">
+                <p className="mt-4 rounded-2xl bg-[#EEF2FF] px-3.5 py-3 text-xs font-medium text-[#2B3674] ring-1 ring-[#4318FF]/10">
                   Once saved, a holiday can be edited, but it cannot be deleted.
                 </p>
               </div>
 
-              <div className="flex shrink-0 justify-end gap-2 border-t border-gray-100 bg-white px-5 py-3">
+              <div className="relative flex shrink-0 justify-end gap-2 border-t border-[#E0E5F2]/80 bg-[#F4F7FE]/50 px-5 py-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -682,7 +749,7 @@ const HolidayManagementPage = () => {
                     setAddStep("rows");
                     setAddOpen(true);
                   }}
-                  className="cursor-pointer h-10 rounded-lg border border-[#4318FF] bg-white px-4 text-sm font-semibold text-[#4318FF] hover:bg-[#F4F7FE]"
+                  className="cursor-pointer h-10 rounded-xl border border-[#E0E5F2] bg-white px-4 text-sm font-bold text-[#2B3674] hover:bg-[#EEF2FF] active:scale-95 transition-all"
                 >
                   Back
                 </button>
@@ -690,7 +757,7 @@ const HolidayManagementPage = () => {
                   type="button"
                   onClick={acceptDrafts}
                   disabled={saving}
-                  className="cursor-pointer h-10 rounded-lg bg-[#4318FF] px-5 text-sm font-bold text-white hover:bg-[#3311CC] disabled:opacity-50"
+                  className="cursor-pointer h-10 rounded-xl bg-gradient-to-r from-[#7551FF] to-[#4318FF] px-5 text-sm font-bold text-white shadow-lg shadow-[#4318FF]/25 hover:shadow-xl disabled:opacity-50 active:scale-95 transition-all"
                 >
                   {saving ? "Saving..." : "Confirm"}
                 </button>

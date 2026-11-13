@@ -6,7 +6,6 @@ import {
   CheckCircle,
   Ban,
   Briefcase,
-  ArrowRight,
   Info,
 } from "lucide-react";
 import { Tooltip } from "antd";
@@ -125,7 +124,6 @@ const AttendanceStatsCards = ({
   trends = [],
   monthlyLeaveBalance,
   loading = false,
-  onViewDetails,
   onSummary,
 }: Props) => {
   // @ts-ignore
@@ -682,17 +680,8 @@ const AttendanceStatsCards = ({
             <span className="text-2xl font-extrabold leading-none tracking-tight">{balanceMonthly.toFixed(1)}</span>
             <span className="text-xs font-medium text-white/75">Days</span>
           </div>
-          <div className="mt-1 flex items-center justify-between gap-2">
+          <div className="mt-1">
             <span className="text-[10px] font-bold uppercase tracking-wider text-white/70">This Month</span>
-            {onViewDetails && (
-              <button
-                type="button"
-                onClick={onViewDetails}
-                className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold ring-1 ring-white/30 backdrop-blur-sm transition-colors hover:bg-white/30"
-              >
-                View Details <ArrowRight size={12} />
-              </button>
-            )}
           </div>
         </div>
       </div>
