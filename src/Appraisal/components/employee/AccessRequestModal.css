@@ -1,7 +1,12 @@
 /* ==========================================================================
    Access Request Modal Styling & Micro-Interactions
-   Executive Blue Theme with 3D Vectors & GSAP Physics
+   Worksphere purple theme with 3D Vectors & GSAP Physics
    ========================================================================== */
+
+/* Left panel: purple tint + purple shadow (same language as access/send icon btns) */
+.access-modal-left-panel {
+  box-shadow: 8px 0 28px rgba(67, 24, 255, 0.22), 2px 0 10px rgba(67, 24, 255, 0.12) !important;
+}
 
 /* Blur and subtly dim header, sidebar, and footer when modal is open */
 body.modal-open-active header,

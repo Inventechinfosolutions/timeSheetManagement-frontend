@@ -324,7 +324,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
     <div className="space-y-3">
       {/* Step Header */}
       <div>
-        <h3 className="text-[1.24rem] font-bold text-[#0F172A]">
+        <h3 className="text-[1.24rem] font-bold">
           <span className="eval-title-anim">Step 3: Teamwork & Collaboration</span>{" "}
           <span className="text-red-500">*</span>
         </h3>
@@ -332,7 +332,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
 
       {/* 1. TOP SECTION: Evaluated Teamwork Dimensions (6 Dimensions, Rating 1-5) */}
       <div className="space-y-3">
-        <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1">
+        <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1">
           Teamwork & Collaboration Dimensions (Rating 1–5) <span className="text-red-500">*</span>
         </label>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
@@ -347,18 +347,18 @@ export const TeamContributionStep: React.FC<StepProps> = ({
               <div
                 key={criterion.key}
                 id={`field-criterion-${criterion.key}`}
-                className={`p-4 rounded-2xl border transition-all duration-300 bg-white flex flex-col justify-between gap-3 shadow-2xs hover:shadow-sm ${
+                className={`p-4 rounded-xl border transition-all duration-300 bg-white flex flex-col justify-between gap-3 shadow-2xs hover:shadow-sm ${
                   criterionError || descError
                     ? "border-red-400 bg-red-50/20 ring-2 ring-red-100"
                     : isSelected
-                    ? "border-blue-200/90 hover:border-blue-300"
-                    : "border-slate-200/90 hover:border-slate-300"
+                    ? "border-[#4318FF]/30 hover:border-[#4318FF]/50"
+                    : "border-[#E0E5F2] hover:border-[#4318FF]/25"
                 }`}
               >
                 {/* Top Row: Title & Star Ratings (No icon, no score badge) */}
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="text-xs sm:text-[13px] font-bold text-[#0F172A] leading-snug">
+                    <span className="text-xs sm:text-[13px] font-bold text-[#2B3674] leading-snug">
                       {criterion.title}
                     </span>
                     <span className="text-red-500 font-bold text-xs">*</span>
@@ -425,13 +425,13 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                           : "Type rating 1–5 (decimals OK) or click stars"
                       }
                       aria-label={`Enter rating for ${criterion.title}`}
-                      className={`w-14 h-7 text-center text-xs font-extrabold text-[#1D4ED8] bg-[#EFF6FF] border-[1.5px] border-[#BFDBFE] rounded-lg outline-none transition-all ${
+                      className={`w-14 h-7 text-center text-xs font-extrabold text-[#4318FF] bg-[#F4F7FE] border-[1.5px] border-[#4318FF]/20 rounded-lg outline-none transition-all ${
                         readOnly
                           ? "opacity-70 cursor-default"
-                          : "hover:bg-[#DBEAFE] hover:border-[#93C5FD] focus:bg-white focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/30 cursor-text"
+                          : "hover:bg-[#EEF0FF] hover:border-[#4318FF]/40 focus:bg-white focus:border-[#4318FF] focus:ring-0 cursor-text"
                       }`}
                     />
-                    <span className="text-[10px] font-bold text-[#475569] whitespace-nowrap">
+                    <span className="text-[10px] font-bold text-[#A3AED0] whitespace-nowrap">
                       / 5
                     </span>
                   </div>
@@ -445,10 +445,10 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                 )}
 
                 {/* Description Textarea Field */}
-                <div id={`field-desc-${criterion.key}`} className="space-y-1.5 pt-1 border-t border-slate-100">
+                <div id={`field-desc-${criterion.key}`} className="space-y-1.5 pt-1 border-t border-[#E0E5F2]">
                   <label
                     htmlFor={`input-desc-${criterion.key}`}
-                    className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A]"
+                    className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674]"
                   >
                     {criterion.title} Description <span className="text-red-500">*</span>
                   </label>
@@ -481,7 +481,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
           <div key={field.key} id={field.containerId} className="flex flex-col space-y-2 scroll-mt-24">
             <label
               htmlFor={field.inputId}
-              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1"
             >
               {field.label}
             </label>

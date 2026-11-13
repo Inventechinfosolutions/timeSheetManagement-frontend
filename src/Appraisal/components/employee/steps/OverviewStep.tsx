@@ -96,28 +96,28 @@ export const OverviewStep: React.FC<StepProps> = ({
     <div className="space-y-3">
       {/* Step Header */}
       <div>
-        <h3 className="text-[1.24rem] font-bold text-[#0F172A]">
+        <h3 className="text-[1.24rem] font-bold">
           <span className="eval-title-anim">Step 1: Role & Quarter Overview</span>
         </h3>
       </div>
 
       {/* Review Period: Compact, clean card bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-white rounded-2xl text-xs shadow-sm hover:shadow-md transition-all">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-[#F4F7FE] rounded-xl border border-[#E0E5F2] text-xs transition-all">
         <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-blue-600 shrink-0" />
-          <span className="font-bold text-[#0F172A]">
+          <Calendar className="w-4 h-4 text-[#4318FF] shrink-0" />
+          <span className="font-bold text-[#2B3674]">
             Review Period ({quarter} • {financialYear || "FY"}):
           </span>
-          <span className="text-[#334155] font-medium">
-            <span className="text-[#334155]">Start Date:</span>{" "}
-            <strong className="text-[#0F172A] font-semibold">{startDate || "—"}</strong>
+          <span className="text-[#707EAE] font-medium">
+            <span className="text-[#707EAE]">Start Date:</span>{" "}
+            <strong className="text-[#2B3674] font-semibold">{startDate || "—"}</strong>
             {"  "}—{"  "}
-            <span className="text-[#334155]">End Date:</span>{" "}
-            <strong className="text-[#0F172A] font-semibold">{endDate || "—"}</strong>
+            <span className="text-[#707EAE]">End Date:</span>{" "}
+            <strong className="text-[#2B3674] font-semibold">{endDate || "—"}</strong>
           </span>
         </div>
         {periodLoading && (
-          <span className="text-[11px] text-blue-600 font-medium animate-pulse">
+          <span className="text-[11px] text-[#4318FF] font-medium animate-pulse">
             Fetching dates...
           </span>
         )}
@@ -137,7 +137,7 @@ export const OverviewStep: React.FC<StepProps> = ({
             >
               <label
                 htmlFor={field.inputId}
-                className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-0.5"
+                className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-0.5"
               >
                 <span>
                   {field.label} {field.required && <span className="text-red-500">*</span>}
