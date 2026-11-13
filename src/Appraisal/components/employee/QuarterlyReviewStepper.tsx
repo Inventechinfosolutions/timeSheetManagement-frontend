@@ -1,21 +1,46 @@
-import React, { useState, useRef, useEffect } from "react";
+﻿import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
+  ArrowRight,
   Check,
-  CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Send,
   AlertCircle,
+  Sliders,
+  X,
+  Lock,
+  Loader2,
 } from "lucide-react";
+import {
+  StepOverviewIcon,
+  StepAchievementsIcon,
+  StepTeamworkIcon,
+  StepGoalsIcon,
+  StepEnvironmentIcon,
+  StepFinalReviewIcon,
+} from "./StepSvgIcons";
 import {
   animateStepSlide,
   initActiveStepperCircle,
   animateFieldError,
 } from "../../animations/appraisalAnimations";
-import { ReviewFormData, QuarterlyReviewAssignment, StoredPerformanceFile } from "../../types/appraisal.types";
+import {
+  ReviewFormData,
+  QuarterlyReviewAssignment,
+  StoredPerformanceFile,
+  PerformanceProject,
+  PerformanceWritePayload,
+} from "../../types/appraisal.types";
 import { emptyReviewFormData } from "../../constants/emptyReviewForm";
-import { AppraisalApi, readApiError, toPerformancePayload, toReviewFormData } from "../../reducers/appraisal.reducer";
-import { QuaterlyEnum } from "../../enums/appraisal.enums";
+import { AppraisalApi, readApiError, toProjectWriteBody, changedProjectFields } from "../../reducers/appraisal.reducer";
+import { readProjectList, PERFORMANCE_STEP_PATH, changedStepFields, toStepFields, applyStepDataToForm } from "../../utils/appraisalHelpers";
+import { EmployeePerformanceStatus, QuaterlyEnum, QuarterlyReviewStatus, ReviewPeriod } from "../../enums/appraisal.enums";
+import AppraisalMomentCard from "../common/AppraisalMomentCard";
+import { fetchAppraisalMappingByEmployee } from "../../reducers/appraisalMapping.reducer";
+import { useAppDispatch } from "../../../hooks";
+import { message } from "antd";
 import OverviewStep from "./steps/OverviewStep";
 import AchievementsStep from "./steps/AchievementsStep";
 import TeamContributionStep from "./steps/TeamContributionStep";
@@ -29,27 +54,202 @@ interface QuarterlyReviewStepperProps {
   assignment: QuarterlyReviewAssignment;
   initialFormData?: ReviewFormData;
   readOnly?: boolean;
+  initialStep?: number;
   onBack: () => void;
   onSubmitSuccess?: () => void;
+  onGoToEvaluation?: () => void;
 }
 
+
+const hasCompletedFirstStep = (data: ReviewFormData): boolean => {
+  // Step 1 is "done" when the primary required field (Overall Performance Summary) is filled
+  const ov = (data.overview || data.roleSummary || "").trim();
+  const summary = (
+    data.overallPerformanceSummary ||
+    (ov.startsWith("{") ? "" : ov)
+  ).trim();
+  return summary.length > 0;
+};
+
+/**
+ * Returns true if the user has entered ANY meaningful data across all steps.
+ * Used to determine whether "Save & Exit" should persist DRAFT or reset to NOT_STARTED.
+ */
+const hasAnyDataEntered = (data: ReviewFormData): boolean => {
+  // Step 1 – Overview fields
+  const ov = (data.overview || data.roleSummary || "").trim();
+  if (ov.length > 0 && !ov.startsWith("{")) return true;
+  if ((data.overallPerformanceSummary || "").trim().length > 0) return true;
+  if ((data.keyHighlights || "").trim().length > 0) return true;
+  if ((data.majorContributions || "").trim().length > 0) return true;
+  if ((data.areasForImprovement || "").trim().length > 0) return true;
+
+  // Step 2 – Achievements / Projects
+  if (
+    (data.projects || []).some(
+      (p) =>
+        (p.projectName || p.title || "").trim() ||
+        (p.description || "").trim() ||
+        (p.challenge || "").trim()
+    )
+  )
+    return true;
+  if (
+    (data.projectName || data.projectTitle || "").trim() ||
+    (data.projectDescription || "").trim() ||
+    (data.projectChallenge || "").trim() ||
+    (data.keyResponsibilities || "").trim() ||
+    (data.keyAchievementsOutcomes || "").trim() ||
+    (data.majorAchievements || "").trim()
+  )
+    return true;
+
+  // Step 3 – Team Contribution
+  if (
+    (data.teamCollaborationSummary || "").trim() ||
+    (data.crossTeamContributions || "").trim() ||
+    (data.knowledgeSharingMentoring || "").trim() ||
+    (data.teamworkExamples || "").trim()
+  )
+    return true;
+  if (
+    data.teamRatings &&
+    Object.values(data.teamRatings).some((v) => typeof v === "number" && v > 0)
+  )
+    return true;
+
+  // Step 4 – Learning Goals
+  if (
+    (data.learningGoalItems || []).some((g) => g.trim().length > 0) ||
+    (data.learningGoals || "").trim().length > 0 ||
+    (data.skillsAcquired || "").trim().length > 0 ||
+    (data.certificationsOrCourses || "").trim().length > 0 ||
+    (data.skillsToImprove || "").trim().length > 0 ||
+    (data.nextQuarterLearningGoals || "").trim().length > 0
+  )
+    return true;
+
+  // Step 5 – Company Environment
+  if (
+    (data.workCultureFeedback || "").trim() ||
+    (data.workLifeBalance || "").trim() ||
+    (data.suggestionsForImprovement || "").trim() ||
+    (data.challengesAffectingProductivity || "").trim()
+  )
+    return true;
+  if (data.companyEnvironmentRating && data.companyEnvironmentRating > 0) return true;
+  if (data.toolingAndResourcesRating && data.toolingAndResourcesRating > 0) return true;
+  if (data.managementSupportRating && data.managementSupportRating > 0) return true;
+
+  // Step 6 – Final Review
+  if (data.overallSelfRating && data.overallSelfRating > 0) return true;
+  if ((data.overallEmployeeComments || "").trim()) return true;
+  if ((data.careerGrowthInterests || "").trim()) return true;
+
+  return false;
+};
+
+
+const isStepDone = (stepId: number, data: ReviewFormData): boolean => {
+  if (stepId === 1) {
+    const summary = (
+      data.overallPerformanceSummary ||
+      data.overview ||
+      data.roleSummary ||
+      ""
+    ).trim();
+    return Boolean(summary && !summary.startsWith("{"));
+  }
+  if (stepId === 2) {
+    return Boolean(
+      (data.projects && data.projects.length > 0) ||
+      (data.projectTitle || "").trim() ||
+      (data.projectName || "").trim() ||
+      (data.majorAchievements || "").trim()
+    );
+  }
+  if (stepId === 3) {
+    const r = data.teamRatings || {};
+    const d = data as any;
+    return Boolean(
+      (r.communication || 0) > 0 && Boolean((d.communicationDescription || "").trim()) &&
+      (r.ownership || 0) > 0 && Boolean((d.ownershipDescription || "").trim()) &&
+      (r.collaboration || 0) > 0 && Boolean((d.collaborationDescription || "").trim()) &&
+      (r.problemSolving || 0) > 0 && Boolean((d.problemSolvingDescription || "").trim()) &&
+      (r.leadership || 0) > 0 && Boolean((d.leadershipDescription || "").trim()) &&
+      (r.adaptability || 0) > 0 && Boolean((d.adaptabilityDescription || "").trim())
+    );
+  }
+  if (stepId === 4) {
+    return Boolean(
+      (data.learningGoalItems && data.learningGoalItems.length > 0) ||
+      (data.learningGoals || "").trim() ||
+      (data.skillsAcquired || "").trim() ||
+      (data.certificationsOrCourses || "").trim() ||
+      (data.skillsToImprove || "").trim() ||
+      (data.nextQuarterLearningGoals || "").trim()
+    );
+  }
+  if (stepId === 5) {
+    return Boolean(
+      (data.workCultureFeedback || "").trim() ||
+      (data.workLifeBalance || "").trim() ||
+      (data.suggestionsForImprovement || "").trim() ||
+      (data.challengesAffectingProductivity || "").trim() ||
+      (data.companyEnvironmentRating && data.companyEnvironmentRating > 0) ||
+      (data.toolingAndResourcesRating && data.toolingAndResourcesRating > 0) ||
+      (data.managementSupportRating && data.managementSupportRating > 0)
+    );
+  }
+  return false;
+};
+
+export const getFirstIncompleteStep = (data: ReviewFormData): number => {
+  for (let s = 1; s <= 5; s++) {
+    if (!isStepDone(s, data)) return s;
+  }
+  return 6;
+};
+
 const STEP_DEFINITIONS = [
-  { id: 1, label: "Overview" },
-  { id: 2, label: "Achievements" },
-  { id: 3, label: "Teamwork" },
-  { id: 4, label: "Learning Goals" },
-  { id: 5, label: "Environment" },
-  { id: 6, label: "Final Review" },
+  { id: 1, label: "Overview", IconComponent: StepOverviewIcon },
+  { id: 2, label: "Achievements", IconComponent: StepAchievementsIcon },
+  { id: 3, label: "Teamwork", IconComponent: StepTeamworkIcon },
+  { id: 4, label: "Learning Goals", IconComponent: StepGoalsIcon },
+  { id: 5, label: "Environment", IconComponent: StepEnvironmentIcon },
+  { id: 6, label: "Final Review", IconComponent: StepFinalReviewIcon },
 ];
 
-const quarterValue = (value: string): QuaterlyEnum | null => {
+const stepSavedMessage = (stepId: number) => {
+  const label = STEP_DEFINITIONS.find((step) => step.id === stepId)?.label || "Step";
+  return `${label} saved successfully`;
+};
+
+const quarterValue = (value?: any, reviewPeriod?: string): QuaterlyEnum | null => {
+  if (reviewPeriod === ReviewPeriod.YEARLY) {
+    return QuaterlyEnum.YEARLY;
+  }
+  if (!value) return null;
+  if (typeof value === "object") {
+    return QuaterlyEnum.YEARLY;
+  }
+  const str = String(value).trim().toUpperCase();
   if (
-    value === QuaterlyEnum.Q1 ||
-    value === QuaterlyEnum.Q2 ||
-    value === QuaterlyEnum.Q3 ||
-    value === QuaterlyEnum.Q4
+    str === QuaterlyEnum.Q1 ||
+    str === QuaterlyEnum.Q2 ||
+    str === QuaterlyEnum.Q3 ||
+    str === QuaterlyEnum.Q4 ||
+    str === QuaterlyEnum.YEARLY
   ) {
-    return value;
+    return str as QuaterlyEnum;
+  }
+  if (
+    str.includes("YEARLY") ||
+    str.includes("Q1, Q2") ||
+    str.includes("Q1,Q2") ||
+    str.includes("Q1 - Q4")
+  ) {
+    return QuaterlyEnum.YEARLY;
   }
   return null;
 };
@@ -58,11 +258,58 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   assignment,
   initialFormData,
   readOnly = false,
+  initialStep,
   onBack,
   onSubmitSuccess,
+  onGoToEvaluation,
 }) => {
   const isLocked = readOnly || assignment.canEdit === false;
-  const [currentStep, setCurrentStep] = useState<number>(1);
+  const isReassignedReview = Boolean(
+    (assignment.reassignCount && assignment.reassignCount >= 1) ||
+    [
+      QuarterlyReviewStatus.EDIT_GRANTED,
+      QuarterlyReviewStatus.ALLOWED_TO_EDIT,
+      QuarterlyReviewStatus.APPROVED_FOR_EDITING,
+    ].some(
+      (s) =>
+        s &&
+        (s.toUpperCase() === String(assignment.status || "").toUpperCase() ||
+          s.toUpperCase() === String(assignment.reviewStatus || "").toUpperCase())
+    ) ||
+    Boolean(assignment.submittedAt)
+  );
+  const normalizedStatus = String(assignment.status || assignment.reviewStatus || "").toUpperCase();
+  const isNotStarted =
+    normalizedStatus === "NOT_STARTED" ||
+    normalizedStatus === "NOT STARTED" ||
+    String(assignment.status || "").toUpperCase() === "NOT_STARTED" ||
+    String(assignment.status || "").toUpperCase() === "NOT STARTED";
+  const isCompleted =
+    normalizedStatus === "COMPLETED" ||
+    String(assignment.status || "").toUpperCase() === "COMPLETED" ||
+    String(assignment.reviewStatus || "").toUpperCase() === "COMPLETED";
+  const isAlreadySubmitted =
+    Boolean(assignment.submittedAt) ||
+    Boolean(assignment.performanceDate) ||
+    [
+      "SUBMITTED",
+      "RE_SUBMITTED",
+      "UNDER_REVIEW",
+      "REVIEWED",
+      "COMPLETED",
+      "PERFORMANCE_RECEIVED",
+      "EVALUATION_IN_PROGRESS",
+    ].includes(normalizedStatus);
+  const [currentStep, setCurrentStep] = useState<number>(() => {
+    if (typeof initialStep === "number") return initialStep;
+    if (readOnly) return 6;
+    const initialData = initialFormData || emptyReviewFormData;
+    return getFirstIncompleteStep(initialData);
+  });
+  /** First incomplete step from DB (API `step`). Used for checkmarks + forward skips. */
+  const [dbOpenStep, setDbOpenStep] = useState<number>(() =>
+    Math.min(Math.max(Number(assignment.step) || Number(initialStep) || 1, 1), 6),
+  );
   const [exitingStep, setExitingStep] = useState<number | null>(null);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const [formData, setFormData] = useState<ReviewFormData>(initialFormData || emptyReviewFormData);
@@ -75,9 +322,51 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   const [saveError, setSaveError] = useState<string>("");
   const [submitted, setSubmitted] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // formDirty: tracks whether user has modified the form from its initial loaded state
+  const [formDirty, setFormDirty] = useState<boolean>(false);
+  const [showSubmitConfirmModal, setShowSubmitConfirmModal] = useState<boolean>(false);
+  const [pendingSubmitData, setPendingSubmitData] = useState<ReviewFormData | null>(null);
+  const [isSubmittingModal, setIsSubmittingModal] = useState<boolean>(false);
+  /** EMPLOYEE / Team Lead assigner → "Team Lead"; otherwise "manager". */
+  const [reviewerLabel, setReviewerLabel] = useState<"manager" | "Team Lead">("manager");
+  const initialFormDataRef = useRef<ReviewFormData>(initialFormData || emptyReviewFormData);
+  const dispatch = useAppDispatch();
 
   const topRef = useRef<HTMLDivElement>(null);
   const transitionTimerRef = useRef<any>(null);
+
+  useEffect(() => {
+    const empId = String(assignment.employeeId || "").trim();
+    const assignedByRole = String(assignment.assignedBy || "").trim().toUpperCase();
+    // Fast path when assignedBy is still the role enum (not a person name)
+    if (assignedByRole === "EMPLOYEE" || assignedByRole === "TEAM LEAD") {
+      setReviewerLabel("Team Lead");
+      return;
+    }
+    if (assignedByRole === "MANAGER" || assignedByRole === "ADMIN") {
+      setReviewerLabel("manager");
+      return;
+    }
+    if (!empId) {
+      setReviewerLabel("manager");
+      return;
+    }
+    let cancelled = false;
+    void dispatch(fetchAppraisalMappingByEmployee(empId))
+      .unwrap()
+      .then((mapping) => {
+        if (cancelled) return;
+        setReviewerLabel(
+          mapping?.assignerType === "EMPLOYEE" ? "Team Lead" : "manager",
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setReviewerLabel("manager");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [assignment.employeeId, assignment.assignedBy, dispatch]);
 
   const scrollToTop = () => {
     if (topRef.current) {
@@ -110,6 +399,14 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     };
   }, []);
 
+  // Sync initialFormDataRef when a fresh form is loaded from the server
+  useEffect(() => {
+    if (initialFormData) {
+      initialFormDataRef.current = initialFormData;
+      setFormDirty(false);
+    }
+  }, [initialFormData]);
+
   const goToStep = (targetStep: number, shouldScroll: boolean = true) => {
     if (targetStep === currentStep || targetStep < 1 || targetStep > 6) return;
     const dir = targetStep > currentStep ? "forward" : "backward";
@@ -131,6 +428,83 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }, 480);
   };
 
+  /** Clear active project draft fields (does not touch projects[]). */
+  const clearActiveProjectDraft = (base: ReviewFormData): ReviewFormData => ({
+    ...base,
+    projectName: "",
+    projectDescription: "",
+    projectRole: "",
+    responsibilityType: "",
+    leadershipQualities: "",
+    clientReviewFeedback: "",
+    keyResponsibilities: "",
+    challengesFaced: "",
+    projectChallenge: "",
+    solutionsImplemented: "",
+    keyAchievementsOutcomes: "",
+    technologiesUsed: [],
+    projectAttachments: [],
+    editingProjectIndex: null,
+  });
+
+  /** Load one saved project into the active Step 2 form for editing. */
+  const applyProjectToActiveForm = (
+    base: ReviewFormData,
+    index: number,
+  ): ReviewFormData => {
+    const project = (base.projects || [])[index];
+    if (!project) {
+      return clearActiveProjectDraft(base);
+    }
+    const challenge = project.challengesFaced || project.challenge || "";
+    return {
+      ...base,
+      projectName: project.projectName || "",
+      projectDescription: project.description || "",
+      projectRole: project.projectRole || "",
+      responsibilityType: project.responsibilityType || "",
+      leadershipQualities: project.leadershipQualities || "",
+      clientReviewFeedback: project.clientReviewFeedback || "",
+      keyResponsibilities: project.keyResponsibilities || "",
+      challengesFaced: challenge,
+      projectChallenge: challenge,
+      solutionsImplemented: project.solutionsImplemented || "",
+      keyAchievementsOutcomes: project.keyAchievementsOutcomes || "",
+      technologiesUsed: project.technologiesUsed ? [...project.technologiesUsed] : [],
+      projectAttachments: project.attachments ? [...project.attachments] : [],
+      editingProjectIndex: index,
+    };
+  };
+
+  /**
+   * Final-review "Edit" on a step.
+   * Step 2 special case:
+   * - 1 project → fill form for that project; list below hides it (no duplicate look)
+   * - 2+ projects → empty form; list below so user picks which to edit
+   */
+  const handleEditStepFromReview = async (step: number) => {
+    if (saving) return;
+    setErrors({});
+
+    if (step === 2) {
+      await loadFreshForm(false, 2);
+      const projects = formDataRef.current.projects || [];
+      let next = clearActiveProjectDraft(formDataRef.current);
+      if (projects.length === 1) {
+        next = applyProjectToActiveForm(next, 0);
+      }
+      formDataRef.current = next;
+      setFormData(next);
+      goToStep(2, true);
+      return;
+    }
+
+    if (step < currentStep) {
+      await loadFreshForm(true, step);
+    }
+    goToStep(step, true);
+  };
+
   const activeCircleRef = useRef<HTMLDivElement | null>(null);
   const enterContentRef = useRef<HTMLDivElement | null>(null);
   const exitContentRef = useRef<HTMLDivElement | null>(null);
@@ -138,6 +512,49 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   useEffect(() => {
     return initActiveStepperCircle(activeCircleRef.current);
   }, [currentStep]);
+
+  // ── formWatch: mark form as dirty whenever formData changes from the initial snapshot ──
+  useEffect(() => {
+    if (readOnly || isLocked) return;
+    const initial = initialFormDataRef.current;
+    const current = formData;
+    // Compare serialized snapshots of meaningful fields only
+    const pickMeaningful = (d: ReviewFormData) => ({
+      overallPerformanceSummary: (
+        d.overallPerformanceSummary ||
+        (d.overview && !d.overview.startsWith("{") ? d.overview : "")
+      ).trim(),
+      keyHighlights: (d.keyHighlights || "").trim(),
+      majorContributions: (d.majorContributions || "").trim(),
+      areasForImprovement: (d.areasForImprovement || "").trim(),
+      projects: (d.projects || []).map((p) => ({
+        name: (p.projectName || p.title || "").trim(),
+        desc: (p.description || "").trim(),
+        challenge: (p.challenge || p.challengesFaced || "").trim(),
+        role: (p.projectRole || "").trim(),
+      })),
+      skillsAcquired: (d.skillsAcquired || "").trim(),
+      skillsToImprove: (d.skillsToImprove || "").trim(),
+      nextQuarterLearningGoals: (d.nextQuarterLearningGoals || "").trim(),
+      workCultureFeedback: (d.workCultureFeedback || "").trim(),
+      workLifeBalance: (d.workLifeBalance || "").trim(),
+      suggestionsForImprovement: (d.suggestionsForImprovement || "").trim(),
+      teamRatingsCount: Object.values(d.teamRatings || {}).filter((v) => typeof v === "number" && (v as number) > 0).length,
+      companyEnvironmentRating: d.companyEnvironmentRating || 0,
+      toolingAndResourcesRating: d.toolingAndResourcesRating || 0,
+      managementSupportRating: d.managementSupportRating || 0,
+      overallSelfRating: d.overallSelfRating || 0,
+      overallEmployeeComments: (d.overallEmployeeComments || "").trim(),
+      careerGrowthInterests: (d.careerGrowthInterests || "").trim(),
+      teamCollaborationSummary: (d.teamCollaborationSummary || "").trim(),
+      crossTeamContributions: (d.crossTeamContributions || "").trim(),
+      majorAchievements: (d.majorAchievements || "").trim(),
+      certificationsOrCourses: (d.certificationsOrCourses || "").trim(),
+      challengesAffectingProductivity: (d.challengesAffectingProductivity || "").trim(),
+    });
+    const isDirty = JSON.stringify(pickMeaningful(initial)) !== JSON.stringify(pickMeaningful(current));
+    setFormDirty(isDirty);
+  }, [formData, readOnly, isLocked]);
 
   useEffect(() => {
     if (exitingStep !== null) {
@@ -152,11 +569,24 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       if (el) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
 
+        // If inner layout container (main or overflow-y-auto) exists, ensure target is centered
+        const main = document.querySelector("main");
+        if (main && main.contains(el)) {
+          const mainRect = main.getBoundingClientRect();
+          const elRect = el.getBoundingClientRect();
+          const targetScrollTop = main.scrollTop + (elRect.top - mainRect.top) - main.clientHeight / 2 + elRect.height / 2;
+          main.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" });
+        }
+
         const focusTarget = el.matches("input, textarea, button")
           ? (el as HTMLElement)
           : (el.querySelector("input, textarea, button") as HTMLElement | null);
         if (focusTarget && typeof focusTarget.focus === "function") {
+          try {
             focusTarget.focus({ preventScroll: true });
+          } catch {
+            focusTarget.focus();
+          }
         }
 
         animateFieldError(el);
@@ -171,57 +601,26 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       delete next[field];
       return next;
     });
+    const el = document.getElementById(`field-${field}`);
+    if (el) {
+      el.style.borderColor = "";
+      el.style.boxShadow = "";
+    }
   };
 
   const handleFieldChange = (field: keyof ReviewFormData, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    formDataRef.current = {
+      ...formDataRef.current,
+      [field]: value,
+    };
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      formDataRef.current = next;
+      return next;
+    });
     handleClearError(field as string);
   };
 
-  const commitDraftsIfNeeded = (currentData: ReviewFormData): ReviewFormData => {
-    let updated = { ...currentData };
-    let hasChanged = false;
-
-    // Step 2: Auto-commit project draft if all required fields are filled
-    const pTitle = (updated.projectTitle || "").trim();
-    const pDesc = (updated.projectDescription || "").trim();
-    const pChallenge = (updated.projectChallenge || "").trim();
-    if (pTitle && pDesc && pChallenge) {
-      const existing = updated.projects || [];
-      const newProject = {
-        title: pTitle,
-        description: pDesc,
-        challenge: pChallenge,
-        attachments: updated.projectAttachments ? [...updated.projectAttachments] : [],
-      };
-      updated = {
-        ...updated,
-        projects: [...existing, newProject],
-        projectTitle: "",
-        projectDescription: "",
-        projectChallenge: "",
-        projectAttachments: [],
-      };
-      hasChanged = true;
-    }
-
-    // Step 4: Auto-commit learning goal draft if filled
-    const goalDraft = (updated.learningGoals || "").trim();
-    if (goalDraft) {
-      const existingGoals = updated.learningGoalItems || [];
-      const newGoals = [...existingGoals, goalDraft];
-      updated = {
-        ...updated,
-        learningGoalItems: newGoals,
-        learningGoals: "",
-        skillsAcquired: newGoals.join("\n"),
-        nextQuarterLearningGoals: newGoals.join("\n"),
-      };
-      hasChanged = true;
-    }
-
-    return hasChanged ? updated : currentData;
-  };
 
   const validateStep = (
     stepNum: number,
@@ -231,88 +630,187 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     let firstFieldId: string | undefined = undefined;
 
     if (stepNum === 1) {
-      const overview = (data.overview || data.roleSummary || "").trim();
-      if (!overview) {
-        stepErrors.overview = "Role & quarter overview summary is required.";
-        if (!firstFieldId) firstFieldId = "field-overview";
+      const summary = (data.overallPerformanceSummary || data.overview || "").trim();
+      if (!summary) {
+        stepErrors.overallPerformanceSummary = "Overall performance summary is required.";
+        if (!firstFieldId) firstFieldId = "field-overallPerformanceSummary";
       }
     } else if (stepNum === 2) {
-      const pTitle = (data.projectTitle || "").trim();
+      const pName = (data.projectName || "").trim();
       const pDesc = (data.projectDescription || "").trim();
-      const pChallenge = (data.projectChallenge || "").trim();
-      const hasAnyDraft = Boolean(pTitle || pDesc || pChallenge);
-      const isDraftComplete = Boolean(pTitle && pDesc && pChallenge);
+      const pRole = (data.projectRole || "").trim();
+      const pResp = (data.responsibilityType || "").trim();
+      const pKeyResp = (data.keyResponsibilities || "").trim();
+      const pChallenge = (data.challengesFaced || data.projectChallenge || "").trim();
+      const pOutcomes = (data.keyAchievementsOutcomes || "").trim();
+      const pTechs = Array.isArray(data.technologiesUsed) ? data.technologiesUsed : [];
 
-      const savedProjects = (data.projects || []).filter(
-        (project) => project.title.trim() && project.description.trim() && project.challenge.trim(),
-      );
+      const hasAnyDraft = Boolean(pName || pDesc || pRole || pResp || pKeyResp || pChallenge || pOutcomes || pTechs.length > 0);
+      const isDraftComplete = Boolean(pName && pDesc && pRole && pResp && pKeyResp && pChallenge && pOutcomes && pTechs.length > 0);
+
+      const allProjects = data.projects || [];
+      const hasAnySavedProject = allProjects.length > 0;
 
       // If user partially filled draft in active input fields, point out missing field
       if (hasAnyDraft && !isDraftComplete) {
-        if (!pTitle) {
-          stepErrors.projectTitle = "Project title is required.";
-          if (!firstFieldId) firstFieldId = "field-projectTitle";
+        if (!pName) {
+          stepErrors.projectName = "Project name is required.";
+          if (!firstFieldId) firstFieldId = "field-projectName";
         }
         if (!pDesc) {
           stepErrors.projectDescription = "Project description is required.";
           if (!firstFieldId) firstFieldId = "field-projectDescription";
         }
-        if (!pChallenge) {
-          stepErrors.projectChallenge = "Challenge overcome is required.";
-          if (!firstFieldId) firstFieldId = "field-projectChallenge";
+        if (!pRole) {
+          stepErrors.projectRole = "Project role is required.";
+          if (!firstFieldId) firstFieldId = "field-projectRole";
         }
-      } else if (!isDraftComplete && savedProjects.length === 0) {
-        stepErrors.projectTitle = "Project title is required.";
-        stepErrors.projectDescription = "Project description is required.";
-        stepErrors.projectChallenge = "Challenge overcome is required.";
-        if (!firstFieldId) firstFieldId = "field-projectTitle";
+        if (!pResp) {
+          stepErrors.responsibilityType = "Responsibility type is required.";
+          if (!firstFieldId) firstFieldId = "field-responsibilityType";
+        }
+        if (!pKeyResp) {
+          stepErrors.keyResponsibilities = "Key responsibilities is required.";
+          if (!firstFieldId) firstFieldId = "field-keyResponsibilities";
+        }
+        if (!pChallenge) {
+          stepErrors.challengesFaced = "Challenges faced is required.";
+          if (!firstFieldId) firstFieldId = "field-challengesFaced";
+        }
+        if (!pOutcomes) {
+          stepErrors.keyAchievementsOutcomes = "Key achievements / outcomes is required.";
+          if (!firstFieldId) firstFieldId = "field-keyAchievementsOutcomes";
+        }
+        if (pTechs.length === 0) {
+          stepErrors.technologiesUsed = "At least one technology is required.";
+          if (!firstFieldId) firstFieldId = "field-technologiesUsed";
+        }
+      }
+
+      // Check if any project already in list is in draft or incomplete
+      const incompleteProjectIdx = allProjects.findIndex((p) => {
+        if (p.isDraft) return true;
+        if (!p.projectName?.trim()) return true;
+        if (!p.description?.trim()) return true;
+        if (!p.projectRole?.trim()) return true;
+        if (!p.responsibilityType?.trim()) return true;
+        if (!p.keyResponsibilities?.trim()) return true;
+        if (!(p.challengesFaced?.trim() || p.challenge?.trim())) return true;
+        if (!p.keyAchievementsOutcomes?.trim()) return true;
+        if (!Array.isArray(p.technologiesUsed) || p.technologiesUsed.length === 0) return true;
+        return false;
+      });
+
+      if (incompleteProjectIdx !== -1) {
+        const dProj = allProjects[incompleteProjectIdx];
+        const missing = !dProj.projectName?.trim()
+          ? "Project name is required."
+          : !dProj.description?.trim()
+            ? "Project description should not be empty."
+            : !dProj.projectRole?.trim()
+              ? "Project role should not be empty."
+              : !dProj.responsibilityType?.trim()
+                ? "Responsibility type should not be empty."
+                : !dProj.keyResponsibilities?.trim()
+                  ? "Key responsibilities should not be empty."
+                  : !(dProj.challengesFaced?.trim() || dProj.challenge?.trim())
+                    ? "Challenges faced should not be empty."
+                    : !dProj.keyAchievementsOutcomes?.trim()
+                      ? "Key achievements / outcomes should not be empty."
+                      : (!Array.isArray(dProj.technologiesUsed) || dProj.technologiesUsed.length === 0)
+                        ? "At least one technology is required."
+                        : "This project is in draft. Please edit and complete all required fields.";
+
+        stepErrors[`project_${incompleteProjectIdx}`] = missing;
+        stepErrors[`projects.${incompleteProjectIdx}.description`] = missing;
+        if (!firstFieldId) firstFieldId = `accordion-project-${incompleteProjectIdx}`;
+      }
+
+      // Only require adding a project if there are NO projects saved in the list at all and active form is empty
+      if (!hasAnySavedProject && !hasAnyDraft) {
+        stepErrors.projectName = "At least one project is required.";
+        if (!firstFieldId) firstFieldId = "field-projectName";
       }
     } else if (stepNum === 3) {
-      const ratings = data.teamRatings || {};
-      const CRITERIA = [
-        { key: "communication", title: "Communication" },
-        { key: "ownership", title: "Ownership" },
-        { key: "collaboration", title: "Collaboration" },
-        { key: "problemSolving", title: "Problem Solving" },
-        { key: "leadership", title: "Leadership" },
-        { key: "adaptability", title: "Adaptability" },
+      const ratings = (data.teamRatings as any) || {};
+      const criteriaList = [
+        { key: "communication", descKey: "communicationDescription", title: "Communication & Coordination" },
+        { key: "ownership", descKey: "ownershipDescription", title: "Ownership" },
+        { key: "collaboration", descKey: "collaborationDescription", title: "Collaboration" },
+        { key: "problemSolving", descKey: "problemSolvingDescription", title: "Problem Solving" },
+        { key: "leadership", descKey: "leadershipDescription", title: "Leadership" },
+        { key: "adaptability", descKey: "adaptabilityDescription", title: "Adaptability" },
       ];
-
-      for (const c of CRITERIA) {
-        const val = ratings[c.key as keyof typeof ratings];
-        if (!val || val <= 0) {
-          stepErrors[c.key] = `Please select a rating for ${c.title}.`;
-          if (!firstFieldId) firstFieldId = `field-criterion-${c.key}`;
+      for (const item of criteriaList) {
+        const score = ratings[item.key];
+        if (!score || score <= 0) {
+          stepErrors[item.key] = `Please select a rating for ${item.title}.`;
+          if (!firstFieldId) firstFieldId = `field-criterion-${item.key}`;
+        }
+        const desc = ((data as any)[item.descKey] || "").trim();
+        if (!desc) {
+          stepErrors[item.descKey] = `${item.title} description is required.`;
+          if (!firstFieldId) firstFieldId = `field-desc-${item.key}`;
         }
       }
     } else if (stepNum === 4) {
-      const goalDraft = (data.learningGoals || "").trim();
-      const savedGoals = (data.learningGoalItems || []).filter((goal) => goal.trim());
-      if (!goalDraft && savedGoals.length === 0) {
-        stepErrors.learningGoals = "Add at least one learning goal.";
-        if (!firstFieldId) firstFieldId = "field-learningGoals";
+      const skillsLearned = (data.skillsAcquired || "").trim();
+      const skillsToImprove = (data.skillsToImprove || "").trim();
+      const nextQuarterGoals = (data.nextQuarterLearningGoals || "").trim();
+
+      if (!skillsLearned) {
+        stepErrors.skillsAcquired = "Skills learned during this period is required.";
+        if (!firstFieldId) firstFieldId = "field-skillsAcquired";
+      }
+      if (!skillsToImprove) {
+        stepErrors.skillsToImprove = "Skills to improve is required.";
+        if (!firstFieldId) firstFieldId = "field-skillsToImprove";
+      }
+      if (!nextQuarterGoals) {
+        stepErrors.nextQuarterLearningGoals = "Learning goals for next quarter is required.";
+        if (!firstFieldId) firstFieldId = "field-nextQuarterLearningGoals";
       }
     } else if (stepNum === 5) {
-      const culture = (data.workCultureFeedback || "").trim();
-      const balance = (data.workLifeBalance || "").trim();
-      const suggestions = (data.suggestionsForImprovement || data.toolingAndResources || "").trim();
-      const rating = data.companyEnvironmentRating || data.managementSupportRating || 0;
+      const envRating = data.companyEnvironmentRating || 0;
+      const toolsRating = data.toolingAndResourcesRating || 0;
+      const mgrRating = data.managementSupportRating || 0;
 
+      if (!envRating || envRating <= 0) {
+        stepErrors.companyEnvironmentRating = "Please rate work environment satisfaction (1 to 5).";
+        if (!firstFieldId) firstFieldId = "field-companyEnvironmentRating";
+      }
+      if (!toolsRating || toolsRating <= 0) {
+        stepErrors.toolingAndResourcesRating = "Please rate availability of tools & resources (1 to 5).";
+        if (!firstFieldId) firstFieldId = "field-toolingAndResourcesRating";
+      }
+      if (!mgrRating || mgrRating <= 0) {
+        stepErrors.managementSupportRating = "Please rate manager support (1 to 5).";
+        if (!firstFieldId) firstFieldId = "field-managementSupportRating";
+      }
+      const culture = (data.workCultureFeedback || data.feedbackOnWorkCulture || "").trim();
       if (!culture) {
         stepErrors.workCultureFeedback = "Feedback on work culture is required.";
         if (!firstFieldId) firstFieldId = "field-workCultureFeedback";
       }
-      if (!balance) {
-        stepErrors.workLifeBalance = "Work-life balance feedback is required.";
+      const lifeBalance = (data.workLifeBalance || "").trim();
+      if (!lifeBalance) {
+        stepErrors.workLifeBalance = "Work life balance feedback is required.";
         if (!firstFieldId) firstFieldId = "field-workLifeBalance";
       }
+      const suggestions = (data.suggestionsForImprovement || "").trim();
       if (!suggestions) {
-        stepErrors.suggestionsForImprovement = "Suggestions for improvement are required.";
+        stepErrors.suggestionsForImprovement = "Suggestions for improvement is required.";
         if (!firstFieldId) firstFieldId = "field-suggestionsForImprovement";
       }
-      if (!rating || rating <= 0) {
-        stepErrors.companyEnvironmentRating = "Please rate the company environment (1 to 5).";
-        if (!firstFieldId) firstFieldId = "field-companyEnvironmentRating";
+    } else if (stepNum === 6) {
+      const selfRating = data.overallSelfRating || 0;
+      if (!selfRating || selfRating <= 0) {
+        stepErrors.overallSelfRating = "Please provide your overall self-rating (1 to 5).";
+        if (!firstFieldId) firstFieldId = "field-overallSelfRating";
+      }
+      if (!data.confirmationAccepted) {
+        stepErrors.confirmationAccepted = "Please confirm the review accuracy checkbox before submitting.";
+        if (!firstFieldId) firstFieldId = "field-confirmationAccepted";
       }
     }
 
@@ -327,18 +825,16 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (performanceIdRef.current) {
       return performanceIdRef.current;
     }
-    const quarter = quarterValue(assignment.quarter);
+    const quarter = quarterValue(assignment.quarter, assignment.reviewPeriod);
     if (!assignment.employeeId || !quarter || !assignment.financialYear) {
       throw new Error("This quarter is missing an employee, quarter, or financial year.");
     }
-    const created = await AppraisalApi.createPerformance(
-      toPerformancePayload(
-        assignment.employeeId,
+    const created = await AppraisalApi.createPerformance({
+      employeeId: assignment.employeeId,
       quarter,
-        assignment.financialYear,
-        formDataRef.current,
-      ),
-    );
+      financialYear: assignment.financialYear,
+      status: EmployeePerformanceStatus.NOT_STARTED,
+    });
     performanceIdRef.current = created.id;
     setPerformanceId(created.id);
     return created.id;
@@ -365,33 +861,314 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
   };
 
-  const persistStep = async (asDraft = false, dataToPersist: ReviewFormData = formData): Promise<boolean> => {
-    const quarter = quarterValue(assignment.quarter);
+  const draftProjectFromForm = (data: ReviewFormData): PerformanceProject => ({
+    projectName: (data.projectName || "").trim(),
+    description: (data.projectDescription || "").trim(),
+    challenge: (data.challengesFaced || data.projectChallenge || "").trim(),
+    challengesFaced: (data.challengesFaced || data.projectChallenge || "").trim(),
+    projectRole: (data.projectRole || "").trim(),
+    responsibilityType: (data.responsibilityType || "").trim(),
+    leadershipQualities: data.leadershipQualities || "",
+    clientReviewFeedback: data.clientReviewFeedback || "",
+    keyResponsibilities: (data.keyResponsibilities || "").trim(),
+    solutionsImplemented: data.solutionsImplemented || "",
+    keyAchievementsOutcomes: (data.keyAchievementsOutcomes || "").trim(),
+    technologiesUsed: Array.isArray(data.technologiesUsed) ? [...data.technologiesUsed] : [],
+    attachments: data.projectAttachments ? [...data.projectAttachments] : [],
+    isDraft: false,
+  });
+
+  const isProjectDraftComplete = (data: ReviewFormData): boolean => {
+    const draft = draftProjectFromForm(data);
+    return Boolean(
+      draft.projectName &&
+      draft.description &&
+      draft.projectRole &&
+      draft.responsibilityType &&
+      draft.keyResponsibilities &&
+      (draft.challengesFaced || draft.challenge) &&
+      draft.keyAchievementsOutcomes &&
+      (draft.technologiesUsed || []).length > 0,
+    );
+  };
+
+  const savePendingProject = async (data: ReviewFormData): Promise<void> => {
+    const draft = draftProjectFromForm(data);
+    const hasAnyProjectInput = Boolean(
+      draft.projectName ||
+      draft.description ||
+      draft.projectRole ||
+      draft.responsibilityType ||
+      draft.keyResponsibilities ||
+      (draft.challengesFaced || draft.challenge) ||
+      draft.keyAchievementsOutcomes ||
+      (draft.technologiesUsed || []).length > 0,
+    );
+    if (!hasAnyProjectInput) {
+      return;
+    }
+    const complete = isProjectDraftComplete(data);
+    const id = await ensurePerformanceId();
+    const projects = data.projects || [];
+    const editingIndex = data.editingProjectIndex;
+    const isEdit = typeof editingIndex === "number" && editingIndex >= 0 && editingIndex < projects.length;
+    if (!complete && isEdit && !projects[editingIndex]?.isDraft) {
+      return;
+    }
+    const nextProject = { ...draft, isDraft: !complete };
+    if (isEdit && typeof editingIndex === "number") {
+      const patch = changedProjectFields(projects[editingIndex], nextProject);
+      if (Object.keys(patch).length > 0) {
+        await AppraisalApi.patchPerformanceProject(id, editingIndex, patch);
+      }
+      return;
+    }
+    await AppraisalApi.createPerformanceProject(id, toProjectWriteBody(nextProject));
+  };
+
+  const persistStep = async (
+    asDraft = false,
+    dataToPersist: ReviewFormData = formData,
+    targetStatus?: EmployeePerformanceStatus | string,
+    stepNumber?: number,
+  ): Promise<boolean> => {
+    const quarter = quarterValue(assignment.quarter, assignment.reviewPeriod);
     if (!assignment.employeeId || !quarter || !assignment.financialYear) {
       setSaveError("This quarter is missing an employee, quarter, or financial year.");
       return false;
     }
-    const payload = toPerformancePayload(
-            assignment.employeeId,
-            quarter,
-            assignment.financialYear,
-      dataToPersist,
-    );
+    const metaPayload: {
+      status?: EmployeePerformanceStatus | string;
+      clearSteps?: boolean;
+    } = {};
+    const resetting = targetStatus === EmployeePerformanceStatus.NOT_STARTED && !hasAnyDataEntered(dataToPersist);
+    if (resetting) {
+      metaPayload.clearSteps = true;
+      metaPayload.status = EmployeePerformanceStatus.NOT_STARTED;
+    } else if (
+      targetStatus &&
+      targetStatus !== EmployeePerformanceStatus.DRAFT
+    ) {
+      // Non-draft status changes only (submit/lock/etc). DRAFT is set by step PATCH.
+      metaPayload.status = targetStatus;
+    }
+
+    const stepPath = stepNumber ? PERFORMANCE_STEP_PATH[stepNumber] : undefined;
+    // PATCH body = only fields that differ from last loaded snapshot
+    const stepBody =
+      !resetting && stepNumber && stepNumber !== 2
+        ? changedStepFields(stepNumber, initialFormDataRef.current, dataToPersist)
+        : {};
+    // Steps 1,3–6 use /:id/{step} only — do not also PATCH /:id for DRAFT
+    const usesStepPatch = Boolean(stepPath) && stepNumber !== 2 && !resetting;
+
     setSaving(true);
     setSaveError("");
     try {
-      const existingId = performanceIdRef.current || assignment.performanceId;
+      let existingId = performanceIdRef.current || assignment.performanceId;
+      if (!existingId && assignment.employeeId && quarter && assignment.financialYear) {
+        try {
+          const found = await AppraisalApi.getEmployeePerformance(
+            assignment.employeeId,
+            quarter,
+            assignment.financialYear,
+          );
+          if (found?.id) {
+            existingId = found.id;
+            performanceIdRef.current = found.id;
+            setPerformanceId(found.id);
+          }
+        } catch (_) {
+          // ignore lookup error
+        }
+      }
       if (existingId) {
-        await AppraisalApi.updatePerformance(existingId, payload);
         performanceIdRef.current = existingId;
         setPerformanceId(existingId);
+        if (!usesStepPatch && Object.keys(metaPayload).length > 0) {
+          await AppraisalApi.updatePerformance(existingId, metaPayload);
+        } else if (resetting) {
+          await AppraisalApi.updatePerformance(existingId, metaPayload);
+        }
+        if (usesStepPatch && Object.keys(stepBody).length > 0) {
+          await AppraisalApi.patchPerformanceStep(existingId, stepPath!, stepBody);
+        }
+        if (stepNumber === 2 && !resetting) {
+          await savePendingProject(dataToPersist);
+        }
         return true;
       }
-      const saved = asDraft
-        ? await AppraisalApi.savePerformanceDraft(payload)
-        : await AppraisalApi.createPerformance(payload);
+      const createBody: PerformanceWritePayload = {
+        employeeId: assignment.employeeId,
+        quarter,
+        financialYear: assignment.financialYear,
+        ...metaPayload,
+        ...(asDraft && !resetting ? { status: EmployeePerformanceStatus.DRAFT } : {}),
+      };
+      if (stepNumber === 1) createBody.stepOverview = toStepFields(1, dataToPersist);
+      else if (stepNumber === 3) createBody.stepTeamwork = toStepFields(3, dataToPersist);
+      else if (stepNumber === 4) createBody.stepLearning = toStepFields(4, dataToPersist);
+      else if (stepNumber === 5) createBody.stepEnvironment = toStepFields(5, dataToPersist);
+      else if (stepNumber === 6) createBody.stepFinalReview = toStepFields(6, dataToPersist);
+      const saved = await AppraisalApi.createPerformance(createBody);
       performanceIdRef.current = saved.id;
       setPerformanceId(saved.id);
+      if (stepNumber === 2 && !resetting) {
+        await savePendingProject(dataToPersist);
+      }
+      return true;
+    } catch (error) {
+      const apiErrMsg = readApiError(error);
+      const match = apiErrMsg.match(/projects\.(\d+)\.(\w+)/i);
+      if (match) {
+        const idx = parseInt(match[1], 10);
+        const field = match[2];
+        const humanField =
+          field === "description" ? "Project description" :
+            field === "projectName" ? "Project name" :
+              field === "projectRole" ? "Project role" :
+                field === "responsibilityType" ? "Responsibility type" :
+                  field === "keyResponsibilities" ? "Key responsibilities" :
+                    field === "challengesFaced" ? "Challenges faced" :
+                      field === "keyAchievementsOutcomes" ? "Key achievements / outcomes" :
+                        field === "technologiesUsed" ? "Technologies used" : field;
+        const formattedErr = `${humanField} should not be empty.`;
+        setErrors((prev) => ({
+          ...prev,
+          [`project_${idx}`]: formattedErr,
+          [`projects.${idx}.${field}`]: formattedErr,
+        }));
+        scrollToField(`accordion-project-${idx}`);
+      } else {
+        setSaveError(apiErrMsg);
+      }
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /** Merge one step from API into form without wiping other steps already in memory. */
+  const hydrateStepIntoForm = async (
+    stepNumber: number,
+    base: ReviewFormData,
+  ): Promise<ReviewFormData> => {
+    if (isStepDone(stepNumber, base)) {
+      return base;
+    }
+    const id = performanceIdRef.current || assignment.performanceId;
+    const stepPath = PERFORMANCE_STEP_PATH[stepNumber];
+    if (!id || !stepPath) {
+      return base;
+    }
+    try {
+      const stepRes = await AppraisalApi.getPerformanceStep(Number(id), stepPath);
+      if (typeof stepRes.step === "number" && stepRes.step >= 1 && stepRes.step <= 6) {
+        setDbOpenStep((prev) => Math.max(prev, stepRes.step!));
+      }
+      return applyStepDataToForm(base, stepNumber, stepRes.data);
+    } catch {
+      return base;
+    }
+  };
+
+  /** Load only the given step via GET /:id/{step} — not the full appraisal. */
+  const loadFreshForm = async (
+    preserveDraftInputs = true,
+    stepToLoad: number = currentStep,
+  ): Promise<boolean> => {
+    const id = performanceIdRef.current || assignment.performanceId;
+    if (!id) {
+      return true;
+    }
+    const stepPath = PERFORMANCE_STEP_PATH[stepToLoad];
+    if (!stepPath) {
+      return true;
+    }
+    try {
+      const stepRes = await AppraisalApi.getPerformanceStep(Number(id), stepPath);
+      if (typeof stepRes.step === "number" && stepRes.step >= 1 && stepRes.step <= 6) {
+        setDbOpenStep((prev) => Math.max(prev, stepRes.step!));
+      }
+      let fresh = applyStepDataToForm(
+        formDataRef.current || emptyReviewFormData,
+        stepToLoad,
+        stepRes.data,
+      );
+      if (preserveDraftInputs && formDataRef.current && stepToLoad === 2) {
+        const current = formDataRef.current;
+        fresh = {
+          ...fresh,
+          projectName: current.projectName,
+          projectDescription: current.projectDescription,
+          projectRole: current.projectRole,
+          responsibilityType: current.responsibilityType,
+          leadershipQualities: current.leadershipQualities,
+          clientReviewFeedback: current.clientReviewFeedback,
+          keyResponsibilities: current.keyResponsibilities,
+          challengesFaced: current.challengesFaced,
+          projectChallenge: current.projectChallenge,
+          solutionsImplemented: current.solutionsImplemented,
+          keyAchievementsOutcomes: current.keyAchievementsOutcomes,
+          technologiesUsed: current.technologiesUsed,
+          projectAttachments: current.projectAttachments,
+          editingProjectIndex: current.editingProjectIndex,
+        };
+      }
+      formDataRef.current = fresh;
+      initialFormDataRef.current = fresh;
+      performanceIdRef.current = stepRes.id;
+      setPerformanceId(stepRes.id);
+      setFormData(fresh);
+      return true;
+    } catch (error) {
+      setSaveError(readApiError(error));
+      return false;
+    }
+  };
+
+  const handleSaveProject = async (
+    updatedProjects: PerformanceProject[],
+  ): Promise<boolean> => {
+    const previous = formDataRef.current.projects || [];
+    const editingIndex = formDataRef.current.editingProjectIndex;
+    const isEdit = typeof editingIndex === "number" && editingIndex >= 0 && editingIndex < previous.length;
+    setSaving(true);
+    setSaveError("");
+    try {
+      const id = await ensurePerformanceId();
+      if (isEdit && typeof editingIndex === "number") {
+        const patch = changedProjectFields(previous[editingIndex], updatedProjects[editingIndex]);
+        if (Object.keys(patch).length > 0) {
+          await AppraisalApi.patchPerformanceProject(id, editingIndex, patch);
+        }
+      } else {
+        const created = updatedProjects[updatedProjects.length - 1];
+        if (created) {
+          await AppraisalApi.createPerformanceProject(id, toProjectWriteBody(created));
+        }
+      }
+      const updatedData: ReviewFormData = {
+        ...formDataRef.current,
+        projects: updatedProjects,
+        editingProjectIndex: null,
+        projectName: "",
+        projectDescription: "",
+        projectRole: "",
+        responsibilityType: "",
+        leadershipQualities: "",
+        clientReviewFeedback: "",
+        keyResponsibilities: "",
+        challengesFaced: "",
+        projectChallenge: "",
+        solutionsImplemented: "",
+        keyAchievementsOutcomes: "",
+        technologiesUsed: [],
+        projectAttachments: [],
+      };
+      setFormData(updatedData);
+      formDataRef.current = updatedData;
+      await loadFreshForm(false, 2);
       return true;
     } catch (error) {
       setSaveError(readApiError(error));
@@ -401,23 +1178,96 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     }
   };
 
-  const loadFreshForm = async (): Promise<boolean> => {
-    const id = performanceIdRef.current;
-    if (!id) {
-      return true;
-    }
+  const handlePersistDraft = async (
+    nextProjects: PerformanceProject[],
+    draftIndex: number,
+  ): Promise<boolean> => {
+    const draft = nextProjects[draftIndex];
+    if (!draft) return false;
     try {
-      const performance = await AppraisalApi.getPerformanceById(id);
-      const fresh = toReviewFormData(performance);
-      formDataRef.current = fresh;
-      performanceIdRef.current = performance.id;
-      setPerformanceId(performance.id);
-      setFormData(fresh);
+      const id = await ensurePerformanceId();
+      const previous = formDataRef.current.projects || [];
+      const draftProject = { ...draft, isDraft: true };
+      if (draftIndex >= previous.length) {
+        await AppraisalApi.createPerformanceProject(id, toProjectWriteBody(draftProject));
+      } else {
+        const patch = changedProjectFields(previous[draftIndex], draftProject);
+        if (Object.keys(patch).length > 0) {
+          await AppraisalApi.patchPerformanceProject(id, draftIndex, patch);
+        }
+      }
       return true;
     } catch (error) {
       setSaveError(readApiError(error));
       return false;
     }
+  };
+
+  const handleDeleteProject = async (
+    index: number,
+    updatedProjects: PerformanceProject[],
+  ): Promise<boolean> => {
+    let existingId = performanceIdRef.current || assignment.performanceId;
+    if (!existingId && assignment.employeeId && quarterValue(assignment.quarter, assignment.reviewPeriod) && assignment.financialYear) {
+      try {
+        const found = await AppraisalApi.getEmployeePerformance(
+          assignment.employeeId,
+          quarterValue(assignment.quarter, assignment.reviewPeriod)!,
+          assignment.financialYear,
+        );
+        if (found?.id) {
+          existingId = found.id;
+          performanceIdRef.current = found.id;
+          setPerformanceId(found.id);
+        }
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    const current = {
+      ...formDataRef.current,
+      ...formData,
+    };
+    const isEditingThis = current.editingProjectIndex === index;
+    const nextEditingIndex =
+      current.editingProjectIndex !== null && current.editingProjectIndex !== undefined
+        ? isEditingThis
+          ? null
+          : current.editingProjectIndex > index
+          ? current.editingProjectIndex - 1
+          : current.editingProjectIndex
+        : null;
+
+    if (existingId) {
+      try {
+        const updatedStep = await AppraisalApi.deletePerformanceProject(existingId, index);
+        const freshProjects = updatedStep?.data?.projects
+          ? readProjectList(updatedStep.data.projects)
+          : updatedProjects;
+
+        const nextData: ReviewFormData = {
+          ...current,
+          projects: freshProjects,
+          editingProjectIndex: nextEditingIndex,
+        };
+        formDataRef.current = nextData;
+        setFormData(nextData);
+        return true;
+      } catch (error) {
+        setSaveError(readApiError(error));
+        return false;
+      }
+    }
+
+    const nextData: ReviewFormData = {
+      ...current,
+      projects: updatedProjects,
+      editingProjectIndex: nextEditingIndex,
+    };
+    setFormData(nextData);
+    formDataRef.current = nextData;
+    return true;
   };
 
   const handleNext = async () => {
@@ -432,14 +1282,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       return;
     }
 
-    let currentData = formData;
-    if (currentStep === 2 || currentStep === 4) {
-      currentData = commitDraftsIfNeeded(formData);
-      if (currentData !== formData) {
-        setFormData(currentData);
-        formDataRef.current = currentData;
-      }
-    }
+    const currentData = formData;
 
     const validation = validateStep(currentStep, currentData);
     if (!validation.isValid) {
@@ -448,16 +1291,21 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       return;
     }
     setErrors({});
-    const saved = await persistStep(false, currentData);
+
+    // 1. Save this step via PATCH /:id/{step} (only changed fields)
+    const saved = await persistStep(true, currentData, EmployeePerformanceStatus.DRAFT, currentStep);
     if (!saved) {
       return;
     }
-    const loaded = await loadFreshForm();
-    if (!loaded) {
-      return;
-    }
-    setErrors({});
-    goToStep(currentStep + 1, true);
+
+    const nextStep = currentStep + 1;
+    // 2. Load only the next step via GET /:id/{step}
+    await loadFreshForm(false, nextStep);
+
+    message.success(stepSavedMessage(currentStep));
+    console.info(`[Appraisal] Step ${currentStep} saved successfully. Moving to Step ${nextStep}`);
+
+    goToStep(nextStep, true);
   };
 
   const handlePrev = async () => {
@@ -471,40 +1319,42 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (currentStep <= 1 || saving) {
       return;
     }
-    const saved = await persistStep();
-    if (!saved) {
-      return;
-    }
-    const loaded = await loadFreshForm();
-    if (!loaded) {
-      return;
-    }
+
     setErrors({});
-    goToStep(currentStep - 1, true);
+
+    const prevStep = currentStep - 1;
+    // Load only the previous step via GET /:id/{step}
+    await loadFreshForm(true, prevStep);
+
+    goToStep(prevStep, true);
   };
 
   const handleStepClick = async (targetStep: number) => {
     if (readOnly) {
-      if (targetStep !== currentStep) {
-        setErrors({});
-        goToStep(targetStep, true);
+      const el = document.getElementById(`review-step-${targetStep}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
       }
       return;
     }
     if (targetStep === currentStep || saving) return;
 
-    let currentData = formData;
-    if (currentStep === 2 || currentStep === 4) {
-      currentData = commitDraftsIfNeeded(formData);
-      if (currentData !== formData) {
-        setFormData(currentData);
-        formDataRef.current = currentData;
-      }
+    // Moving backward: GET only the target step (keep other steps already in form)
+    if (targetStep < currentStep) {
+      setErrors({});
+      await loadFreshForm(true, targetStep);
+      goToStep(targetStep, true);
+      return;
     }
 
-    if (targetStep > currentStep) {
+    // Moving forward: re-hydrate any skipped steps from DB before validating
+    // (local form may be empty for step 3 after visiting step 2 only)
+    let data = formDataRef.current || formData;
     for (let s = currentStep; s < targetStep; s++) {
-        const validation = validateStep(s, currentData);
+      data = await hydrateStepIntoForm(s, data);
+      formDataRef.current = data;
+      setFormData(data);
+      const validation = validateStep(s, data);
       if (!validation.isValid) {
         if (s !== currentStep) {
           goToStep(s, false);
@@ -512,20 +1362,15 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         setErrors(validation.errors);
         scrollToField(validation.firstFieldId);
         return;
-        }
       }
     }
 
     setErrors({});
-    const saved = await persistStep(false, currentData);
-    if (!saved) {
-      return;
-    }
-    const loaded = await loadFreshForm();
-    if (!loaded) {
-      return;
-    }
-    setErrors({});
+    const saved = await persistStep(true, data, EmployeePerformanceStatus.DRAFT, currentStep);
+    if (!saved) return;
+    await loadFreshForm(false, targetStep);
+    message.success(stepSavedMessage(currentStep));
+    console.info(`[Appraisal] Step ${currentStep} saved successfully. Moving to Step ${targetStep}`);
     goToStep(targetStep, true);
   };
 
@@ -537,48 +1382,65 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     if (saving) {
       return;
     }
-    let currentData = formData;
-    if (currentStep === 2 || currentStep === 4) {
-      currentData = commitDraftsIfNeeded(formData);
-      if (currentData !== formData) {
-        setFormData(currentData);
-        formDataRef.current = currentData;
+
+    const currentData = formData;
+
+    const hasData = hasAnyDataEntered(currentData);
+    const finishedFirstStep = currentStep > 1 || hasCompletedFirstStep(currentData);
+    const existingId = performanceIdRef.current || assignment.performanceId;
+
+    // ── Case 1: No meaningful data in form (empty or all cleared) ──
+    // Reset to NOT_STARTED regardless of previous status (even if was DRAFT)
+    if (!hasData && !isReassignedReview) {
+      if (existingId) {
+        await persistStep(false, emptyReviewFormData, EmployeePerformanceStatus.NOT_STARTED);
       }
-    }
-    const saved = await persistStep(true, currentData);
-    if (!saved) {
-      return;
-    }
+      message.success(stepSavedMessage(currentStep));
+      console.info("[Appraisal] Form cleared, status reset to NOT_STARTED");
       scrollToTop();
       onBack();
-  };
+      return;
+    }
 
-  const handleSubmit = async () => {
-    if (isLocked || saving) {
+    // ── Case 2: Form has not been modified since it was loaded (not dirty) ──
+    // No need to save again; just exit — resume step is computed from DB next open
+    if (!formDirty && existingId) {
+      console.info("[Appraisal] Form not dirty, exiting without extra save");
+      scrollToTop();
+      onBack();
       return;
     }
-    let currentData = formData;
-    if (currentStep === 2 || currentStep === 4) {
-      currentData = commitDraftsIfNeeded(formData);
-      if (currentData !== formData) {
-        setFormData(currentData);
-        formDataRef.current = currentData;
-      }
+
+    // ── Case 3: User has data and form is dirty — persist it ──
+    let targetStatus: EmployeePerformanceStatus | undefined = undefined;
+    if (!isReassignedReview) {
+      // Only mark DRAFT if Step 1 required field (Overall Performance Summary) is filled
+      targetStatus = finishedFirstStep
+        ? EmployeePerformanceStatus.DRAFT
+        : EmployeePerformanceStatus.NOT_STARTED;
     }
-    for (let s = 1; s <= 5; s++) {
-      const validation = validateStep(s, currentData);
-      if (!validation.isValid) {
-        goToStep(s, false);
-        setErrors(validation.errors);
-        scrollToField(validation.firstFieldId);
-      return;
-    }
-    }
-    const saved = await persistStep(false, currentData);
+
+    const saved = await persistStep(
+      targetStatus === EmployeePerformanceStatus.DRAFT,
+      currentData,
+      targetStatus,
+      currentStep,
+    );
     if (!saved) {
       return;
     }
-    const quarter = quarterValue(assignment.quarter);
+    message.success(stepSavedMessage(currentStep));
+    console.info("[Appraisal] Draft saved successfully and exiting");
+    scrollToTop();
+    onBack();
+  };
+
+  const executeSubmit = async (currentData: ReviewFormData) => {
+    const saved = await persistStep(false, currentData, undefined, currentStep);
+    if (!saved) {
+      return;
+    }
+    const quarter = quarterValue(assignment.quarter, assignment.reviewPeriod);
     const performanceId = performanceIdRef.current;
     if (!quarter || !performanceId) {
       return;
@@ -590,16 +1452,65 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         quarter,
         financialYear: assignment.financialYear,
       });
+      message.success("Appraisal submitted successfully!");
+      console.info("[Appraisal] Appraisal submitted successfully for performanceId:", performanceId);
     } catch (error) {
-      setSaveError(readApiError(error));
+      const errMsg = readApiError(error);
+      setSaveError(errMsg);
+      message.error(errMsg || "Failed to submit appraisal.");
+      console.error("[Appraisal] Submission error:", error);
       setSaving(false);
       return;
     }
     setSaving(false);
     setSubmitted(true);
-    setTimeout(() => {
-      onSubmitSuccess?.();
-    }, 1200);
+    submitFinishedRef.current = false;
+  };
+
+  const submitFinishedRef = useRef(false);
+  const finishSubmitted = () => {
+    if (submitFinishedRef.current) return;
+    submitFinishedRef.current = true;
+    onSubmitSuccess?.();
+  };
+
+  const handleSubmit = async () => {
+    if (isLocked || saving) {
+      return;
+    }
+    const currentData = formData;
+    for (let s = 1; s <= 6; s++) {
+      const validation = validateStep(s, currentData);
+      if (!validation.isValid) {
+        if (s !== currentStep) {
+          goToStep(s, false);
+        }
+        setErrors(validation.errors);
+        scrollToField(validation.firstFieldId);
+        message.warning(`Please complete required fields in Step ${s}`);
+        return;
+      }
+    }
+    setPendingSubmitData(currentData);
+    setShowSubmitConfirmModal(true);
+  };
+
+  const handleCloseSubmitModal = () => {
+    if (isSubmittingModal) return;
+    setShowSubmitConfirmModal(false);
+    setPendingSubmitData(null);
+  };
+
+  const handleConfirmSubmit = async () => {
+    if (!pendingSubmitData || isSubmittingModal) return;
+    setIsSubmittingModal(true);
+    try {
+      await executeSubmit(pendingSubmitData);
+    } finally {
+      setIsSubmittingModal(false);
+      setShowSubmitConfirmModal(false);
+      setPendingSubmitData(null);
+    }
   };
 
   const renderStepContent = (stepNum: number) => {
@@ -611,6 +1522,8 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onChange={handleFieldChange}
             errors={errors}
             clearError={handleClearError}
+            readOnly={readOnly}
+            assignment={assignment}
           />
         );
       case 2:
@@ -622,6 +1535,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             clearError={handleClearError}
             onUploadAttachment={uploadAttachment}
             onRemoveAttachment={removeAttachment}
+            readOnly={readOnly}
+            onSaveProject={handleSaveProject}
+            onPersistDraft={handlePersistDraft}
+            onDeleteProject={handleDeleteProject}
           />
         );
       case 3:
@@ -631,6 +1548,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onChange={handleFieldChange}
             errors={errors}
             clearError={handleClearError}
+            readOnly={readOnly}
           />
         );
       case 4:
@@ -640,6 +1558,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onChange={handleFieldChange}
             errors={errors}
             clearError={handleClearError}
+            readOnly={readOnly}
           />
         );
       case 5:
@@ -650,6 +1569,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onChange={handleFieldChange}
             errors={errors}
             clearError={handleClearError}
+            readOnly={readOnly}
           />
         );
       case 6:
@@ -659,6 +1579,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             onChange={handleFieldChange}
             errors={errors}
             clearError={handleClearError}
+            readOnly={readOnly}
+            assignment={assignment}
+            onEditStep={readOnly ? undefined : (step) => void handleEditStepFromReview(step)}
           />
         );
       default:
@@ -667,13 +1590,15 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
   };
 
   return (
-    <div ref={topRef} className="w-full max-w-5xl mx-auto space-y-6 font-sans">
-      {assignment.canEdit === false && (
+    <div ref={topRef} className="w-full space-y-6 font-sans">
+      {!readOnly && !isAlreadySubmitted && assignment.canEdit === false && (
         <div className="p-4 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-center gap-3 text-amber-900 text-sm font-semibold shadow-xs">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
           <span>
             {assignment.status.toUpperCase() === "EDIT_GRANTED"
               ? "Your edit deadline granted by your manager has expired. This review is locked."
+              : assignment.canRequestEdit
+                ? "The deadline is today. Submit is closed. Request access from your manager."
                 : "This review is currently locked for editing."}
           </span>
         </div>
@@ -686,7 +1611,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleSaveAndExit}
+              onClick={onBack}
               leftIcon={<ArrowLeft className="w-4 h-4" />}
               className="text-[#2563EB] hover:text-[#1D4ED8] hover:bg-blue-50/80 !p-2 rounded-xl cursor-pointer"
               title="Back to history"
@@ -695,7 +1620,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               <div className="flex items-center gap-2.5">
                 <h1 className="text-xl sm:text-2xl font-bold tracking-tight w-fit">
                   <span className="manager-review-title-anim">
-                    {assignment.quarter} Performance Review
+                    {assignment.quarter} Performance Review{readOnly ? " (View Mode)" : ""}
                   </span>
                 </h1>
               </div>
@@ -710,19 +1635,22 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             </div>
           </div>
 
+          {!readOnly && (
             <div className="text-right hidden sm:block">
-            <span className="text-xs text-[#64748B] block">Progress</span>
+              <span className="text-xs text-[#334155] block">Progress</span>
               <span className="text-sm font-bold text-[#2563EB]">Step {currentStep} of 6</span>
             </div>
+          )}
         </div>
 
-        {/* Numbered Stepper with Title Below and Click Navigation */}
+        {/* Numbered Stepper with Title Below and Click Navigation (Hidden in View Mode) */}
+        {!readOnly && (
           <div className="mt-7 pt-6 border-t border-blue-100 overflow-x-auto no-scrollbar pb-2">
             <div className="relative flex items-center justify-between min-w-[620px] px-6">
-            {/* Background connecting progress line */}
-            <div className="absolute top-5 -translate-y-1/2 left-[44px] right-[44px] h-[3px] bg-blue-100 rounded-full z-0">
+              {/* Connecting line: gray for incomplete, blue for completed progress */}
+              <div className="absolute top-5 -translate-y-1/2 left-[44px] right-[44px] h-[3px] bg-[#CBD5E1] rounded-full z-0">
                 <div
-                className="h-full bg-gradient-to-r from-blue-400 to-[#2563EB] rounded-full transition-all duration-500 ease-out shadow-xs"
+                  className="h-full bg-[#2563EB] rounded-full transition-all duration-500 ease-out"
                   style={{
                     width: `${((currentStep - 1) / (STEP_DEFINITIONS.length - 1)) * 100}%`,
                   }}
@@ -731,7 +1659,11 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
               {/* Stepper Steps (Number in Circle, Title Below) */}
               {STEP_DEFINITIONS.map((step) => {
-              const isCompleted = currentStep > step.id;
+                const hasData = isStepDone(step.id, formData);
+                // Complete = before DB open step, or local form has that step filled
+                const isCompleted = isAlreadySubmitted
+                  ? true
+                  : step.id < dbOpenStep || (step.id !== currentStep && hasData);
                 const isActive = currentStep === step.id;
 
                 return (
@@ -740,34 +1672,32 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     type="button"
                     onClick={() => handleStepClick(step.id)}
                     title={`Go to Step ${step.id}: ${step.label}`}
-                  className="group relative z-10 flex flex-col items-center cursor-pointer select-none focus:outline-none transition-transform"
+                    className="group relative z-10 flex flex-col items-center cursor-pointer select-none focus:outline-none"
                   >
-                  {/* Circle with Step Number */}
+                    {/* Circle with Step Icon */}
                     <div
                       ref={isActive ? activeCircleRef : undefined}
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ease-out ${
-                      isActive
-                        ? "bg-[#2563EB] text-white ring-4 ring-blue-400/30 shadow-lg shadow-blue-500/25 scale-110"
+                      className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-200 ${isActive
+                          ? "bg-[#2563EB] text-white ring-4 ring-blue-400/25 shadow-md shadow-blue-500/20"
                           : isCompleted
-                        ? "bg-blue-500 text-white shadow-xs hover:scale-105 border-2 border-blue-500"
-                        : "bg-white text-[#64748B] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB] hover:scale-105"
+                            ? "bg-blue-500 text-white border-2 border-blue-500 shadow-xs"
+                            : "bg-white text-[#334155] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB]"
                         }`}
                     >
                       {isCompleted ? (
                         <Check className="w-5 h-5 stroke-[2.8]" />
                       ) : (
-                      <span>{step.id}</span>
+                        <step.IconComponent isActive={isActive} />
                       )}
                     </div>
 
                     {/* Title Placed Below Circle */}
                     <span
-                    className={`mt-2 text-xs font-semibold text-center whitespace-nowrap transition-all duration-300 ${
-                      isActive
-                        ? "text-[#2563EB] font-extrabold scale-105"
+                      className={`mt-2 text-xs font-semibold text-center whitespace-nowrap transition-colors duration-200 ${isActive
+                          ? "text-[#2563EB] font-bold"
                           : isCompleted
                             ? "text-[#0F172A] font-semibold"
-                        : "text-[#64748B] group-hover:text-[#0F172A]"
+                            : "text-[#334155] group-hover:text-[#0F172A]"
                         }`}
                     >
                       {step.label}
@@ -777,26 +1707,24 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               })}
             </div>
           </div>
+        )}
       </Card>
 
       {/* Main Step Body Card */}
       <Card className="rounded-3xl p-6 sm:p-8 manager-review-glass-card">
         {submitted ? (
-          <div className="py-16 text-center animate-in zoom-in-95 duration-300">
-            <div className="w-16 h-16 rounded-full bg-[#EFF6FF] text-[#2563EB] mx-auto flex items-center justify-center mb-4 shadow-sm border border-[#BFDBFE]">
-              <CheckCircle2 className="w-8 h-8 stroke-[2.5]" />
-            </div>
-            <h3 className="text-xl font-bold text-[#0F172A]">Appraisal Submitted!</h3>
-            <p className="text-sm text-[#64748B] mt-1 max-w-md mx-auto">
-              Your self-evaluation has been successfully recorded. Your manager has been notified for subsequent review.
-            </p>
-          </div>
+          <AppraisalMomentCard
+            kind="submitted"
+            name={assignment.employeeName || "Employee"}
+            quarter={assignment.quarter}
+            financialYear={assignment.financialYear}
+            reviewerLabel={reviewerLabel}
+            onClose={finishSubmitted}
+          />
         ) : (
           <>
-            <fieldset
-              disabled={readOnly}
-              className={`relative min-h-[380px] border-0 p-0 m-0 min-w-0 ${
-                exitingStep !== null ? "overflow-hidden" : "overflow-visible"
+            <div
+              className={`relative min-h-[380px] border-0 p-0 m-0 min-w-0 ${exitingStep !== null ? "overflow-hidden" : "overflow-visible"
                 }`}
             >
               {exitingStep !== null && (
@@ -815,17 +1743,106 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
               >
                 {renderStepContent(currentStep)}
               </div>
-            </fieldset>
+            </div>
+
+            {/* Evaluation CTA Card: strictly shown on Step 6 only when evaluation is completed */}
+            {currentStep === 6 && onGoToEvaluation && isCompleted && (
+              <div className="eval-matrix-cta-card relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-blue-200/70 bg-gradient-to-br from-white via-blue-50/40 to-blue-100/20 shadow-lg shadow-blue-500/10 mt-6 !opacity-100">
+                {/* Ambient Decorative SVG in Background */}
+                <svg
+                  className="absolute -right-8 -bottom-10 w-72 h-72 text-blue-500/10 pointer-events-none eval-cta-bg-svg"
+                  viewBox="0 0 200 200"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  aria-hidden="true"
+                >
+                  <circle cx="100" cy="100" r="80" stroke="currentColor" strokeWidth="2" strokeDasharray="6 6" />
+                  <circle cx="100" cy="100" r="50" stroke="currentColor" strokeWidth="1.5" />
+                  <path d="M40 100 Q70 60 100 100 T160 100" stroke="currentColor" strokeWidth="2" />
+                </svg>
+
+                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+                  <div className="flex items-start sm:items-center gap-4">
+                    {/* Glowing Matrix Icon SVG Box with Animated Orbital Pulse */}
+                    <div className="relative shrink-0">
+                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-md shadow-blue-500/25 eval-matrix-btn-icon-glow">
+                        <svg
+                          className="w-7 h-7 eval-matrix-icon-svg"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          xmlns="http://www.w3.org/2000/svg"
+                        >
+                          <path
+                            d="M4 6H20M4 12H20M4 18H20"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeDasharray="16"
+                            strokeDashoffset="0"
+                            className="eval-matrix-svg-lines"
+                          />
+                          <circle cx="8" cy="6" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
+                          <circle cx="16" cy="12" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
+                          <circle cx="11" cy="18" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
+                        </svg>
+                      </div>
+                      <span className="absolute -inset-1 rounded-2xl border border-blue-400/40 animate-ping opacity-25 pointer-events-none" />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-blue-600 font-bold">
+                          {assignment.quarter} Evaluation Ready
+                        </span>
+                      </div>
+                      <h3 className="text-lg sm:text-xl font-bold text-[#2B3674] mt-1">
+                        View Evaluation & Ratings
+                      </h3>
+                    </div>
+                  </div>
+
+                  {/* Action Button that navigates to the Evaluation Matrix */}
+                  <button
+                    type="button"
+                    onClick={onGoToEvaluation}
+                    className="eval-open-matrix-btn shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#3B82F6] via-[#2563EB] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer group"
+                  >
+                    <Sliders className="w-4 h-4 transition-transform group-hover:rotate-45" />
+                    <span>Go to Evaluation Matrix</span>
+                    <svg
+                      className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M5 12H19M19 12L13 6M19 12L13 18"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Stepper Navigation Footer */}
-            <div className="flex items-center justify-between pt-6 mt-8 border-t border-blue-100">
-              {currentStep === 1 ? (
+            <div className={`flex items-center ${readOnly ? "justify-end" : "justify-between"} pt-6 mt-8 border-t border-blue-100`}>
+              {!readOnly && (
+                currentStep === 1 ? (
                   <Button
                     variant="outline"
                     size="md"
                     onClick={onBack}
-                  leftIcon={<ArrowLeft className="w-4 h-4" />}
-                  className="px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400"
+                    leftIcon={
+                      <span className="relative inline-flex items-center justify-center w-4 h-4 shrink-0 self-center leading-none">
+                        <ChevronLeft className="w-4 h-4 shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:-translate-x-1" />
+                        <ArrowLeft className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
+                      </span>
+                    }
+                    className="group px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400 [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
                   >
                     Back
                   </Button>
@@ -834,10 +1851,17 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     variant="outline"
                     size="md"
                     onClick={handlePrev}
-                  className="px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400"
+                    leftIcon={
+                      <span className="relative inline-flex items-center justify-center w-4 h-4 shrink-0 self-center leading-none">
+                        <ChevronLeft className="w-4 h-4 shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:-translate-x-1" />
+                        <ArrowLeft className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
+                      </span>
+                    }
+                    className="group px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400 [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
                   >
                     Previous
                   </Button>
+                )
               )}
 
               <div className="flex items-center gap-3">
@@ -848,22 +1872,36 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     size="md"
                     onClick={() => void handleSaveAndExit()}
                     disabled={saving}
-                  className="text-[#64748B] hover:text-[#0F172A]"
+                    className="text-[#334155] hover:text-[#0F172A]"
                   >
                     {saving ? "Saving" : "Save & Exit"}
                   </Button>
                 )}
 
-                {isLocked && currentStep === 6 ? null : currentStep < 6 ? (
+                {currentStep < 6 ? (
                   <Button
                     variant="primary"
                     size="md"
-                    onClick={() => void handleNext()}
+                    onClick={handleNext}
                     disabled={saving}
-                    rightIcon={<ChevronRight className="w-4 h-4" />}
-                    className="px-6 py-2.5 rounded-xl font-bold !bg-gradient-to-b !from-[#3B82F6] !to-[#1D4ED8] hover:!from-[#2563EB] hover:!to-[#1E40AF] !text-white shadow-md shadow-blue-500/30 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all !shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.45),0_8px_20px_rgba(37,99,235,0.35)]"
+                    rightIcon={
+                      <span className="relative inline-flex items-center justify-center w-4 h-4 shrink-0 self-center leading-none">
+                        <ChevronRight className="w-4 h-4 shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:translate-x-1" />
+                        <ArrowRight className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1" />
+                      </span>
+                    }
+                    className="group px-6 py-2.5 rounded-xl font-bold !bg-gradient-to-b !from-[#3B82F6] !to-[#1D4ED8] hover:!from-[#2563EB] hover:!to-[#1E40AF] !text-white shadow-md shadow-blue-500/30 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all !shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.45),0_8px_20px_rgba(37,99,235,0.35)] [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
                   >
                     Next Step
+                  </Button>
+                ) : isLocked ? (
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={onBack}
+                    className="px-6 py-2.5 rounded-xl font-bold border-blue-200 bg-white hover:bg-blue-50 text-[#2563EB] shadow-xs cursor-pointer"
+                  >
+                    Back to List
                   </Button>
                 ) : (
                   <Button
@@ -882,6 +1920,104 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
           </>
         )}
       </Card>
+
+      {/* Modern Custom Submit Appraisal Confirmation Modal */}
+      {showSubmitConfirmModal && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-[#0F172A]/25 backdrop-blur-[3.5px] animate-in fade-in duration-200"
+          style={{ backdropFilter: "blur(3.5px)", WebkitBackdropFilter: "blur(3.5px)" }}
+          onClick={handleCloseSubmitModal}
+        >
+          <div
+            className="relative w-full max-w-[440px] bg-white rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-100 text-[#0F172A] animate-in zoom-in-95 duration-200 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Top Accent Gradient Line */}
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500" />
+
+            {/* Close Button */}
+            <button
+              type="button"
+              disabled={isSubmittingModal}
+              onClick={handleCloseSubmitModal}
+              className="absolute top-3.5 right-3.5 text-slate-400 hover:text-slate-700 w-7 h-7 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-40"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            {/* Header: Icon + Title & Description in clean structured layout */}
+            <div className="flex items-start gap-3.5 pt-1">
+              <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/80 flex items-center justify-center text-blue-600 shrink-0 shadow-xs">
+                <Send className="w-5 h-5 stroke-[2.2] -rotate-12 translate-x-0.5" />
+              </div>
+              <div className="min-w-0 flex-1 pr-6">
+                <h3 className="text-base sm:text-lg font-bold text-[#0F172A] tracking-tight leading-snug">
+                  Submit Quarterly Appraisal
+                </h3>
+                <p className="text-xs text-slate-500 leading-relaxed mt-1">
+                  Are you sure you want to submit your appraisal? Once submitted, your self-assessment will be locked and sent to your {reviewerLabel} for evaluation.
+                </p>
+              </div>
+            </div>
+
+            {/* Assessment Details Box */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 my-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Target Review
+                </span>
+                <span className="px-2 py-0.5 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded-md">
+                  {assignment.quarter || "Quarterly"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800">
+                  {assignment.quarter || "Q"} Performance Review
+                </span>
+                <span className="text-xs text-slate-500 font-medium">
+                  FY {assignment.financialYear || "Current"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-amber-800 bg-amber-50/90 border border-amber-200/80 rounded-lg px-2.5 py-1.5 pt-1 mt-1">
+                <Lock className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                <span>Self-reviwe will be locked for editing upon submission.</span>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                disabled={isSubmittingModal}
+                onClick={handleCloseSubmitModal}
+                className="flex-1 sm:flex-initial py-2 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs hover:border-slate-300 transition-all cursor-pointer disabled:opacity-50"
+              >
+                Review Again
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingModal}
+                onClick={handleConfirmSubmit}
+                className="flex-1 sm:flex-initial py-2 px-5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-bold shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/35 active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {isSubmittingModal ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" />
+                    <span>Submitting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-3.5 h-3.5 stroke-[2.2] shrink-0" />
+                    <span>Submit Appraisal</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

@@ -55,9 +55,12 @@ import Requests from "./AdminDashboard/Requests";
 import AdminViewEmployeeDashboard from "./AdminDashboard/AdminViewEmployeeDashboard";
 import AdminLeaveManagement from "./AdminDashboard/AdminLeaveManagement";
 import ManagerMapping from "./ManagerMapping/ManagerMapping";
+import AppraisalMappingPage from "./Appraisal/components/AppraisalMappingPage";
+import AppraisalAssignerEmployeesView from "./Appraisal/components/AppraisalAssignerEmployeesView";
 import ManagerEmployeesView from "./AdminDashboard/ManagerEmployeesView";
 import MonthlyAttendanceMatrix from "./AdminDashboard/MonthlyAttendanceMatrix";
 import NotesManagement from "./Notes/NotesManagement";
+import ManagerQuarterlyReviewPage from "./Appraisal/pages/ManagerQuarterlyReviewPage";
 import InboxManagement from "./Inbox/InboxManagement";
 import EmployeeAppraisalPage from "./Appraisal/pages/EmployeeAppraisalPage";
 import AttendenceEditRequests from "./AdminDashboard/AttendenceEditRequests";
@@ -83,8 +86,9 @@ const EmployeeTabWrapper = () => {
     case "leave-balance":
       return <LeaveBalance />;
     case "appraisal":
-    case "quarterly-review":
       return <EmployeeAppraisalPage />;
+    case "quarterly-review":
+      return <ManagerQuarterlyReviewPage />;
     case "notes":
     case "employee-notes":
       return <NotesManagement />;
@@ -100,11 +104,12 @@ const RECEPTIONIST_BLOCKED_ADMIN_TABS = ["leave-calculation"];
 
 const AdminTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
-  const location = useLocation();
+  const { pathname } = useLocation();
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const isCeo = isCeoOrGmUser(currentUser);
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
-  const dashboardHome = location.pathname.startsWith("/manager-dashboard")
+  const isManagerDashboard = pathname.includes("/manager-dashboard");
+  const dashboardHome = pathname.startsWith("/manager-dashboard")
     ? "/manager-dashboard"
     : "/admin-dashboard";
 
@@ -145,6 +150,10 @@ const AdminTabWrapper = () => {
       return <InboxManagement />;
     case "manager-mapping":
       return <ManagerMapping />;
+    case "appraisal-mapping":
+      return <AppraisalMappingPage />;
+    case "appraisal-assigner-employees":
+      return <AppraisalAssignerEmployeesView />;
     case "manager-employees":
       return <ManagerEmployeesView />;
     case "my-dashboard":
@@ -157,11 +166,21 @@ const AdminTabWrapper = () => {
       return <MyProfile />;
     case "leave-management":
       return <LeaveManagement />;
-    case "appraisal":
     case "quarterly-review":
+      return <ManagerQuarterlyReviewPage />;
+    case "appraisal":
     case "my-appraisal":
     case "my-quarterly-review":
-      return <EmployeeAppraisalPage />;
+      // Manager My Workspace → personal assignments only.
+      // Admin/CEO/GM Appraisal tab stays on team assign/review page.
+      if (isManagerDashboard) {
+        return <EmployeeAppraisalPage />;
+      }
+      return tab === "appraisal" ? (
+        <ManagerQuarterlyReviewPage />
+      ) : (
+        <Navigate to="/admin-dashboard/quarterly-review" replace />
+      );
     case "edit-access":
       return <AttendenceEditRequests />;
     case "holiday-management":
@@ -170,7 +189,12 @@ const AdminTabWrapper = () => {
       }
       return <HolidayManagementPage />;
     default:
-      return <Navigate to="/admin-dashboard" replace />;
+      return (
+        <Navigate
+          to={isManagerDashboard ? "/manager-dashboard" : "/admin-dashboard"}
+          replace
+        />
+      );
   }
 };
 
@@ -365,6 +389,10 @@ function AppContent() {
                     path="manager-employees/:managerId"
                     element={<ManagerEmployeesView />}
                   />
+                  <Route
+                    path="appraisal-assigner-employees/:assignerId"
+                    element={<AppraisalAssignerEmployeesView />}
+                  />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>
 
@@ -410,6 +438,10 @@ function AppContent() {
                   <Route
                     path="manager-employees/:managerId"
                     element={<ManagerEmployeesView />}
+                  />
+                  <Route
+                    path="appraisal-assigner-employees/:assignerId"
+                    element={<AppraisalAssignerEmployeesView />}
                   />
                   <Route path=":tab/:date?" element={<AdminTabWrapper />} />
                 </Route>

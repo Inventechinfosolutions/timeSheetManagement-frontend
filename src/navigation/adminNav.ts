@@ -87,10 +87,10 @@ export const ADMIN_NAV: AdminNavItem[] = [
     pathIncludes: ["/admin-dashboard/edit-access"],
   },
   {
-    label: "Appraisal",
-    path: "/admin-dashboard/appraisal",
+    label: "Quarterly Review",
+    path: "/admin-dashboard/quarterly-review",
     tabs: ["appraisal", "quarterly-review"],
-    labelAliases: ["Quarterly Review"],
+    labelAliases: ["Appraisal"],
     pathIncludes: ["/admin-dashboard/appraisal", "/admin-dashboard/quarterly-review"],
   },
   {
@@ -112,6 +112,15 @@ export const ADMIN_NAV: AdminNavItem[] = [
     pathIncludes: [
       "/admin-dashboard/manager-mapping",
       "/admin-dashboard/manager-employees/",
+    ],
+  },
+  {
+    label: "Appraisal Mapping",
+    path: "/admin-dashboard/appraisal-mapping",
+    tabs: ["appraisal-mapping"],
+    pathIncludes: [
+      "/admin-dashboard/appraisal-mapping",
+      "/admin-dashboard/appraisal-assigner-employees/",
     ],
   },
   {
