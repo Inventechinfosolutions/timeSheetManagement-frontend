@@ -2,7 +2,6 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import {
   LayoutGrid,
   Calendar,
-  User,
   Lock,
   AlarmClock,
   Unlock,

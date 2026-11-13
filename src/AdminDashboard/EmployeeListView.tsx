@@ -200,6 +200,7 @@ const EmployeeListView = () => {
   const employees = entities.map((emp: any) => ({
     id: emp.employeeId || emp.id,
     name: emp.fullName || emp.name,
+    email: emp.email || "",
     department: emp.department,
     role: emp.role,
     userStatus: emp.userStatus,
@@ -218,6 +219,7 @@ const EmployeeListView = () => {
     return (
       emp.name.toLowerCase().includes(s) ||
       emp.id.toString().toLowerCase().includes(s) ||
+      (emp.email && emp.email.toLowerCase().includes(s)) ||
       (emp.department && emp.department.toLowerCase().includes(s))
     );
   });
@@ -782,35 +784,37 @@ const EmployeeListView = () => {
             <table className="w-full border-separate border-spacing-0">
               <thead>
                 <tr className="bg-[#4318FF] text-white">
-                  <th className="text-center py-4 pl-6 pr-2 text-[13px] font-bold uppercase tracking-wider w-[8%]">
+                  <th className="text-center py-4 px-1 text-[13px] font-bold uppercase tracking-wider w-[4%]">
                     Sl No
                   </th>
                   <th
-                    className="text-left py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors w-[26%]"
+                    className="text-left py-4 px-3 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors w-[14%]"
                     onClick={() => handleSort("fullName")}
                   >
                     Name
                   </th>
+                  <th className="text-left py-4 px-3 text-[13px] font-bold uppercase tracking-wider w-[24%]">
+                    Email
+                  </th>
                   <th
-                    className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors w-[14%]"
+                    className="text-center py-4 px-3 text-[13px] font-bold uppercase tracking-wider cursor-pointer select-none hover:bg-[#3d16e5] transition-colors w-[9%]"
                     onClick={() => handleSort("employeeId")}
                   >
                     ID
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[18%]">
+                  <th className="text-center py-4 px-3 text-[13px] font-bold uppercase tracking-wider w-[12%]">
                     Department
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[14%]"
-                  >
+                  <th className="text-center py-4 px-3 text-[13px] font-bold uppercase tracking-wider w-[10%]">
                     Role
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[12%]">
+                  <th className="text-center py-4 px-3 text-[13px] font-bold uppercase tracking-wider w-[10%]">
                     Status
                   </th>
-                  <th className="text-center py-4 px-4 text-[13px] font-bold uppercase tracking-wider w-[12%]">
+                  <th className="text-center py-4 px-3 text-[13px] font-bold uppercase tracking-wider w-[9%]">
                     Activation
                   </th>
-                  <th className="py-4 px-4 text-[13px] font-bold uppercase tracking-wider text-center w-[16%]">
+                  <th className="py-4 px-3 text-[13px] font-bold uppercase tracking-wider text-center w-[8%]">
                     Actions
                   </th>
                 </tr>
@@ -821,19 +825,22 @@ const EmployeeListView = () => {
                     key={emp.id}
                     className={`group transition-all duration-200 ${index % 2 === 0 ? "bg-white" : "bg-[#F8F9FC]"} hover:bg-[#F1F4FF] cursor-pointer`}
                   >
-                    <td className="py-4 pl-6 pr-2 text-center text-[#475569] text-sm font-semibold">
+                    <td className="py-4 px-3 text-center text-[#475569] text-sm font-semibold">
                       {(currentPage - 1) * itemsPerPage + index + 1}
                     </td>
-                    <td className="py-4 px-4 text-[#2B3674] text-sm font-bold">
+                    <td className="py-4 px-3 text-[#2B3674] text-sm font-bold">
                       {emp.name}
                     </td>
-                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                    <td className="py-4 px-3 text-left text-[#475569] text-sm font-semibold break-all whitespace-normal">
+                      {emp.email || "—"}
+                    </td>
+                    <td className="py-4 px-3 text-center text-[#475569] text-sm font-semibold">
                       {emp.id}
                     </td>
-                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                    <td className="py-4 px-3 text-center text-[#475569] text-sm font-semibold">
                       {emp.department || "General"}
                     </td>
-                    <td className="py-4 px-4 text-center text-[#475569] text-sm font-semibold">
+                    <td className="py-4 px-3 text-center text-[#475569] text-sm font-semibold">
                       {emp.role || "-"}
                     </td>
                     <td className="py-4 px-4 text-center">
