@@ -121,7 +121,7 @@ const SidebarLayout = ({
       case "inbox":
         return "Inbox";
         case "master-holidays":
-         return "Holiday";
+         return "Holidays";
       default:
         return "Dashboard";
     }
@@ -330,7 +330,7 @@ const SidebarLayout = ({
                 <div key={item.name} className="relative group">
                  <button
                onClick={() => {
-                   if (item.name === "Holiday") {
+                   if (item.name === "Holidays") {
                      navigate("/employee-dashboard/master-holidays");
                        } else {
                        onTabChange?.(item.name);
