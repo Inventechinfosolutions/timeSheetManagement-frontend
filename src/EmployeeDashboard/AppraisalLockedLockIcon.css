@@ -1,0 +1,56 @@
+.appr-locked-lock {
+  position: relative;
+  display: flex;
+  height: 120px;
+  width: 130px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
+
+.appr-locked-lock__glow {
+  position: absolute;
+  inset: 18px;
+  border-radius: 9999px;
+  background: rgba(254, 205, 211, 0.35);
+  filter: blur(18px);
+  animation: appr-locked-glow 2.6s ease-in-out infinite;
+}
+
+.appr-locked-lock__svg {
+  position: relative;
+  z-index: 1;
+  height: 96px;
+  width: 96px;
+  animation: appr-locked-bob 2.8s ease-in-out infinite;
+}
+
+@keyframes appr-locked-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes appr-locked-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appr-locked-lock__glow,
+  .appr-locked-lock__svg {
+    animation: none;
+  }
+}

@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import gsap from "gsap";
+import { createPortal } from "react-dom";
 import {
   Award,
   BarChart3,
@@ -18,6 +20,8 @@ import {
   X,
   AlertCircle,
   ArrowRight,
+  Star,
+  Send,
 } from "lucide-react";
 import {
   animateKeyIconBounce,
@@ -29,11 +33,16 @@ import {
   ReviewFormData,
 } from "../../types/appraisal.types";
 import { useEmployeeAppraisal } from "../../hooks/useEmployeeAppraisal";
-import { AppraisalApi, formatAppraisalDisplayDate, readApiError, toReviewFormData } from "../../reducers/appraisal.reducer";
+import { AppraisalFilterAll } from "../../enums/appraisal.enums";
+import { isYearlyReview, yearlyQuarterLabels, formatQuarterDisplay, PERFORMANCE_STEP_PATH, applyStepDataToForm } from "../../utils/appraisalHelpers";
+import { AppraisalApi, formatAppraisalDisplayDate, isResubmittedStatus, readApiError, toReviewFormData } from "../../reducers/appraisal.reducer";
+import { emptyReviewFormData } from "../../constants/emptyReviewForm";
+import { RATING_REVEAL_DURATION_MS } from "../../constants/appraisal.constants";
 import QuarterlyReviewStepper from "./QuarterlyReviewStepper";
 import EvaluationPanel from "../manager/EvaluationPanel";
 import RatingVerificationModal from "./RatingVerificationModal";
 import AccessRequestModal from "./AccessRequestModal";
+import { RevealedRatingModal, RevealedRatingData } from "./RevealedRatingModal";
 import { message } from "antd";
 import {
   Card,
@@ -42,7 +51,10 @@ import {
   Button,
   Dropdown,
   Pagination,
+  SearchBox,
 } from "../../../components/ui";
+import { useAppSelector } from "../../../hooks";
+import { isAdminAccess } from "../../../utils/roleAccess";
 import "./AppraisalDashboard.css";
 
 // Empty State Illustration using modern vector illustration style from manager side
@@ -55,19 +67,106 @@ export const EmptyReviewIllustration: React.FC = () => {
   );
 };
 
-const renderQuarterBadge = (quarter: string) => {
-  const q = (quarter || "").trim().toUpperCase();
+const renderQuarterBadge = (assignmentOrQuarter: QuarterlyReviewAssignment | string) => {
+  const assignment = typeof assignmentOrQuarter === "string"
+    ? { quarter: assignmentOrQuarter }
+    : assignmentOrQuarter;
+  if (isYearlyReview(assignment)) {
+    return (
+      <div className="qr-yearly-capsule" title="Yearly Review (Q1 - Q4)">
+        <span className="qr-yearly-capsule-tag">Yearly</span>
+        <span className="qr-yearly-capsule-divider" />
+        <div className="qr-yearly-capsule-quarters">
+          {yearlyQuarterLabels(assignment.yearlyQuarterReviews).map((item) => (
+            <span
+              key={item.quarter}
+              className={`qr-capsule-q qr-quarter-${item.quarter.toLowerCase()} ${item.assigned ? "" : "is-empty"}`}
+              title={`${item.quarter}${item.assigned ? "" : " (Pending)"}`}
+            >
+              {item.quarter}
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  const qRaw = formatQuarterDisplay(assignment.quarter).trim();
+  if (qRaw.includes(",")) {
+    const parts = qRaw.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean);
+    return (
+      <div className="qr-yearly-capsule">
+        <div className="qr-yearly-capsule-quarters">
+          {parts.map((p) => {
+            const qClass =
+              p === "Q2" ? "qr-quarter-q2" : p === "Q3" ? "qr-quarter-q3" : p === "Q4" ? "qr-quarter-q4" : "qr-quarter-q1";
+            return (
+              <span key={p} className={`qr-capsule-q ${qClass}`}>
+                {p}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+  const q = qRaw.toUpperCase();
   let qClass = "qr-quarter-q1";
   if (q === "Q2") qClass = "qr-quarter-q2";
   else if (q === "Q3") qClass = "qr-quarter-q3";
   else if (q === "Q4") qClass = "qr-quarter-q4";
 
-  return <span className={`qr-quarter-pill ${qClass}`}>{quarter}</span>;
+  return <span className={`qr-quarter-pill ${qClass}`}>{qRaw}</span>;
 };
 
-const renderStatusBadge = (status: string) => {
-  const raw = (status || "").trim();
-  const normalized = raw.toLowerCase().replace(/_/g, " ");
+const renderStatusBadge = (status: string, reassignCount?: number) => {
+  const rawUpper = (status || "").trim().toUpperCase();
+  const effective =
+    rawUpper === "REASSIGNED" || (rawUpper === "ASSIGNED" && Number(reassignCount || 0) >= 1)
+      ? "REASSIGNED"
+      : rawUpper;
+  if (effective === "NOT_UPDATED" || effective === "LOCKED") {
+    return (
+      <span className="qr-status-badge qr-status-locked" title="Locked because the deadline was missed">
+        <Lock className="w-3 h-3 text-rose-500 mr-0.5 inline" />
+        Locked
+      </span>
+    );
+  }
+  if (effective === "REASSIGNED") {
+    return (
+      <span className="qr-status-badge qr-status-not-started" title="Reopened after deadline miss">
+        <span className="qr-status-dot" />
+        Re-Assigned
+      </span>
+    );
+  }
+  if (effective === "REQUESTED_FOR_EDIT") {
+    return (
+      <span
+        className="qr-status-badge qr-status-in-progress"
+        title="Edit request sent. Waiting for reviewer approval — access is not granted yet."
+      >
+        <Clock className="w-3 h-3 text-sky-600 mr-0.5 inline" />
+        Requested For Edit
+      </span>
+    );
+  }
+  if (
+    effective === "EDIT_GRANTED" ||
+    effective === "APPROVED_FOR_EDITING" ||
+    effective === "ALLOWED_TO_EDIT"
+  ) {
+    return (
+      <span
+        className="qr-status-badge qr-status-in-progress"
+        title="Edit access granted. Update your answers and resubmit. Until you resubmit, your old submitted data stays as is."
+      >
+        <KeyRound className="w-3 h-3 text-sky-600 mr-0.5 inline" />
+        Edit Granted
+      </span>
+    );
+  }
+  const normalized = effective.toLowerCase().replace(/_/g, " ");
   let badgeClass = "qr-status-not-started";
 
   if (normalized.includes("progress") || normalized === "draft" || normalized.includes("requested")) {
@@ -88,11 +187,471 @@ const renderStatusBadge = (status: string) => {
   );
 };
 
+const Marquee: React.FC<
+  React.HTMLAttributes<HTMLElement> & {
+    scrollamount?: number | string;
+    behavior?: string;
+    direction?: string;
+  }
+> = ({ children, ...props }) => {
+  return React.createElement("marquee", props, children);
+};
+
+// ==========================================
+// EXECUTIVE HEADER SUMMARY STAT CARDS (GSAP & BESPOKE SVGs)
+// ==========================================
+
+const DeadlineSvgIcon: React.FC<{
+  urgency: "overdue" | "warning" | "normal" | "empty";
+}> = ({ urgency }) => {
+  const theme = {
+    overdue: {
+      bgGradStart: "#FEF2F2",
+      bgGradEnd: "#FEE2E2",
+      border: "#FECACA",
+      accent: "#EF4444",
+      calTop: "#DC2626",
+      pin: "#991B1B",
+    },
+    warning: {
+      bgGradStart: "#FFFBEB",
+      bgGradEnd: "#FEF3C7",
+      border: "#FDE68A",
+      accent: "#F59E0B",
+      calTop: "#D97706",
+      pin: "#92400E",
+    },
+    normal: {
+      bgGradStart: "#EFF6FF",
+      bgGradEnd: "#DBEAFE",
+      border: "#BFDBFE",
+      accent: "#2563EB",
+      calTop: "#1D4ED8",
+      pin: "#1E40AF",
+    },
+    empty: {
+      bgGradStart: "#F8FAFC",
+      bgGradEnd: "#F1F5F9",
+      border: "#E2E8F0",
+      accent: "#64748B",
+      calTop: "#475569",
+      pin: "#334155",
+    },
+  }[urgency];
+
+  return (
+    <svg
+      width="44"
+      height="44"
+      viewBox="0 0 44 44"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="shrink-0"
+    >
+      <defs>
+        <linearGradient id={`dlBg-${urgency}`} x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={theme.bgGradStart} />
+          <stop offset="100%" stopColor={theme.bgGradEnd} />
+        </linearGradient>
+        <linearGradient id={`dlCalTop-${urgency}`} x1="0" y1="0" x2="20" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor={theme.calTop} />
+          <stop offset="100%" stopColor={theme.accent} />
+        </linearGradient>
+      </defs>
+
+      <rect
+        x="2"
+        y="2"
+        width="40"
+        height="40"
+        rx="12"
+        fill={`url(#dlBg-${urgency})`}
+        stroke={theme.border}
+        strokeWidth="1.5"
+      />
+
+      <g transform="translate(6, 6.5)">
+        <rect
+          x="1"
+          y="3"
+          width="18"
+          height="18"
+          rx="4"
+          fill="#FFFFFF"
+          stroke={theme.border}
+          strokeWidth="1"
+        />
+        <path
+          d="M 1 7 C 1 4.79 2.79 3 5 3 L 15 3 C 17.21 3 19 4.79 19 7 L 19 8 L 1 8 Z"
+          fill={`url(#dlCalTop-${urgency})`}
+        />
+        <rect x="4.5" y="1" width="1.8" height="3" rx="0.9" fill="#FFFFFF" />
+        <rect x="13.7" y="1" width="1.8" height="3" rx="0.9" fill="#FFFFFF" />
+        <circle cx="5.5" cy="11.5" r="1" fill={theme.accent} opacity="0.7" />
+        <circle cx="10" cy="11.5" r="1" fill={theme.accent} opacity="0.7" />
+        <circle cx="14.5" cy="11.5" r="1" fill={theme.accent} opacity="0.7" />
+        <circle cx="5.5" cy="15.5" r="1" fill={theme.accent} opacity="0.7" />
+        <circle cx="10" cy="15.5" r="1" fill={theme.accent} opacity="0.7" />
+        <circle cx="14.5" cy="15.5" r="1" fill={theme.accent} opacity="0.5" />
+      </g>
+
+      <g transform="translate(19.5, 18.5)">
+        <circle cx="10" cy="10" r="9.5" fill="#FFFFFF" stroke={theme.border} strokeWidth="1.2" />
+        <circle cx="10" cy="10" r="7.5" fill={theme.bgGradStart} />
+        <circle cx="10" cy="10" r="1.3" fill={theme.pin} />
+        <line x1="10" y1="10" x2="10" y2="6.2" stroke={theme.pin} strokeWidth="1.5" strokeLinecap="round" />
+        <line x1="10" y1="10" x2="13.8" y2="10" stroke={theme.accent} strokeWidth="1.4" strokeLinecap="round" />
+      </g>
+    </svg>
+  );
+};
+
+const FinancialRatingSvgIcon: React.FC = () => {
+  return (
+    <svg
+      width="44"
+      height="44"
+      viewBox="0 0 44 44"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="shrink-0"
+    >
+      <defs>
+        <linearGradient id="frBgGrad" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#EFF6FF" />
+          <stop offset="100%" stopColor="#DBEAFE" />
+        </linearGradient>
+        <linearGradient id="frRibbonLeft" x1="0" y1="0" x2="0" y2="1" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#3B82F6" />
+          <stop offset="100%" stopColor="#1D4ED8" />
+        </linearGradient>
+        <linearGradient id="frRibbonRight" x1="0" y1="0" x2="0" y2="1" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#2563EB" />
+          <stop offset="100%" stopColor="#1E40AF" />
+        </linearGradient>
+        <linearGradient id="frGoldRim" x1="0" y1="0" x2="20" y2="20" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#FDE047" />
+          <stop offset="50%" stopColor="#EAB308" />
+          <stop offset="100%" stopColor="#CA8A04" />
+        </linearGradient>
+        <linearGradient id="frGoldCore" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#FEF08A" />
+          <stop offset="60%" stopColor="#FACC15" />
+          <stop offset="100%" stopColor="#EAB308" />
+        </linearGradient>
+        <linearGradient id="frGlint" x1="0" y1="0" x2="8" y2="8" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      <rect
+        x="2"
+        y="2"
+        width="40"
+        height="40"
+        rx="12"
+        fill="url(#frBgGrad)"
+        stroke="#BFDBFE"
+        strokeWidth="1.5"
+      />
+
+      {/* Perfectly Centered Medal Assembly */}
+      <g transform="translate(11, 8.5)">
+        <path
+          d="M 5 14 L 2 26 L 6.5 23.5 L 11 26 L 9 14 Z"
+          fill="url(#frRibbonLeft)"
+        />
+        <path
+          d="M 13 14 L 11 26 L 15.5 23.5 L 20 26 L 17 14 Z"
+          fill="url(#frRibbonRight)"
+        />
+
+        <circle cx="11" cy="11" r="9.5" fill="url(#frGoldRim)" stroke="#A16207" strokeWidth="0.6" />
+        <circle cx="11" cy="11" r="8" fill="url(#frGoldCore)" />
+        <circle cx="11" cy="11" r="6.8" stroke="#CA8A04" strokeWidth="0.75" strokeDasharray="1.5 1" fill="none" />
+
+        <path
+          d="M 5 8 A 7 7 0 0 1 17 8"
+          stroke="url(#frGlint)"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+          fill="none"
+        />
+
+        <polygon
+          points="11,6.5 12.4,9.5 15.5,9.8 13.1,11.9 13.8,15 11,13.3 8.2,15 8.9,11.9 6.5,9.8 9.6,9.5"
+          fill="#FFFFFF"
+          stroke="#B45309"
+          strokeWidth="0.4"
+        />
+      </g>
+
+      <g transform="translate(29, 9)">
+        <path
+          d="M 3 0 Q 3 3 6 3 Q 3 3 3 6 Q 3 3 0 3 Q 3 3 3 0 Z"
+          fill="#3B82F6"
+          opacity="0.8"
+        />
+      </g>
+    </svg>
+  );
+};
+
+interface DeadlineHeaderCardProps {
+  deadlineInfo: {
+    assignment: QuarterlyReviewAssignment;
+    days: number;
+    pendingCount: number;
+    deadlineLabel: string;
+    pendingMap: Map<string, { days: number; deadlineLabel: string }>;
+  } | null;
+  onOpenEdit: (assignment: QuarterlyReviewAssignment) => void;
+  onOpenView: (assignment: QuarterlyReviewAssignment) => void;
+  renderQuarterBadge: (assignmentOrQuarter: QuarterlyReviewAssignment | string) => React.ReactNode;
+}
+
+const DeadlineHeaderCard: React.FC<DeadlineHeaderCardProps> = ({
+  deadlineInfo,
+  onOpenEdit,
+  onOpenView,
+  renderQuarterBadge,
+}) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const chevronRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (cardRef.current) {
+      gsap.fromTo(
+        cardRef.current,
+        { opacity: 0, y: 10, scale: 0.98 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "power2.out" }
+      );
+    }
+  }, []);
+
+  const isClickable = Boolean(deadlineInfo);
+  const days = deadlineInfo?.days ?? null;
+  const isOverdue = days !== null && days < 0;
+  const isUrgent = days !== null && days >= 0 && days <= 3;
+
+  const urgencyState: "overdue" | "warning" | "normal" | "empty" = !deadlineInfo
+    ? "empty"
+    : isOverdue
+      ? "overdue"
+      : isUrgent
+        ? "warning"
+        : "normal";
+
+  const handleMouseEnter = () => {
+    if (!isClickable) return;
+    if (cardRef.current) {
+      gsap.to(cardRef.current, {
+        y: -3,
+        scale: 1.015,
+        boxShadow: isOverdue
+          ? "0 14px 28px -4px rgba(239,68,68,0.18), 0 4px 12px rgba(15,23,42,0.04)"
+          : isUrgent
+            ? "0 14px 28px -4px rgba(245,158,11,0.18), 0 4px 12px rgba(15,23,42,0.04)"
+            : "0 14px 28px -4px rgba(37,99,235,0.14), 0 4px 12px rgba(15,23,42,0.04)",
+        borderColor: isOverdue ? "#FCA5A5" : isUrgent ? "#FCD34D" : "#93C5FD",
+        duration: 0.28,
+        ease: "power2.out",
+      });
+    }
+    if (chevronRef.current) {
+      gsap.to(chevronRef.current, { x: 3, duration: 0.2, ease: "power2.out" });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!isClickable) return;
+    if (cardRef.current) {
+      gsap.to(cardRef.current, {
+        y: 0,
+        scale: 1,
+        boxShadow: "0 4px 16px -2px rgba(15,23,42,0.04)",
+        borderColor: "#E2E8F0",
+        duration: 0.25,
+        ease: "power2.out",
+      });
+    }
+    if (chevronRef.current) {
+      gsap.to(chevronRef.current, { x: 0, duration: 0.2, ease: "power2.out" });
+    }
+  };
+
+  const handleClick = () => {
+    if (!deadlineInfo) return;
+    if (deadlineInfo.assignment.canEdit) {
+      onOpenEdit(deadlineInfo.assignment);
+    } else {
+      onOpenView(deadlineInfo.assignment);
+    }
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`employee-stat-card-executive group ${isOverdue
+        ? "employee-stat-card-executive-overdue"
+        : isUrgent
+          ? "employee-stat-card-executive-warning"
+          : ""
+        } ${isClickable ? "cursor-pointer" : "cursor-default"}`}
+      title={isClickable && deadlineInfo ? `Click to open ${deadlineInfo.assignment.quarter} review` : undefined}
+    >
+      {/* Colored Left Edge Bar */}
+      <div className="employee-stat-edge-bar" />
+
+      <div className="flex items-center gap-3">
+        <DeadlineSvgIcon urgency={urgencyState} />
+
+        <div className="flex flex-col justify-center">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug">
+              Deadline
+            </span>
+            {deadlineInfo && renderQuarterBadge(deadlineInfo.assignment)}
+          </div>
+
+          {deadlineInfo ? (
+            <div className="text-[11px] sm:text-xs font-semibold leading-snug mt-1 flex items-center flex-wrap gap-1">
+              <span
+                className={
+                  isOverdue
+                    ? "text-[#DC2626] font-bold"
+                    : isUrgent
+                      ? "text-[#D97706] font-bold"
+                      : "text-[#0F172A]"
+                }
+              >
+                {deadlineInfo.deadlineLabel}
+              </span>
+              <span className="text-[#94A3B8] font-normal">
+                {" "}· {isOverdue
+                  ? `Overdue by ${Math.abs(days!)}d`
+                  : days === 0
+                    ? "Due today"
+                    : `${days}d left`}
+              </span>
+            </div>
+          ) : (
+            <span className="text-[11px] sm:text-xs text-[#94A3B8] font-medium leading-snug mt-1 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+              No pending reviews
+            </span>
+          )}
+        </div>
+      </div>
+
+      <div ref={chevronRef} className="employee-stat-chevron-pill ml-2">
+        <ChevronRight className="w-3.5 h-3.5 stroke-[2.4]" />
+      </div>
+    </div>
+  );
+};
+
+interface FinancialRatingHeaderCardProps {
+  onOpen: () => void;
+}
+
+const FinancialRatingHeaderCard: React.FC<FinancialRatingHeaderCardProps> = ({ onOpen }) => {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const chevronRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (cardRef.current) {
+      gsap.fromTo(
+        cardRef.current,
+        { opacity: 0, y: 10, scale: 0.98 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.45, delay: 0.08, ease: "power2.out" }
+      );
+    }
+  }, []);
+
+  const handleMouseEnter = () => {
+    if (cardRef.current) {
+      gsap.to(cardRef.current, {
+        y: -3,
+        scale: 1.015,
+        boxShadow: "0 14px 28px -4px rgba(37,99,235,0.15), 0 4px 12px rgba(15,23,42,0.04)",
+        borderColor: "#93C5FD",
+        duration: 0.28,
+        ease: "power2.out",
+      });
+    }
+    if (chevronRef.current) {
+      gsap.to(chevronRef.current, { x: 3, duration: 0.2, ease: "power2.out" });
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (cardRef.current) {
+      gsap.to(cardRef.current, {
+        y: 0,
+        scale: 1,
+        boxShadow: "0 4px 16px -2px rgba(15,23,42,0.04)",
+        borderColor: "#E2E8F0",
+        duration: 0.25,
+        ease: "power2.out",
+      });
+    }
+    if (chevronRef.current) {
+      gsap.to(chevronRef.current, { x: 0, duration: 0.2, ease: "power2.out" });
+    }
+  };
+
+  return (
+    <div
+      ref={cardRef}
+      onClick={onOpen}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className="employee-stat-card-executive cursor-pointer group"
+      title="Click to view Financial Rating breakdown & calculation"
+    >
+      {/* Colored Left Edge Bar */}
+      <div className="employee-stat-edge-bar" />
+
+      <div className="flex items-center gap-3">
+        <FinancialRatingSvgIcon />
+
+        <div className="flex flex-col justify-center">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug group-hover:text-[#2563EB] transition-colors">
+              Financial Rating
+            </span>
+            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider bg-blue-50 text-blue-700 border border-blue-200/80">
+              Annual
+            </span>
+          </div>
+
+          <span className="text-[11px] sm:text-xs text-[#64748B] font-medium leading-snug mt-1 flex items-center gap-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+            Verified Evaluation
+          </span>
+        </div>
+      </div>
+
+      <div ref={chevronRef} className="employee-stat-chevron-pill ml-2">
+        <ChevronRight className="w-3.5 h-3.5 stroke-[2.4]" />
+      </div>
+    </div>
+  );
+};
+
 export const AppraisalDashboard: React.FC = () => {
+  const currentUser = useAppSelector((state) => state.user.currentUser);
+  const hideAdminHeaderCards = isAdminAccess(currentUser);
   const {
     assignments,
     activeAssignment,
     financialYear,
+    defaultYear,
     quarter,
     statusFilter,
     yearOptions,
@@ -116,14 +675,73 @@ export const AppraisalDashboard: React.FC = () => {
     submitReview,
   } = useEmployeeAppraisal();
   const [editingForm, setEditingForm] = useState<ReviewFormData | undefined>(undefined);
+  const [editingOpenStep, setEditingOpenStep] = useState<number | undefined>(undefined);
   const [stepperReadOnly, setStepperReadOnly] = useState<boolean>(false);
-  const [rowRatings, setRowRatings] = useState<Record<string, { finalRating: number }>>({});
+  interface ActiveRatingSession {
+    finalRating: number;
+    expiresAt: number;
+    quarter: string;
+    financialYear: string;
+    reviewId: number;
+  }
+
+  const [rowRatings, setRowRatings] = useState<Record<string, ActiveRatingSession>>({});
+  const [revealedModalData, setRevealedModalData] = useState<RevealedRatingData | null>(null);
   const [ratingTarget, setRatingTarget] = useState<QuarterlyReviewAssignment | null>(null);
   const [ratingPassword, setRatingPassword] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const employeeFiltersDockRef = useRef<HTMLDivElement>(null);
+
+  // GSAP: Modern entrance animation for employee filter dock
+  useEffect(() => {
+    if (employeeFiltersDockRef.current) {
+      gsap.fromTo(
+        employeeFiltersDockRef.current.children,
+        { opacity: 0, y: 7, scale: 0.98 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.45,
+          stagger: 0.05,
+          ease: "power2.out",
+          clearProps: "transform,opacity",
+        }
+      );
+    }
+  }, []);
   const [showRatingPassword, setShowRatingPassword] = useState(false);
   const [ratingError, setRatingError] = useState("");
   const [unlockingRating, setUnlockingRating] = useState(false);
   const ratingTimersRef = useRef<Record<string, number>>({});
+  const [, setTicker] = useState(0);
+
+  // Live timer tick for active revealed ratings & auto-invalidation after 2 minutes
+  useEffect(() => {
+    const hasActive = Object.values(rowRatings).some((r) => r.expiresAt > Date.now());
+    if (!hasActive) return;
+
+    const intervalId = window.setInterval(() => {
+      setTicker((prev) => prev + 1);
+      const now = Date.now();
+      setRowRatings((prev) => {
+        let changed = false;
+        const next = { ...prev };
+        for (const [key, session] of Object.entries(next)) {
+          if (session.expiresAt <= now) {
+            delete next[key];
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [rowRatings]);
 
   useEffect(() => {
     const timers = ratingTimersRef.current;
@@ -136,6 +754,21 @@ export const AppraisalDashboard: React.FC = () => {
     assignment.status.toUpperCase() === "COMPLETED" &&
     (assignment.reviewStatus || "").toUpperCase() === "COMPLETED" &&
     Boolean(assignment.reviewId);
+
+  // Scroll lock & background blur for password authentication modal
+  useEffect(() => {
+    if (ratingTarget) {
+      document.body.style.overflow = "hidden";
+      document.body.classList.add("modal-open-active");
+    } else {
+      document.body.style.overflow = "unset";
+      document.body.classList.remove("modal-open-active");
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+      document.body.classList.remove("modal-open-active");
+    };
+  }, [ratingTarget]);
 
   const closeRatingModal = () => {
     setRatingTarget(null);
@@ -168,12 +801,21 @@ export const AppraisalDashboard: React.FC = () => {
         return;
       }
       const rowId = ratingTarget.id;
+      const scoreNum = Number(revealed.finalRating);
+      const expiresAt = Date.now() + RATING_REVEAL_DURATION_MS;
+      const sessionData: ActiveRatingSession = {
+        finalRating: scoreNum,
+        expiresAt,
+        quarter: ratingTarget.quarter,
+        financialYear: ratingTarget.financialYear,
+        reviewId: ratingTarget.reviewId,
+      };
+
       setRowRatings((current) => ({
         ...current,
-        [rowId]: {
-          finalRating: Number(revealed.finalRating),
-        },
+        [rowId]: sessionData,
       }));
+
       if (ratingTimersRef.current[rowId] != null) {
         window.clearTimeout(ratingTimersRef.current[rowId]);
       }
@@ -184,7 +826,18 @@ export const AppraisalDashboard: React.FC = () => {
           return next;
         });
         delete ratingTimersRef.current[rowId];
-      }, 2 * 60 * 1000);
+      }, RATING_REVEAL_DURATION_MS);
+
+      // Open celebratory modern 3D rating modal
+      setRevealedModalData({
+        reviewId: ratingTarget.reviewId,
+        rowId,
+        quarter: ratingTarget.quarter,
+        financialYear: ratingTarget.financialYear,
+        finalRating: scoreNum,
+        expiresAt,
+      });
+
       closeRatingModal();
     } catch (error) {
       setRatingError(readApiError(error));
@@ -193,12 +846,28 @@ export const AppraisalDashboard: React.FC = () => {
     }
   };
 
+  const handleCloseRevealedModal = () => {
+    if (revealedModalData) {
+      const rowId = revealedModalData.rowId;
+      if (ratingTimersRef.current[rowId] != null) {
+        window.clearTimeout(ratingTimersRef.current[rowId]);
+        delete ratingTimersRef.current[rowId];
+      }
+      setRowRatings((prev) => {
+        const next = { ...prev };
+        delete next[rowId];
+        return next;
+      });
+    }
+    setRevealedModalData(null);
+  };
+
   const renderRowRating = (assignment: QuarterlyReviewAssignment) => {
     const revealed = rowRatings[assignment.id];
     if (revealed) {
       return (
         <span className="text-sm font-extrabold text-[#0F172A]">
-          {Number.isFinite(revealed.finalRating) ? revealed.finalRating.toFixed(2) : "—"}
+          {Number.isFinite(revealed.finalRating) ? Number(revealed.finalRating.toFixed(2)) : "—"}
         </span>
       );
     }
@@ -237,7 +906,7 @@ export const AppraisalDashboard: React.FC = () => {
     innovationProblemSolving?: number | string | null;
     performanceStrengths?: string | null;
     areasOfImprovement?: string | null;
-    additionalRemarks?: string | null;
+    managerComment?: string | null;
   }>();
 
   const [isRatingAuthModalOpen, setIsRatingAuthModalOpen] = useState<boolean>(false);
@@ -278,31 +947,74 @@ export const AppraisalDashboard: React.FC = () => {
     });
   };
 
-  // Scroll to top helper handlers for View and Edit
+  /** Resolve performance id from assignment (list row or quarter lookup) — no full GET. */
+  const resolvePerformanceId = async (assignment: QuarterlyReviewAssignment): Promise<number | null> => {
+    if (assignment.performanceId) {
+      return Number(assignment.performanceId);
+    }
+    const q = (
+      assignment.quarter === "Q1" ||
+      assignment.quarter === "Q2" ||
+      assignment.quarter === "Q3" ||
+      assignment.quarter === "Q4" ||
+      assignment.quarter === "YEARLY"
+    ) ? (assignment.quarter as any) : undefined;
+    if (assignment.employeeId && q && assignment.financialYear) {
+      try {
+        const found = await AppraisalApi.getEmployeePerformance(assignment.employeeId, q, assignment.financialYear);
+        return found?.id ? Number(found.id) : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  };
+
+  /** Full record — only for evaluation / flows that need every step at once. */
   const loadRowPerformance = async (assignment: QuarterlyReviewAssignment) => {
-    if (!assignment.performanceId) {
+    const id = await resolvePerformanceId(assignment);
+    if (!id) return null;
+    try {
+      return await AppraisalApi.getPerformanceById(id);
+    } catch {
       return null;
     }
-    return AppraisalApi.getPerformanceById(assignment.performanceId);
+  };
+
+  /**
+   * Edit resume: `step` comes from DB (list row). Call only that step GET — no full GET, no local storage.
+   */
+  const loadResumeEditForm = async (assignment: QuarterlyReviewAssignment) => {
+    const id = await resolvePerformanceId(assignment);
+    if (!id) return null;
+    const openStep = Math.min(Math.max(Number(assignment.step) || 1, 1), 6);
+    const stepRes = await AppraisalApi.getPerformanceStep(
+      id,
+      PERFORMANCE_STEP_PATH[openStep],
+    );
+    return {
+      id: stepRes.id,
+      status: stepRes.status,
+      form: applyStepDataToForm(emptyReviewFormData, openStep, stepRes.data),
+      step: stepRes.step || openStep,
+    };
   };
 
   const handleOpenEdit = async (assignment: QuarterlyReviewAssignment) => {
     scrollToPageTop();
     try {
-      const performance = await loadRowPerformance(assignment);
+      const stepLoad = await loadResumeEditForm(assignment);
       setStepperReadOnly(false);
-      setEditingForm(performance ? toReviewFormData(performance) : undefined);
+      setEditingForm(stepLoad?.form);
+      setEditingOpenStep(stepLoad?.step);
       openAssignment({
         ...assignment,
-        performanceId: performance?.id ?? assignment.performanceId,
-        assignedBy: performance?.assignedBy || assignment.assignedBy,
-        assignedDate: performance?.assignedDate
-          ? formatAppraisalDisplayDate(performance.assignedDate)
-          : assignment.assignedDate,
-        deadline: performance?.deadlineDate
-          ? formatAppraisalDisplayDate(performance.deadlineDate)
-          : assignment.deadline,
-        description: performance?.description ?? assignment.description,
+        performanceId: stepLoad?.id ?? assignment.performanceId,
+        step: stepLoad?.step ?? assignment.step,
+        assignedBy: assignment.assignedBy,
+        assignedDate: assignment.assignedDate,
+        deadline: assignment.deadline,
+        description: assignment.description,
       });
     } catch (error) {
       message.error(readApiError(error));
@@ -311,15 +1023,15 @@ export const AppraisalDashboard: React.FC = () => {
     setTimeout(scrollToPageTop, 50);
   };
 
+  /** View mode: full GET /:id (all steps) — not the per-step APIs. */
   const handleOpenView = async (assignment: QuarterlyReviewAssignment) => {
     scrollToPageTop();
     try {
       const performance = await loadRowPerformance(assignment);
-      setViewingForm(performance ? toReviewFormData(performance) : undefined);
-      setViewingPerformanceStatus(performance?.status || assignment.status || "");
-      setViewingReviewStatus(assignment.reviewStatus || "");
-      setViewingEvaluation(undefined);
-      setViewingAssignment({
+      setStepperReadOnly(true);
+      setEditingForm(performance ? toReviewFormData(performance) : undefined);
+      setEditingOpenStep(undefined);
+      openAssignment({
         ...assignment,
         performanceId: performance?.id ?? assignment.performanceId,
         assignedBy: performance?.assignedBy || assignment.assignedBy,
@@ -350,7 +1062,7 @@ export const AppraisalDashboard: React.FC = () => {
   const [accessRequests, setAccessRequests] = useState<AccessRequest[]>([]);
   const [isAccessModalOpen, setIsAccessModalOpen] = useState<boolean>(false);
   const [selectedAccessAssignment, setSelectedAccessAssignment] = useState<QuarterlyReviewAssignment | null>(null);
-  const [selectedAccessRemainingHours, setSelectedAccessRemainingHours] = useState<number>(24);
+  const [selectedAccessRemainingHours, setSelectedAccessRemainingHours] = useState<number>(42);
 
   const checkAccessEligibility = (assignment: QuarterlyReviewAssignment) => {
     const hidden = {
@@ -361,36 +1073,58 @@ export const AppraisalDashboard: React.FC = () => {
       tooltip: "",
     };
 
-    const statusUpper = assignment.status.toUpperCase();
-    const isPending =
-      statusUpper === "REQUESTED_FOR_EDIT" ||
-      accessRequests.some(
-        (req) =>
-          req.assignmentId === assignment.id ||
-          (req.quarter === assignment.quarter && req.financialYear === assignment.financialYear)
-      );
+    const statusUpper = (assignment.status || "").toUpperCase();
+    if (isResubmittedStatus(assignment.status) || statusUpper === "RE_SUBMITTED") {
+      return hidden;
+    }
+
+    // Waiting for reviewer approval — access NOT granted yet
+    if (statusUpper === "REQUESTED_FOR_EDIT") {
+      return {
+        visible: true,
+        eligible: true,
+        alreadyRequested: true,
+        remainingHours: 0,
+        tooltip: `Edit request sent to ${assignment.assignedBy}. Waiting for approval — access is not granted yet.`,
+      };
+    }
+
+    // Edit already granted — use pencil to edit; hide redundant access key
+    if (
+      statusUpper === "EDIT_GRANTED" ||
+      statusUpper === "APPROVED_FOR_EDITING" ||
+      statusUpper === "ALLOWED_TO_EDIT"
+    ) {
+      return hidden;
+    }
+
+    const isPending = accessRequests.some(
+      (req) =>
+        req.assignmentId === assignment.id ||
+        (req.quarter === assignment.quarter && req.financialYear === assignment.financialYear),
+    );
 
     if (isPending) {
       return {
         visible: true,
-        eligible: false,
+        eligible: true,
         alreadyRequested: true,
         remainingHours: 0,
-        tooltip: `Access request already sent to ${assignment.assignedBy}. Status: Pending Approval.`,
+        tooltip: `Access request submitted to ${assignment.assignedBy}. Status: Pending Approval. Click to view details.`,
       };
     }
 
-    if (!assignment.canRequestEdit) {
+    if (!assignment.canRequestEdit || (assignment.remainingRequestHours ?? 0) <= 0) {
       return hidden;
     }
 
-    const remainingHours = assignment.remainingRequestHours ?? 24;
+    const remainingHours = assignment.remainingRequestHours ?? 0;
     return {
       visible: true,
       eligible: true,
       alreadyRequested: false,
       remainingHours,
-      tooltip: `Request edit access from ${assignment.assignedBy} (~${remainingHours}h remaining in the 2-day window).`,
+      tooltip: `Request edit access from ${assignment.assignedBy} (~${remainingHours}h remaining in the 42-hour window).`,
     };
   };
 
@@ -440,10 +1174,23 @@ export const AppraisalDashboard: React.FC = () => {
     }
   }, [activeAssignment, viewingAssignment]);
 
-  const totalItems = total;
+  const filteredAssignments = useMemo(() => {
+    if (!debouncedSearch.trim()) return assignments;
+    const q = debouncedSearch.toLowerCase().trim();
+    return assignments.filter((a) => {
+      const quarterMatch = (a.quarter || "").toLowerCase().includes(q);
+      const fyMatch = (a.financialYear || "").toLowerCase().includes(q);
+      const assignedByMatch = (a.assignedBy || "").toLowerCase().includes(q);
+      const statusMatch = (a.status || "").toLowerCase().includes(q);
+      const descMatch = (a.description || "").toLowerCase().includes(q);
+      return quarterMatch || fyMatch || assignedByMatch || statusMatch || descMatch;
+    });
+  }, [assignments, debouncedSearch]);
+
+  const totalItems = debouncedSearch.trim() ? filteredAssignments.length : total;
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalItems);
-  const paginatedAssignments = assignments;
+  const paginatedAssignments = filteredAssignments;
 
   // Nearest deadline among assignments that are loaded and not finally submitted.
   const deadlineInfo = useMemo(() => {
@@ -477,7 +1224,17 @@ export const AppraisalDashboard: React.FC = () => {
     };
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const closed = new Set(["submitted", "reviewed", "completed", "re_submitted", "under_review"]);
+    // Already past employee submission — no deadline countdown (incl. assigner→manager final).
+    const closed = new Set([
+      "submitted",
+      "reviewed",
+      "completed",
+      "re_submitted",
+      "under_review",
+      "evaluation_in_progress",
+      "awaiting_manager_final_review",
+      "performance_received",
+    ]);
     const editWindow = new Set([
       "requested_for_edit",
       "edit_requested",
@@ -493,20 +1250,55 @@ export const AppraisalDashboard: React.FC = () => {
       })
       .map((assignment) => {
         const status = (assignment.status || "").toLowerCase();
-        const editDeadline = approvedEdit.has(status) ? assignment.editAllowedUntil : undefined;
+        const deadlineDateParsed = assignment.deadline ? parse(assignment.deadline) : null;
+        const editUntilParsed =
+          approvedEdit.has(status) && assignment.editAllowedUntil
+            ? parse(assignment.editAllowedUntil)
+            : null;
+
+        let targetDate: Date | null = null;
+        let targetLabel: string = assignment.deadline || "";
+
+        if (deadlineDateParsed && editUntilParsed) {
+          if (deadlineDateParsed.getTime() >= editUntilParsed.getTime()) {
+            targetDate = deadlineDateParsed;
+            targetLabel = assignment.deadline || formatAppraisalDisplayDate(deadlineDateParsed);
+          } else {
+            targetDate = editUntilParsed;
+            targetLabel = formatAppraisalDisplayDate(assignment.editAllowedUntil!);
+          }
+        } else if (deadlineDateParsed) {
+          targetDate = deadlineDateParsed;
+          targetLabel = assignment.deadline || formatAppraisalDisplayDate(deadlineDateParsed);
+        } else if (editUntilParsed) {
+          targetDate = editUntilParsed;
+          targetLabel = formatAppraisalDisplayDate(assignment.editAllowedUntil!);
+        }
+
+        const days = targetDate ? Math.round((targetDate.getTime() - today.getTime()) / 86400000) : null;
+
         return {
           assignment,
-          date: parse(editDeadline || assignment.deadline),
-          deadlineLabel: editDeadline ? formatAppraisalDisplayDate(editDeadline) : assignment.deadline,
+          date: targetDate,
+          deadlineLabel: targetLabel,
+          days,
         };
       })
-      .filter((item): item is { assignment: QuarterlyReviewAssignment; date: Date; deadlineLabel: string } => item.date !== null)
+      .filter((item): item is { assignment: QuarterlyReviewAssignment; date: Date; deadlineLabel: string; days: number } => item.date !== null)
       .sort((left, right) => {
         const leftDistance = Math.abs(left.date.getTime() - today.getTime());
         const rightDistance = Math.abs(right.date.getTime() - today.getTime());
         if (leftDistance !== rightDistance) return leftDistance - rightDistance;
         return left.date.getTime() - right.date.getTime();
       });
+
+    const pendingMap = new Map<string, { days: number; deadlineLabel: string }>();
+    pending.forEach((item) => {
+      pendingMap.set(item.assignment.id, {
+        days: item.days,
+        deadlineLabel: item.deadlineLabel,
+      });
+    });
 
     if (pending.length === 0) return null;
 
@@ -517,6 +1309,7 @@ export const AppraisalDashboard: React.FC = () => {
       days,
       pendingCount: pending.length,
       deadlineLabel: pick.deadlineLabel,
+      pendingMap,
     };
   }, [assignments]);
 
@@ -543,11 +1336,8 @@ export const AppraisalDashboard: React.FC = () => {
     };
 
     return (
-      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE]">
-
-
-
-        <div className="relative z-10">
+      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
+        <div className="relative z-10 w-full flex-1 flex flex-col min-h-0">
           <EvaluationPanel
             key={`employee-${viewRecord.reviewId || viewRecord.id}`}
             record={viewRecord}
@@ -555,6 +1345,7 @@ export const AppraisalDashboard: React.FC = () => {
             managerEvaluation={viewingEvaluation}
             mode="view"
             hideScoreParameters={true}
+            initialActiveView="matrix"
             onBack={() => {
               scrollToPageTop();
               setViewingAssignment(null);
@@ -573,25 +1364,92 @@ export const AppraisalDashboard: React.FC = () => {
   // If stepper is open, display 6-step review UI
   if (activeAssignment) {
     return (
-      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE]">
-
-
-
-        <div className="relative z-10">
+      <div className="w-full min-h-screen relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
+        <div className="relative z-10 w-full flex-1 flex flex-col min-h-0">
           <QuarterlyReviewStepper
-            key={activeAssignment.id}
+            key={`${activeAssignment.id}-${stepperReadOnly ? "view" : "edit"}-${editingOpenStep ?? "auto"}`}
             assignment={activeAssignment}
             initialFormData={editingForm}
+            initialStep={stepperReadOnly ? undefined : editingOpenStep}
             readOnly={stepperReadOnly}
             onBack={() => {
               scrollToPageTop();
               setStepperReadOnly(false);
               setEditingForm(undefined);
+              setEditingOpenStep(undefined);
               closeAssignment();
               reloadAssignments();
               setTimeout(scrollToPageTop, 50);
             }}
+            onGoToEvaluation={async () => {
+              scrollToPageTop();
+              try {
+                const targetAssignment = activeAssignment;
+                let resolvedReviewId = targetAssignment.reviewId ?? 0;
+                let resolvedReviewStatus =
+                  targetAssignment.reviewStatus || targetAssignment.status || "";
+
+                // Do not GET /employee-performance here. Scores load only after the password.
+                if (!resolvedReviewId && targetAssignment.employeeId) {
+                  try {
+                    const list = await AppraisalApi.getManagerReviewList(
+                      targetAssignment.employeeId,
+                      {
+                        financialYear: targetAssignment.financialYear,
+                        quarter:
+                          typeof targetAssignment.quarter === "string"
+                            ? targetAssignment.quarter
+                            : undefined,
+                      },
+                    );
+                    const match = (list.data || []).find(
+                      (row: { id?: number; quarter?: string; financialYear?: string; status?: string }) =>
+                        row.financialYear === targetAssignment.financialYear &&
+                        (typeof targetAssignment.quarter !== "string" ||
+                          row.quarter === targetAssignment.quarter),
+                    );
+                    if (match?.id) {
+                      resolvedReviewId = match.id;
+                      resolvedReviewStatus = match.status || resolvedReviewStatus;
+                    }
+                  } catch {
+                    /* keep existing ids */
+                  }
+                }
+
+                if (!resolvedReviewId) {
+                  message.error(
+                    "This evaluation is not ready to open yet. Please refresh and try again.",
+                  );
+                  return;
+                }
+
+                setViewingForm(editingForm);
+                setViewingPerformanceStatus(targetAssignment.status || "");
+                setViewingReviewStatus(resolvedReviewStatus);
+                setViewingEvaluation(undefined);
+                setViewingAssignment({
+                  ...targetAssignment,
+                  reviewId: resolvedReviewId,
+                });
+                setStepperReadOnly(false);
+                setEditingForm(undefined);
+                closeAssignment();
+              } catch (error) {
+                message.error(readApiError(error));
+              }
+              setTimeout(scrollToPageTop, 50);
+            }}
             onSubmitSuccess={() => {
+              if (activeAssignment) {
+                setAccessRequests((prev) =>
+                  prev.filter(
+                    (req) =>
+                      req.assignmentId !== activeAssignment.id &&
+                      !(req.quarter === activeAssignment.quarter && req.financialYear === activeAssignment.financialYear)
+                  )
+                );
+              }
               submitReview(activeAssignment.id);
               reloadAssignments();
             }}
@@ -602,7 +1460,7 @@ export const AppraisalDashboard: React.FC = () => {
   }
 
   return (
-    <div className="w-full relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
+    <div className="w-full relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 py-3 sm:py-4 lg:py-6 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
 
 
 
@@ -614,102 +1472,23 @@ export const AppraisalDashboard: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
               <span className="manager-review-title-anim">Appraisal</span>
             </h1>
-            <p className="text-sm mt-1 font-normal w-fit">
-              <span className="manager-review-subtitle-anim">
-                Complete authorized quarterly review assignments and track your performance appraisals.
-              </span>
-            </p>
           </div>
 
-          {/* 2 Summary Cards beside title */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
-            {/* DEADLINE CARD */}
-            <div
-              onClick={() => {
-                if (!deadlineInfo) return;
-                if (deadlineInfo.assignment.canEdit) {
-                  handleOpenEdit(deadlineInfo.assignment);
-                  return;
-                }
-                handleOpenView(deadlineInfo.assignment);
-              }}
-              className={`manager-review-glass-card employee-header-stat-card ${deadlineInfo ? "cursor-pointer" : "cursor-default"
-                }`}
-              title={deadlineInfo ? "Click to open review assignment" : undefined}
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className={`employee-header-stat-icon-wrap ${deadlineInfo && deadlineInfo.days < 0
-                    ? "bg-[#FEF2F2] border border-red-200 text-[#DC2626]"
-                    : deadlineInfo && deadlineInfo.days <= 3
-                      ? "bg-[#FFFBEB] border border-amber-200 text-[#D97706]"
-                      : "bg-white/90 border border-white/90 text-[#0F172A]"
-                    }`}
-                >
-                  <CalendarClock className="w-5 h-5 stroke-[2.2]" />
-                </div>
+          {/* Deadline + Financial Rating cards — hidden for Admin/CEO/GM */}
+          {!hideAdminHeaderCards && (
+            <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 shrink-0">
+              <DeadlineHeaderCard
+                deadlineInfo={deadlineInfo}
+                onOpenEdit={handleOpenEdit}
+                onOpenView={handleOpenView}
+                renderQuarterBadge={renderQuarterBadge}
+              />
 
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug">
-                      Deadline
-                    </span>
-                    {deadlineInfo && renderQuarterBadge(deadlineInfo.assignment.quarter)}
-                  </div>
-
-                  {deadlineInfo ? (
-                    <div className="text-[11px] sm:text-xs font-semibold leading-snug mt-1">
-                      <span
-                        className={
-                          deadlineInfo.days < 0
-                            ? "text-[#DC2626]"
-                            : deadlineInfo.days <= 3
-                              ? "text-[#D97706]"
-                              : "text-[#0F172A]"
-                        }
-                      >
-                        {deadlineInfo.deadlineLabel}
-                      </span>
-                      <span className="text-[#94A3B8] font-normal">
-                        {" "}· {deadlineInfo.days < 0
-                          ? `Overdue by ${Math.abs(deadlineInfo.days)}d`
-                          : deadlineInfo.days === 0
-                            ? "Due today"
-                            : `${deadlineInfo.days}d left`}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-[11px] sm:text-xs text-[#94A3B8] font-medium leading-snug mt-1">
-                      No pending reviews
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <ChevronRight className="w-4 h-4 text-[#94A3B8] shrink-0 ml-1.5" />
+              <FinancialRatingHeaderCard
+                onOpen={handleOpenAnnualRating}
+              />
             </div>
-
-            {/* FINANCIAL RATING CARD */}
-            <div
-              onClick={handleOpenAnnualRating}
-              className="manager-review-glass-card employee-header-stat-card cursor-pointer group hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
-              title="Click to view Financial Rating breakdown & calculation"
-            >
-              <div className="flex items-center gap-3">
-                <div className="employee-header-stat-icon-wrap bg-white/90 border border-white/90 text-[#2563EB] group-hover:bg-[#2563EB] group-hover:text-white transition-colors duration-200 shadow-2xs">
-                  <Award className="w-5 h-5 stroke-[2.2]" />
-                </div>
-
-                <div className="flex flex-col justify-center">
-                  <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug group-hover:text-[#2563EB] transition-colors">
-                    Financial Rating
-                  </span>
-                </div>
-              </div>
-
-              <ChevronRight className="w-4 h-4 text-[#94A3B8] group-hover:text-[#2563EB] group-hover:translate-x-0.5 transition-all shrink-0 ml-1.5" />
-            </div>
-          </div>
+          )}
         </div>
 
         {/* MAIN SECTION: QUARTERLY REVIEW HISTORY */}
@@ -725,77 +1504,124 @@ export const AppraisalDashboard: React.FC = () => {
               </CardTitle>
             </div>
 
-            {/* Filters Bar */}
-            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar flex-nowrap py-1 manager-review-filters-bar flex-1 justify-start xl:justify-end">
+            {/* Filters beside title on one line - calibrated to never overflow outside card */}
+            <div
+              ref={employeeFiltersDockRef}
+              className="manager-review-filters-dock flex items-center gap-1.5 flex-nowrap shrink-0 justify-end"
+            >
+              <div className="w-28 sm:w-32 lg:w-36 shrink-0 filter-item-stagger-1">
+                <SearchBox
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onClear={() => {
+                    setSearchTerm("");
+                    setDebouncedSearch("");
+                  }}
+                  onDebounce={setDebouncedSearch}
+                  placeholder="Search..."
+                  variant="outlined"
+                  inputSize="md"
+                  containerClassName="w-full rounded-xl manager-review-search-box"
+                  className="text-xs manager-review-search-input"
+                  allowClear
+                />
+              </div>
+
               {/* Financial Year Dropdown */}
               <Dropdown
-                className="shrink-0 filter-item-stagger-1"
+                className="shrink-0 filter-item-stagger-2"
                 placeholder="Financial Year"
                 allowClear={true}
                 defaultValue=""
-                prefixIcon={<Calendar size={14} className="filter-icon-fy" />}
+                prefixIcon={
+                  <span className="filter-icon-badge filter-icon-badge-fy">
+                    <Calendar size={13} />
+                  </span>
+                }
                 options={yearOptions}
                 value={financialYear}
                 onChange={setFinancialYear}
                 onOpen={loadFinancialYears}
                 loading={yearsLoading}
-                maxLabelWidth="max-w-[124px]"
-                buttonClassName="manager-review-filter-btn filter-btn-fy rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[172px]"
+                maxLabelWidth="max-w-[95px]"
+                buttonClassName={`manager-review-filter-btn filter-btn-fy ${
+                  financialYear && financialYear !== defaultYear ? "filter-active" : ""
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[145px]`}
               />
 
+              {/* Quarters Dropdown */}
               <Dropdown
-                className="shrink-0 filter-item-stagger-2"
+                className="shrink-0 filter-item-stagger-3"
                 placeholder="Quarter"
                 allowClear={false}
                 defaultValue=""
-                prefixIcon={<Clock size={14} className="filter-icon-quarters" />}
+                prefixIcon={
+                  <span className="filter-icon-badge filter-icon-badge-quarters">
+                    <Clock size={13} />
+                  </span>
+                }
                 options={quarterOptions}
                 value={quarter}
-                onChange={setQuarter}
+                onChange={(val) => setQuarter(val || AppraisalFilterAll.ALL)}
                 onOpen={loadQuarters}
                 loading={quartersLoading && quarterOptions.length === 0}
-                maxLabelWidth="max-w-[100px]"
-                buttonClassName="manager-review-filter-btn filter-btn-quarters rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[150px]"
+                maxLabelWidth="max-w-[85px]"
+                buttonClassName={`manager-review-filter-btn filter-btn-quarters ${
+                  quarter && quarter !== AppraisalFilterAll.ALL ? "filter-active" : ""
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[122px]`}
               />
 
               {/* Status Dropdown */}
               <Dropdown
-                className="shrink-0 filter-item-stagger-3"
+                className="shrink-0 filter-item-stagger-4"
                 placeholder="Status"
                 allowClear={true}
                 defaultValue=""
-                prefixIcon={<ClipboardList size={14} className="filter-icon-status" />}
+                prefixIcon={
+                  <span className="filter-icon-badge filter-icon-badge-status">
+                    <ClipboardList size={13} />
+                  </span>
+                }
                 options={[
                   { value: "NOT_STARTED", label: "Not Started" },
                   { value: "DRAFT", label: "Draft" },
+                  { value: "ASSIGNED", label: "Assigned" },
+                  { value: "REASSIGNED", label: "Re-Assigned" },
                   { value: "SUBMITTED", label: "Submitted" },
+                  { value: "EVALUATION_IN_PROGRESS", label: "Evaluation In Progress" },
                   { value: "COMPLETED", label: "Completed" },
                 ]}
                 value={statusFilter}
                 onChange={setStatusFilter}
-                maxLabelWidth="max-w-[80px]"
+                maxLabelWidth="max-w-[75px]"
                 contentWidth
-                buttonClassName="manager-review-filter-btn filter-btn-status rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[124px]"
+                align="right"
+                buttonClassName={`manager-review-filter-btn filter-btn-status ${
+                  statusFilter ? "filter-active" : ""
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[110px]`}
               />
 
               {/* Clear Button */}
-              {hasActiveFilters && (
+              {(hasActiveFilters || Boolean(searchTerm) || Boolean(debouncedSearch)) && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleClearFilters}
-                  className="manager-review-clear-btn shrink-0 p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-xs font-medium flex items-center gap-1 border border-blue-200/80 bg-white/90 text-blue-600 hover:text-blue-700 hover:bg-blue-50/80 shadow-xs"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setDebouncedSearch("");
+                    handleClearFilters();
+                  }}
+                  className="manager-review-clear-btn shrink-0"
                   title="Clear all filters"
                 >
-                  <RotateCcw size={13} className="filter-clear-icon shrink-0" />
-                  <span className="hidden 2xl:inline text-xs">Clear</span>
+                  <RotateCcw size={14} className="filter-clear-icon shrink-0" />
                 </Button>
               )}
             </div>
           </div>
 
           <CardContent className="p-0">
-            {assignments.length > 0 ? (
+            {filteredAssignments.length > 0 ? (
               /* STATE 2: Populated Table with Styled Brand Layout */
               <div className="space-y-4">
                 <div className="hidden sm:block">
@@ -805,7 +1631,7 @@ export const AppraisalDashboard: React.FC = () => {
                         <thead>
                           <tr>
                             <th className="text-center min-w-[70px]">Sl No</th>
-                            <th className="text-left min-w-[110px]">Quarter</th>
+                            <th className="text-left min-w-[170px]">Quarter</th>
                             <th className="text-left min-w-[150px]">Financial Year</th>
                             <th className="text-center min-w-[130px]">Assigned By</th>
                             <th className="text-center min-w-[140px]">Assigned Date</th>
@@ -817,13 +1643,17 @@ export const AppraisalDashboard: React.FC = () => {
                         </thead>
                         <tbody>
                           {paginatedAssignments.map((assignment, index) => {
+                            const pendingItem = deadlineInfo?.pendingMap?.get(assignment.id);
+                            const daysLeft = pendingItem?.days ?? null;
+                            const showRowMarquee = pendingItem !== undefined && daysLeft === 1;
+
                             return (
-                              <tr key={assignment.id}>
+                              <tr key={assignment.id} className={showRowMarquee ? "qr-urgent-row" : ""}>
                                 <td className="text-center font-semibold text-xs text-[#475569]">
                                   {index + 1}
                                 </td>
                                 {/* 1. Quarter with Dedicated Color */}
-                                <td>{renderQuarterBadge(assignment.quarter)}</td>
+                                <td>{renderQuarterBadge(assignment)}</td>
 
                                 {/* 2. Financial Year */}
                                 <td>
@@ -832,18 +1662,9 @@ export const AppraisalDashboard: React.FC = () => {
 
                                 {/* 3. Assigned By */}
                                 <td className="text-center">
-                                  <span
-                                    className={`qr-assigned-by-pill ${assignment.assignedBy.toLowerCase() === "admin"
-                                      ? "qr-assigned-by-admin"
-                                      : ""
-                                      }`}
-                                  >
-                                    {assignment.assignedBy.toLowerCase() === "admin" ? (
-                                      <ShieldCheck className="w-3.5 h-3.5" />
-                                    ) : (
-                                      <UserCheck className="w-3.5 h-3.5" />
-                                    )}
-                                    {assignment.assignedBy}
+                                  <span className="qr-assigned-by-pill">
+                                    <UserCheck className="w-3.5 h-3.5" />
+                                    {assignment.assignedBy || "—"}
                                   </span>
                                 </td>
 
@@ -855,15 +1676,22 @@ export const AppraisalDashboard: React.FC = () => {
                                 </td>
 
                                 <td className="text-center">
-                                  <span className="qr-date-chip">
-                                    <Calendar className="w-3.5 h-3.5 text-[#A36361] mr-1.5 inline" />
+                                  <span className={`qr-date-chip ${showRowMarquee ? "qr-date-chip-urgent" : ""}`}>
+                                    <Calendar className={`w-3.5 h-3.5 mr-1.5 inline ${showRowMarquee ? "text-rose-500" : "text-[#A36361]"}`} />
                                     {assignment.deadline}
                                   </span>
+                                  {showRowMarquee && (
+                                    <div className="qr-cell-marquee-container">
+                                      <Marquee scrollamount={3} className="qr-cell-marquee-text">
+                                        ⚠️ 1 day remaining — please submit your review before the deadline.
+                                      </Marquee>
+                                    </div>
+                                  )}
                                 </td>
 
                                 {/* 5. Status */}
                                 <td className="text-center">
-                                  {renderStatusBadge(assignment.status)}
+                                  {renderStatusBadge(assignment.status, assignment.reassignCount)}
                                 </td>
 
                                 <td className="text-center">
@@ -883,15 +1711,35 @@ export const AppraisalDashboard: React.FC = () => {
                                       <Eye className="w-4 h-4" />
                                     </button>
                                     {assignment.canEdit && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleOpenEdit(assignment)}
-                                        className="qr-action-icon-btn qr-action-btn-edit"
-                                        title={`Edit review for ${assignment.quarter}`}
-                                        aria-label={`Edit review for ${assignment.quarter}`}
-                                      >
-                                        <Pencil className="w-4 h-4" />
-                                      </button>
+                                      (() => {
+                                        const rawStatus = (assignment.status || assignment.reviewStatus || "").toUpperCase();
+                                        const isDraft =
+                                          rawStatus === "DRAFT" ||
+                                          rawStatus === "EDIT_GRANTED" ||
+                                          rawStatus === "ALLOWED_TO_EDIT";
+
+                                        return isDraft ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenEdit(assignment)}
+                                            className="qr-action-icon-btn qr-action-btn-edit"
+                                            title={`Edit review for ${assignment.quarter}`}
+                                            aria-label={`Edit review for ${assignment.quarter}`}
+                                          >
+                                            <Pencil className="w-4 h-4" />
+                                          </button>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleOpenEdit(assignment)}
+                                            className="qr-action-icon-btn qr-action-btn-send"
+                                            title={`Start review for ${assignment.quarter}`}
+                                            aria-label={`Start review for ${assignment.quarter}`}
+                                          >
+                                            <Send className="w-4 h-4" />
+                                          </button>
+                                        );
+                                      })()
                                     )}
 
                                     {(() => {
@@ -902,23 +1750,29 @@ export const AppraisalDashboard: React.FC = () => {
                                           type="button"
                                           disabled={!elig.eligible}
                                           onMouseEnter={(e) => {
-                                            if (elig.eligible) animateKeyIconBounce(e.currentTarget);
+                                            if (elig.eligible && !elig.alreadyRequested) animateKeyIconBounce(e.currentTarget);
                                           }}
                                           onClick={() =>
                                             elig.eligible &&
                                             handleOpenAccessRequest(assignment, elig.remainingHours)
                                           }
                                           className={`qr-action-icon-btn qr-action-btn-access ${elig.alreadyRequested
-                                              ? "qr-action-btn-access-requested"
-                                              : elig.eligible
-                                                ? "qr-action-btn-access-enabled"
-                                                : "qr-action-btn-access-disabled"
+                                            ? "qr-action-btn-access-requested cursor-pointer"
+                                            : elig.eligible
+                                              ? "qr-action-btn-access-enabled cursor-pointer"
+                                              : "qr-action-btn-access-disabled"
                                             }`}
                                           title={elig.tooltip}
                                           aria-label={
-                                            elig.alreadyRequested
-                                              ? `Access requested for ${assignment.quarter}`
-                                              : `Request access for ${assignment.quarter}`
+                                            ["EDIT_GRANTED", "APPROVED_FOR_EDITING", "ALLOWED_TO_EDIT"].includes(
+                                              assignment.status.toUpperCase(),
+                                            )
+                                              ? `Edit access granted for ${assignment.quarter}. Edit and resubmit.`
+                                              : assignment.status.toUpperCase() === "REQUESTED_FOR_EDIT"
+                                                ? `Edit request pending approval for ${assignment.quarter}.`
+                                                : elig.alreadyRequested
+                                                  ? `Access request submitted for ${assignment.quarter}. Click to view.`
+                                                  : `Request access for ${assignment.quarter}`
                                           }
                                         >
                                           <KeyRound className="w-4 h-4" />
@@ -961,36 +1815,32 @@ export const AppraisalDashboard: React.FC = () => {
                 {/* Mobile Card Layout for Table Rows */}
                 <div className="sm:hidden space-y-3">
                   {paginatedAssignments.map((assignment) => {
+                    const pendingItem = deadlineInfo?.pendingMap?.get(assignment.id);
+                    const daysLeft = pendingItem?.days ?? null;
+                    const showRowMarquee = pendingItem !== undefined && daysLeft === 1;
+
                     return (
                       <Card
                         key={assignment.id}
-                        className="p-4 rounded-2xl border border-[#BFDBFE]/60 bg-white shadow-xs space-y-3"
+                        className={`p-4 rounded-2xl border space-y-3 ${showRowMarquee ? "bg-[#FFF1F2] border-rose-300 ring-1 ring-rose-200" : "bg-white border-[#BFDBFE]/60 shadow-xs"
+                          }`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            {renderQuarterBadge(assignment.quarter)}
+                            {renderQuarterBadge(assignment)}
                             <span className="qr-fy-pill">
                               {assignment.financialYear}
                             </span>
                           </div>
-                          {renderStatusBadge(assignment.status)}
+                          {renderStatusBadge(assignment.status, assignment.reassignCount)}
                         </div>
 
                         <div className="text-xs text-[#64748B] space-y-1.5 pt-1">
                           <div className="flex items-center justify-between">
                             <span>Assigned by:</span>
-                            <span
-                              className={`qr-assigned-by-pill ${assignment.assignedBy.toLowerCase() === "admin"
-                                ? "qr-assigned-by-admin"
-                                : ""
-                                }`}
-                            >
-                              {assignment.assignedBy.toLowerCase() === "admin" ? (
-                                <ShieldCheck className="w-3 h-3" />
-                              ) : (
-                                <UserCheck className="w-3 h-3" />
-                              )}
-                              {assignment.assignedBy}
+                            <span className="qr-assigned-by-pill">
+                              <UserCheck className="w-3 h-3" />
+                              {assignment.assignedBy || "—"}
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
@@ -1002,10 +1852,19 @@ export const AppraisalDashboard: React.FC = () => {
                           </div>
                           <div className="flex items-center justify-between">
                             <span>Deadline:</span>
-                            <span className="qr-date-chip">
-                              <Calendar className="w-3 h-3 text-[#A36361] mr-1 inline" />
-                              {assignment.deadline}
-                            </span>
+                            <div className="flex flex-col items-end">
+                              <span className={`qr-date-chip ${showRowMarquee ? "qr-date-chip-urgent" : ""}`}>
+                                <Calendar className={`w-3 h-3 mr-1 inline ${showRowMarquee ? "text-rose-500" : "text-[#A36361]"}`} />
+                                {assignment.deadline}
+                              </span>
+                              {showRowMarquee && (
+                                <div className="qr-cell-marquee-container w-[130px]">
+                                  <Marquee scrollamount={3} className="qr-cell-marquee-text">
+                                    ⚠️ 1 day left! Review not submitted
+                                  </Marquee>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -1024,14 +1883,33 @@ export const AppraisalDashboard: React.FC = () => {
                             View
                           </button>
                           {assignment.canEdit && (
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEdit(assignment)}
-                              className="qr-action-btn-edit flex-1 justify-center py-2 text-xs"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                              Edit
-                            </button>
+                            (() => {
+                              const rawStatus = (assignment.status || assignment.reviewStatus || "").toUpperCase();
+                              const isDraft =
+                                rawStatus === "DRAFT" ||
+                                rawStatus === "EDIT_GRANTED" ||
+                                rawStatus === "ALLOWED_TO_EDIT";
+
+                              return isDraft ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEdit(assignment)}
+                                  className="qr-action-btn-edit flex-1 justify-center py-2 text-xs"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                  Edit
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenEdit(assignment)}
+                                  className="qr-action-btn-send flex-1 justify-center py-2 text-xs"
+                                >
+                                  <Send className="w-3.5 h-3.5" />
+                                  Start
+                                </button>
+                              );
+                            })()
                           )}
 
                           {(() => {
@@ -1046,16 +1924,22 @@ export const AppraisalDashboard: React.FC = () => {
                                   handleOpenAccessRequest(assignment, elig.remainingHours)
                                 }
                                 className={`qr-action-icon-btn qr-action-btn-access !h-8 !w-8 justify-center shrink-0 ${elig.alreadyRequested
-                                    ? "qr-action-btn-access-requested"
-                                    : elig.eligible
-                                      ? "qr-action-btn-access-enabled"
-                                      : "qr-action-btn-access-disabled"
+                                  ? "qr-action-btn-access-requested cursor-pointer"
+                                  : elig.eligible
+                                    ? "qr-action-btn-access-enabled cursor-pointer"
+                                    : "qr-action-btn-access-disabled"
                                   }`}
                                 title={elig.tooltip}
                                 aria-label={
-                                  elig.alreadyRequested
-                                    ? `Access requested for ${assignment.quarter}`
-                                    : `Request access for ${assignment.quarter}`
+                                  ["EDIT_GRANTED", "APPROVED_FOR_EDITING", "ALLOWED_TO_EDIT"].includes(
+                                    assignment.status.toUpperCase(),
+                                  )
+                                    ? `Edit access granted for ${assignment.quarter}. Edit and resubmit.`
+                                    : assignment.status.toUpperCase() === "REQUESTED_FOR_EDIT"
+                                      ? `Edit request pending approval for ${assignment.quarter}.`
+                                      : elig.alreadyRequested
+                                        ? `Access request submitted for ${assignment.quarter}. Click to view.`
+                                        : `Request access for ${assignment.quarter}`
                                 }
                               >
                                 <KeyRound className="w-3.5 h-3.5" />
@@ -1084,90 +1968,119 @@ export const AppraisalDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {ratingTarget && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 eval-themed-modal-overlay"
-          onClick={closeRatingModal}
-        >
+      {ratingTarget && typeof document !== "undefined" && createPortal(
+        <>
+          <style>{`
+            header,
+            .header,
+            aside,
+            footer,
+            .footer,
+            .sidebar-footer {
+              transition: filter 0.3s ease, opacity 0.3s ease !important;
+            }
+            body.modal-open-active header,
+            body.modal-open-active .header,
+            body.modal-open-active aside,
+            body.modal-open-active footer,
+            body.modal-open-active .footer,
+            body.modal-open-active .sidebar-footer {
+              filter: blur(2.5px) !important;
+              -webkit-filter: blur(2.5px) !important;
+              pointer-events: none !important;
+              user-select: none !important;
+            }
+          `}</style>
           <div
-            className="eval-themed-modal-card max-w-sm sm:max-w-md w-full p-6 sm:p-8 text-[#0F172A] relative shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 eval-themed-modal-overlay"
+            style={{
+              backdropFilter: "blur(2.5px)",
+              WebkitBackdropFilter: "blur(2.5px)",
+              backgroundColor: "rgba(30, 58, 138, 0.35)",
+            }}
+            onClick={closeRatingModal}
           >
-            <button
-              type="button"
-              onClick={closeRatingModal}
-              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors z-20"
-              title="Close"
+            <div
+              className="eval-themed-modal-card max-w-sm sm:max-w-md w-full p-6 sm:p-8 text-[#0F172A] relative shadow-2xl"
+              onClick={(event) => event.stopPropagation()}
             >
-              <X className="w-4 h-4" />
-            </button>
-            <form onSubmit={(event) => void revealRowRating(event)} className="relative z-10 space-y-5">
-              <div className="text-center space-y-1.5">
-                <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-lg shadow-blue-500/25 mb-3">
-                  <ShieldCheck className="w-6 h-6" />
+              <button
+                type="button"
+                onClick={closeRatingModal}
+                className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors z-20 cursor-pointer"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <form onSubmit={(event) => void revealRowRating(event)} className="relative z-10 space-y-5">
+                <div className="text-center space-y-1.5">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-lg shadow-blue-500/25 mb-3">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-xl font-bold tracking-tight text-[#0F172A]">
+                    Authenticate Rating Access
+                  </h3>
+                  <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
+                    Enter your login password to see the final rating and average for {formatQuarterDisplay(ratingTarget.quarter)}.
+                  </p>
                 </div>
-                <h3 className="text-xl font-bold tracking-tight text-[#0F172A]">
-                  Authenticate Rating Access
-                </h3>
-                <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
-                  Enter your login password to see the final rating and average for {ratingTarget.quarter}.
-                </p>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
-                  Password <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showRatingPassword ? "text" : "password"}
-                    required
-                    value={ratingPassword}
-                    onChange={(event) => {
-                      setRatingPassword(event.target.value);
-                      if (ratingError) setRatingError("");
-                    }}
-                    placeholder="Password"
-                    autoComplete="current-password"
-                    className="w-full px-4 py-3 pl-10 pr-10 rounded-2xl bg-white border border-[#E2E8F0] text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                    autoFocus
-                  />
-                  <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <div>
+                  <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showRatingPassword ? "text" : "password"}
+                      required
+                      value={ratingPassword}
+                      onChange={(event) => {
+                        setRatingPassword(event.target.value);
+                        if (ratingError) setRatingError("");
+                      }}
+                      placeholder="Password"
+                      autoComplete="current-password"
+                      className="w-full px-4 py-3 pl-10 pr-10 rounded-2xl bg-white border border-[#E2E8F0] text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                      autoFocus
+                    />
+                    <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <button
+                      type="button"
+                      onClick={() => setShowRatingPassword((current) => !current)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#2563EB]"
+                      aria-label={showRatingPassword ? "Hide password" : "Show password"}
+                    >
+                      {showRatingPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {ratingError && (
+                    <p className="text-xs font-medium text-red-500 mt-1.5 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      {ratingError}
+                    </p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 pt-2">
                   <button
                     type="button"
-                    onClick={() => setShowRatingPassword((current) => !current)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#2563EB]"
-                    aria-label={showRatingPassword ? "Hide password" : "Show password"}
+                    onClick={closeRatingModal}
+                    className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
                   >
-                    {showRatingPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={unlockingRating}
+                    className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                  >
+                    <span>{unlockingRating ? "Checking" : "Continue"}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
-                {ratingError && (
-                  <p className="text-xs font-medium text-red-500 mt-1.5 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                    {ratingError}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={closeRatingModal}
-                  className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={unlockingRating}
-                  className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
-                >
-                  <span>{unlockingRating ? "Checking" : "Continue"}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
+        </>,
+        document.body
       )}
 
       {/* RATING VERIFICATION MODAL */}
@@ -1183,8 +2096,33 @@ export const AppraisalDashboard: React.FC = () => {
         assignment={selectedAccessAssignment}
         remainingHours={selectedAccessRemainingHours}
         onSubmit={handleSubmitAccessRequest}
+        isReadOnly={Boolean(
+          selectedAccessAssignment &&
+          (selectedAccessAssignment.status.toUpperCase() === "REQUESTED_FOR_EDIT" ||
+            accessRequests.some(
+              (req) =>
+                req.assignmentId === selectedAccessAssignment.id ||
+                (req.quarter === selectedAccessAssignment.quarter &&
+                  req.financialYear === selectedAccessAssignment.financialYear)
+            ))
+        )}
+        requestDetails={
+          selectedAccessAssignment
+            ? accessRequests.find(
+              (req) =>
+                req.assignmentId === selectedAccessAssignment.id ||
+                (req.quarter === selectedAccessAssignment.quarter &&
+                  req.financialYear === selectedAccessAssignment.financialYear)
+            ) || null
+            : null
+        }
       />
 
+      {/* 3D CELEBRATORY REVEALED RATING MODAL */}
+      <RevealedRatingModal
+        data={revealedModalData}
+        onClose={handleCloseRevealedModal}
+      />
     </div>
   );
 };
