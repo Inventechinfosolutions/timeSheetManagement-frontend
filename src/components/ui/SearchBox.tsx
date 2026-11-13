@@ -45,14 +45,17 @@ export const SearchBox: React.FC<SearchBoxProps> = ({
     onDebounceRef.current?.(debouncedValue);
   }, [debouncedValue]);
 
-  // Sync when parent clears / resets — but not right after our own debounce emit
+  // Sync when parent clears / resets — skip only same-value echo after our debounce emit
   useEffect(() => {
     if (value === undefined) return;
+    const next = String(value);
     if (skipNextValueSyncRef.current) {
       skipNextValueSyncRef.current = false;
+      // Still apply real parent resets (e.g. Clear All → "")
+      setInternalValue((prev) => (next === prev ? prev : next));
       return;
     }
-    setInternalValue(String(value));
+    setInternalValue(next);
   }, [value]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

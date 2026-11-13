@@ -44,7 +44,8 @@ const AdminEmployeeTimesheetList = () => {
     : "/admin-dashboard";
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  // Keep in sync with backend default; with 11 employees this yields 2 pages
+  const itemsPerPage = 10;
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
@@ -293,18 +294,10 @@ const AdminEmployeeTimesheetList = () => {
         </h1> */}
 
         {/* Filters Row */}
-        <div className="flex flex-wrap items-center gap-3 mb-6">
-          {/* Month/Year Selector */}
-          <MonthNavigator
-            month={selectedMonth}
-            year={selectedYear}
-            onPrev={handlePreviousMonth}
-            onNext={handleNextMonth}
-          />
-
+        <div className="flex flex-nowrap items-center gap-2.5 mb-6">
           <button
             onClick={handleOpenDownloadModal}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold cursor-pointer"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#01B574] text-white rounded-full shadow-lg shadow-green-500/20 hover:shadow-green-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold cursor-pointer shrink-0"
           >
             <Download size={16} />
             <span className="whitespace-nowrap">Export Excel</span>
@@ -318,20 +311,20 @@ const AdminEmployeeTimesheetList = () => {
                   state: { month: selectedMonth, year: selectedYear },
                 })
               }
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white text-[#4318FF] hover:bg-[#4318FF] hover:text-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] border border-[#4318FF]/20 active:scale-95 transition-all text-sm font-bold cursor-pointer"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#2563EB] text-white rounded-full shadow-lg shadow-blue-500/25 hover:bg-[#1D4ED8] hover:shadow-blue-500/40 hover:-translate-y-0.5 active:scale-95 transition-all text-sm font-bold cursor-pointer shrink-0"
               title="Open monthly attendance matrix grid view"
             >
-              <FileSpreadsheet size={16} />
+              <FileSpreadsheet size={16} className="text-white" />
               <span className="whitespace-nowrap">Excel Grid View</span>
             </button>
           )}
 
           {/* Department Dropdown */}
           {basePath === "/admin-dashboard" && (
-            <div className="relative min-w-[240px] sm:min-w-[280px] md:min-w-[320px]" ref={dropdownRef}>
+            <div className="relative w-[150px] sm:w-[170px] shrink-0" ref={dropdownRef}>
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className={`w-full flex items-center justify-between gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 ${selectedDepartment !== "All Departments" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
+                className={`w-full flex items-center justify-between gap-2 px-3.5 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 ${selectedDepartment !== "All Departments" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
               >
                 <div className="flex items-center gap-2 min-w-0">
                   <Filter size={14} className="text-[#4318FF] shrink-0" />
@@ -339,12 +332,12 @@ const AdminEmployeeTimesheetList = () => {
                 </div>
                 <ChevronDown
                   size={14}
-                  className={`text-[#A3AED0] transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
+                  className={`text-[#A3AED0] shrink-0 transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
                 />
               </button>
 
               {isDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-full min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200 max-h-64 overflow-y-auto custom-scrollbar">
+                <div className="absolute top-full left-0 mt-2 w-[220px] min-w-full bg-white/95 backdrop-blur-xl rounded-2xl shadow-[0px_20px_40px_rgba(0,0,0,0.1)] border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2 duration-200 max-h-64 overflow-y-auto custom-scrollbar">
                   <div className="mb-2">
                     <span className="text-[10px] font-black text-[#A3AED0] uppercase tracking-widest">
                       Departments
@@ -381,7 +374,7 @@ const AdminEmployeeTimesheetList = () => {
           )}
 
           {/* Status Dropdown */}
-          <div className="relative" ref={statusDropdownRef}>
+          <div className="relative shrink-0" ref={statusDropdownRef}>
             <button
               onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
               className={`flex items-center gap-2 px-4 py-2.5 bg-white rounded-full shadow-[0px_18px_40px_rgba(112,144,176,0.12)] font-bold text-sm hover:bg-gray-50 transition-all border border-transparent focus:border-[#4318FF]/20 whitespace-nowrap ${selectedStatus !== "All Status" ? "text-[#4318FF]" : "text-[#2B3674]"}`}
@@ -433,7 +426,7 @@ const AdminEmployeeTimesheetList = () => {
               setDebouncedSearchTerm("");
               setCurrentPage(1);
             }}
-            containerClassName="w-full sm:w-auto min-w-[240px] sm:min-w-[300px] md:min-w-[360px] flex-1 sm:flex-none"
+            containerClassName="w-[180px] sm:w-[200px] shrink-0"
             variant="outlined"
           />
 
@@ -444,13 +437,23 @@ const AdminEmployeeTimesheetList = () => {
             selectedYear !== new Date().getFullYear()) && (
             <button
               onClick={handleClearFilters}
-              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap flex-shrink-0"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#5B4FFF] text-white rounded-full hover:bg-[#4318FF] active:scale-95 transition-all text-sm font-bold border border-[#4318FF]/50 whitespace-nowrap shrink-0"
               title="Clear all filters"
             >
               <X size={14} />
               <span>Clear All</span>
             </button>
           )}
+
+          {/* Month/Year Selector — same row, far right */}
+          <div className="ml-auto shrink-0">
+            <MonthNavigator
+              month={selectedMonth}
+              year={selectedYear}
+              onPrev={handlePreviousMonth}
+              onNext={handleNextMonth}
+            />
+          </div>
         </div>
 
         <div className="bg-white rounded-[20px] p-0 shadow-[0px_18px_40px_rgba(112,144,176,0.12)] overflow-hidden border border-gray-100">
