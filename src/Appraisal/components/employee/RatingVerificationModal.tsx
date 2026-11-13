@@ -36,7 +36,10 @@ const ratingText = (value: number | string | null | undefined): string => {
   if (value === null || value === undefined || value === "") {
     return "";
   }
-  return String(value);
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  const one = Number(n.toFixed(1));
+  return Number.isInteger(one) ? String(one) : String(one);
 };
 
 const hasStoredRating = (record: AnnualSummaryRecord): boolean =>
@@ -293,7 +296,7 @@ export const RatingVerificationModal: React.FC<RatingVerificationModalProps> = (
                       <p className="text-xl font-bold text-white tracking-tight">
                         {ratingText(summary.annualAverageRating) || "—"}
                       </p>
-                      <p className="text-[10px] text-blue-200">/ 5.00</p>
+                      <p className="text-[10px] text-blue-200">/ 5</p>
                     </div>
                   </div>
 

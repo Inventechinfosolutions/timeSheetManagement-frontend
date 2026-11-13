@@ -447,40 +447,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
     editingProjectIndex: null,
   });
 
-  /** Load one saved project into the active Step 2 form for editing. */
-  const applyProjectToActiveForm = (
-    base: ReviewFormData,
-    index: number,
-  ): ReviewFormData => {
-    const project = (base.projects || [])[index];
-    if (!project) {
-      return clearActiveProjectDraft(base);
-    }
-    const challenge = project.challengesFaced || project.challenge || "";
-    return {
-      ...base,
-      projectName: project.projectName || "",
-      projectDescription: project.description || "",
-      projectRole: project.projectRole || "",
-      responsibilityType: project.responsibilityType || "",
-      leadershipQualities: project.leadershipQualities || "",
-      clientReviewFeedback: project.clientReviewFeedback || "",
-      keyResponsibilities: project.keyResponsibilities || "",
-      challengesFaced: challenge,
-      projectChallenge: challenge,
-      solutionsImplemented: project.solutionsImplemented || "",
-      keyAchievementsOutcomes: project.keyAchievementsOutcomes || "",
-      technologiesUsed: project.technologiesUsed ? [...project.technologiesUsed] : [],
-      projectAttachments: project.attachments ? [...project.attachments] : [],
-      editingProjectIndex: index,
-    };
-  };
-
   /**
    * Final-review "Edit" on a step.
-   * Step 2 special case:
-   * - 1 project → fill form for that project; list below hides it (no duplicate look)
-   * - 2+ projects → empty form; list below so user picks which to edit
+   * Step 2: empty form + project list (user picks Edit on a row). Never auto-fill.
    */
   const handleEditStepFromReview = async (step: number) => {
     if (saving) return;
@@ -488,11 +457,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
     if (step === 2) {
       await loadFreshForm(false, 2);
-      const projects = formDataRef.current.projects || [];
-      let next = clearActiveProjectDraft(formDataRef.current);
-      if (projects.length === 1) {
-        next = applyProjectToActiveForm(next, 0);
-      }
+      const next = clearActiveProjectDraft(formDataRef.current);
       formDataRef.current = next;
       setFormData(next);
       goToStep(2, true);
@@ -995,6 +960,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         }
         if (stepNumber === 2 && !resetting) {
           await savePendingProject(dataToPersist);
+          // Clear active form so returning to Step 2 does not duplicate / re-fill.
+          const cleared = clearActiveProjectDraft(formDataRef.current);
+          formDataRef.current = cleared;
+          setFormData(cleared);
         }
         return true;
       }
@@ -1015,6 +984,9 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       setPerformanceId(saved.id);
       if (stepNumber === 2 && !resetting) {
         await savePendingProject(dataToPersist);
+        const cleared = clearActiveProjectDraft(formDataRef.current);
+        formDataRef.current = cleared;
+        setFormData(cleared);
       }
       return true;
     } catch (error) {
@@ -1074,7 +1046,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
   /** Load only the given step via GET /:id/{step} — not the full appraisal. */
   const loadFreshForm = async (
-    preserveDraftInputs = true,
+    _preserveDraftInputs = true,
     stepToLoad: number = currentStep,
   ): Promise<boolean> => {
     const id = performanceIdRef.current || assignment.performanceId;
@@ -1095,25 +1067,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
         stepToLoad,
         stepRes.data,
       );
-      if (preserveDraftInputs && formDataRef.current && stepToLoad === 2) {
-        const current = formDataRef.current;
-        fresh = {
-          ...fresh,
-          projectName: current.projectName,
-          projectDescription: current.projectDescription,
-          projectRole: current.projectRole,
-          responsibilityType: current.responsibilityType,
-          leadershipQualities: current.leadershipQualities,
-          clientReviewFeedback: current.clientReviewFeedback,
-          keyResponsibilities: current.keyResponsibilities,
-          challengesFaced: current.challengesFaced,
-          projectChallenge: current.projectChallenge,
-          solutionsImplemented: current.solutionsImplemented,
-          keyAchievementsOutcomes: current.keyAchievementsOutcomes,
-          technologiesUsed: current.technologiesUsed,
-          projectAttachments: current.projectAttachments,
-          editingProjectIndex: current.editingProjectIndex,
-        };
+      // Step 2: never re-fill the active form with a saved project when navigating
+      // back — keep the form empty; list shows saved projects for edit.
+      if (stepToLoad === 2) {
+        fresh = clearActiveProjectDraft(fresh);
       }
       formDataRef.current = fresh;
       initialFormDataRef.current = fresh;

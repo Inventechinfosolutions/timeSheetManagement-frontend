@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { StepProps, ReviewFormData } from "../../../types/appraisal.types";
-import { Star, Edit3, AlertCircle, CheckCircle2, ChevronDown, Calendar, FileText, Clock } from "lucide-react";
+import { Star, Edit3, AlertCircle, CheckCircle2, Calendar, FileText, Clock } from "lucide-react";
 import { resolveAssignedQuarterPeriod } from "../../../utils/appraisalHelpers";
 import { ENVIRONMENT_SCORES } from "../../../constants/appraisal.constants";
 import {
@@ -11,6 +11,7 @@ import {
   animateShatteringStar,
 } from "../../../animations/appraisalAnimations";
 import AttachmentItem from "../../common/AttachmentItem";
+import ProjectExpandIcon from "../../common/ProjectExpandIcon";
 import "../AppraisalDashboard.css";
 import { renderAnimatedEmojiIcon } from "./CompanyEnvironmentStep";
 
@@ -21,6 +22,43 @@ const RATING_LABELS: Record<number, string> = {
   4: "Exceeds Expectations",
   5: "Outstanding",
 };
+
+/** Display score with at most 1 decimal (4.3 → "4.3"; whole numbers as "4", not "4.0"). */
+const formatScoreDisplay = (score: number | string | null | undefined): string => {
+  const n = Number(score);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  const normalized = Number(n.toFixed(1));
+  return Number.isInteger(normalized) ? String(normalized) : String(normalized);
+};
+
+/** Read-only stars with fractional fill (e.g. 1.4 → 1 full + 40% of 2nd). */
+const FractionalStars: React.FC<{ score: number; sizeClass?: string }> = ({
+  score,
+  sizeClass = "w-3.5 h-3.5",
+}) => (
+  <span className="inline-flex items-center gap-0.5 shrink-0">
+    {[1, 2, 3, 4, 5].map((s) => {
+      const fillRatio = Math.max(0, Math.min(1, Number(score) - (s - 1)));
+      const isFull = fillRatio >= 1;
+      const isPartial = fillRatio > 0 && fillRatio < 1;
+      return (
+        <span key={s} className={`relative inline-flex ${sizeClass}`}>
+          <Star className="absolute inset-0 w-full h-full fill-transparent text-gray-300" />
+          {(isFull || isPartial) && (
+            <Star
+              className="absolute inset-0 w-full h-full fill-[#F59E0B] text-[#F59E0B]"
+              style={
+                isPartial
+                  ? { clipPath: `inset(0 ${Math.round((1 - fillRatio) * 100)}% 0 0)` }
+                  : undefined
+              }
+            />
+          )}
+        </span>
+      );
+    })}
+  </span>
+);
 
 const RATING_OPTIONS = [
   { id: 1, label: "Very Bad", emoji: "😡", enumVal: "VERY_BAD" },
@@ -96,7 +134,10 @@ const CriterionStarButton: React.FC<CriterionStarButtonProps> = ({
 }) => {
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const displayRating = Math.max(currentRating, hovered);
-  const isFilled = starIndex <= displayRating;
+  // 0 = empty, 1 = full, 0.4 = 40% for typed decimals like 2.4
+  const fillRatio = Math.max(0, Math.min(1, displayRating - (starIndex - 1)));
+  const isFull = fillRatio >= 1;
+  const isPartial = fillRatio > 0 && fillRatio < 1;
 
   useEffect(() => {
     if (isDirectlyClicked && btnRef.current) {
@@ -127,12 +168,19 @@ const CriterionStarButton: React.FC<CriterionStarButtonProps> = ({
       title={`${criterionTitle}: ${starIndex} of 5 (${RATING_LABELS[starIndex]})`}
       className="relative p-1 rounded-lg cursor-pointer focus:outline-none select-none overflow-visible"
     >
-      <Star
-        className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-200 ${isFilled && !isShattering
-            ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_2px_4px_rgba(245,158,11,0.5)]"
-            : "text-gray-300 fill-transparent hover:text-[#F59E0B]"
-          }`}
-      />
+      <span className="relative inline-flex w-4 h-4 sm:w-5 sm:h-5">
+        <Star className="absolute inset-0 w-full h-full text-gray-300 fill-transparent" />
+        {(isFull || isPartial) && !isShattering && (
+          <Star
+            className="absolute inset-0 w-full h-full fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_2px_4px_rgba(245,158,11,0.5)]"
+            style={
+              isPartial
+                ? { clipPath: `inset(0 ${Math.round((1 - fillRatio) * 100)}% 0 0)` }
+                : undefined
+            }
+          />
+        )}
+      </span>
       {isShattering && <ShatteringStar />}
     </button>
   );
@@ -151,6 +199,10 @@ export const ReviewStep: React.FC<StepProps> = ({
   const [hoveredRating, setHoveredRating] = useState<number>(0);
   const [animatingStar, setAnimatingStar] = useState<number | null>(null);
   const [shatteringStars, setShatteringStars] = useState<number[]>([]);
+  /** Draft text for manual 1–5 self-rating box (supports 1.5, 2.5, etc.). */
+  const [selfRatingDraft, setSelfRatingDraft] = useState(
+    formData.overallSelfRating > 0 ? String(formData.overallSelfRating) : "",
+  );
   const [assignedReviewPeriod, setAssignedReviewPeriod] = useState<{
     start: string;
     end: string;
@@ -190,6 +242,24 @@ export const ReviewStep: React.FC<StepProps> = ({
     return initScrollRevealCards(containerRef.current);
   }, []);
 
+  const formatSelfRatingDraft = (score: number) => {
+    if (score <= 0) return "";
+    return formatScoreDisplay(score);
+  };
+
+  const applySelfRating = (score: number, syncDraft = true) => {
+    const clamped = Math.max(0, Math.min(5, score));
+    const normalized = clamped <= 0 ? 0 : Number(Number(clamped).toFixed(1));
+    if (onChange) onChange("overallSelfRating", normalized);
+    if (normalized > 0 && clearError) clearError("overallSelfRating");
+    if (syncDraft) setSelfRatingDraft(formatSelfRatingDraft(normalized));
+    const el = document.getElementById("field-overallSelfRating");
+    if (el) {
+      el.style.borderColor = "";
+      el.style.boxShadow = "";
+    }
+  };
+
   const handleRatingClick = (score: number) => {
     const currentScore = formData.overallSelfRating || 0;
     let finalScore = score;
@@ -199,7 +269,7 @@ export const ReviewStep: React.FC<StepProps> = ({
       finalScore = score - 1;
       unselectedStars.push(score);
     } else if (score < currentScore) {
-      for (let s = score + 1; s <= currentScore; s++) {
+      for (let s = score + 1; s <= Math.ceil(currentScore); s++) {
         unselectedStars.push(s);
       }
       finalScore = score;
@@ -214,17 +284,40 @@ export const ReviewStep: React.FC<StepProps> = ({
       setTimeout(() => setShatteringStars([]), 480);
     }
 
-    if (onChange) {
-      onChange("overallSelfRating", finalScore);
+    applySelfRating(finalScore);
+  };
+
+  const handleSelfRatingInputChange = (text: string) => {
+    if (text === "") {
+      setSelfRatingDraft("");
+      if (onChange) onChange("overallSelfRating", 0);
+      return;
     }
-    if (clearError) {
-      clearError("overallSelfRating");
+    // Only 0–5 with optional one decimal (1.4); blocks 1.40 / 33 / 6
+    if (!/^\d{0,1}(\.\d{0,1})?$/.test(text)) return;
+    if (text === ".") return;
+    const parsed = parseFloat(text);
+    if (!Number.isNaN(parsed) && parsed > 5) return;
+
+    setSelfRatingDraft(text);
+    if (text.endsWith(".")) return;
+    if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 5) {
+      applySelfRating(parsed, false);
     }
-    const el = document.getElementById("field-overallSelfRating");
-    if (el) {
-      el.style.borderColor = "";
-      el.style.boxShadow = "";
+  };
+
+  const handleSelfRatingInputBlur = () => {
+    const raw = selfRatingDraft.trim();
+    if (!raw || raw === ".") {
+      applySelfRating(0);
+      return;
     }
+    const parsed = parseFloat(raw);
+    if (Number.isNaN(parsed) || parsed <= 0 || parsed > 5) {
+      setSelfRatingDraft(formatSelfRatingDraft(formData.overallSelfRating || 0));
+      return;
+    }
+    applySelfRating(parsed);
   };
 
   const handleTextChange = (field: keyof ReviewFormData, val: string) => {
@@ -549,7 +642,7 @@ export const ReviewStep: React.FC<StepProps> = ({
           ) : (
             <div className="space-y-3">
               {(formData.projects || []).map((project, index) => {
-                const isExpanded = readOnly ? (expandedProjects[index] !== false) : Boolean(expandedProjects[index]);
+                const isExpanded = Boolean(expandedProjects[index]);
                 return (
                   <div
                     key={`${project.projectName}-${index}`}
@@ -561,10 +654,10 @@ export const ReviewStep: React.FC<StepProps> = ({
                       className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-white hover:bg-slate-50/60 cursor-pointer select-none group transition-colors"
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                        <span className="shrink-0 px-2 py-0.5 text-[10px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+                        <span className="shrink-0 px-2.5 py-1 text-sm sm:text-base font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
                           Project {index + 1}
                         </span>
-                        <h4 className="text-xs sm:text-sm font-bold text-[#0F172A] leading-snug group-hover:text-[#2563EB] transition-colors">
+                        <h4 className="text-sm sm:text-base font-bold text-[#0F172A] leading-snug group-hover:text-[#2563EB] transition-colors">
                           {project.projectName || "—"}
                         </h4>
                       </div>
@@ -577,13 +670,7 @@ export const ReviewStep: React.FC<StepProps> = ({
                           </span>
                         )}
 
-                        {/* Accordion Chevron */}
-                        <div className="p-0.5 rounded-md text-[#334155] group-hover:text-[#2563EB] transition-colors">
-                          <ChevronDown
-                            className={`w-4 h-4 transition-transform duration-300 ease-in-out ${isExpanded ? "rotate-180 text-[#2563EB]" : ""
-                              }`}
-                          />
-                        </div>
+                        <ProjectExpandIcon expanded={isExpanded} />
                       </div>
                     </div>
 
@@ -760,25 +847,25 @@ export const ReviewStep: React.FC<StepProps> = ({
               );
               const avgScore =
                 ratedCriteria.length > 0
-                  ? (
+                  ? formatScoreDisplay(
                     ratedCriteria.reduce(
                       (sum, c) =>
                         sum + (teamRatings[c.key as keyof typeof teamRatings] || 0),
                       0
                     ) / ratedCriteria.length
-                  ).toFixed(1)
+                  )
                   : teamRatings.communication
-                    ? `${teamRatings.communication}.0`
+                    ? formatScoreDisplay(teamRatings.communication)
                     : null;
 
               return avgScore ? (
                 <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
-                  <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
+                  <FractionalStars score={Number(avgScore) || 0} />
                   <span className="text-[11px] font-semibold text-[#334155]">Average:</span>
                   <span className="text-xs sm:text-sm font-extrabold text-[#0F172A]">
                     {avgScore}
                   </span>
-                  <span className="text-[10px] font-bold text-[#475569]">/ 5.0</span>
+                  <span className="text-[10px] font-bold text-[#475569]">/ 5</span>
                 </div>
               ) : null;
             })()}
@@ -804,19 +891,28 @@ export const ReviewStep: React.FC<StepProps> = ({
                       </span>
                       <div className="flex items-center gap-2 shrink-0">
                         <div className="flex items-center gap-1">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              className={`w-4 h-4 transition-colors duration-150 ${s <= score
-                                  ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
-                                  : "fill-transparent text-gray-300"
-                                }`}
-                            />
-                          ))}
+                          {[1, 2, 3, 4, 5].map((s) => {
+                            const fillRatio = Math.max(0, Math.min(1, score - (s - 1)));
+                            return (
+                              <span key={s} className="relative inline-flex w-4 h-4">
+                                <Star className="absolute inset-0 w-full h-full fill-transparent text-gray-300" />
+                                {fillRatio > 0 && (
+                                  <Star
+                                    className="absolute inset-0 w-full h-full fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
+                                    style={
+                                      fillRatio < 1
+                                        ? { clipPath: `inset(0 ${Math.round((1 - fillRatio) * 100)}% 0 0)` }
+                                        : undefined
+                                    }
+                                  />
+                                )}
+                              </span>
+                            );
+                          })}
                         </div>
                         {score > 0 && (
                           <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200">
-                            {score}.0
+                            {formatScoreDisplay(score)}
                           </span>
                         )}
                       </div>
@@ -1005,17 +1101,19 @@ export const ReviewStep: React.FC<StepProps> = ({
 
                 const avgScore =
                   scores.length > 0
-                    ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1)
+                    ? formatScoreDisplay(
+                        scores.reduce((a, b) => a + b, 0) / scores.length,
+                      )
                     : null;
 
                 return avgScore ? (
                   <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
-                    <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
+                    <FractionalStars score={Number(avgScore) || 0} />
                     <span className="text-[11px] font-semibold text-[#334155]">Average:</span>
                     <span className="text-xs sm:text-sm font-extrabold text-[#0F172A]">
                       {avgScore}
                     </span>
-                    <span className="text-[10px] font-bold text-[#475569]">/ 5.0</span>
+                    <span className="text-[10px] font-bold text-[#475569]">/ 5</span>
                   </div>
                 ) : null;
               })()}
@@ -1062,19 +1160,28 @@ export const ReviewStep: React.FC<StepProps> = ({
                   </span>
                   <div className="flex items-center gap-2 shrink-0">
                     <div className="flex items-center gap-1">
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star
-                          key={s}
-                          className={`w-4 h-4 transition-colors duration-150 ${s <= item.score
-                              ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
-                              : "fill-transparent text-gray-300"
-                            }`}
-                        />
-                      ))}
+                      {[1, 2, 3, 4, 5].map((s) => {
+                        const fillRatio = Math.max(0, Math.min(1, item.score - (s - 1)));
+                        return (
+                          <span key={s} className="relative inline-flex w-4 h-4">
+                            <Star className="absolute inset-0 w-full h-full fill-transparent text-gray-300" />
+                            {fillRatio > 0 && (
+                              <Star
+                                className="absolute inset-0 w-full h-full fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)]"
+                                style={
+                                  fillRatio < 1
+                                    ? { clipPath: `inset(0 ${Math.round((1 - fillRatio) * 100)}% 0 0)` }
+                                    : undefined
+                                }
+                              />
+                            )}
+                          </span>
+                        );
+                      })}
                     </div>
                     {item.score > 0 && (
                       <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-1.5 py-0.5 rounded border border-blue-200">
-                        {item.score}.0
+                        {formatScoreDisplay(item.score)}
                       </span>
                     )}
                   </div>
@@ -1145,7 +1252,9 @@ export const ReviewStep: React.FC<StepProps> = ({
             {formData.overallSelfRating > 0 && (
               <span className="text-xs font-bold text-[#2563EB] px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB]" />
-                <span>Self-Rating: {formData.overallSelfRating}/5</span>
+                <span>
+                  Self-Rating: {formatScoreDisplay(formData.overallSelfRating)}/5
+                </span>
               </span>
             )}
           </div>
@@ -1168,7 +1277,8 @@ export const ReviewStep: React.FC<StepProps> = ({
               </span>
               {formData.overallSelfRating > 0 && (
                 <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60 ml-1 shrink-0">
-                  {RATING_LABELS[formData.overallSelfRating]}
+                  {RATING_LABELS[Math.round(formData.overallSelfRating)] ||
+                    RATING_LABELS[Math.max(1, Math.min(5, Math.round(formData.overallSelfRating)))]}
                 </span>
               )}
             </div>
@@ -1200,13 +1310,30 @@ export const ReviewStep: React.FC<StepProps> = ({
                 })}
               </div>
 
-              {formData.overallSelfRating > 0 ? (
-                <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-200 whitespace-nowrap">
-                  {formData.overallSelfRating}.0 / 5.0
-                </span>
-              ) : (
-                <span className="text-[10px] font-medium text-[#475569]">Not rated</span>
-              )}
+              {/* Manual 1–5 entry (same idea as Step 3 / evaluation score box) */}
+              <input
+                type="text"
+                inputMode="decimal"
+                disabled={readOnly}
+                readOnly={readOnly}
+                value={
+                  !readOnly && hoveredRating > 0
+                    ? String(hoveredRating)
+                    : selfRatingDraft
+                }
+                onChange={(e) => handleSelfRatingInputChange(e.target.value)}
+                onBlur={handleSelfRatingInputBlur}
+                onFocus={readOnly ? undefined : (e) => e.target.select()}
+                maxLength={3}
+                title={readOnly ? "View only" : "Type rating 1–5 (one decimal, e.g. 1.4) or click stars"}
+                aria-label="Enter overall self-rating from 1 to 5 (one decimal allowed)"
+                className={`w-14 h-7 text-center text-xs font-extrabold text-[#1D4ED8] bg-[#EFF6FF] border-[1.5px] border-[#BFDBFE] rounded-lg outline-none transition-all ${
+                  readOnly
+                    ? "opacity-70 cursor-default"
+                    : "hover:bg-[#DBEAFE] hover:border-[#93C5FD] focus:bg-white focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/30 cursor-text"
+                }`}
+              />
+              <span className="text-[10px] font-bold text-[#475569] whitespace-nowrap">/ 5</span>
             </div>
 
             {!readOnly && (!formData.overallSelfRating || formData.overallSelfRating <= 0) && errors?.overallSelfRating && (

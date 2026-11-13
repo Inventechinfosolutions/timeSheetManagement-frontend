@@ -28,6 +28,17 @@ interface ApiErrorBody {
   message?: string | string[];
 }
 
+/** One decimal max: 4.43 → "4.4", whole numbers → "4" (not "4.0" / "4.00"). */
+export const formatRatingOneDecimal = (
+  value: number | string | null | undefined,
+): string => {
+  if (value === null || value === undefined || value === "") return "";
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  const one = Number(n.toFixed(1));
+  return Number.isInteger(one) ? String(one) : String(one);
+};
+
 export const readApiError = (error: unknown): string => {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data;
@@ -759,9 +770,7 @@ export const toManagerReviewRecord = (
   assignerId: "assignerId" in review ? review.assignerId || undefined : undefined,
   managerId: "managerId" in review ? review.managerId || undefined : undefined,
   finalRating:
-    review.finalRating == null
-      ? ""
-      : String(Number(review.finalRating)),
+    review.finalRating == null ? "" : formatRatingOneDecimal(review.finalRating),
   status: review.status,
   reviewId: review.id,
   description: review.description || "",

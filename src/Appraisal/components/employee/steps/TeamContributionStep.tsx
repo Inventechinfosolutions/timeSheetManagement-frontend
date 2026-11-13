@@ -146,7 +146,9 @@ const CriterionStarButton: React.FC<CriterionStarButtonProps> = ({
 }) => {
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const displayRating = Math.max(currentRating, hovered);
-  const isFilled = starIndex <= displayRating;
+  const fillRatio = Math.max(0, Math.min(1, displayRating - (starIndex - 1)));
+  const isFull = fillRatio >= 1;
+  const isPartial = fillRatio > 0 && fillRatio < 1;
 
   useEffect(() => {
     if (isDirectlyClicked && btnRef.current) {
@@ -177,13 +179,19 @@ const CriterionStarButton: React.FC<CriterionStarButtonProps> = ({
       title={`${criterionTitle}: ${starIndex} of 5 (${RATING_LABELS[starIndex]})`}
       className="relative p-1 rounded-lg cursor-pointer focus:outline-none select-none overflow-visible"
     >
-      <Star
-        className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-200 ${
-          isFilled && !isShattering
-            ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_2px_4px_rgba(245,158,11,0.5)]"
-            : "text-gray-300 fill-transparent hover:text-[#F59E0B]"
-        }`}
-      />
+      <span className="relative inline-flex w-4 h-4 sm:w-5 sm:h-5">
+        <Star className="absolute inset-0 w-full h-full text-gray-300 fill-transparent" />
+        {(isFull || isPartial) && !isShattering && (
+          <Star
+            className="absolute inset-0 w-full h-full fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_2px_4px_rgba(245,158,11,0.5)]"
+            style={
+              isPartial
+                ? { clipPath: `inset(0 ${Math.round((1 - fillRatio) * 100)}% 0 0)` }
+                : undefined
+            }
+          />
+        )}
+      </span>
       {isShattering && <ShatteringStar />}
     </button>
   );
@@ -200,6 +208,40 @@ export const TeamContributionStep: React.FC<StepProps> = ({
   const [hoveredStars, setHoveredStars] = useState<Record<string, number>>({});
   const [animatingStar, setAnimatingStar] = useState<{ key: string; star: number } | null>(null);
   const [shatteringStars, setShatteringStars] = useState<ShatteringStarItem[]>([]);
+  const formatDraft = (score: number) => {
+    if (score <= 0) return "";
+    const n = Number(Number(score).toFixed(1));
+    return Number.isInteger(n) ? String(n) : String(n);
+  };
+
+  const [ratingDrafts, setRatingDrafts] = useState<Record<string, string>>(() => {
+    const init: Record<string, string> = {};
+    CRITERIA.forEach((c) => {
+      const v = (ratings as Record<string, number>)[c.key] || 0;
+      init[c.key] = formatDraft(v);
+    });
+    return init;
+  });
+
+  const applyCriterionRating = (
+    criterionKey: string,
+    score: number,
+    syncDraft = true,
+  ) => {
+    const clamped = Math.max(0, Math.min(5, score));
+    const normalized = clamped <= 0 ? 0 : Number(Number(clamped).toFixed(1));
+    onChange("teamRatings" as any, {
+      ...ratings,
+      [criterionKey]: normalized,
+    });
+    if (normalized > 0 && clearError) clearError(criterionKey);
+    if (syncDraft) {
+      setRatingDrafts((prev) => ({
+        ...prev,
+        [criterionKey]: formatDraft(normalized),
+      }));
+    }
+  };
 
   const handleRate = (criterionKey: string, score: number) => {
     const currentScore = (ratings as Record<string, number>)[criterionKey] || 0;
@@ -210,7 +252,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
       finalScore = score - 1;
       unselectedStars.push(score);
     } else if (score < currentScore) {
-      for (let s = score + 1; s <= currentScore; s++) {
+      for (let s = score + 1; s <= Math.ceil(currentScore); s++) {
         unselectedStars.push(s);
       }
       finalScore = score;
@@ -237,14 +279,45 @@ export const TeamContributionStep: React.FC<StepProps> = ({
       }, 480);
     }
 
-    const updated = {
-      ...ratings,
-      [criterionKey]: finalScore,
-    };
-    onChange("teamRatings" as any, updated);
-    if (clearError) {
-      clearError(criterionKey);
+    applyCriterionRating(criterionKey, finalScore);
+  };
+
+  const handleCriterionInputChange = (criterionKey: string, text: string) => {
+    if (readOnly) return;
+    if (text === "") {
+      setRatingDrafts((prev) => ({ ...prev, [criterionKey]: "" }));
+      applyCriterionRating(criterionKey, 0, false);
+      return;
     }
+    if (!/^\d{0,1}(\.\d{0,1})?$/.test(text)) return;
+    if (text === ".") return;
+    const parsed = parseFloat(text);
+    if (!Number.isNaN(parsed) && parsed > 5) return;
+
+    setRatingDrafts((prev) => ({ ...prev, [criterionKey]: text }));
+    if (text.endsWith(".")) return;
+    if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 5) {
+      applyCriterionRating(criterionKey, parsed, false);
+    }
+  };
+
+  const handleCriterionInputBlur = (criterionKey: string) => {
+    if (readOnly) return;
+    const raw = (ratingDrafts[criterionKey] || "").trim();
+    if (!raw || raw === ".") {
+      applyCriterionRating(criterionKey, 0);
+      return;
+    }
+    const parsed = parseFloat(raw);
+    const current = (ratings as Record<string, number>)[criterionKey] || 0;
+    if (Number.isNaN(parsed) || parsed <= 0 || parsed > 5) {
+      setRatingDrafts((prev) => ({
+        ...prev,
+        [criterionKey]: formatDraft(current),
+      }));
+      return;
+    }
+    applyCriterionRating(criterionKey, parsed);
   };
 
   return (
@@ -291,7 +364,7 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                     <span className="text-red-500 font-bold text-xs">*</span>
                   </div>
 
-                  <div className="flex items-center shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <div
                       className="flex items-center gap-0.5"
                       onMouseLeave={() =>
@@ -313,20 +386,54 @@ export const TeamContributionStep: React.FC<StepProps> = ({
                             criterionTitle={criterion.title}
                             starIndex={starIndex}
                             currentRating={currentRating}
-                            hovered={hovered}
+                            hovered={readOnly ? 0 : hovered}
                             isDirectlyClicked={isDirectlyClicked}
                             isShattering={isShattering}
-                            onRate={handleRate}
-                            onHover={(key, score) =>
-                              setHoveredStars((prev) => ({
-                                ...prev,
-                                [key]: score,
-                              }))
+                            onRate={readOnly ? () => {} : handleRate}
+                            onHover={
+                              readOnly
+                                ? () => {}
+                                : (key, score) =>
+                                    setHoveredStars((prev) => ({
+                                      ...prev,
+                                      [key]: score,
+                                    }))
                             }
                           />
                         );
                       })}
                     </div>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      disabled={readOnly}
+                      readOnly={readOnly}
+                      maxLength={3}
+                      value={
+                        !readOnly && hovered > 0
+                          ? String(hovered)
+                          : ratingDrafts[criterion.key] ?? ""
+                      }
+                      onChange={(e) =>
+                        handleCriterionInputChange(criterion.key, e.target.value)
+                      }
+                      onBlur={() => handleCriterionInputBlur(criterion.key)}
+                      onFocus={readOnly ? undefined : (e) => e.target.select()}
+                      title={
+                        readOnly
+                          ? "View only"
+                          : "Type rating 1–5 (decimals OK) or click stars"
+                      }
+                      aria-label={`Enter rating for ${criterion.title}`}
+                      className={`w-14 h-7 text-center text-xs font-extrabold text-[#1D4ED8] bg-[#EFF6FF] border-[1.5px] border-[#BFDBFE] rounded-lg outline-none transition-all ${
+                        readOnly
+                          ? "opacity-70 cursor-default"
+                          : "hover:bg-[#DBEAFE] hover:border-[#93C5FD] focus:bg-white focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/30 cursor-text"
+                      }`}
+                    />
+                    <span className="text-[10px] font-bold text-[#475569] whitespace-nowrap">
+                      / 5
+                    </span>
                   </div>
                 </div>
 

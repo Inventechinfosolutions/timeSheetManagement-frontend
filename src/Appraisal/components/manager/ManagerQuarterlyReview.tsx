@@ -452,7 +452,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const quarterOptions = (() => {
     const seen = new Set<string>();
     const options: { value: string; label: string }[] = [
-      { value: AppraisalFilterAll.ALL, label: "Quarter" },
+      { value: AppraisalFilterAll.ALL, label: "All Quarters" },
     ];
     masterYears.forEach((year) => {
       year.quarters?.forEach((item) => {
@@ -576,7 +576,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
           {/* Action Area & Manager Department at top right */}
           <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-2.5 flex-wrap">
-            {fullDepartmentName && !isCeoOrGm && (
+            {/* Managers only — admin uses the Department filter instead */}
+            {fullDepartmentName && !isCeoOrGm && !isAdmin && (
               <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white border border-[#E2E8F0] shadow-2xs shrink-0">
                 <Building2 className="w-4 h-4 text-[#2563EB] shrink-0" />
                 <span className="text-xs font-semibold text-[#64748B]">Department:</span>
@@ -702,7 +703,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
               <Dropdown
                 className="shrink-0 filter-item-stagger-3"
-                placeholder="Quarters"
+                placeholder="All Quarters"
                 allowClear={false}
                 defaultValue=""
                 prefixIcon={

@@ -242,6 +242,31 @@ const AppraisalMappingPage: React.FC = () => {
       id: String(p.id || p.employeeId),
     }));
 
+  /** Reload full Assigner dropdown for a department (after Edit/Save leaves a 1-person list). */
+  const reloadDepartmentAssigners = (department: string) => {
+    if (!department) {
+      setAssignerPeople([]);
+      return Promise.resolve();
+    }
+    skipDeptAssignerFetchRef.current = false;
+    setLoadingAssigners(true);
+    return dispatch(
+      getEntitiesSelect({
+        department,
+        role: APPRAISAL_ROLES,
+      }),
+    )
+      .then((action: any) => {
+        const list = Array.isArray(action.payload)
+          ? action.payload
+          : action.payload?.data || [];
+        setAssignerPeople(mapPeople(list as Person[]));
+      })
+      .finally(() => {
+        setLoadingAssigners(false);
+      });
+  };
+
   useEffect(() => {
     dispatch(fetchDepartments());
   }, [dispatch]);
@@ -495,29 +520,37 @@ const AppraisalMappingPage: React.FC = () => {
         const toCreate = stagedEmployees.filter((emp) => emp.mappingId == null);
         if (toCreate.length === 0) {
           message.info("No new people to map.");
-          return;
+        } else {
+          await dispatch(
+            createAppraisalMappingsBulk(
+              toCreate.map((emp) => ({
+                department: selectedDepartment,
+                assignerId: selectedAssigner.employeeId,
+                assignerName: selectedAssigner.fullName,
+                assignerType,
+                employeeId: emp.employeeId,
+                employeeName: emp.fullName,
+              })),
+            ),
+          ).unwrap();
+          message.success("Appraisal mapping saved.");
         }
-        await dispatch(
-          createAppraisalMappingsBulk(
-            toCreate.map((emp) => ({
-              department: selectedDepartment,
-              assignerId: selectedAssigner.employeeId,
-              assignerName: selectedAssigner.fullName,
-              assignerType,
-              employeeId: emp.employeeId,
-              employeeName: emp.fullName,
-            })),
-          ),
-        ).unwrap();
-        message.success("Appraisal mapping saved.");
       }
 
+      const deptToReload = selectedDepartment;
       setStagedEmployees([]);
       setSelectedEmployeeIds([]);
       setSelectedStagedIds([]);
       setEditBaseline([]);
       setSelectedAssignerId("");
+      setAvailablePeople([]);
+      setSearchText("");
+      setDebouncedSearch("");
+      lastSeededAssignerRef.current = "";
+      pendingEditGroupRef.current = null;
       setHistoryPage(1);
+      // Re-load full assigner list — Edit replaces dropdown with a single person
+      await reloadDepartmentAssigners(deptToReload);
       dispatch(
         fetchAppraisalMappings({
           page: 1,

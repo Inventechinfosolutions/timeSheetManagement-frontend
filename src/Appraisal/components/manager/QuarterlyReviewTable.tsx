@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { Star, Pencil, Eye, ShieldCheck, UserCheck, Check, X, CheckCircle, XCircle, Calendar, Clock, AlertCircle, Lock, RotateCcw } from "lucide-react";
+import { Star, Pencil, Eye, Send, ShieldCheck, UserCheck, Check, X, CheckCircle, XCircle, Calendar, Clock, AlertCircle, Lock, RotateCcw } from "lucide-react";
 import { ManagerQuarterlyReviewRecord } from "../../types/appraisal.types";
-import { isYearlyReview, yearlyQuarterLabels, formatQuarterDisplay } from "../../utils/appraisalHelpers";
+import { isYearlyReview, yearlyQuarterLabels, formatQuarterDisplay, formatRatingOneDecimal } from "../../utils/appraisalHelpers";
 import { DatePicker, Pagination } from "../../../components/ui";
 import { useAppSelector } from "../../../hooks";
 import { AppraisalApi, readApiError } from "../../reducers/appraisal.reducer";
@@ -238,14 +238,15 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   };
 
   const renderRating = (rating: string) => {
-    if (!rating || rating.trim() === "-") {
+    const display = formatRatingOneDecimal(rating);
+    if (!display) {
       return <span className="qr-rating-empty">—</span>;
     }
 
     return (
       <span className="qr-rating-pill">
         <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
-        {rating}
+        {display}
       </span>
     );
   };
@@ -508,6 +509,16 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
             recordAssignerId === currentId &&
             (!recordManagerId || recordManagerId !== currentId);
           if (isEmployeeAssignerViewOnly) return null;
+
+          // Paper rocket for statuses that mean “evaluate / send next”
+          const isManagerFinalReview =
+            statusUpper === "AWAITING_MANAGER_FINAL_REVIEW" &&
+            !!currentId &&
+            !!recordManagerId &&
+            recordManagerId === currentId;
+          const useSendIcon =
+            statusUpper === "PERFORMANCE_RECEIVED" || isManagerFinalReview;
+
           return (
             <button
               type="button"
@@ -515,11 +526,25 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                 scrollToTop();
                 onEdit?.(record);
               }}
-              className="qr-action-icon-btn qr-action-btn-edit"
-              title={`Edit evaluation for ${record.name}`}
-              aria-label={`Edit evaluation for ${record.name}`}
+              className={`qr-action-icon-btn ${
+                useSendIcon ? "qr-action-btn-send" : "qr-action-btn-edit"
+              }`}
+              title={
+                useSendIcon
+                  ? statusUpper === "PERFORMANCE_RECEIVED"
+                    ? `Evaluate & submit for ${record.name}`
+                    : `Complete manager final review for ${record.name}`
+                  : `Edit evaluation for ${record.name}`
+              }
+              aria-label={
+                useSendIcon
+                  ? statusUpper === "PERFORMANCE_RECEIVED"
+                    ? `Evaluate & submit for ${record.name}`
+                    : `Complete manager final review for ${record.name}`
+                  : `Edit evaluation for ${record.name}`
+              }
             >
-              <Pencil size={18} />
+              {useSendIcon ? <Send size={18} /> : <Pencil size={18} />}
             </button>
           );
         })()}

@@ -445,7 +445,9 @@ const CriterionStarButton: React.FC<CriterionStarButtonProps> = ({
 }) => {
   const btnRef = useRef<HTMLButtonElement | null>(null);
   const displayRating = Math.max(currentRating, hovered);
-  const isFilled = starIndex <= displayRating;
+  const fillRatio = Math.max(0, Math.min(1, displayRating - (starIndex - 1)));
+  const isFull = fillRatio >= 1;
+  const isPartial = fillRatio > 0 && fillRatio < 1;
 
   useEffect(() => {
     if (isDirectlyClicked && btnRef.current) {
@@ -476,13 +478,19 @@ const CriterionStarButton: React.FC<CriterionStarButtonProps> = ({
       title={`${criterionTitle}: ${starIndex} of 5 (${RATING_LABELS[starIndex]})`}
       className="relative p-1 rounded-lg cursor-pointer focus:outline-none select-none overflow-visible"
     >
-      <Star
-        className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors duration-200 ${
-          isFilled && !isShattering
-            ? "fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_2px_4px_rgba(245,158,11,0.5)]"
-            : "text-gray-300 fill-transparent hover:text-[#F59E0B]"
-        }`}
-      />
+      <span className="relative inline-flex w-4 h-4 sm:w-5 sm:h-5">
+        <Star className="absolute inset-0 w-full h-full text-gray-300 fill-transparent" />
+        {(isFull || isPartial) && !isShattering && (
+          <Star
+            className="absolute inset-0 w-full h-full fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_2px_4px_rgba(245,158,11,0.5)]"
+            style={
+              isPartial
+                ? { clipPath: `inset(0 ${Math.round((1 - fillRatio) * 100)}% 0 0)` }
+                : undefined
+            }
+          />
+        )}
+      </span>
       {isShattering && <ShatteringStar />}
     </button>
   );
@@ -494,9 +502,11 @@ interface EnvironmentRatingCardProps {
   title: string;
   value: number;
   error?: string;
+  readOnly?: boolean;
   animatingStar: number | null;
   shatteringStars: number[];
   onRate: (criterionKey: string, score: number) => void;
+  onScoreSet: (criterionKey: string, score: number) => void;
 }
 
 const EnvironmentRatingCard: React.FC<EnvironmentRatingCardProps> = ({
@@ -505,12 +515,61 @@ const EnvironmentRatingCard: React.FC<EnvironmentRatingCardProps> = ({
   title,
   value,
   error,
+  readOnly,
   animatingStar,
   shatteringStars,
   onRate,
+  onScoreSet,
 }) => {
   const [hoveredStar, setHoveredStar] = useState<number>(0);
+  const formatEnvDraft = (score: number) => {
+    if (score <= 0) return "";
+    const n = Number(Number(score).toFixed(1));
+    return Number.isInteger(n) ? String(n) : String(n);
+  };
+  const [draft, setDraft] = useState(formatEnvDraft(value));
   const isSelected = value > 0;
+
+  useEffect(() => {
+    setDraft(formatEnvDraft(value));
+  }, [value]);
+
+  const handleInputChange = (text: string) => {
+    if (readOnly) return;
+    if (text === "") {
+      setDraft("");
+      onScoreSet(criterionKey, 0);
+      return;
+    }
+    if (!/^\d{0,1}(\.\d{0,1})?$/.test(text)) return;
+    if (text === ".") return;
+    const parsed = parseFloat(text);
+    if (!Number.isNaN(parsed) && parsed > 5) return;
+
+    setDraft(text);
+    if (text.endsWith(".")) return;
+    if (!Number.isNaN(parsed) && parsed >= 0 && parsed <= 5) {
+      onScoreSet(criterionKey, parsed);
+    }
+  };
+
+  const handleInputBlur = () => {
+    if (readOnly) return;
+    const raw = draft.trim();
+    if (!raw || raw === ".") {
+      onScoreSet(criterionKey, 0);
+      setDraft("");
+      return;
+    }
+    const parsed = parseFloat(raw);
+    if (Number.isNaN(parsed) || parsed <= 0 || parsed > 5) {
+      setDraft(value > 0 ? String(value) : "");
+      return;
+    }
+    const normalized = Number(Number(parsed).toFixed(1));
+    onScoreSet(criterionKey, normalized);
+    setDraft(Number.isInteger(normalized) ? String(normalized) : String(normalized));
+  };
 
   return (
     <div
@@ -533,12 +592,13 @@ const EnvironmentRatingCard: React.FC<EnvironmentRatingCardProps> = ({
         </div>
         {isSelected && (
           <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60 shrink-0 whitespace-nowrap">
-            {RATING_LABELS[value]}
+            {RATING_LABELS[Math.round(value)] ||
+              RATING_LABELS[Math.max(1, Math.min(5, Math.round(value)))]}
           </span>
         )}
       </div>
 
-      {/* Bottom: 5 Animated Star Buttons & Score Pill */}
+      {/* Bottom: stars + typeable 1–5 score */}
       <div className="flex items-center justify-between gap-2 w-full pt-0.5">
         <div
           className="flex items-center gap-0.5"
@@ -555,23 +615,37 @@ const EnvironmentRatingCard: React.FC<EnvironmentRatingCardProps> = ({
                 criterionTitle={title}
                 starIndex={starIndex}
                 currentRating={value}
-                hovered={hoveredStar}
+                hovered={readOnly ? 0 : hoveredStar}
                 isDirectlyClicked={isDirectlyClicked}
                 isShattering={isShattering}
-                onRate={onRate}
-                onHover={(_, score) => setHoveredStar(score)}
+                onRate={readOnly ? () => {} : onRate}
+                onHover={readOnly ? () => {} : (_, score) => setHoveredStar(score)}
               />
             );
           })}
         </div>
 
-        {value > 0 ? (
-          <span className="text-[11px] font-bold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded-md border border-blue-200 whitespace-nowrap">
-            {value}.0
-          </span>
-        ) : (
-          <span className="text-[10px] font-medium text-[#475569]">1–5</span>
-        )}
+        <div className="flex items-center gap-1 shrink-0">
+          <input
+            type="text"
+            inputMode="decimal"
+            disabled={readOnly}
+            readOnly={readOnly}
+            maxLength={3}
+            value={!readOnly && hoveredStar > 0 ? String(hoveredStar) : draft}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onBlur={handleInputBlur}
+            onFocus={readOnly ? undefined : (e) => e.target.select()}
+            title={readOnly ? "View only" : "Type rating 1–5 (decimals OK) or click stars"}
+            aria-label={`Enter rating for ${title}`}
+            className={`w-14 h-7 text-center text-xs font-extrabold text-[#1D4ED8] bg-[#EFF6FF] border-[1.5px] border-[#BFDBFE] rounded-lg outline-none transition-all ${
+              readOnly
+                ? "opacity-70 cursor-default"
+                : "hover:bg-[#DBEAFE] hover:border-[#93C5FD] focus:bg-white focus:border-[#2563EB] focus:ring-[3px] focus:ring-[#2563EB]/30 cursor-text"
+            }`}
+          />
+          <span className="text-[10px] font-bold text-[#475569] whitespace-nowrap">/ 5</span>
+        </div>
       </div>
 
       {error && (
@@ -601,6 +675,14 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
       ? ENVIRONMENT_SCORES[formData.rateCompanyEnvironment]
       : 0;
 
+  const applyRateField = (field: keyof ReviewFormData, score: number) => {
+    if (readOnly) return;
+    const clamped = Math.max(0, Math.min(5, score));
+    const normalized = clamped <= 0 ? 0 : Number(Number(clamped).toFixed(1));
+    onChange(field, normalized);
+    if (normalized > 0 && clearError) clearError(field as string);
+  };
+
   const handleRateField = (field: keyof ReviewFormData, score: number) => {
     if (readOnly) return;
     const currentScore = (formData[field] as number) || 0;
@@ -611,7 +693,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
       finalScore = score - 1;
       unselectedStars.push(score);
     } else if (score < currentScore) {
-      for (let s = score + 1; s <= currentScore; s++) {
+      for (let s = score + 1; s <= Math.ceil(currentScore); s++) {
         unselectedStars.push(s);
       }
       finalScore = score;
@@ -641,10 +723,7 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
       }, 480);
     }
 
-    onChange(field, finalScore);
-    if (clearError) {
-      clearError(field as string);
-    }
+    applyRateField(field, finalScore);
   };
 
   const handleEmojiSelect = (item: (typeof RATING_OPTIONS)[number]) => {
@@ -686,11 +765,13 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
             title="Work Environment Satisfaction"
             value={formData.companyEnvironmentRating || 0}
             error={errors?.companyEnvironmentRating}
+            readOnly={readOnly}
             animatingStar={animatingStars["companyEnvironmentRating"] ?? null}
             shatteringStars={shatteringStars
               .filter((s) => s.key === "companyEnvironmentRating")
               .map((s) => s.star)}
             onRate={(key, score) => handleRateField(key as keyof ReviewFormData, score)}
+            onScoreSet={(key, score) => applyRateField(key as keyof ReviewFormData, score)}
           />
 
           {/* Field 2: Availability of Tools & Resources */}
@@ -700,11 +781,13 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
             title="Availability of Tools & Resources"
             value={formData.toolingAndResourcesRating || 0}
             error={errors?.toolingAndResourcesRating}
+            readOnly={readOnly}
             animatingStar={animatingStars["toolingAndResourcesRating"] ?? null}
             shatteringStars={shatteringStars
               .filter((s) => s.key === "toolingAndResourcesRating")
               .map((s) => s.star)}
             onRate={(key, score) => handleRateField(key as keyof ReviewFormData, score)}
+            onScoreSet={(key, score) => applyRateField(key as keyof ReviewFormData, score)}
           />
 
           {/* Field 3: Manager Support */}
@@ -714,11 +797,13 @@ export const CompanyEnvironmentStep: React.FC<StepProps> = ({
             title="Manager Support"
             value={formData.managementSupportRating || 0}
             error={errors?.managementSupportRating}
+            readOnly={readOnly}
             animatingStar={animatingStars["managementSupportRating"] ?? null}
             shatteringStars={shatteringStars
               .filter((s) => s.key === "managementSupportRating")
               .map((s) => s.star)}
             onRate={(key, score) => handleRateField(key as keyof ReviewFormData, score)}
+            onScoreSet={(key, score) => applyRateField(key as keyof ReviewFormData, score)}
           />
         </div>
       </div>

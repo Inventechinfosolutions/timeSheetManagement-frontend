@@ -696,7 +696,9 @@ export const RevealedRatingModal: React.FC<RevealedRatingModalProps> = ({ data, 
               {/* Rating Score */}
               <div className="flex items-baseline gap-1.5 mb-1.5">
                 <span className="text-4xl sm:text-5xl font-black text-[#0B2568] tracking-tight leading-none">
-                  {Number(animatedScore.toFixed(2))}
+                  {Number.isInteger(Number(animatedScore.toFixed(1)))
+                    ? String(Number(animatedScore.toFixed(1)))
+                    : String(Number(animatedScore.toFixed(1)))}
                 </span>
                 <span className="text-base sm:text-lg font-bold text-slate-400">/ 5</span>
               </div>
