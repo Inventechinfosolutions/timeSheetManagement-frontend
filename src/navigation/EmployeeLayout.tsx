@@ -33,6 +33,8 @@ const EmployeeLayout = () => {
         return "Employee Notes";
       case "inbox":
         return "Inbox";
+      case "master-holidays":
+        return "Holidays";
       default:
         return "Dashboard";
     }
@@ -71,6 +73,8 @@ const EmployeeLayout = () => {
       case "Inbox":
         navigate("/employee-dashboard/inbox");
         break;
+      case "Holidays":
+      case "Holiday":
       case "Master Holidays":
         navigate("/employee-dashboard/master-holidays");
         break;

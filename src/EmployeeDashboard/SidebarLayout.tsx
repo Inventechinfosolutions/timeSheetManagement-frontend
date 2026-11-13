@@ -121,7 +121,7 @@ const SidebarLayout = ({
       case "inbox":
         return "Inbox";
         case "master-holidays":
-         return "Holiday";
+         return "Holidays";
       default:
         return "Dashboard";
     }
@@ -175,6 +175,7 @@ const SidebarLayout = ({
       { name: "Request Management", icon: Calendar },
       { name: "Employee Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
+      { name: "Holidays", icon: Calendar },
     ];
     return items;
   }, [isAppraisalAssigner]);
@@ -329,7 +330,7 @@ const SidebarLayout = ({
                 <div key={item.name} className="relative group">
                  <button
                onClick={() => {
-                   if (item.name === "Holiday") {
+                   if (item.name === "Holidays") {
                      navigate("/employee-dashboard/master-holidays");
                        } else {
                        onTabChange?.(item.name);
