@@ -1173,7 +1173,7 @@ const Header = ({
                 <button
                   type="button"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-1.5 md:gap-2 min-w-0"
+                  className="flex items-center gap-1.5 md:gap-2 min-w-0 cursor-pointer"
                 >
                   <div className="flex flex-col items-start translate-y-[1px]">
                     <span className="text-[12px] md:text-sm font-bold text-white transition-colors leading-none">
@@ -1280,14 +1280,14 @@ const Header = ({
                   {!isAdminOrReceptionist && (
                     <button
                       onClick={handleProfileClick}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left cursor-pointer"
                     >
                       <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
                         <User size={16} className="text-[#667eea]" />
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-[#1B2559]">
-                          Account Settings
+                          My Profile
                         </p>
                         <p className="text-xs text-gray-400">
                           View your profile
@@ -1302,7 +1302,7 @@ const Header = ({
                       setIsDropdownOpen(false);
                       navigate("/about");
                     }}
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left cursor-pointer"
                   >
                     <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center">
                       <Info size={16} className="text-[#4318FF]" />
@@ -1316,7 +1316,7 @@ const Header = ({
                   <div className="border-t border-gray-100 mt-1 pt-1">
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 transition-colors text-left group"
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 transition-colors text-left group cursor-pointer"
                     >
                       <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center group-hover:bg-red-100">
                         <LogOut size={16} className="text-red-600" />
