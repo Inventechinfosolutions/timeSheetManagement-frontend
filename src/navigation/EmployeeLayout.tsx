@@ -71,6 +71,9 @@ const EmployeeLayout = () => {
       case "Inbox":
         navigate("/employee-dashboard/inbox");
         break;
+      case "Master Holidays":
+        navigate("/employee-dashboard/master-holidays");
+        break;
       default:
         navigate("/employee-dashboard");
     }

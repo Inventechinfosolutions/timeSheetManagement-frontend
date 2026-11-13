@@ -120,6 +120,8 @@ const SidebarLayout = ({
         return "Employee Notes";
       case "inbox":
         return "Inbox";
+        case "master-holidays":
+         return "Holiday";
       default:
         return "Dashboard";
     }
@@ -326,11 +328,16 @@ const SidebarLayout = ({
               const isActive = derivedActiveTab === item.name;
               return (
                 <div key={item.name} className="relative group">
-                  <button
-                    onClick={() => {
-                      onTabChange?.(item.name);
-                      setIsMobileOpen(false);
-                    }}
+                 <button
+               onClick={() => {
+                   if (item.name === "Holiday") {
+                     navigate("/employee-dashboard/master-holidays");
+                       } else {
+                       onTabChange?.(item.name);
+                        }
+
+                     setIsMobileOpen(false);
+                   }}
                     className={navItemClass(isActive, isOpen || isMobileOpen)}
                   >
                     {isActive && (isOpen || isMobileOpen) && (
