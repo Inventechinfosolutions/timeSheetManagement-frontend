@@ -175,7 +175,7 @@ const SidebarLayout = ({
       { name: "Request Management", icon: Calendar },
       { name: "Employee Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
-      { name: "Holiday", icon: Calendar },
+      { name: "Holidays", icon: Calendar },
     ];
     return items;
   }, [isAppraisalAssigner]);
