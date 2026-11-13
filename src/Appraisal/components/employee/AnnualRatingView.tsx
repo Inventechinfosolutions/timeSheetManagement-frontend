@@ -1,6 +1,7 @@
 import React from "react";
 import { ArrowLeft, Star, ShieldCheck, Info } from "lucide-react";
 import { Card, CardContent, Button } from "../../../components/ui";
+import { formatRatingOneDecimal } from "../../utils/appraisalHelpers";
 import "./AppraisalDashboard.css";
 
 interface AnnualRatingViewProps {
@@ -65,7 +66,9 @@ const renderQuarterCell = (val: number | null) => {
   return (
     <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-xl bg-white/90 border border-blue-100 shadow-2xs">
       <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
-      <span className="text-sm font-bold text-[#0F172A]">{val}</span>
+      <span className="text-sm font-bold text-[#0F172A]">
+        {formatRatingOneDecimal(val)}
+      </span>
     </div>
   );
 };
@@ -193,7 +196,7 @@ export const AnnualRatingView: React.FC<AnnualRatingViewProps> = ({
                         <div className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-xl bg-[#EFF6FF] border border-[#BFDBFE] shadow-2xs whitespace-nowrap">
                           <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
                           <span className="text-sm font-extrabold text-[#1D4ED8]">
-                            {row.total.toFixed(2)}
+                            {formatRatingOneDecimal(row.total)}
                           </span>
                         </div>
                       </td>

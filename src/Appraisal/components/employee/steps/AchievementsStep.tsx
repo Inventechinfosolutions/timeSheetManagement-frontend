@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { StepProps, PerformanceProject, ProjectRoleEnum, ResponsibilityTypeEnum } from "../../../types/appraisal.types";
 import { AlertCircle, X, Paperclip, ChevronDown, Pencil, Trash2, Check, Plus, UserCheck, ShieldCheck, Loader2 } from "lucide-react";
+import ProjectExpandIcon from "../../common/ProjectExpandIcon";
 import { message, Modal } from "antd";
 import { readApiError } from "../../../reducers/appraisal.reducer";
 import AttachmentItem from "../../common/AttachmentItem";
@@ -1346,7 +1347,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 ) : (
                   <>
                     <Check className="w-3.5 h-3.5" />
-                    <span>{editingIndex !== null ? "Update Project" : "Save Project"}</span>
+                    <span>{editingIndex !== null ? "Update Project" : "Save and Add Project"}</span>
                   </>
                 )}
               </button>
@@ -1457,14 +1458,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                           </button>
                         )}
 
-                        {/* Accordion Chevron */}
-                        <div className="p-1 rounded-lg text-[#334155] group-hover:text-[#2563EB] transition-colors">
-                          <ChevronDown
-                            className={`w-4 h-4 transition-transform duration-200 ease-in-out ${
-                              isExpanded ? "rotate-180 text-[#2563EB]" : ""
-                            }`}
-                          />
-                        </div>
+                        <ProjectExpandIcon expanded={isExpanded} />
                       </div>
                     </div>
 

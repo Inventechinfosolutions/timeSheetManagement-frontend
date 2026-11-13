@@ -246,7 +246,9 @@ const AppraisalMomentCard: React.FC<AppraisalMomentCardProps> = ({
                 <>
                   <div className="mb-1.5 flex items-baseline gap-1.5">
                     <span className="text-4xl font-black leading-none tracking-tight text-[#0B2568] sm:text-5xl">
-                      {Number(score.toFixed(2))}
+                      {Number.isInteger(Number(score.toFixed(1)))
+                        ? String(Number(score.toFixed(1)))
+                        : String(Number(score.toFixed(1)))}
                     </span>
                     <span className="text-base font-bold text-slate-400 sm:text-lg">/ 5</span>
                   </div>

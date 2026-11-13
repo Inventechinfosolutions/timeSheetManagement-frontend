@@ -22,7 +22,6 @@ import {
   ArrowRight,
   ShieldCheck,
   Send,
-  ChevronDown,
 } from "lucide-react";
 import {
   ManagerQuarterlyReviewRecord,
@@ -41,6 +40,7 @@ import {
 } from "../../utils/appraisalHelpers";
 import { ENVIRONMENT_SCORES } from "../../constants/appraisal.constants";
 import AppraisalMomentCard from "../common/AppraisalMomentCard";
+import ProjectExpandIcon from "../common/ProjectExpandIcon";
 import { renderAnimatedEmojiIcon } from "../employee/steps/CompanyEnvironmentStep";
 import {
   AppraisalMappingRecord,
@@ -189,6 +189,56 @@ const getRatingLabel = (score: number): string => {
   return RATING_LABEL_MAP[rounded] || "";
 };
 
+/** Clamp/normalize rating to one decimal (1.4 not 1.49). */
+const normalizeOneDecimal = (score: number): number => {
+  if (!Number.isFinite(score) || score <= 0) return 0;
+  return Number(Math.min(5, Math.max(0, score)).toFixed(1));
+};
+
+/** Display score with at most 1 decimal (4.3 → "4.3"; whole numbers as "4", not "4.0"). */
+const formatScoreDisplay = (score: number | string | null | undefined): string => {
+  const n = Number(score);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  const one = normalizeOneDecimal(n);
+  return Number.isInteger(one) ? String(one) : String(one);
+};
+
+/** Draft text for rating inputs (1.4, not 1.40 / 1.49). */
+const formatRatingDraft = (score: number): string => {
+  if (score <= 0) return "";
+  const one = normalizeOneDecimal(score);
+  return Number.isInteger(one) ? String(one) : String(one);
+};
+
+/** Read-only stars with fractional fill (e.g. 1.4 → 1 full + 40% of 2nd). */
+const FractionalStars: React.FC<{ score: number; sizeClass?: string }> = ({
+  score,
+  sizeClass = "w-4 h-4",
+}) => (
+  <span className="inline-flex items-center gap-0.5">
+    {[1, 2, 3, 4, 5].map((s) => {
+      const fillRatio = Math.max(0, Math.min(1, Number(score) - (s - 1)));
+      const isFull = fillRatio >= 1;
+      const isPartial = fillRatio > 0 && fillRatio < 1;
+      return (
+        <span key={s} className={`relative inline-flex ${sizeClass}`}>
+          <Star className="absolute inset-0 w-full h-full fill-transparent text-gray-300" />
+          {(isFull || isPartial) && (
+            <Star
+              className="absolute inset-0 w-full h-full fill-[#F59E0B] text-[#F59E0B]"
+              style={
+                isPartial
+                  ? { clipPath: `inset(0 ${Math.round((1 - fillRatio) * 100)}% 0 0)` }
+                  : undefined
+              }
+            />
+          )}
+        </span>
+      );
+    })}
+  </span>
+);
+
 const TEAM_CRITERIA = [
   { key: "communication", title: "Communication & Coordination", descKey: "communicationDescription" },
   { key: "ownership", title: "Ownership", descKey: "ownershipDescription" },
@@ -247,7 +297,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       overallPerformanceRating: managerEvaluation?.overallPerformanceRating,
     };
     const value = Number(source[key]);
-    return Number.isFinite(value) && value > 0 ? value : 0;
+    return Number.isFinite(value) && value > 0 ? normalizeOneDecimal(value) : 0;
   };
   const hasManagerEvaluation = Boolean(
     managerEvaluation &&
@@ -730,7 +780,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     const initial: Record<string, string> = {};
     EVALUATION_PARAMETERS.forEach((p) => {
       const saved = savedManagerScore(p.key);
-      initial[p.key] = saved > 0 ? String(saved) : "";
+      initial[p.key] = saved > 0 ? formatRatingDraft(saved) : "";
     });
     return initial;
   });
@@ -741,7 +791,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     value: number;
   } | null>(null);
 
-  // Project Accordion state for Step 2 in Evaluation Panel (closed by default, exactly as in employee view)
+  // Project Accordion — closed by default (assigner / manager view)
   const [expandedProjects, setExpandedProjects] = useState<Record<number, boolean>>({});
   const toggleProjectExpand = (index: number) => {
     setExpandedProjects((prev) => ({
@@ -749,22 +799,6 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       [index]: !prev[index],
     }));
   };
-
-  useEffect(() => {
-    const projects = formData.projects || [];
-    if (projects.length === 0) return;
-    setExpandedProjects((current) => {
-      const next = { ...current };
-      let changed = false;
-      projects.forEach((_, index) => {
-        if (next[index] === undefined) {
-          next[index] = true;
-          changed = true;
-        }
-      });
-      return changed ? next : current;
-    });
-  }, [formData.projects]);
 
   // Form comments
   const [reviewId, setReviewId] = useState<number | undefined>(record.reviewId);
@@ -840,29 +874,30 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
   const applyRevealedEvaluation = (rating: RevealedRating) => {
     const nextScores: Record<string, number> = {
-      productivity: Number(rating.productivity) || 0,
-      qualityOfWork: Number(rating.qualityOfWork) || 0,
-      ownership: Number(rating.ownershipResponsibility) || 0,
-      communication: Number(rating.communication) || 0,
-      teamCollaboration: Number(rating.teamCollaboration) || 0,
-      innovation: Number(rating.innovationProblemSolving) || 0,
-      technicalJobSkills: Number(rating.technicalJobSkills) || 0,
-      overallPerformanceRating: Number(rating.overallPerformanceRating) || 0,
+      productivity: normalizeOneDecimal(Number(rating.productivity) || 0),
+      qualityOfWork: normalizeOneDecimal(Number(rating.qualityOfWork) || 0),
+      ownership: normalizeOneDecimal(Number(rating.ownershipResponsibility) || 0),
+      communication: normalizeOneDecimal(Number(rating.communication) || 0),
+      teamCollaboration: normalizeOneDecimal(Number(rating.teamCollaboration) || 0),
+      innovation: normalizeOneDecimal(Number(rating.innovationProblemSolving) || 0),
+      technicalJobSkills: normalizeOneDecimal(Number(rating.technicalJobSkills) || 0),
+      overallPerformanceRating: normalizeOneDecimal(Number(rating.overallPerformanceRating) || 0),
     };
     setScores(nextScores);
     setRawInputValues(
       Object.fromEntries(
-        Object.entries(nextScores).map(([key, value]) => [key, value > 0 ? String(value) : ""]),
+        Object.entries(nextScores).map(([key, value]) => [
+          key,
+          value > 0 ? formatRatingDraft(value) : "",
+        ]),
       ),
     );
     setStrengths(rating.performanceStrengths || "");
     setImprovements(rating.areasOfImprovement || "");
     setRemarks(rating.managerComment || "");
-    const revealedScore = Number(rating.finalRating);
+    const revealedScore = normalizeOneDecimal(Number(rating.finalRating) || 0);
     setFinalScoreText(
-      Number.isFinite(revealedScore) && revealedScore >= 1 && revealedScore <= 5
-        ? String(revealedScore)
-        : "",
+      revealedScore >= 1 && revealedScore <= 5 ? formatRatingDraft(revealedScore) : "",
     );
 
     // Section 5: Final Review & Submission Fields
@@ -1007,18 +1042,19 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   // Click on a star
   const handleStarClick = (paramKey: string, ratingValue: number) => {
     if (isViewMode) return;
+    const normalized = normalizeOneDecimal(ratingValue);
     setScores((prev) => ({
       ...prev,
-      [paramKey]: ratingValue,
+      [paramKey]: normalized,
     }));
     setRawInputValues((prev) => ({
       ...prev,
-      [paramKey]: ratingValue.toString(),
+      [paramKey]: formatRatingDraft(normalized),
     }));
     clearFieldError(paramKey);
   };
 
-  // Type directly in the numeric input
+  // Type directly in the numeric input — one decimal only (1.4, not 1.49)
   const handleInputChange = (paramKey: string, text: string) => {
     if (isViewMode) return;
     if (text === "") {
@@ -1027,16 +1063,23 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       return;
     }
 
-    if (!/^[0-9]*\.?[0-9]*$/.test(text)) {
-      return;
-    }
+    if (!/^\d{0,1}(\.\d{0,1})?$/.test(text)) return;
+    if (text === ".") return;
+    const parsed = parseFloat(text);
+    if (!Number.isNaN(parsed) && parsed > 5) return;
 
     setRawInputValues((prev) => ({ ...prev, [paramKey]: text }));
 
-    const parsed = parseFloat(text);
-    if (!isNaN(parsed)) {
-      const clamped = Math.min(Math.max(parsed, 0), 5);
-      setScores((prev) => ({ ...prev, [paramKey]: clamped }));
+    if (text.endsWith(".")) {
+      clearFieldError(paramKey);
+      return;
+    }
+
+    if (!Number.isNaN(parsed)) {
+      setScores((prev) => ({
+        ...prev,
+        [paramKey]: normalizeOneDecimal(parsed),
+      }));
     } else {
       setScores((prev) => ({ ...prev, [paramKey]: 0 }));
     }
@@ -1046,24 +1089,24 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
   const handleInputBlur = (paramKey: string) => {
     if (isViewMode) return;
-    const raw = rawInputValues[paramKey];
-    if (!raw || raw.trim() === "") {
+    const raw = (rawInputValues[paramKey] || "").trim();
+    if (!raw || raw === ".") {
       setScores((prev) => ({ ...prev, [paramKey]: 0 }));
       setRawInputValues((prev) => ({ ...prev, [paramKey]: "" }));
       return;
     }
 
     const parsed = parseFloat(raw);
-    if (isNaN(parsed) || parsed <= 0) {
+    if (Number.isNaN(parsed) || parsed <= 0) {
       setScores((prev) => ({ ...prev, [paramKey]: 0 }));
       setRawInputValues((prev) => ({ ...prev, [paramKey]: "" }));
     } else {
-      const clamped = Math.min(Math.max(parsed, 0), 5);
-      const formatted = Number.isInteger(clamped)
-        ? clamped.toString()
-        : clamped.toString();
-      setScores((prev) => ({ ...prev, [paramKey]: clamped }));
-      setRawInputValues((prev) => ({ ...prev, [paramKey]: formatted }));
+      const normalized = normalizeOneDecimal(parsed);
+      setScores((prev) => ({ ...prev, [paramKey]: normalized }));
+      setRawInputValues((prev) => ({
+        ...prev,
+        [paramKey]: formatRatingDraft(normalized),
+      }));
     }
   };
 
@@ -1071,45 +1114,49 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     return scores[paramKey] ?? 0;
   };
 
-  // Render individual star with true 50% half-star clipping support
+  // Fractional fill (e.g. 1.4 → 40% of star 2), not only half-stars
   const renderStarIcon = (
     starIndex: number,
     currentScore: number,
     isHovering = false
   ) => {
-    if (currentScore >= starIndex) {
+    const fillRatio = Math.max(0, Math.min(1, currentScore - (starIndex - 1)));
+    if (fillRatio >= 1) {
       return (
         <Star
-          className={`eval-star-icon eval-star-icon-filled ${isHovering ? "scale-105" : ""
-            }`}
+          className={`eval-star-icon eval-star-icon-filled ${isHovering ? "scale-105" : ""}`}
         />
       );
     }
 
-    const diff = starIndex - currentScore;
-    if (diff > 0 && diff < 1) {
+    if (fillRatio > 0) {
       return (
         <span className="eval-star-half-wrapper" aria-hidden="true">
           <Star className="eval-star-icon eval-star-icon-empty" />
-          <Star className="eval-star-icon eval-star-icon-filled eval-star-half-overlay" />
+          <Star
+            className="eval-star-icon eval-star-icon-filled eval-star-half-overlay"
+            style={{
+              clipPath: `inset(0 ${Math.round((1 - fillRatio) * 100)}% 0 0)`,
+              WebkitClipPath: `inset(0 ${Math.round((1 - fillRatio) * 100)}% 0 0)`,
+            }}
+          />
         </span>
       );
     }
 
     return (
       <Star
-        className={`eval-star-icon eval-star-icon-empty ${isHovering ? "eval-star-icon-hovered" : ""
-          }`}
+        className={`eval-star-icon eval-star-icon-empty ${isHovering ? "eval-star-icon-hovered" : ""}`}
       />
     );
   };
 
-  // System-calculated average from evaluation parameters — this IS the final rating (2 dp, matches DB)
+  // System-calculated average — one decimal only (1.4, not 1.41)
   const calculatedAverage = useMemo(() => {
     const vals = EVALUATION_PARAMETERS.map((p) => scores[p.key] || 0).filter((v) => v > 0);
     if (vals.length === 0) return null;
     const sum = vals.reduce((a, b) => a + b, 0);
-    return Number((sum / vals.length).toFixed(2));
+    return normalizeOneDecimal(sum / vals.length);
   }, [scores]);
 
   // averageScore = auto-computed (no manual entry required)
@@ -2068,38 +2115,36 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 {(formData.projects || []).length === 0 ? (
                   <KvRow label="Projects" value="No project added." />
                 ) : (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {(formData.projects || []).map((project, index) => {
                       const isExpanded = Boolean(expandedProjects[index]);
                       return (
                         <div
                           key={`${project.projectName}-${index}`}
-                          className="rounded-xl bg-slate-50/40 overflow-hidden"
+                          className="bg-white border border-[#64748B] hover:border-[#64748B] rounded-2xl shadow-2xs overflow-hidden transition-all duration-200"
                         >
                           <div
                             onClick={() => toggleProjectExpand(index)}
-                            className="flex items-center justify-between gap-3 px-1 py-2.5 cursor-pointer select-none group border-b border-[#94A3B8]"
+                            className="flex items-center justify-between gap-3 px-3.5 py-3 bg-white hover:bg-slate-50/60 cursor-pointer select-none group transition-colors"
                           >
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                              <span className="shrink-0 text-[11px] font-bold text-[#2563EB]">
-                                Project {index + 1}:
+                              <span className="shrink-0 px-2.5 py-1 text-sm sm:text-base font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+                                Project {index + 1}
                               </span>
-                              <h4 className="text-sm font-semibold text-[#0F172A] leading-snug truncate">
+                              <h4 className="text-sm sm:text-base font-bold text-[#0F172A] leading-snug truncate group-hover:text-[#2563EB] transition-colors">
                                 {project.projectName || "—"}
                               </h4>
                               {project.isDraft && (
-                                <span className="text-[10px] font-bold text-amber-700">Draft</span>
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-extrabold text-amber-700 bg-amber-50 border border-amber-300 rounded-md">
+                                  Draft
+                                </span>
                               )}
                             </div>
-                            <ChevronDown
-                              className={`w-4 h-4 text-[#334155] shrink-0 transition-transform duration-300 ${
-                                isExpanded ? "rotate-180 text-[#2563EB]" : ""
-                              }`}
-                            />
+                            <ProjectExpandIcon expanded={isExpanded} />
                           </div>
 
                           {isExpanded && (
-                            <div className="px-1 pb-1 animate-in fade-in duration-200">
+                            <div className="px-3.5 pb-3 pt-1 border-t border-[#E2E8F0] animate-in fade-in duration-200">
                               <KvRow label="Project Name" value={project.projectName} />
                               <KvRow label="Project Role" value={project.projectRole} />
                               <KvRow label="Responsibility Type" value={project.responsibilityType} />
@@ -2169,10 +2214,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   </div>
                   {avgTeamScore ? (
                     <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
-                      <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
+                      <FractionalStars
+                        score={Number(avgTeamScore) || 0}
+                        sizeClass="w-3.5 h-3.5"
+                      />
                       <span className="text-[11px] font-semibold text-[#334155]">Average:</span>
-                      <span className="text-xs sm:text-sm font-bold text-[#0F172A]">{avgTeamScore}</span>
-                      <span className="text-[10px] font-bold text-[#475569]">/ 5.0</span>
+                      <span className="text-xs sm:text-sm font-bold text-[#0F172A]">
+                        {formatScoreDisplay(avgTeamScore)}
+                      </span>
+                      <span className="text-[10px] font-bold text-[#475569]">/ 5</span>
                     </div>
                   ) : null}
                 </div>
@@ -2192,20 +2242,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             {criterion.title}:
                           </span>
                           <span className="inline-flex items-center gap-1.5 flex-wrap">
-                            <span className="inline-flex items-center gap-0.5">
-                              {[1, 2, 3, 4, 5].map((s) => (
-                                <Star
-                                  key={s}
-                                  className={`w-4 h-4 ${
-                                    s <= score
-                                      ? "fill-[#F59E0B] text-[#F59E0B]"
-                                      : "fill-transparent text-gray-300"
-                                  }`}
-                                />
-                              ))}
-                            </span>
+                            <FractionalStars score={Number(score) || 0} />
                             <span className="text-sm sm:text-[15px] font-semibold text-[#0F172A]">
-                              {score > 0 ? `${score}.0 / 5.0` : "Not rated"}
+                              {score > 0
+                                ? `${formatScoreDisplay(score)} / 5`
+                                : "Not rated"}
                             </span>
                           </span>
                         </div>
@@ -2319,12 +2360,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                         return avgScore ? (
                           <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
-                            <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] drop-shadow-[0_1px_2px_rgba(245,158,11,0.3)] shrink-0" />
+                            <FractionalStars
+                              score={Number(avgScore) || 0}
+                              sizeClass="w-3.5 h-3.5"
+                            />
                             <span className="text-[11px] font-semibold text-[#334155]">Average:</span>
                             <span className="text-xs sm:text-sm font-extrabold text-[#0F172A]">
-                              {avgScore}
+                              {formatScoreDisplay(avgScore)}
                             </span>
-                            <span className="text-[10px] font-bold text-[#475569]">/ 5.0</span>
+                            <span className="text-[10px] font-bold text-[#475569]">/ 5</span>
                           </div>
                         ) : null;
                       })()}
@@ -2351,20 +2395,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                           {item.title}:
                         </span>
                         <span className="inline-flex items-center gap-2 flex-wrap">
-                          <span className="inline-flex items-center gap-0.5">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <Star
-                                key={s}
-                                className={`w-4 h-4 ${
-                                  s <= item.score
-                                    ? "fill-[#F59E0B] text-[#F59E0B]"
-                                    : "fill-transparent text-gray-300"
-                                }`}
-                              />
-                            ))}
-                          </span>
+                          <FractionalStars score={Number(item.score) || 0} />
                           <span className="text-sm sm:text-[15px] font-semibold text-[#0F172A]">
-                            {item.score > 0 ? `${item.score}.0 / 5.0` : "Not rated"}
+                            {item.score > 0
+                              ? `${formatScoreDisplay(item.score)} / 5`
+                              : "Not rated"}
                           </span>
                         </span>
                       </div>
@@ -2402,7 +2437,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     {formData.overallSelfRating > 0 ? (
                       <span className="text-xs font-bold text-[#2563EB] px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
                         <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB]" />
-                        <span>Self-Rating: {formData.overallSelfRating}/5</span>
+                        <span>Self-Rating: {formatScoreDisplay(formData.overallSelfRating)}/5</span>
                       </span>
                     ) : null}
                   </div>
@@ -2412,23 +2447,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       label="Overall Self-Rating"
                       value={
                         <span className="inline-flex items-center gap-2 flex-wrap">
-                          <span className="inline-flex items-center gap-1">
-                            {[1, 2, 3, 4, 5].map((s) => (
-                              <Star
-                                key={s}
-                                className={`w-3.5 h-3.5 ${
-                                  s <= (formData.overallSelfRating || 0)
-                                    ? "fill-[#F59E0B] text-[#F59E0B]"
-                                    : "fill-transparent text-gray-300"
-                                }`}
-                              />
-                            ))}
-                          </span>
+                          <FractionalStars
+                            score={Number(formData.overallSelfRating) || 0}
+                            sizeClass="w-3.5 h-3.5"
+                          />
                           {formData.overallSelfRating > 0 ? (
                             <span className="text-sm font-semibold text-[#0F172A]">
-                              {formData.overallSelfRating}.0 / 5.0
-                              {RATING_LABEL_MAP[formData.overallSelfRating]
-                                ? ` · ${RATING_LABEL_MAP[formData.overallSelfRating]}`
+                              {formatScoreDisplay(formData.overallSelfRating)} / 5
+                              {getRatingLabel(Number(formData.overallSelfRating))
+                                ? ` · ${getRatingLabel(Number(formData.overallSelfRating))}`
                                 : ""}
                             </span>
                           ) : (
@@ -2787,7 +2814,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                                     title={
                                       isViewMode
                                         ? "Evaluation is in view-only mode (Editing disabled)"
-                                        : "Type rating number (e.g. 3.3, .2, 4.7) or click stars"
+                                        : "Type rating 1–5 (one decimal, e.g. 1.4) or click stars"
                                     }
                                     aria-label={`Enter rating for ${param.label}`}
                                   />
@@ -2798,7 +2825,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               {currentRating > 0 && !fieldErrors[param.key] && (
                                 <div className="mt-1 px-1 flex items-center gap-1">
                                   <span className="text-[10px] font-bold text-blue-600">
-                                    {currentRating} – {getRatingLabel(currentRating)}
+                                    {formatScoreDisplay(currentRating)} – {getRatingLabel(currentRating)}
                                   </span>
                                 </div>
                               )}
@@ -2867,7 +2894,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             title="Auto-calculated from evaluation parameters"
                             aria-label="Auto-calculated final rating"
                           >
-                            {averageScore !== null ? averageScore.toFixed(2) : "—"}
+                            {averageScore !== null ? formatScoreDisplay(averageScore) : "—"}
                           </div>
                           {fieldErrors.finalScore ? (
                             <span className="text-[11px] font-semibold text-red-600">{fieldErrors.finalScore}</span>
@@ -2921,9 +2948,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               className="text-base font-bold leading-none transition-colors duration-300"
                               style={currentTier ? { color: currentTier.badgeTextHex } : { color: "#0F172A" }}
                             >
-                              {averageScore !== null ? averageScore.toFixed(2) : "—"}
+                              {averageScore !== null ? formatScoreDisplay(averageScore) : "—"}
                             </span>
-                            <span className="text-[9px] font-bold text-[#334155] mt-0.5">/ 5.00</span>
+                            <span className="text-[9px] font-bold text-[#334155] mt-0.5">/ 5</span>
                           </div>
                         </div>
                       </div>
@@ -3009,7 +3036,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         {calculatedAverage !== null && (
                           <span className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-[11px] font-semibold text-[#0F172A]">
                             <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                            Avg: {calculatedAverage.toFixed(2)} / 5.00
+                            Avg: {formatScoreDisplay(calculatedAverage)} / 5
                           </span>
                         )}
                       </div>
@@ -3328,7 +3355,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           onClick={() => !isSubmitting && confirmSubmitState === "idle" && setShowConfirmModal(false)}
         >
           <div
-            className="eval-themed-modal-card max-w-sm w-full p-6 sm:p-7 text-[#2B3674] relative shadow-2xl"
+            className="eval-themed-modal-card max-w-md sm:max-w-lg w-full p-6 sm:p-8 text-[#2B3674] relative shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             {!isSubmitting && confirmSubmitState === "idle" && (
@@ -3369,7 +3396,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       ? "Forward Evaluation?"
                       : "Submit Final Review?"}
               </h3>
-              <p className="text-xs text-[#334155] max-w-xs mx-auto leading-relaxed">
+              <p className="text-xs sm:text-sm text-[#334155] max-w-md mx-auto leading-relaxed">
                 {confirmSubmitState === "success" ? (
                   <span>
                     {isAssignerForwardModal ? (
@@ -3414,12 +3441,12 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               </div>
             )}
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-stretch gap-3">
               <button
                 type="button"
                 disabled={isSubmitting || confirmSubmitState !== "idle"}
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-3 rounded-2xl border border-[#64748B] text-[#2B3674] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="min-w-[7.5rem] flex-[0.85] px-4 py-3 rounded-2xl border border-[#64748B] text-[#2B3674] text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -3427,7 +3454,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 type="button"
                 disabled={confirmSubmitState !== "idle"}
                 onClick={handleConfirmedSubmit}
-                className={`flex-1 py-3 rounded-2xl text-white text-xs font-bold transition-all duration-350 flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed eval-confirm-submit-btn ${
+                className={`min-w-[13.5rem] flex-[1.35] px-5 py-3 rounded-2xl text-white text-xs sm:text-sm font-bold transition-all duration-350 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed eval-confirm-submit-btn ${
                   confirmSubmitState === "idle"
                     ? "confirm-btn-idle active:scale-[0.98]"
                     : confirmSubmitState === "submitting"
