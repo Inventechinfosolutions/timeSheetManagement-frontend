@@ -37,7 +37,6 @@ import {
   Button,
   Card,
   CardHeader,
-  CardTitle,
   CardContent,
   SearchBox,
   Dropdown,
@@ -565,12 +564,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
       {/* FOREGROUND CONTENT (z-10 layer for crisp interactivity and clarity) */}
       <div className="relative z-10 flex-1 flex flex-col min-h-0">
         {/* Page Header */}
-        <div className="mb-2 sm:mb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
-              <span className="manager-review-title-anim">
-                {isAdmin ? "Appraisal Reviews" : "Quarterly Review"}
-              </span>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#2B3674]">
+              {isAdmin ? "Appraisal Reviews" : "Quarterly Review"}
             </h1>
           </div>
 
@@ -578,10 +575,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
           <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-2.5 flex-wrap">
             {/* Managers only — admin uses the Department filter instead */}
             {fullDepartmentName && !isCeoOrGm && !isAdmin && (
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white border border-[#E2E8F0] shadow-2xs shrink-0">
-                <Building2 className="w-4 h-4 text-[#2563EB] shrink-0" />
-                <span className="text-xs font-semibold text-[#64748B]">Department:</span>
-                <span className="text-xs sm:text-sm font-semibold text-[#0F172A] whitespace-nowrap">
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-[#E0E5F2] shadow-sm shrink-0">
+                <Building2 className="w-4 h-4 text-[#4318FF] shrink-0" />
+                <span className="text-xs font-semibold text-[#A3AED0]">Department:</span>
+                <span className="text-xs sm:text-sm font-bold text-[#2B3674] whitespace-nowrap">
                   {fullDepartmentName}
                 </span>
               </div>
@@ -631,12 +628,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
 
         {/* Main Section Card */}
         <Card className="w-full p-3 sm:px-5 sm:py-4 manager-review-glass-card flex-1 flex flex-col min-h-0">
-          <CardHeader className="flex flex-row items-center justify-between gap-2.5 mb-2.5 flex-nowrap w-full">
-            <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title whitespace-nowrap shrink-0">
-              Quarterly Reviews
-            </CardTitle>
-
-            {/* Filters beside title on one line - calibrated to never overflow outside card */}
+          <CardHeader className="flex flex-row items-center justify-end gap-2.5 mb-3 flex-nowrap w-full">
+            {/* Filters on one line - calibrated to never overflow outside card */}
             <div
               ref={filtersDockRef}
               className="manager-review-filters-dock flex items-center gap-1.5 flex-nowrap shrink-0 justify-end"
@@ -781,10 +774,10 @@ export const ManagerQuarterlyReview: React.FC = () => {
                     <div className="manager-review-empty-illustration" />
                   </div>
 
-                  <h3 className="text-xl font-bold text-[#0F172A]">
+                  <h3 className="text-xl font-bold text-[#2B3674]">
                     No data found
                   </h3>
-                  <p className="text-sm text-[#64748B] max-w-sm mt-1.5 leading-relaxed font-normal">
+                  <p className="text-sm text-[#A3AED0] max-w-sm mt-1.5 leading-relaxed font-normal">
                     There are currently no employee quarterly reviews matching your filters.
                   </p>
                 </div>

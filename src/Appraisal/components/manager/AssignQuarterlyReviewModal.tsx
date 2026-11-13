@@ -30,7 +30,7 @@ const datePickerTheme = {
     controlHeight: 42,
     colorBgContainer: "#FFFFFF",
     colorBorder: "#BFDBFE",
-    colorPrimary: "#2563EB",
+    colorPrimary: "#4318FF",
   },
   components: {
     DatePicker: {
@@ -519,7 +519,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
         <Send className="w-5 h-5 -rotate-12 translate-x-0.5" />
       </div>
       <div className="text-left">
-        <h2 className="text-lg font-bold text-[#0F172A] leading-tight">
+        <h2 className="text-lg font-bold text-[#2B3674] leading-tight">
           Assign Quarterly Review
         </h2>
         <p className="text-xs text-[#94A3B8] mt-0.5 font-normal">
@@ -682,7 +682,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               <CheckCircle size={32} className="text-white" />
             </div>
             <h3 className="text-xl font-bold">Successful!</h3>
-            <p className="text-blue-100 text-sm mt-1">Appraisal assigned successfully!</p>
+            <p className="text-[#EEF0FF] text-sm mt-1">Appraisal assigned successfully!</p>
           </div>
           <div className="p-6 text-center">
             <div className="p-3 bg-green-50 rounded-xl border border-green-100">
@@ -703,7 +703,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
             <div className="flex items-center justify-between mb-1">
               <label className="text-[11px] font-bold tracking-wider text-[#0F172A] uppercase">
                 SELECT EMPLOYEES
-                <span className="ml-2 normal-case tracking-normal text-blue-600 font-semibold">
+                <span className="ml-2 normal-case tracking-normal text-[#4318FF] font-semibold">
                   Selected ({selectedEmployees.length})
                 </span>
               </label>
@@ -715,7 +715,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
                     setSelectedEmployees(employeeOptions.map((employee) => employee.value));
                     clearFieldError(AssignFormField.EMPLOYEES);
                   }}
-                  className="!p-0 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-transparent hover:underline !shadow-none assign-select-all-btn"
+                  className="!p-0 text-xs font-semibold text-[#4318FF] hover:text-[#3311CC] hover:bg-transparent hover:underline !shadow-none assign-select-all-btn"
                 >
                   Select All ({employeeOptions.length})
                 </Button>
@@ -753,7 +753,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               menuClassName="shadow-2xl"
               buttonClassName={`w-full justify-between bg-white border rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.EMPLOYEES
                   ? "is-error !border-red-500"
-                  : "border-blue-400 ring-2 ring-blue-500/15"
+                  : "border-[#4318FF] ring-2 ring-[#4318FF]/15"
                 }`}
             />
             {errorField === AssignFormField.EMPLOYEES ? (
@@ -778,7 +778,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               className="w-full"
               buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.REVIEW_PERIOD
                   ? "is-error !border-red-500"
-                  : "border-blue-200/70"
+                  : "border-[#4318FF]/20"
                 }`}
             />
             {errorField === AssignFormField.REVIEW_PERIOD ? (
@@ -808,7 +808,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
                 className="w-full"
                 buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.FINANCIAL_YEAR
                     ? "is-error !border-red-500"
-                    : "border-blue-200/70"
+                    : "border-[#4318FF]/20"
                   }`}
               />
               {errorField === AssignFormField.FINANCIAL_YEAR ? (
@@ -823,7 +823,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               </label>
               {isYearly ? (
                 <div
-                  className="assign-yearly-quarters assign-input-control w-full justify-start bg-[#F8FAFC] border border-blue-200/70 rounded-xl px-3.5 py-2.5"
+                  className="assign-yearly-quarters assign-input-control w-full justify-start bg-[#F8FAFC] border border-[#4318FF]/20 rounded-xl px-3.5 py-2.5"
                   aria-disabled="true"
                   title="Yearly includes all quarters. Quarter cannot be changed."
                 >
@@ -846,7 +846,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
                   className="w-full"
                   buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.QUARTER
                       ? "is-error !border-red-500"
-                      : "border-blue-200/70"
+                      : "border-[#4318FF]/20"
                     }`}
                 />
               )}
@@ -862,7 +862,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
               <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
                 ASSIGNED DATE
               </label>
-              <div className="ui-date-field flex w-full items-center rounded-xl border border-blue-200/70 bg-white px-3.5 py-2.5 text-sm assign-input-control">
+              <div className="ui-date-field flex w-full items-center rounded-xl border border-[#4318FF]/20 bg-white px-3.5 py-2.5 text-sm assign-input-control">
                 <span className="font-mono text-[#0F172A]">{fromDate}</span>
               </div>
             </div>
@@ -911,7 +911,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
                     }}
                     format="DD-MM-YYYY"
                     placeholder="dd-mm-yyyy"
-                    className={`w-full! h-[42px]! px-3.5! py-2! rounded-xl! bg-white! border! border-blue-200/70! hover:border-[#2563EB]! focus:border-[#2563EB]! transition-all text-sm! font-medium! text-[#0F172A]! shadow-none ${
+                    className={`w-full! h-[42px]! px-3.5! py-2! rounded-xl! bg-white! border! border-[#4318FF]/20! hover:border-[#4318FF]! focus:border-[#4318FF]! transition-all text-sm! font-medium! text-[#0F172A]! shadow-none ${
                       errorField === AssignFormField.DEADLINE ? "is-error !border-red-500" : ""
                     }`}
                     getPopupContainer={() => document.body}
@@ -939,7 +939,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
                 }
               }}
               placeholder="Add instructions, focus areas, or deadline remarks for the employee(s)..."
-              className={`w-full px-3.5 py-2.5 bg-white border rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[80px] assign-input-control assign-input-textarea custom-scrollbar ${errorField === AssignFormField.DESCRIPTION ? "is-error !border-red-500 ring-2 ring-red-500/15" : "border-blue-200/70"}`}
+              className={`w-full px-3.5 py-2.5 bg-white border rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[80px] assign-input-control assign-input-textarea custom-scrollbar ${errorField === AssignFormField.DESCRIPTION ? "is-error !border-red-500 ring-2 ring-red-500/15" : "border-[#4318FF]/20"}`}
             />
             {errorField === AssignFormField.DESCRIPTION ? (
               <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>

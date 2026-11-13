@@ -142,13 +142,13 @@ const AppraisalSelectWithOther: React.FC<AppraisalSelectWithOtherProps> = ({
             type="text"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="flex-1 min-w-0 bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm font-normal text-[#0F172A]"
+            className="flex-1 min-w-0 bg-transparent border-0 outline-none focus:ring-0 p-0 text-sm font-normal text-[#2B3674]"
             autoFocus
           />
         ) : (
           <span
             className={`flex-1 min-w-0 text-left truncate ${
-              !value ? "text-[#475569] font-normal text-sm" : "text-[#0F172A] text-sm font-normal"
+              !value ? "text-[#A3AED0] font-normal text-sm" : "text-[#2B3674] text-sm font-normal"
             }`}
           >
             {value || placeholder}
@@ -904,7 +904,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
       {/* Header */}
       <div id="field-projects" className="flex items-start justify-between gap-3 scroll-mt-24">
         <div>
-          <h3 className="text-[1.24rem] font-bold text-[#0F172A]">
+          <h3 className="text-[1.24rem] font-bold">
             <span className="eval-title-anim">Step 2: Key Achievements & Projects</span>
           </h3>
         </div>
@@ -912,7 +912,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           <button
             type="button"
             onClick={handleAddMoreClick}
-            className="shrink-0 inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs active:scale-[0.98] mr-0.5 mt-0.5"
+            className="shrink-0 inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#4318FF] bg-[#F4F7FE] hover:bg-[#EEF0FF] border border-[#4318FF]/20 hover:border-[#4318FF] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs active:scale-[0.98] mr-0.5 mt-0.5"
           >
             <span className="tracking-wide">+ Add more project</span>
           </button>
@@ -922,11 +922,11 @@ export const AchievementsStep: React.FC<StepProps> = ({
       <div className="space-y-4">
         {/* Project Number Indicator */}
         <div className="flex items-center gap-2 pt-0.5">
-          <span className="shrink-0 px-2.5 py-0.5 text-[11px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md shadow-2xs">
+          <span className="shrink-0 px-2.5 py-0.5 text-[11px] font-extrabold text-[#4318FF] bg-[#F4F7FE] border border-[#4318FF]/20 rounded-md shadow-2xs">
             Project {currentProjectNumber}
           </span>
           {editingIndex !== null && (
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold text-[#4318FF] bg-[#F4F7FE] border border-[#4318FF]/20 rounded-md">
               <Pencil className="w-2.5 h-2.5" />
               Editing
             </span>
@@ -937,7 +937,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
         <div id="field-projectName" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-projectName"
-            className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
+            className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1"
           >
             <span>
               Project Name <span className="text-red-500">*</span>
@@ -964,7 +964,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
         <div id="field-projectDescription" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-projectDescription"
-            className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
+            className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1"
           >
             <span>
               Project Description <span className="text-red-500">*</span>
@@ -992,7 +992,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           {/* Project Role Dropdown */}
           <div id="field-projectRole" className="space-y-1.5 flex flex-col">
             <label
-              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1"
             >
               <span>
                 Project Role <span className="text-red-500">*</span>
@@ -1018,7 +1018,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           {/* Responsibility Type Dropdown */}
           <div id="field-responsibilityType" className="space-y-1.5 flex flex-col">
             <label
-              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1"
             >
               <span>
                 Responsibility Type <span className="text-red-500">*</span>
@@ -1046,7 +1046,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
         <div id="field-keyResponsibilities" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-keyResponsibilities"
-            className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
+            className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1"
           >
             <span>
               Key Responsibilities <span className="text-red-500">*</span>
@@ -1075,7 +1075,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           <div id="field-challengesFaced" className="space-y-1.5 flex flex-col">
             <label
               htmlFor="input-challengesFaced"
-              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1"
             >
               <span>
                 Challenges Faced <span className="text-red-500">*</span>
@@ -1102,7 +1102,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           <div id="field-solutionsImplemented" className="space-y-1.5 flex flex-col">
             <label
               htmlFor="input-solutionsImplemented"
-              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1"
             >
               Solutions Implemented
             </label>
@@ -1122,7 +1122,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           <div id="field-leadershipQualities" className="space-y-1.5 flex flex-col">
             <label
               htmlFor="input-leadershipQualities"
-              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1"
             >
               Leadership Qualities
             </label>
@@ -1139,7 +1139,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           <div id="field-clientReviewFeedback" className="space-y-1.5 flex flex-col">
             <label
               htmlFor="input-clientReviewFeedback"
-              className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
+              className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1"
             >
               Client Review & Feedback
             </label>
@@ -1157,7 +1157,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
         <div id="field-keyAchievementsOutcomes" className="space-y-1.5 flex flex-col">
           <label
             htmlFor="input-keyAchievementsOutcomes"
-            className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
+            className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1"
           >
             <span>
               Key Achievements / Outcomes <span className="text-red-500">*</span>
@@ -1182,7 +1182,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
         {/* 9. Technologies Used (Multi-select) */}
         <div id="field-technologiesUsed" className="space-y-1.5 flex flex-col">
-          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1">
+          <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1">
             <span>
               Technologies Used <span className="text-red-500">*</span>
             </span>
@@ -1191,12 +1191,12 @@ export const AchievementsStep: React.FC<StepProps> = ({
             {/* Selected Tags */}
             <div className="flex flex-wrap items-center gap-1.5">
               {technologiesUsed.length === 0 ? (
-                <span className="text-xs text-[#475569] italic">No technologies selected yet. Click from suggested or type below:</span>
+                <span className="text-xs text-[#A3AED0] italic">No technologies selected yet. Click from suggested or type below:</span>
               ) : (
                 technologiesUsed.map((tech) => (
                   <span
                     key={tech}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-lg shadow-2xs"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold text-[#4318FF] bg-[#F4F7FE] border border-[#4318FF]/20 rounded-lg shadow-2xs"
                   >
                     {tech}
                     <button
@@ -1214,7 +1214,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
 
             {/* Quick Pick Pills */}
             <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] mr-1">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2B3674] mr-1">
                 Suggested:
               </span>
               {COMMON_TECH_STACK.map((tech) => {
@@ -1232,8 +1232,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
                     }}
                     className={`px-2 py-0.5 text-[11px] font-semibold rounded-md border transition-all cursor-pointer ${
                       isSelected
-                        ? "bg-[#2563EB] text-white border-[#2563EB] shadow-2xs"
-                        : "bg-white text-[#334155] border-slate-200 hover:border-blue-300 hover:bg-blue-50/50"
+                        ? "bg-[#4318FF] text-white border-[#4318FF] shadow-2xs"
+                        : "bg-white text-[#707EAE] border-slate-200 hover:border-[#4318FF]/40 hover:bg-[#F4F7FE]"
                     }`}
                   >
                     {isSelected ? `✓ ${tech}` : `+ ${tech}`}
@@ -1257,13 +1257,13 @@ export const AchievementsStep: React.FC<StepProps> = ({
                     handleAddTechnology(techInput);
                   }
                 }}
-                className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-[#0F172A] outline-none focus:border-blue-500 font-normal"
+                className="flex-1 bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-[#2B3674] outline-none focus:border-[#4318FF] font-normal"
               />
               <button
                 type="button"
                 onClick={() => handleAddTechnology(techInput)}
                 disabled={!techInput.trim()}
-                className="px-2.5 py-1 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] hover:bg-[#DBEAFE] rounded-lg transition-all disabled:opacity-50 cursor-pointer"
+                className="px-2.5 py-1 text-xs font-bold text-[#4318FF] bg-[#F4F7FE] border border-[#4318FF]/20 hover:bg-[#EEF0FF] rounded-lg transition-all disabled:opacity-50 cursor-pointer"
               >
                 Add
               </button>
@@ -1300,15 +1300,15 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 type="button"
                 disabled={uploading}
                 onClick={() => fileInputRef.current?.click()}
-                className="btn-attach-document group inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border border-[#BFDBFE] hover:border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait"
+                className="btn-attach-document group inline-flex items-center gap-2 px-3.5 py-2 text-xs font-bold text-[#4318FF] bg-[#F4F7FE] hover:bg-[#EEF0FF] border border-[#4318FF]/20 hover:border-[#4318FF] rounded-xl transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-wait"
               >
-                <Paperclip className="w-4 h-4 text-[#2563EB] shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6" />
+                <Paperclip className="w-4 h-4 text-[#4318FF] shrink-0 transition-transform duration-200 group-hover:scale-110 group-hover:rotate-6" />
                 <span className="tracking-wide">
                   {uploading ? "Saving..." : attachments.length === 0 ? "Attach Document" : "Add more"}
                 </span>
               </button>
             )}
-            <span className="text-[11px] text-[#334155] font-medium">
+            <span className="text-[11px] text-[#707EAE] font-medium">
               PDF, Word, Excel, or Image
             </span>
             {uploadError && (
@@ -1323,7 +1323,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 type="button"
                 onClick={handleCancelEdit}
                 disabled={savingProject}
-                className="px-3.5 py-2 text-xs font-bold text-[#334155] hover:text-[#0F172A] bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3.5 py-2 text-xs font-bold text-[#707EAE] hover:text-[#2B3674] bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-all duration-200 cursor-pointer shadow-2xs active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
@@ -1334,7 +1334,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 id="btn-save-project"
                 disabled={savingProject}
                 onClick={handleSaveProject}
-                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#2563EB] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed border border-[#2563EB] rounded-xl transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.98]"
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-[#4318FF] hover:bg-[#3311CC] disabled:opacity-50 disabled:cursor-not-allowed border border-[#4318FF] rounded-xl transition-all duration-200 cursor-pointer shadow-xs hover:shadow-md hover:scale-[1.01] active:scale-[0.98]"
               >
                 {savingProject ? (
                   <>
@@ -1358,7 +1358,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
         {projects.some((_, index) => index !== editingIndex) && (
           <div ref={accordionContainerRef} className="space-y-2 pt-2">
             <div className="flex items-center justify-between px-1">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#334155]">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#707EAE]">
                 Added Projects (
                 {projects.filter((_, index) => index !== editingIndex).length})
               </span>
@@ -1407,10 +1407,10 @@ export const AchievementsStep: React.FC<StepProps> = ({
                       className="flex items-center justify-between gap-3 px-4 py-3 bg-white hover:bg-slate-50/70 cursor-pointer select-none group transition-colors"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="shrink-0 px-2.5 py-0.5 text-[11px] font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+                        <span className="shrink-0 px-2.5 py-0.5 text-[11px] font-extrabold text-[#4318FF] bg-[#F4F7FE] border border-[#4318FF]/20 rounded-md">
                           Project {index + 1}
                         </span>
-                        <h4 className="text-sm font-bold text-[#0F172A] truncate group-hover:text-[#2563EB] transition-colors">
+                        <h4 className="text-sm font-bold text-[#2B3674] truncate group-hover:text-[#4318FF] transition-colors">
                           {displayProjectName}
                         </h4>
                       </div>
@@ -1432,8 +1432,8 @@ export const AchievementsStep: React.FC<StepProps> = ({
                             }}
                             className={`inline-flex items-center justify-center w-7 h-7 rounded-lg border transition-all duration-150 cursor-pointer shadow-2xs hover:scale-105 active:scale-95 ${
                               editingIndex === index
-                                ? "text-white bg-[#2563EB] border-[#2563EB]"
-                                : "text-[#2563EB] bg-[#EFF6FF] hover:bg-[#DBEAFE] border-[#BFDBFE] hover:border-[#2563EB]"
+                                ? "text-white bg-[#4318FF] border-[#4318FF]"
+                                : "text-[#4318FF] bg-[#F4F7FE] hover:bg-[#EEF0FF] border-[#4318FF]/20 hover:border-[#4318FF]"
                             }`}
                             title={editingIndex === index ? "Currently editing" : "Edit project"}
                             aria-label="Edit project"
@@ -1523,7 +1523,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                         <div className="px-4 pb-4 pt-2.5 space-y-3 text-xs border-t border-slate-100">
                           {/* Project Description with proper title */}
                           <div>
-                            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
+                            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2B3674] block mb-1">
                               Project Description
                             </span>
                             <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
@@ -1538,7 +1538,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                             <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-xs text-slate-600">
                               {project.projectRole && (
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A]">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2B3674]">
                                     Project Role:
                                   </span>
                                   <span className="font-normal text-slate-800">{project.projectRole}</span>
@@ -1549,7 +1549,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                               )}
                               {project.responsibilityType && (
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A]">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2B3674]">
                                     Responsibility Type:
                                   </span>
                                   <span className="font-normal text-slate-800">{project.responsibilityType}</span>
@@ -1563,7 +1563,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                               {Boolean(project.keyResponsibilities) && (
                                 <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2B3674] block mb-1">
                                     Key Responsibilities
                                   </span>
                                   <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-normal">
@@ -1573,7 +1573,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                               )}
                               {Boolean(project.keyAchievementsOutcomes) && (
                                 <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2B3674] block mb-1">
                                     Key Achievements / Outcomes
                                   </span>
                                   <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-normal">
@@ -1589,7 +1589,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                               {(project.challengesFaced || project.challenge) && (
                                 <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2B3674] block mb-1">
                                     Challenges Faced
                                   </span>
                                   <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-normal">
@@ -1599,7 +1599,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                               )}
                               {Boolean(project.solutionsImplemented?.trim()) && (
                                 <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2B3674] block mb-1">
                                     Solutions Implemented
                                   </span>
                                   <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-normal">
@@ -1615,7 +1615,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                               {Boolean(project.leadershipQualities) && (
                                 <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2B3674] block mb-1">
                                     Leadership Qualities
                                   </span>
                                   <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-normal">
@@ -1625,7 +1625,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                               )}
                               {Boolean(project.clientReviewFeedback) && (
                                 <div className="bg-slate-50/70 border border-slate-100 rounded-md p-2.5">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] block mb-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2B3674] block mb-1">
                                     Client Review & Feedback
                                   </span>
                                   <p className="text-xs text-slate-700 whitespace-pre-line leading-relaxed font-normal">
@@ -1639,7 +1639,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                           {/* Technologies Used */}
                           {(project.technologiesUsed || []).length > 0 && (
                             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] mr-1">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2B3674] mr-1">
                                 Technologies Used:
                               </span>
                               {(project.technologiesUsed || []).map((tech) => (
@@ -1656,7 +1656,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                           {/* Attachments */}
                           {(project.attachments || []).length > 0 && (
                             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#0F172A] mr-1">
+                              <span className="text-[10px] font-semibold uppercase tracking-wider text-[#2B3674] mr-1">
                                 Attachments:
                               </span>
                               {(project.attachments || []).map((file) => (
@@ -1687,7 +1687,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
           onClick={handleCancelDelete}
         >
           <div
-            className="relative w-full max-w-[420px] bg-white rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-100 text-[#0F172A] animate-in zoom-in-95 duration-200 overflow-hidden"
+            className="relative w-full max-w-[420px] bg-white rounded-2xl p-5 sm:p-6 shadow-2xl border border-slate-100 text-[#2B3674] animate-in zoom-in-95 duration-200 overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Top Accent Gradient Line */}
@@ -1698,7 +1698,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
               type="button"
               disabled={isDeletingProject}
               onClick={handleCancelDelete}
-              className="absolute top-3.5 right-3.5 text-[#475569] hover:text-slate-700 w-7 h-7 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-40"
+              className="absolute top-3.5 right-3.5 text-[#A3AED0] hover:text-slate-700 w-7 h-7 rounded-full flex items-center justify-center hover:bg-slate-100 transition-colors cursor-pointer disabled:opacity-40"
               title="Close"
             >
               <X className="w-4 h-4" />
@@ -1710,7 +1710,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 <Trash2 className="w-5 h-5 stroke-[2.2]" />
               </div>
               <div className="min-w-0 flex-1 pr-6">
-                <h3 className="text-base sm:text-lg font-bold text-[#0F172A] tracking-tight leading-snug">
+                <h3 className="text-base sm:text-lg font-bold text-[#2B3674] tracking-tight leading-snug">
                   Delete Project?
                 </h3>
                 <p className="text-xs text-slate-500 leading-relaxed mt-1">
@@ -1725,7 +1725,7 @@ export const AchievementsStep: React.FC<StepProps> = ({
                 <Trash2 className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#475569] block leading-none mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#A3AED0] block leading-none mb-1">
                   Project to be deleted
                 </span>
                 <p className="text-xs sm:text-sm font-bold text-slate-800 truncate" title={projectToDelete.name}>
