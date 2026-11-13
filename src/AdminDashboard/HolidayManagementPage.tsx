@@ -153,8 +153,8 @@ const HolidayManagementPage = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    dispatch(fetchHolidays());
-  }, [dispatch]);
+    dispatch(fetchHolidays(year));
+  }, [dispatch, year]);
 
   // Toasts must sit above Add/Confirm portals (z-[3000])
   useEffect(() => {
@@ -172,6 +172,7 @@ const HolidayManagementPage = () => {
   }, []);
 
   const rows = useMemo(() => {
+    // API already filters by year when year query is sent
     return (holidays || [])
       .map((holiday: MasterHoliday) => ({
         ...holiday,
@@ -288,6 +289,7 @@ const HolidayManagementPage = () => {
       ).unwrap();
       message.success(ready.length === 1 ? "Holiday added" : "Holidays added");
       setYear(addYear);
+      await dispatch(fetchHolidays(addYear));
       closeAdd();
     } catch (err: any) {
       message.error(typeof err === "string" ? err : err?.message || "Failed to add holidays");
@@ -332,6 +334,7 @@ const HolidayManagementPage = () => {
       await dispatch(updateHoliday({ id: editingId, data: { date: isoDate, name } })).unwrap();
       message.success("Holiday updated");
       setEditingId(null);
+      await dispatch(fetchHolidays(year));
     } catch (err: any) {
       message.error(typeof err === "string" ? err : err?.message || "Failed to update holiday");
     } finally {
