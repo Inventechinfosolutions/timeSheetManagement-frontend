@@ -84,6 +84,7 @@ export const fetchEditRequestsForReview = createAsyncThunk(
     department?: string;
     status?: string;
     lockType?: string;
+    role?: string;
   }) => {
     const query: Record<string, string | number> = {
       page: params?.page ?? 1,
@@ -92,6 +93,7 @@ export const fetchEditRequestsForReview = createAsyncThunk(
       lockType: params?.lockType || "All",
     };
     if (params?.managerId) query.managerId = params.managerId;
+    if (params?.role) query.role = params.role;
     if (params?.department && params.department !== "All") {
       query.department = params.department;
     }

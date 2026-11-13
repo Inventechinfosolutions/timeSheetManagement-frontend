@@ -10,7 +10,6 @@ import {
   Calendar,
   Eye,
   LayoutGrid,
-  User,
   ClipboardList,
   ChevronDown,
   ChevronRight,
@@ -78,11 +77,10 @@ const SidebarLayout = ({
           { name: "My Dashboard", icon: LayoutGrid },
           { name: "My Timesheet", icon: Calendar },
           { name: "My Timesheet History", icon: Eye },
-          { name: "My Appraisal", icon: ClipboardCheck },
+          { name: "Appraisal", icon: ClipboardCheck },
           { name: "Notes", icon: FileText },
           { name: "Inbox", icon: Inbox },
           { name: "Request Management ", icon: Calendar },
-          { name: "Account Settings", icon: User },
         ],
       },
       {
@@ -92,7 +90,7 @@ const SidebarLayout = ({
           { name: "Employee Directory", icon: Users },
           { name: "Employee Timesheet", icon: AlarmClock },
           { name: "Request Management", icon: Calendar },
-          { name: "Appraisal", icon: ClipboardCheck },
+          { name: "Quarterly Review", icon: ClipboardCheck },
           { name: "Access Ticket", icon: Unlock },
           { name: "Notification", icon: Bell },
         ],
@@ -110,10 +108,11 @@ const SidebarLayout = ({
       { name: "Leave Management", icon: CalendarCheck },
       { name: "Holiday Management", icon: CalendarDays },
       { name: "Access Ticket", icon: Unlock },
-      { name: "Appraisal", icon: ClipboardCheck },
+      { name: "Quarterly Review", icon: ClipboardCheck },
       { name: "Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
       { name: "Manager Mapping", icon: Users },
+      { name: "Appraisal Mapping", icon: ClipboardCheck },
       { name: "Notification", icon: Bell },
     ],
     [],
@@ -160,12 +159,9 @@ const SidebarLayout = ({
     return items;
   }, [title, adminSidebarItems]);
 
-
-
   // Determine active tab from URL if not explicitly provided
   const derivedActiveTab = useMemo(() => {
     if (activeTab && activeTab !== "Dashboard") return activeTab;
-
     // Shared admin nav config (label/path/tab in one place)
     const fromAdminNav = resolveAdminLabelFromTab(tab);
     if (fromAdminNav) return fromAdminNav;

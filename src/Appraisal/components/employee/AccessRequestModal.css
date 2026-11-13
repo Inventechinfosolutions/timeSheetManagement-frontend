@@ -1,0 +1,43 @@
+/* ==========================================================================
+   Access Request Modal Styling & Micro-Interactions
+   Executive Blue Theme with 3D Vectors & GSAP Physics
+   ========================================================================== */
+
+/* Blur and subtly dim header, sidebar, and footer when modal is open */
+body.modal-open-active header,
+body.modal-open-active .header,
+body.modal-open-active aside,
+body.modal-open-active footer,
+body.modal-open-active .footer,
+body.modal-open-active .sidebar-footer {
+  filter: blur(2.5px) brightness(0.92) !important;
+  opacity: 0.72 !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  transition: filter 0.25s ease, opacity 0.25s ease !important;
+}
+
+/* Hide scrollbars on modal body */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* 3D Illustration SVG Smooth Hover & Transform Origins */
+.access-gsap-doc {
+  transform-origin: 116px 112px;
+}
+
+.access-gsap-pen {
+  transform-origin: 152px 118px;
+}
+
+.access-gsap-clock {
+  transform-origin: 162px 42px;
+}
+
+
+

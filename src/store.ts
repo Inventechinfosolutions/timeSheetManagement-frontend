@@ -14,6 +14,8 @@ import masterDepartmentReducer from './reducers/masterDepartment.reducer';
 import apiLoadingReducer from './reducers/apiLoading.reducer';
 import notesReducer from './reducers/notes.reducer';
 import inboxReducer from './reducers/inbox.reducer';
+import appraisalReducer from './Appraisal/reducers/appraisal.reducer';
+import appraisalMappingReducer from './Appraisal/reducers/appraisalMapping.reducer';
 import adminDashboardReducer from './reducers/adminDashboard.reducer';
 import attendenceEditRequestReducer from './reducers/attendenceEditRequest.reducer';
 import leaveManagerReducer from './reducers/leaveManager.reducer';
@@ -35,6 +37,8 @@ export const store = configureStore({
     masterDepartments: masterDepartmentReducer,
     notes: notesReducer,
     inbox: inboxReducer,
+    appraisal: appraisalReducer,
+    appraisalMapping: appraisalMappingReducer,
     adminDashboard: adminDashboardReducer,
     attendenceEditRequest: attendenceEditRequestReducer,
     leaveManager: leaveManagerReducer,

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from "react";
-import { Send, Check } from "lucide-react";
+import { Send, Check, ArrowLeft, ChevronLeft, CheckCircle } from "lucide-react";
 import { AssignQuarterlyReviewModalProps } from "../../types/appraisal.types";
 import { useAppSelector } from "../../../hooks";
 import {
@@ -10,17 +10,35 @@ import {
   readApiError,
 } from "../../reducers/appraisal.reducer";
 import { AppraisalCopy } from "../../constants/appraisal.constants";
-import { AssignButtonState, AssignFormField, AssignmentKind, QuaterlyEnum } from "../../enums/appraisal.enums";
+import { AssignButtonState, AssignFormField, AssignmentKind, QuaterlyEnum, ReviewPeriod } from "../../enums/appraisal.enums";
 import {
   Modal,
   Button,
   Dropdown,
   SearchDropdown,
-  DatePicker,
 } from "../../../components/ui";
+import { DatePicker as AntDatePicker, ConfigProvider } from "antd";
+import dayjs from "dayjs";
 import { AssignSubmitPanel, AssignSubmitSummary } from "./AssignSubmitPanel";
+import AppraisalMomentCard from "../common/AppraisalMomentCard";
 import { loadAppraisalPeriod } from "../../utils/appraisalHelpers";
 import "./AssignQuarterlyReviewModal.css";
+
+const datePickerTheme = {
+  token: {
+    borderRadius: 14,
+    controlHeight: 42,
+    colorBgContainer: "#FFFFFF",
+    colorBorder: "#BFDBFE",
+    colorPrimary: "#2563EB",
+  },
+  components: {
+    DatePicker: {
+      cellHeight: 24,
+      cellWidth: 26,
+    },
+  },
+};
 
 const todayDisplayDate = (): string => {
   const now = new Date();
@@ -40,12 +58,17 @@ const toIsoDate = (value: string): string | undefined => {
 export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProps> = ({
   isOpen,
   onClose,
+  onBack,
   assignmentType = AssignmentKind.INDIVIDUAL,
+  managersOnly = false,
   onAssign,
+  selectedDepartment,
+  isAdmin = false,
 }) => {
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const managerId = currentUser?.employeeId || currentUser?.loginId || "";
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("");
+  const [reviewPeriod, setReviewPeriod] = useState<ReviewPeriod>(ReviewPeriod.QUARTERLY);
   const [selectedQuarter, setSelectedQuarter] = useState<string>("");
   const [masterYears, setMasterYears] = useState<MasterFinancialYearOption[]>([]);
   const [masterQuarters, setMasterQuarters] = useState<MasterQuarterRecord[]>([]);
@@ -61,10 +84,12 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   const teamApplied = useRef(false);
   const yearsLoaded = useRef(false);
   const periodTouched = useRef(false);
+  const closedNoticeRef = useRef(false);
   const [assignError, setAssignError] = useState<string>("");
   const [errorField, setErrorField] = useState<AssignFormField | null>(null);
   const [submitSummary, setSubmitSummary] = useState<AssignSubmitSummary | null>(null);
   const [buttonState, setButtonState] = useState<AssignButtonState>(AssignButtonState.IDLE);
+  const [assignmentNoticeCount, setAssignmentNoticeCount] = useState(0);
   const [isModalClosing, setIsModalClosing] = useState<boolean>(false);
   const [formSession, setFormSession] = useState(0);
   const [trackedOpen, setTrackedOpen] = useState(isOpen);
@@ -80,8 +105,11 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       setSelectedEmployees([]);
       setTeamMembers([]);
       teamApplied.current = false;
+      closedNoticeRef.current = false;
       setSubmitSummary(null);
+      setAssignmentNoticeCount(0);
       setSelectedFinancialYear("");
+      setReviewPeriod(ReviewPeriod.QUARTERLY);
       setSelectedQuarter("");
       setFromDate(todayDisplayDate());
       setMasterQuarters([]);
@@ -92,6 +120,34 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     }
   }
 
+  const datePickerWrapperRef = useRef<HTMLDivElement>(null);
+  const [datePickerWidth, setDatePickerWidth] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const updateWidth = () => {
+      if (datePickerWrapperRef.current) {
+        const rect = datePickerWrapperRef.current.getBoundingClientRect();
+        if (rect.width > 0) {
+          const w = Math.round(rect.width);
+          setDatePickerWidth(w);
+          document.documentElement.style.setProperty("--date-picker-width", `${w}px`);
+        }
+      }
+    };
+    updateWidth();
+    const raf = requestAnimationFrame(updateWidth);
+    const t1 = setTimeout(updateWidth, 60);
+    const t2 = setTimeout(updateWidth, 180);
+    window.addEventListener("resize", updateWidth);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, [isOpen]);
+
   const employeeOptions = useMemo(() => {
     return mappedEmployees.map((emp) => ({
       value: emp.employeeId,
@@ -101,29 +157,92 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
   }, [mappedEmployees]);
 
   const loadEmployees = useCallback((search?: string) => {
+    if (isAdmin && selectedDepartment) {
+      setEmployeesLoading(true);
+      void AppraisalApi.getEmployeesByDepartment(
+        selectedDepartment,
+        search,
+        managersOnly ? "MANAGER" : undefined,
+      )
+        .then((employees) => {
+          setMappedEmployees(employees);
+          if (search?.trim()) return;
+          setTeamMembers(employees);
+          if (
+            assignmentType === AssignmentKind.ALL &&
+            employees.length > 0 &&
+            !teamApplied.current
+          ) {
+            teamApplied.current = true;
+            setSelectedEmployees(employees.map((employee) => employee.employeeId));
+          }
+        })
+        .catch(() => setMappedEmployees([]))
+        .finally(() => setEmployeesLoading(false));
+      return;
+    }
+
     if (!managerId) {
       setMappedEmployees([]);
       setEmployeesLoading(false);
       return;
     }
+
+    // Employee / Team Lead assigner: appraisal_mapping only.
+    // Manager: merge manager_mapping + appraisal_mapping (dedupe). Dual eval flow stays on backend.
+    const userType = String(currentUser?.userType || "")
+      .toUpperCase()
+      .replace(/\s+/g, " ");
+    const isEmployeeAssignerRole =
+      userType === "EMPLOYEE" || userType === "TEAM LEAD";
+
     setEmployeesLoading(true);
-    void AppraisalApi.getMappedEmployees(managerId, search)
-      .then((employees) => {
-        setMappedEmployees(employees);
-        if (search?.trim()) return;
-        setTeamMembers(employees);
-        if (
-          assignmentType === AssignmentKind.ALL &&
-          employees.length > 0 &&
-          !teamApplied.current
-        ) {
-          teamApplied.current = true;
-          setSelectedEmployees(employees.map((employee) => employee.employeeId));
+    const applyEmployees = (employees: MappedEmployee[]) => {
+      setMappedEmployees(employees);
+      if (search?.trim()) return;
+      setTeamMembers(employees);
+      if (
+        assignmentType === AssignmentKind.ALL &&
+        employees.length > 0 &&
+        !teamApplied.current
+      ) {
+        teamApplied.current = true;
+        setSelectedEmployees(employees.map((employee) => employee.employeeId));
+      }
+    };
+
+    if (isEmployeeAssignerRole) {
+      void AppraisalApi.getAppraisalMappedEmployees(managerId, search)
+        .then(applyEmployees)
+        .catch(() => setMappedEmployees([]))
+        .finally(() => setEmployeesLoading(false));
+      return;
+    }
+
+    void Promise.all([
+      AppraisalApi.getMappedEmployees(managerId, search).catch(() => [] as MappedEmployee[]),
+      AppraisalApi.getAppraisalMappedEmployees(managerId, search).catch(
+        () => [] as MappedEmployee[],
+      ),
+    ])
+      .then(([fromManagerMapping, fromAppraisalMapping]) => {
+        const byId = new Map<string, MappedEmployee>();
+        for (const emp of [...fromManagerMapping, ...fromAppraisalMapping]) {
+          if (!emp?.employeeId || byId.has(emp.employeeId)) continue;
+          byId.set(emp.employeeId, emp);
         }
+        applyEmployees(Array.from(byId.values()));
       })
       .catch(() => setMappedEmployees([]))
       .finally(() => setEmployeesLoading(false));
-  }, [managerId, assignmentType]);
+  }, [
+    managerId,
+    assignmentType,
+    isAdmin,
+    selectedDepartment,
+    managersOnly,
+    currentUser?.userType,
+  ]);
 
   const loadFinancialYears = () => {
     if (yearsLoaded.current) return;
@@ -151,6 +270,8 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       .catch(() => setMasterQuarters([]))
       .finally(() => setQuartersLoading(false));
   };
+
+  const isYearly = reviewPeriod === ReviewPeriod.YEARLY;
 
   const quarterOptions = useMemo(() => {
     if (!selectedFinancialYear) return [];
@@ -181,7 +302,21 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     loadQuartersForYear(value);
   };
 
+  const handleReviewPeriodChange = (value: string) => {
+    const nextPeriod = value === ReviewPeriod.YEARLY ? ReviewPeriod.YEARLY : ReviewPeriod.QUARTERLY;
+    periodTouched.current = true;
+    setReviewPeriod(nextPeriod);
+    setSelectedQuarter("");
+    clearFieldError(AssignFormField.REVIEW_PERIOD);
+    clearFieldError(AssignFormField.QUARTER);
+    // Same for Quarterly and Yearly: assign date = today, manager picks deadline
+    setFromDate(todayDisplayDate());
+    setToDate("");
+    clearFieldError(AssignFormField.DEADLINE);
+  };
+
   const handleQuarterChange = (quarter: string) => {
+    if (reviewPeriod === ReviewPeriod.YEARLY) return;
     periodTouched.current = true;
     setSelectedQuarter(quarter);
     clearFieldError(AssignFormField.QUARTER);
@@ -195,6 +330,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     setSelectedEmployees([]);
     setSubmitSummary(null);
     setSelectedFinancialYear("");
+    setReviewPeriod(ReviewPeriod.QUARTERLY);
     setSelectedQuarter("");
     setFromDate(todayDisplayDate());
     setMasterQuarters([]);
@@ -248,7 +384,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
         : assignmentType === AssignmentKind.ALL
           ? roster.map((employee) => employee.employeeId)
           : [];
-    if (!managerId || targets.length === 0) {
+    if ((!managerId && !isAdmin) || targets.length === 0) {
       showFieldError(AssignFormField.EMPLOYEES, AppraisalCopy.selectMappedEmployee);
       return;
     }
@@ -260,7 +396,11 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       showFieldError(AssignFormField.FINANCIAL_YEAR, AppraisalCopy.selectFinancialYear);
       return;
     }
-    if (!quarter) {
+    if (!reviewPeriod) {
+      showFieldError(AssignFormField.REVIEW_PERIOD, AppraisalCopy.selectReviewPeriod);
+      return;
+    }
+    if (!isYearly && !quarter) {
       showFieldError(AssignFormField.QUARTER, AppraisalCopy.invalidQuarter);
       return;
     }
@@ -272,6 +412,10 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     }
     if (deadlineIso <= assignedIso) {
       showFieldError(AssignFormField.DEADLINE, AppraisalCopy.deadlineAfterAssigned);
+      return;
+    }
+    if (!description.trim()) {
+      showFieldError(AssignFormField.DESCRIPTION, AppraisalCopy.descriptionRequired);
       return;
     }
 
@@ -286,7 +430,7 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
         };
       }),
       financialYear: selectedFinancialYear,
-      quarter: selectedQuarter,
+      quarter: isYearly ? "Q1, Q2, Q3, Q4" : selectedQuarter,
       fromDate,
       toDate,
       description,
@@ -299,49 +443,74 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
     const quarter = (Object.values(QuaterlyEnum) as string[]).includes(selectedQuarter)
       ? (selectedQuarter as QuaterlyEnum)
       : undefined;
-    if (!quarter || !managerId) return;
+    // Always store the real person id so Assigned By shows their name (not "Admin").
+    const assignerId =
+      managerId ||
+      currentUser?.employeeId ||
+      currentUser?.loginId ||
+      currentUser?.aliasLoginName ||
+      "MANAGER";
+    const userType = String(currentUser?.userType || "").toUpperCase();
+    const assignedBy = isAdmin
+      ? "ADMIN"
+      : userType === "EMPLOYEE" || userType === "TEAM LEAD"
+        ? "EMPLOYEE"
+        : "MANAGER";
+    if ((!isYearly && !quarter) || !assignerId) return;
 
     setAssignError("");
     setButtonState(AssignButtonState.ANIMATING);
-    void Promise.all(
+
+    const minAnimTime = new Promise((resolve) => setTimeout(resolve, 1100));
+    const apiCall = Promise.all(
       submitSummary.people.map((person) =>
         AppraisalApi.createReview({
           employeeId: person.employeeId,
-          quarter,
+          ...(isYearly ? {} : { quarter }),
+          reviewPeriod,
           financialYear: selectedFinancialYear,
           assignedDate: toIsoDate(fromDate),
           deadlineDate: toIsoDate(toDate),
           description: description || undefined,
-          assignerId: managerId,
+          assignerId,
+          assignedBy,
         }),
       ),
-    )
+    );
+
+    void Promise.all([apiCall, minAnimTime])
       .then(() => {
-        setTimeout(() => {
-          setButtonState(AssignButtonState.ASSIGNED);
-        }, 280);
-        setTimeout(() => {
-          setIsModalClosing(true);
-        }, 850);
-        setTimeout(() => {
-          onAssign?.({
-            quarter: selectedQuarter,
-            employee: selectedEmployees[0] || "",
-            financialYear: selectedFinancialYear,
-            fromDate,
-            toDate,
-            description,
-          });
-          onClose();
-          setIsModalClosing(false);
-          setButtonState(AssignButtonState.IDLE);
-        }, 1150);
+        setButtonState(AssignButtonState.ASSIGNED);
+        closedNoticeRef.current = false;
+        setAssignmentNoticeCount(submitSummary.people.length);
       })
       .catch((error: unknown) => {
         setButtonState(AssignButtonState.CONFIRM);
         setErrorField(null);
         setAssignError(readApiError(error));
       });
+  };
+
+  const closeAssignmentNotice = () => {
+    if (closedNoticeRef.current) return;
+    closedNoticeRef.current = true;
+    setAssignmentNoticeCount(0);
+    onAssign?.({
+      quarter: selectedQuarter,
+      employee: selectedEmployees[0] || "",
+      financialYear: selectedFinancialYear,
+      fromDate,
+      toDate,
+      description,
+    });
+    onClose();
+    setIsModalClosing(false);
+    setButtonState(AssignButtonState.IDLE);
+  };
+
+  const handleBack = () => {
+    resetForm();
+    onBack?.();
   };
 
   const modalTitle = (
@@ -351,67 +520,141 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       </div>
       <div className="text-left">
         <h2 className="text-lg font-bold text-[#0F172A] leading-tight">
-          Assign Appraisal
+          Assign Quarterly Review
         </h2>
         <p className="text-xs text-[#94A3B8] mt-0.5 font-normal">
-          Open review access for your reporting team members
+          {selectedDepartment
+            ? `Assigning reviews for ${selectedDepartment} department`
+            : "Open review access for your reporting team members"}
         </p>
       </div>
     </div>
   );
 
-  const modalFooter = (
-    <div className="flex justify-end gap-2 w-full">
+  const hasBackButton =
+    buttonState === AssignButtonState.CONFIRM ||
+    (Boolean(onBack) && buttonState === AssignButtonState.IDLE);
+
+  const modalFooter = assignmentNoticeCount > 0 ? (
+    <div className="flex w-full justify-center pt-1">
+      <button
+        type="button"
+        onClick={closeAssignmentNotice}
+        className="px-8 py-2.5 text-sm font-bold text-white bg-[#4318FF] hover:bg-[#3311CC] rounded-xl shadow-lg hover:shadow-xl transition-all"
+      >
+        Close
+      </button>
+    </div>
+  ) : (
+    <div className="flex items-center justify-between w-full flex-1 pt-1">
       {buttonState === AssignButtonState.CONFIRM ? (
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
+          type="button"
           onClick={() => {
             setButtonState(AssignButtonState.IDLE);
             setSubmitSummary(null);
             setAssignError("");
             setErrorField(null);
           }}
-          className="assign-modal-cancel-btn"
+          className="group assign-modal-cancel-btn h-[42px] max-h-[42px]"
         >
-          Back
-        </Button>
-      ) : null}
-      <button
-        type="button"
-        disabled={buttonState === AssignButtonState.ANIMATING || buttonState === AssignButtonState.ASSIGNED}
-        onClick={buttonState === AssignButtonState.CONFIRM ? handleConfirmClick : handleAssignClick}
-        className={`assign-modal-submit-btn ${
-          buttonState === AssignButtonState.ANIMATING
-            ? "assign-btn-animating"
-            : buttonState === AssignButtonState.ASSIGNED
-            ? "assign-btn-assigned"
-            : ""
-        }`}
-      >
-        <span className="assign-btn-icon-wrapper">
-          {buttonState === AssignButtonState.ASSIGNED ? (
-            <Check className="w-4 h-4 text-white stroke-[3] assign-icon-check" />
-          ) : (
-            <Send
-              className={`w-4 h-4 fill-white -rotate-12 ${
-                buttonState === AssignButtonState.ANIMATING ? "assign-icon-launching" : ""
-              }`}
-            />
+          <span className="relative inline-flex items-center justify-center w-3.5 h-3.5 shrink-0">
+            <ChevronLeft className="w-3.5 h-3.5 stroke-[2.5] shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:-translate-x-1" />
+            <ArrowLeft className="w-3.5 h-3.5 stroke-[2.5] shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
+          </span>
+          <span>Back</span>
+        </button>
+      ) : onBack && buttonState === AssignButtonState.IDLE ? (
+        <button
+          type="button"
+          onClick={handleBack}
+          className="group assign-modal-cancel-btn h-[42px] max-h-[42px]"
+        >
+          <span className="relative inline-flex items-center justify-center w-3.5 h-3.5 shrink-0">
+            <ChevronLeft className="w-3.5 h-3.5 stroke-[2.5] shrink-0 transition-all duration-200 group-hover:opacity-0 group-hover:-translate-x-1" />
+            <ArrowLeft className="w-3.5 h-3.5 stroke-[2.5] shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
+          </span>
+          <span>Back</span>
+        </button>
+      ) : (
+        <div />
+      )}
+      {buttonState === AssignButtonState.IDLE ? (
+        <button
+          type="button"
+          onClick={handleAssignClick}
+          className="assign-modal-submit-btn"
+        >
+          <Send className="w-4 h-4 fill-white -rotate-12 mr-1" />
+          <span>Assign</span>
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled={buttonState === AssignButtonState.ANIMATING || buttonState === AssignButtonState.ASSIGNED}
+          onClick={handleConfirmClick}
+          className={`assign-modal-submit-btn ${
+            buttonState === AssignButtonState.ANIMATING
+              ? "assign-btn-animating"
+              : buttonState === AssignButtonState.ASSIGNED
+                ? "assign-btn-assigned"
+                : ""
+          }`}
+        >
+          {/* Animated Flight Arc Trail (visible during ANIMATING) */}
+          {buttonState === AssignButtonState.ANIMATING && (
+            <span className="assign-btn-flight-track" aria-hidden="true">
+              <svg className="assign-flight-svg" viewBox="0 0 100 100" fill="none">
+                <path
+                  d="M 15 50 Q 75 10 85 45 Q 90 90 40 85 Q 20 80 20 50"
+                  className="assign-flight-arc"
+                />
+              </svg>
+            </span>
           )}
-        </span>
-        <span className="assign-btn-text">
-          {buttonState === AssignButtonState.ASSIGNED
-            ? "Assigned"
-            : buttonState === AssignButtonState.ANIMATING
-              ? "Assigning"
-              : buttonState === AssignButtonState.CONFIRM
-                ? "Confirm"
-                : "Assign"}
-        </span>
-      </button>
+
+          {/* Circular Badge: at rest / animating / assigned */}
+          <span className="assign-btn-circle-badge">
+            {/* Paper Airplane (flies off and enters circle) */}
+            <span className="assign-btn-plane-wrap">
+              <Send className="assign-plane-icon w-4 h-4" />
+            </span>
+
+            {/* Checkmark (pops in circle during animation, turns green when assigned) */}
+            <span className="assign-btn-check-wrap">
+              <Check className="assign-check-icon w-4 h-4 stroke-[3]" />
+            </span>
+          </span>
+
+          {/* Text */}
+          <span className="assign-btn-label">
+            {buttonState === AssignButtonState.ASSIGNED
+              ? "Assigned"
+              : buttonState === AssignButtonState.ANIMATING
+                ? ""
+                : "Confirm"}
+          </span>
+        </button>
+      )}
     </div>
   );
+
+  if (isOpen && assignmentNoticeCount > 0) {
+    const people = submitSummary?.people || [];
+    const name =
+      people.length > 1
+        ? `${people.length} employees`
+        : people[0]?.employeeName || "Team";
+    return (
+      <AppraisalMomentCard
+        kind="assigned"
+        name={name}
+        quarter={selectedQuarter}
+        financialYear={selectedFinancialYear}
+        onClose={closeAssignmentNotice}
+      />
+    );
+  }
 
   return (
     <Modal
@@ -419,192 +662,290 @@ export const AssignQuarterlyReviewModal: React.FC<AssignQuarterlyReviewModalProp
       onClose={handleModalClose}
       title={modalTitle}
       footer={modalFooter}
-      maxWidth="2xl"
+      maxWidth={
+        buttonState !== AssignButtonState.IDLE && submitSummary ? "4xl" : "2xl"
+      }
       overlayClassName={`assign-quarterly-modal-overlay ${isModalClosing ? "modal-overlay-is-closing" : ""}`}
       closeBtnClassName="assign-modal-close-btn"
       closeOnBackdrop={false}
       closeOnEsc={false}
-      className={`assign-quarterly-modal-dialog ${isModalClosing ? "modal-is-closing" : ""} p-5 sm:p-6 overflow-hidden flex flex-col justify-between [&>div:first-child]:border-none [&>div:first-child]:pb-1.5 [&>div:first-child]:mb-1.5 [&>div:last-child]:border-none [&>div:last-child]:pt-2.5 [&>div:last-child]:mt-2.5`}
+      className={`assign-quarterly-modal-dialog ${isModalClosing ? "modal-is-closing" : ""} p-5 sm:p-6 ${
+        buttonState !== AssignButtonState.IDLE && submitSummary
+          ? "overflow-y-auto"
+          : "overflow-hidden"
+      } flex flex-col [&>div:first-child]:border-none [&>div:first-child]:pb-1.5 [&>div:first-child]:mb-1.5 [&>div:last-child]:border-none [&>div:last-child]:pt-2 [&>div:last-child]:mt-1.5 [&>div:last-child]:w-full`}
     >
-      {buttonState !== AssignButtonState.IDLE && submitSummary ? (
+      {assignmentNoticeCount > 0 ? (
+        <div className="overflow-hidden rounded-2xl border border-[#E2E8F0]">
+          <div className="bg-gradient-to-r from-[#4318FF] to-[#868CFF] p-6 text-white text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 backdrop-blur-sm shadow-inner">
+              <CheckCircle size={32} className="text-white" />
+            </div>
+            <h3 className="text-xl font-bold">Successful!</h3>
+            <p className="text-blue-100 text-sm mt-1">Appraisal assigned successfully!</p>
+          </div>
+          <div className="p-6 text-center">
+            <div className="p-3 bg-green-50 rounded-xl border border-green-100">
+              <p className="text-sm text-green-800 font-medium">
+                {assignmentNoticeCount === 1
+                  ? "The employee will receive the assignment email."
+                  : "The employees will receive the assignment email."}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : buttonState !== AssignButtonState.IDLE && submitSummary ? (
         <AssignSubmitPanel summary={submitSummary} status={buttonState} error={assignError} />
       ) : (
-      <div key={formSession} className="space-y-3.5 h-[340px] flex flex-col justify-between min-h-0">
-        {/* SELECT EMPLOYEES */}
-        <div className="assign-modal-form-section">
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-[11px] font-bold tracking-wider text-[#0F172A] uppercase">
-              SELECT EMPLOYEES
-              <span className="ml-2 normal-case tracking-normal text-blue-600 font-semibold">
-                Selected ({selectedEmployees.length})
-              </span>
-            </label>
-            {assignmentType !== AssignmentKind.ALL && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSelectedEmployees(employeeOptions.map((employee) => employee.value));
-                  clearFieldError(AssignFormField.EMPLOYEES);
-                }}
-                className="!p-0 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-transparent hover:underline !shadow-none assign-select-all-btn"
-              >
-                Select All ({employeeOptions.length})
-              </Button>
-            )}
-          </div>
-
-          {/* Searchable employee selector - full length search bar */}
-          <SearchDropdown
-            placeholder="Select one or more team members..."
-            searchPlaceholder="Search employees by name, role or ID..."
-            allowClear={true}
-            defaultValue=""
-            options={employeeOptions}
-            value=""
-            onChange={() => undefined}
-            multiple
-            values={selectedEmployees}
-            onToggle={(employeeId) => {
-              setSelectedEmployees((current) =>
-                current.includes(employeeId)
-                  ? current.filter((id) => id !== employeeId)
-                  : [...current, employeeId],
-              );
-              clearFieldError(AssignFormField.EMPLOYEES);
-            }}
-            onClear={() => {
-              setSelectedEmployees([]);
-              clearFieldError(AssignFormField.EMPLOYEES);
-            }}
-            serverSearch
-            loading={employeesLoading}
-            onSearchChange={loadEmployees}
-            className="w-full"
-            maxLabelWidth="min-w-0 flex-1"
-            menuClassName="shadow-2xl"
-            buttonClassName={`w-full justify-between bg-white border rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] shadow-none assign-input-control assign-input-dropdown ${
-              errorField === AssignFormField.EMPLOYEES
-                ? "is-error !border-red-500"
-                : "border-blue-400 ring-2 ring-blue-500/15"
-            }`}
-          />
-          {errorField === AssignFormField.EMPLOYEES ? (
-            <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
-          ) : null}
-        </div>
-
-        {/* FINANCIAL YEAR & QUARTER (2-Column Grid) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          {/* FINANCIAL YEAR * */}
+        <div key={formSession} className="space-y-3 flex flex-col min-h-0">
+          {/* SELECT EMPLOYEES */}
           <div className="assign-modal-form-section">
-            <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
-              FINANCIAL YEAR <span className="text-red-500">*</span>
-            </label>
-            <Dropdown
-              placeholder="Select financial year"
-              allowClear={false}
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[11px] font-bold tracking-wider text-[#0F172A] uppercase">
+                SELECT EMPLOYEES
+                <span className="ml-2 normal-case tracking-normal text-blue-600 font-semibold">
+                  Selected ({selectedEmployees.length})
+                </span>
+              </label>
+              {assignmentType !== AssignmentKind.ALL && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedEmployees(employeeOptions.map((employee) => employee.value));
+                    clearFieldError(AssignFormField.EMPLOYEES);
+                  }}
+                  className="!p-0 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:bg-transparent hover:underline !shadow-none assign-select-all-btn"
+                >
+                  Select All ({employeeOptions.length})
+                </Button>
+              )}
+            </div>
+
+            {/* Searchable employee selector - full length search bar */}
+            <SearchDropdown
+              placeholder="Select one or more team members..."
+              searchPlaceholder="Search employees by name, role or ID..."
+              allowClear={true}
               defaultValue=""
-              options={masterYears.map((year) => ({
-                value: year.financialYear,
-                label: year.financialYear,
-              }))}
-              value={selectedFinancialYear}
-              onChange={handleFinancialYearChange}
-              onOpen={loadFinancialYears}
-              loading={yearsLoading}
+              options={employeeOptions}
+              value=""
+              onChange={() => undefined}
+              multiple
+              values={selectedEmployees}
+              onToggle={(employeeId) => {
+                setSelectedEmployees((current) =>
+                  current.includes(employeeId)
+                    ? current.filter((id) => id !== employeeId)
+                    : [...current, employeeId],
+                );
+                clearFieldError(AssignFormField.EMPLOYEES);
+              }}
+              onClear={() => {
+                setSelectedEmployees([]);
+                clearFieldError(AssignFormField.EMPLOYEES);
+              }}
+              serverSearch
+              loading={employeesLoading}
+              onSearchChange={loadEmployees}
               className="w-full"
-              buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${
-                errorField === AssignFormField.FINANCIAL_YEAR
+              maxLabelWidth="min-w-0 flex-1"
+              menuClassName="shadow-2xl"
+              buttonClassName={`w-full justify-between bg-white border rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.EMPLOYEES
                   ? "is-error !border-red-500"
-                  : "border-blue-200/70"
-              }`}
+                  : "border-blue-400 ring-2 ring-blue-500/15"
+                }`}
             />
-            {errorField === AssignFormField.FINANCIAL_YEAR ? (
+            {errorField === AssignFormField.EMPLOYEES ? (
               <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
             ) : null}
           </div>
 
-          {/* QUARTER * */}
           <div className="assign-modal-form-section">
             <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
-              QUARTER <span className="text-red-500">*</span>
+              REVIEW PERIOD <span className="text-red-500">*</span>
             </label>
             <Dropdown
-              placeholder="Select quarter"
+              placeholder="Select quarterly or yearly"
               allowClear={false}
-              defaultValue=""
-              options={quarterOptions}
-              value={selectedQuarter}
-              onChange={handleQuarterChange}
-              disabled={!selectedFinancialYear}
-              loading={quartersLoading && quarterOptions.length === 0}
+              defaultValue={ReviewPeriod.QUARTERLY}
+              options={[
+                { value: ReviewPeriod.QUARTERLY, label: "Quarterly" },
+                { value: ReviewPeriod.YEARLY, label: "Yearly" },
+              ]}
+              value={reviewPeriod}
+              onChange={handleReviewPeriodChange}
               className="w-full"
-              buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${
-                errorField === AssignFormField.QUARTER
+              buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.REVIEW_PERIOD
                   ? "is-error !border-red-500"
                   : "border-blue-200/70"
-              }`}
+                }`}
             />
-            {errorField === AssignFormField.QUARTER ? (
+            {errorField === AssignFormField.REVIEW_PERIOD ? (
               <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
             ) : null}
           </div>
-        </div>
 
-        {/* ASSIGNED DATE (today) & TO (DEADLINE) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          <div className="assign-modal-form-section">
-            <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
-              ASSIGNED DATE
-            </label>
-            <div className="ui-date-field flex w-full items-center rounded-xl border border-blue-200/70 bg-white px-3.5 py-2.5 text-sm assign-input-control">
-              <span className="font-mono text-[#0F172A]">{fromDate}</span>
+          {/* FINANCIAL YEAR & QUARTER (2-Column Grid) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* FINANCIAL YEAR * */}
+            <div className="assign-modal-form-section">
+              <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
+                FINANCIAL YEAR <span className="text-red-500">*</span>
+              </label>
+              <Dropdown
+                placeholder="Select financial year"
+                allowClear={false}
+                defaultValue=""
+                options={masterYears.map((year) => ({
+                  value: year.financialYear,
+                  label: year.financialYear,
+                }))}
+                value={selectedFinancialYear}
+                onChange={handleFinancialYearChange}
+                onOpen={loadFinancialYears}
+                loading={yearsLoading}
+                className="w-full"
+                buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.FINANCIAL_YEAR
+                    ? "is-error !border-red-500"
+                    : "border-blue-200/70"
+                  }`}
+              />
+              {errorField === AssignFormField.FINANCIAL_YEAR ? (
+                <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+              ) : null}
+            </div>
+
+            {/* QUARTER * */}
+            <div className="assign-modal-form-section">
+              <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
+                QUARTER <span className="text-red-500">*</span>
+              </label>
+              {isYearly ? (
+                <div
+                  className="assign-yearly-quarters assign-input-control w-full justify-start bg-[#F8FAFC] border border-blue-200/70 rounded-xl px-3.5 py-2.5"
+                  aria-disabled="true"
+                  title="Yearly includes all quarters. Quarter cannot be changed."
+                >
+                  {(["Q1", "Q2", "Q3", "Q4"] as const).map((quarter) => (
+                    <span key={quarter} className={`qr-quarter-pill qr-quarter-${quarter.toLowerCase()}`}>
+                      {quarter}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <Dropdown
+                  placeholder="Select quarter"
+                  allowClear={false}
+                  defaultValue=""
+                  options={quarterOptions}
+                  value={selectedQuarter}
+                  onChange={handleQuarterChange}
+                  disabled={!selectedFinancialYear}
+                  loading={quartersLoading && quarterOptions.length === 0}
+                  className="w-full"
+                  buttonClassName={`w-full justify-between bg-white border hover:border-gray-300 rounded-xl px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control assign-input-dropdown ${errorField === AssignFormField.QUARTER
+                      ? "is-error !border-red-500"
+                      : "border-blue-200/70"
+                    }`}
+                />
+              )}
+              {errorField === AssignFormField.QUARTER ? (
+                <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+              ) : null}
             </div>
           </div>
 
-          {/* TO (DEADLINE) * */}
-          <div className="assign-modal-form-section">
-            <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
-              TO (DEADLINE) <span className="text-red-500">*</span>
-            </label>
-            <DatePicker
-              value={toDate}
-              onChange={(value) => {
-                setToDate(value);
-                const deadlineIso = toIsoDate(value);
-                const assignedIso = toIsoDate(fromDate);
-                if (deadlineIso && assignedIso && deadlineIso <= assignedIso) {
-                  showFieldError(AssignFormField.DEADLINE, AppraisalCopy.deadlineAfterAssigned);
-                  return;
-                }
-                clearFieldError(AssignFormField.DEADLINE);
-              }}
-              placeholder="dd-mm-yyyy"
-              className={`assign-input-control ${
-                errorField === AssignFormField.DEADLINE ? "is-error !border-red-500" : ""
-              }`}
-            />
+          {/* Same for Quarterly + Yearly: assigned date + deadline picker (FY comes from dropdown) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div className="assign-modal-form-section">
+              <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
+                ASSIGNED DATE
+              </label>
+              <div className="ui-date-field flex w-full items-center rounded-xl border border-blue-200/70 bg-white px-3.5 py-2.5 text-sm assign-input-control">
+                <span className="font-mono text-[#0F172A]">{fromDate}</span>
+              </div>
+            </div>
+
+            <div className="assign-modal-form-section">
+              <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
+                TO (DEADLINE) <span className="text-red-500">*</span>
+              </label>
+              <div ref={datePickerWrapperRef} className="w-full">
+                <ConfigProvider theme={datePickerTheme}>
+                  <AntDatePicker
+                    inputReadOnly={true}
+                    showToday={false}
+                    placement="bottomLeft"
+                    popupAlign={{ overflow: { adjustY: false } }}
+                    popupStyle={datePickerWidth ? { width: `${datePickerWidth}px` } : undefined}
+                    onOpenChange={(open) => {
+                      if (open && datePickerWrapperRef.current) {
+                        const rect = datePickerWrapperRef.current.getBoundingClientRect();
+                        if (rect.width > 0) {
+                          const w = Math.round(rect.width);
+                          setDatePickerWidth(w);
+                          document.documentElement.style.setProperty("--date-picker-width", `${w}px`);
+                        }
+                      }
+                    }}
+                    classNames={{
+                      popup: "hide-other-months show-weekdays assign-ant-datepicker-popup",
+                    }}
+                    disabledDate={(currentDate) => {
+                      if (!fromDate || !currentDate) return false;
+                      const assignedMoment = dayjs(fromDate, "DD-MM-YYYY");
+                      return currentDate.isSame(assignedMoment, "day") || currentDate.isBefore(assignedMoment, "day");
+                    }}
+                    value={toDate ? dayjs(toDate, "DD-MM-YYYY") : null}
+                    onChange={(date) => {
+                      const formatted = date ? date.format("DD-MM-YYYY") : "";
+                      setToDate(formatted);
+                      const deadlineIso = toIsoDate(formatted);
+                      const assignedIso = toIsoDate(fromDate);
+                      if (deadlineIso && assignedIso && deadlineIso <= assignedIso) {
+                        showFieldError(AssignFormField.DEADLINE, AppraisalCopy.deadlineAfterAssigned);
+                        return;
+                      }
+                      clearFieldError(AssignFormField.DEADLINE);
+                    }}
+                    format="DD-MM-YYYY"
+                    placeholder="dd-mm-yyyy"
+                    className={`w-full! h-[42px]! px-3.5! py-2! rounded-xl! bg-white! border! border-blue-200/70! hover:border-[#2563EB]! focus:border-[#2563EB]! transition-all text-sm! font-medium! text-[#0F172A]! shadow-none ${
+                      errorField === AssignFormField.DEADLINE ? "is-error !border-red-500" : ""
+                    }`}
+                    getPopupContainer={() => document.body}
+                  />
+                </ConfigProvider>
+              </div>
+            </div>
             {errorField === AssignFormField.DEADLINE ? (
               <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
             ) : null}
           </div>
-        </div>
 
-        {/* DESCRIPTION * */}
-        <div className="assign-modal-form-section">
-          <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
-            DESCRIPTION <span className="text-red-500">*</span>
-          </label>
-          <textarea
-            rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Add instructions, focus areas, or deadline remarks for the employee(s)..."
-            className="w-full px-3.5 py-2.5 bg-white border border-blue-200/70 rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[80px] assign-input-control assign-input-textarea custom-scrollbar"
-          />
+          {/* DESCRIPTION * */}
+          <div className="assign-modal-form-section">
+            <label className="block text-[11px] font-bold tracking-wider text-[#0F172A] uppercase mb-1">
+              DESCRIPTION <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (e.target.value.trim()) {
+                  clearFieldError(AssignFormField.DESCRIPTION);
+                }
+              }}
+              placeholder="Add instructions, focus areas, or deadline remarks for the employee(s)..."
+              className={`w-full px-3.5 py-2.5 bg-white border rounded-xl text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none resize-none transition-all h-[80px] assign-input-control assign-input-textarea custom-scrollbar ${errorField === AssignFormField.DESCRIPTION ? "is-error !border-red-500 ring-2 ring-red-500/15" : "border-blue-200/70"}`}
+            />
+            {errorField === AssignFormField.DESCRIPTION ? (
+              <p className="mt-1 text-xs font-bold text-red-600">{assignError}</p>
+            ) : null}
+          </div>
         </div>
-      </div>
       )}
     </Modal>
   );
