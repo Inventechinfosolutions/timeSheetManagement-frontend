@@ -9,16 +9,17 @@ import {
   Menu,
   LogOut,
   FileText,
-  Inbox,
   ClipboardCheck,
+  Inbox,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { logoutUser } from "../reducers/user.reducer";
 import { fetchInboxUnreadCount } from "../reducers/inbox.reducer";
 import { fetchNotes } from "../reducers/notes.reducer";
 import { UserType } from "../enums";
 import { isAdminAccess, isCeoUser, isGeneralManagerUser } from "../utils/roleAccess";
+import { AppraisalApi } from "../Appraisal/reducers/appraisal.reducer";
 import ApiLoadingSpinner from "../components/ApiLoadingSpinner";
 import ScrollNavigator from "../components/ScrollNavigator";
 import Header from "../components/Header";
@@ -42,6 +43,7 @@ const SidebarLayout = ({
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const mainContentRef = useRef<HTMLElement>(null);
   const { tab } = useParams<{ tab?: string }>();
+  const location = useLocation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const unreadInboxCount = useAppSelector((state) => state.inbox?.unreadCount || 0);
@@ -68,9 +70,33 @@ const SidebarLayout = ({
   // Get employee details from Redux
   const { entity } = useAppSelector((state) => state.employeeDetails);
   const { currentUser } = useAppSelector((state) => state.user);
+  const [isAppraisalAssigner, setIsAppraisalAssigner] = useState(false);
 
-  // Determine active tab from URL if not explicitly provided
+  useEffect(() => {
+    const assignerId =
+      entity?.employeeId || currentUser?.employeeId || currentUser?.loginId || "";
+    if (!assignerId) {
+      setIsAppraisalAssigner(false);
+      return;
+    }
+    let cancelled = false;
+    void AppraisalApi.isAppraisalAssigner(assignerId)
+      .then((yes) => {
+        if (!cancelled) setIsAppraisalAssigner(yes);
+      })
+      .catch(() => {
+        if (!cancelled) setIsAppraisalAssigner(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [entity?.employeeId, currentUser?.employeeId, currentUser?.loginId]);
+
+  // Prefer pathname so Appraisal vs Quarterly Review never collapse together
   const derivedActiveTab = useMemo(() => {
+    const path = location.pathname || "";
+    if (path.includes("/employee-dashboard/quarterly-review")) return "Quarterly Review";
+    if (path.includes("/employee-dashboard/appraisal")) return "Appraisal";
     if (activeTab && activeTab !== "Dashboard") return activeTab;
     switch (tab) {
       case "my-timesheet":
@@ -86,6 +112,7 @@ const SidebarLayout = ({
       case "leave-balance":
         return "Leave Balance";
       case "quarterly-review":
+        return "Quarterly Review";
       case "appraisal":
         return "Appraisal";
       case "notes":
@@ -93,10 +120,12 @@ const SidebarLayout = ({
         return "Employee Notes";
       case "inbox":
         return "Inbox";
+        case "master-holidays":
+         return "Holidays";
       default:
         return "Dashboard";
     }
-  }, [tab, activeTab]);
+  }, [tab, activeTab, location.pathname]);
 
   useEffect(() => {
     setIsWorkspaceMode(false);
@@ -133,16 +162,23 @@ const SidebarLayout = ({
     });
   };
 
-  const sidebarItems = [
-    { name: "Dashboard", icon: LayoutGrid },
-    { name: "My Timesheet", icon: Calendar },
-    { name: "Timesheet History", icon: Eye },
-    { name: "Appraisal", icon: ClipboardCheck },
-    { name: "Request Management", icon: Calendar },
-    { name: "Employee Notes", icon: FileText },
-    { name: "Inbox", icon: Inbox },
-    //{ name: 'Change Password', icon: Lock },
-  ];
+  const sidebarItems = useMemo(() => {
+    const items = [
+      { name: "Dashboard", icon: LayoutGrid },
+      { name: "My Timesheet", icon: Calendar },
+      { name: "Timesheet History", icon: Eye },
+      { name: "Appraisal", icon: ClipboardCheck },
+      // Assigner (appraisal_mapping): also get manager-style Quarterly Review
+      ...(isAppraisalAssigner
+        ? [{ name: "Quarterly Review", icon: ClipboardCheck }]
+        : []),
+      { name: "Request Management", icon: Calendar },
+      { name: "Employee Notes", icon: FileText },
+      { name: "Inbox", icon: Inbox },
+      { name: "Holidays", icon: Calendar },
+    ];
+    return items;
+  }, [isAppraisalAssigner]);
 
   return (
     <div className="flex flex-col w-full h-screen bg-[#f8f9fa] font-sans text-[#2B3674] overflow-hidden relative">
@@ -214,10 +250,10 @@ const SidebarLayout = ({
                 : isGeneralManagerUser(currentUser)
                 ? "General Manager"
                 : isAdminAccess(currentUser)
-                ? "Admin"
-                : currentUser?.userType === UserType.MANAGER
-                  ? "Manager"
-                  : "Employee"}
+                  ? "Admin"
+                  : currentUser?.userType === UserType.MANAGER
+                    ? "Manager"
+                    : "Employee"}
             </span>
           </div>
           {/* Branding & Lock Toggle - Desktop Only */}
@@ -252,10 +288,10 @@ const SidebarLayout = ({
                     : isGeneralManagerUser(currentUser)
                     ? "General Manager"
                     : isAdminAccess(currentUser)
-                    ? "Admin"
-                    : currentUser?.userType === UserType.MANAGER
-                      ? "Manager"
-                      : "Employee"}
+                      ? "Admin"
+                      : currentUser?.userType === UserType.MANAGER
+                        ? "Manager"
+                        : "Employee"}
                 </span>
               </div>
             </div>
@@ -292,11 +328,16 @@ const SidebarLayout = ({
               const isActive = derivedActiveTab === item.name;
               return (
                 <div key={item.name} className="relative group">
-                  <button
-                    onClick={() => {
-                      onTabChange?.(item.name);
-                      setIsMobileOpen(false);
-                    }}
+                 <button
+               onClick={() => {
+                   if (item.name === "Holidays") {
+                     navigate("/employee-dashboard/master-holidays");
+                       } else {
+                       onTabChange?.(item.name);
+                        }
+
+                     setIsMobileOpen(false);
+                   }}
                     className={navItemClass(isActive, isOpen || isMobileOpen)}
                   >
                     {isActive && (isOpen || isMobileOpen) && (
@@ -385,8 +426,8 @@ const SidebarLayout = ({
           <Footer className="sidebar-footer" />
           {(derivedActiveTab === "Employee Notes" ||
             derivedActiveTab === "Inbox") && (
-            <ScrollNavigator targetRef={mainContentRef} />
-          )}
+              <ScrollNavigator targetRef={mainContentRef} />
+            )}
         </main>
       </div>
     </div>

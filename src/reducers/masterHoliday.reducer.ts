@@ -30,13 +30,15 @@ const initialState: MasterHolidayState = {
 
 // --- Async Thunks ---
 
-// Fetch All Holidays
+// Fetch holidays — with year uses existing GET /master-holidays/year/:year
 export const fetchHolidays = createAsyncThunk(
   'masterHolidays/fetchAll',
-  async (_, { rejectWithValue }) => {
+  async (year: number | undefined = undefined, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`${API_URL}`);
-      return response.data; 
+      const url =
+        year != null ? `${API_URL}/year/${year}` : API_URL;
+      const response = await axios.get(url);
+      return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch holidays');
     }

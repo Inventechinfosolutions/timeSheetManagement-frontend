@@ -87,11 +87,15 @@ export const ADMIN_NAV: AdminNavItem[] = [
     pathIncludes: ["/admin-dashboard/edit-access"],
   },
   {
-    label: "Appraisal",
-    path: "/admin-dashboard/appraisal",
+    label: "Quarterly Review",
+    path: "/admin-dashboard/quarterly-review",
     tabs: ["appraisal", "quarterly-review"],
-    labelAliases: ["Quarterly Review"],
-    pathIncludes: ["/admin-dashboard/appraisal", "/admin-dashboard/quarterly-review"],
+    labelAliases: ["Appraisal"],
+    // Boundary-matched in resolveAdminActiveLabel so appraisal ≠ appraisal-mapping
+    pathIncludes: [
+      "/admin-dashboard/quarterly-review",
+      "/admin-dashboard/appraisal",
+    ],
   },
   {
     label: "Notes",
@@ -112,6 +116,15 @@ export const ADMIN_NAV: AdminNavItem[] = [
     pathIncludes: [
       "/admin-dashboard/manager-mapping",
       "/admin-dashboard/manager-employees/",
+    ],
+  },
+  {
+    label: "Appraisal Mapping",
+    path: "/admin-dashboard/appraisal-mapping",
+    tabs: ["appraisal-mapping"],
+    pathIncludes: [
+      "/admin-dashboard/appraisal-mapping",
+      "/admin-dashboard/appraisal-assigner-employees/",
     ],
   },
   {
@@ -152,13 +165,25 @@ export function resolveAdminHomeLabel(opts: {
   return "Admin Dashboard";
 }
 
+/** True when needle is a path segment boundary (avoids appraisal ⊂ appraisal-mapping). */
+function pathnameIncludesPath(pathname: string, needle: string): boolean {
+  const idx = pathname.indexOf(needle);
+  if (idx === -1) return false;
+  const after = pathname.charAt(idx + needle.length);
+  return after === "" || after === "/" || after === "?" || after === "#";
+}
+
 export function resolveAdminActiveLabel(
   pathname: string,
   tab: string | undefined,
   opts: { isCeo: boolean; isGm: boolean; isReceptionist?: boolean },
 ): string {
-  for (const { needle, label } of PATH_MATCHERS) {
-    if (pathname.includes(needle)) return label;
+  // Prefer longer needles first so appraisal-mapping wins over appraisal
+  const ordered = [...PATH_MATCHERS].sort(
+    (a, b) => b.needle.length - a.needle.length,
+  );
+  for (const { needle, label } of ordered) {
+    if (pathnameIncludesPath(pathname, needle)) return label;
   }
   if (tab && TAB_TO_LABEL.has(tab)) {
     return TAB_TO_LABEL.get(tab)!;

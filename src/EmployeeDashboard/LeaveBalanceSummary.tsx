@@ -1,13 +1,14 @@
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { BarChart3, Lightbulb, ChevronRight } from "lucide-react";
+import { BarChart3, Lightbulb } from "lucide-react";
 import type { LeaveSummary } from "./AttendanceStatsCards";
 
 interface Props {
   summary: LeaveSummary;
+  /** @deprecated Navigation to leave balance page removed */
   onViewDetails?: () => void;
 }
 
-const LeaveBalanceSummary = ({ summary, onViewDetails }: Props) => {
+const LeaveBalanceSummary = ({ summary }: Props) => {
   const items = [
     { name: "Available", value: summary.available, color: "#7C3AED" },
     { name: "Used", value: summary.used, color: "#F59E0B" },
@@ -24,9 +25,9 @@ const LeaveBalanceSummary = ({ summary, onViewDetails }: Props) => {
         <h4 className="text-base font-bold tracking-tight">Leave Balance Summary</h4>
       </div>
 
-      <div className="flex flex-1 flex-col justify-between gap-4 p-5">
-        <div className="flex items-center gap-4">
-          <div className="relative h-[130px] w-[130px] shrink-0">
+      <div className="flex flex-1 flex-col justify-between gap-5 p-5">
+        <div className="flex flex-1 flex-col items-center justify-center gap-5">
+          <div className="relative h-[140px] w-[140px] shrink-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -54,25 +55,28 @@ const LeaveBalanceSummary = ({ summary, onViewDetails }: Props) => {
             </div>
           </div>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+          <div className="flex w-full max-w-[200px] flex-col gap-2.5">
             {items.map((item) => (
-              <div key={item.name} className="flex items-center justify-between gap-2 text-sm">
+              <div
+                key={item.name}
+                className="flex w-full items-center justify-between gap-3 text-sm"
+              >
                 <span className="flex items-center gap-2 font-semibold text-[#2B3674]">
-                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: item.color }}
+                  />
                   {item.name}
                 </span>
-                <span className="font-extrabold text-[#1B2559]">{item.value.toFixed(1)}</span>
+                <span className="font-extrabold text-[#1B2559]">
+                  {item.value.toFixed(1)}
+                </span>
               </div>
             ))}
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onViewDetails}
-          disabled={!onViewDetails}
-          className="flex w-full items-center gap-3 rounded-2xl bg-[#F5F3FF] px-3.5 py-3 text-left transition-colors enabled:hover:bg-[#EDE9FE] disabled:cursor-default"
-        >
+        <div className="flex w-full items-center gap-3 rounded-2xl bg-[#F5F3FF] px-3.5 py-3 text-left">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#7C3AED] shadow-sm">
             <Lightbulb size={16} />
           </span>
@@ -80,12 +84,7 @@ const LeaveBalanceSummary = ({ summary, onViewDetails }: Props) => {
             You have <strong className="font-extrabold text-[#1B2559]">{summary.available.toFixed(1)} days</strong>{" "}
             leave balance this month.
           </span>
-          {onViewDetails && (
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#7C3AED] text-white">
-              <ChevronRight size={14} />
-            </span>
-          )}
-        </button>
+        </div>
       </div>
     </div>
   );

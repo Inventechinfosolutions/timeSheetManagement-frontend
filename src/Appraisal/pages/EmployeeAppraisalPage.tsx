@@ -1,9 +1,8 @@
 import React from "react";
-import AppraisalComingSoon from "../components/employee/AppraisalComingSoon";
+import AppraisalDashboard from "../components/employee/AppraisalDashboard";
 
-/** Employee Appraisal entry — celebration / arriving-soon experience. */
 export const EmployeeAppraisalPage: React.FC = () => {
-  return <AppraisalComingSoon />;
+  return <AppraisalDashboard />;
 };
 
 export default EmployeeAppraisalPage;
