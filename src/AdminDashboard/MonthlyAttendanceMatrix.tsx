@@ -74,7 +74,43 @@ interface MatrixData {
   daysInMonth: number;
   days: DayInfo[];
   employees: EmployeeRow[];
+  totalEmployees?: number;
+  totalCount?: number;
+  totalItems?: number;
+  totalRecords?: number;
+  total?: number;
+  totalPages?: number;
+  pagination?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    totalEmployees?: number;
+    totalCount?: number;
+    totalItems?: number;
+    totalRecords?: number;
+    totalPages?: number;
+    itemCount?: number;
+  };
 }
+
+const getMatrixTotalEmployees = (data?: MatrixData, pageSize = 10) => {
+  if (!data) return 0;
+  const total =
+    data.totalEmployees ??
+    data.totalCount ??
+    data.totalItems ??
+    data.totalRecords ??
+    data.total ??
+    data.pagination?.totalEmployees ??
+    data.pagination?.totalCount ??
+    data.pagination?.totalItems ??
+    data.pagination?.totalRecords ??
+    data.pagination?.total;
+  if (total !== undefined) return total;
+
+  const totalPages = data.totalPages ?? data.pagination?.totalPages;
+  return totalPages !== undefined ? totalPages * pageSize : data.employees.length;
+};
 
 const MonthlyAttendanceMatrix: React.FC = () => {
   const navigate = useNavigate();
@@ -118,17 +154,15 @@ const MonthlyAttendanceMatrix: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [isExporting, setIsExporting] = useState<boolean>(false);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+  const matrixRequestId = useRef(0);
 
   // Detect manager's department
+  // Only from profile/entity — do NOT derive from matrixData (that re-triggers fetch in a loop)
   const managerDepartment = useMemo(() => {
     if (entity?.department) return entity.department;
     if (entity?.department_name) return entity.department_name;
-    if (matrixData?.employees && matrixData.employees.length > 0) {
-      const found = matrixData.employees.find((e) => e.department && e.department.trim());
-      if (found?.department) return found.department;
-    }
     return "";
-  }, [entity, matrixData]);
+  }, [entity]);
 
   // Filters — SearchBox applies useDebounce via onDebounce
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -142,12 +176,17 @@ const MonthlyAttendanceMatrix: React.FC = () => {
   // Status Filter: All, Submitted, Pending
   const [selectedStatus, setSelectedStatus] = useState<string>("All");
 
-  // Pagination: 20 records per page for the Excel grid
+  // Pagination: 10 records per page for the attendance matrix
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const pageSize = 20;
+  const pageSize = 10;
+  const skipPageResetOnMount = useRef(true);
 
-  // Reset page when month, year, search, department, or status changes
+  // Reset page when filters change (skip mount — page is already 1)
   useEffect(() => {
+    if (skipPageResetOnMount.current) {
+      skipPageResetOnMount.current = false;
+      return;
+    }
     setCurrentPage(1);
   }, [selectedMonth, selectedYear, debouncedSearchTerm, selectedDepartment, selectedStatus]);
 
@@ -208,24 +247,60 @@ const MonthlyAttendanceMatrix: React.FC = () => {
     searchQuery?: string,
     deptFilter?: string,
     statusFilter?: string,
+    page = 1,
   ) => {
+    const requestId = ++matrixRequestId.current;
     try {
       setLoading(true);
-      const data = await fetchMonthlyAttendanceMatrix(m, y, searchQuery, deptFilter, statusFilter);
-      setMatrixData(data);
+      const data = await fetchMonthlyAttendanceMatrix(
+        m,
+        y,
+        searchQuery,
+        deptFilter,
+        statusFilter,
+        page,
+        pageSize,
+      );
+      if (requestId === matrixRequestId.current) {
+        setMatrixData(data);
+      }
     } catch (err: any) {
-      console.error("Failed to load monthly attendance matrix:", err);
-      message.error("Failed to load attendance matrix data");
+      if (requestId === matrixRequestId.current) {
+        console.error("Failed to load monthly attendance matrix:", err);
+        message.error("Failed to load attendance matrix data");
+      }
     } finally {
-      setLoading(false);
+      if (requestId === matrixRequestId.current) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    const deptToFilter = !isManager && selectedDepartment !== "All Departments" ? selectedDepartment : undefined;
+    const deptToFilter = isManager
+      ? managerDepartment || selectedDepartment || undefined
+      : selectedDepartment !== "All Departments"
+        ? selectedDepartment
+        : undefined;
     const statusToFilter = selectedStatus !== "All" ? selectedStatus : undefined;
-    loadMatrixData(selectedMonth, selectedYear, debouncedSearchTerm, deptToFilter, statusToFilter);
-  }, [selectedMonth, selectedYear, debouncedSearchTerm, selectedDepartment, selectedStatus, isManager]);
+    loadMatrixData(
+      selectedMonth,
+      selectedYear,
+      debouncedSearchTerm,
+      deptToFilter,
+      statusToFilter,
+      currentPage,
+    );
+  }, [
+    selectedMonth,
+    selectedYear,
+    debouncedSearchTerm,
+    selectedDepartment,
+    selectedStatus,
+    isManager,
+    managerDepartment,
+    currentPage,
+  ]);
 
   // Month navigation
   const handlePrevMonth = () => {
@@ -251,11 +326,23 @@ const MonthlyAttendanceMatrix: React.FC = () => {
     "July", "August", "September", "October", "November", "December"
   ];
 
-  // Excel Export Handler (direct download of original .xlsx)
+  // Excel Export: apply current matrix filters; export ALL matching rows (ignore pagination)
   const handleExportExcel = async () => {
     try {
       setIsExporting(true);
-      const blob = await downloadAttendanceReport(selectedMonth, selectedYear);
+      const deptToFilter = isManager
+        ? managerDepartment || selectedDepartment || undefined
+        : selectedDepartment !== "All Departments"
+          ? selectedDepartment
+          : undefined;
+      const statusToFilter = selectedStatus !== "All" ? selectedStatus : undefined;
+      const blob = await downloadAttendanceReport(
+        selectedMonth,
+        selectedYear,
+        debouncedSearchTerm || undefined,
+        deptToFilter,
+        statusToFilter,
+      );
       saveAs(blob, `Attendance_${selectedMonth}_${selectedYear}.xlsx`);
       message.success("Attendance report downloaded successfully!");
     } catch (error) {
@@ -278,9 +365,28 @@ const MonthlyAttendanceMatrix: React.FC = () => {
         undefined,
         isManager ? managerDepartment : undefined,
         undefined,
+        1,
+        100,
       );
 
-      const allEmployees = fullData?.employees || [];
+      const allEmployees = [...(fullData?.employees || [])];
+      const pageSize = 100;
+      const totalEmployees = getMatrixTotalEmployees(fullData, pageSize);
+      const totalPages = Math.ceil(totalEmployees / pageSize);
+
+      for (let page = 2; page <= totalPages; page += 1) {
+        const pageData = await fetchMonthlyAttendanceMatrix(
+          selectedMonth,
+          selectedYear,
+          undefined,
+          isManager ? managerDepartment : undefined,
+          undefined,
+          page,
+          pageSize,
+        );
+        allEmployees.push(...(pageData?.employees || []));
+      }
+
       if (allEmployees.length === 0) {
         message.warning("No attendance data to export for this month");
         return;
@@ -318,40 +424,13 @@ const MonthlyAttendanceMatrix: React.FC = () => {
   };
 
   // Filtered employees list
-  const filteredEmployees = useMemo(() => {
-    if (!matrixData?.employees) return [];
-    return matrixData.employees.filter((emp) => {
-      const q = debouncedSearchTerm.trim().toLowerCase();
-      const matchesSearch =
-        !q ||
-        emp.fullName.toLowerCase().includes(q) ||
-        emp.employeeId.toLowerCase().includes(q);
-
-      const matchesDept =
-        !selectedDepartment ||
-        selectedDepartment === "All Departments" ||
-        (emp.department && emp.department.trim().toLowerCase() === selectedDepartment.trim().toLowerCase()) ||
-        (isManager && (!emp.department || emp.department.trim().toLowerCase() === selectedDepartment.trim().toLowerCase()));
-
-      const matchesStatus =
-        !selectedStatus ||
-        selectedStatus === "All" ||
-        (selectedStatus === "Submitted" && (emp.summary?.notUpdated || 0) === 0) ||
-        (selectedStatus === "Pending" && (emp.summary?.notUpdated || 0) > 0);
-
-      return matchesSearch && matchesDept && matchesStatus;
-    });
-  }, [matrixData, debouncedSearchTerm, selectedDepartment, selectedStatus, isManager]);
-
-  const totalEmployees = filteredEmployees.length;
+  const filteredEmployees = matrixData?.employees ?? [];
+  const totalEmployees = getMatrixTotalEmployees(matrixData, pageSize);
   const totalPages = Math.max(1, Math.ceil(totalEmployees / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
 
-  // Paginated employees for 20 records per page
-  const paginatedEmployees = useMemo(() => {
-    const start = (safeCurrentPage - 1) * pageSize;
-    return filteredEmployees.slice(start, start + pageSize);
-  }, [filteredEmployees, safeCurrentPage, pageSize]);
+  // The API already returns only the requested page.
+  const paginatedEmployees = filteredEmployees;
 
   // Aggregate summary stats across visible employees
   const totalStats = useMemo(() => {
@@ -555,7 +634,7 @@ const MonthlyAttendanceMatrix: React.FC = () => {
               {/* Active employee count */}
               <Badge variant="count" className="px-2.5 py-1.5 rounded-xl text-xs shrink-0 font-bold">
                 <Users size={13} className="mr-0.5" />
-                <span>{filteredEmployees.length} Employees</span>
+                <span>{totalEmployees} Employees</span>
               </Badge>
             </div>
 
