@@ -65,15 +65,13 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/notes")) {
       return "Notes";
     }
-    if (
-      path.includes("/manager-dashboard/my-appraisal") ||
-      path.includes("/manager-dashboard/my-quarterly-review")
-    ) {
-      return "My Appraisal";
+    if (path.includes("/manager-dashboard/quarterly-review")) {
+      return "Quarterly Review";
     }
     if (
       path.includes("/manager-dashboard/appraisal") ||
-      path.includes("/manager-dashboard/quarterly-review")
+      path.includes("/manager-dashboard/my-appraisal") ||
+      path.includes("/manager-dashboard/my-quarterly-review")
     ) {
       return "Appraisal";
     }
@@ -111,12 +109,12 @@ const ManagerLayout = () => {
         return "Account Settings";
       case "leave-management":
         return "Request Management ";
-      case "appraisal":
       case "quarterly-review":
-        return "Appraisal";
-      case "my-appraisal":
+        return "Quarterly Review";
       case "my-quarterly-review":
-        return "My Appraisal";
+      case "appraisal":
+      case "my-appraisal":
+        return "Appraisal";
       case "notes":
         return "Notes";
       case "inbox":
@@ -172,10 +170,10 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/my-profile");
     } else if (tabName === "Request Management ") {
       navigate("/manager-dashboard/leave-management");
-    } else if (tabName === "Appraisal" || tabName === "Quarterly Review") {
+    } else if (tabName === "Quarterly Review") {
+      navigate("/manager-dashboard/quarterly-review");
+    } else if (tabName === "Appraisal" || tabName === "My Appraisal" || tabName === "Quarterly Review ") {
       navigate("/manager-dashboard/appraisal");
-    } else if (tabName === "My Appraisal" || tabName === "Quarterly Review ") {
-      navigate("/manager-dashboard/my-appraisal");
     } else if (tabName === "Notes") {
       navigate("/manager-dashboard/notes");
     } else if (tabName === "Inbox") {
