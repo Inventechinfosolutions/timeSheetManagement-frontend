@@ -308,9 +308,14 @@ const YearHoliday = () => {
           </div>
 
           <div className="rounded-3xl border border-white/60 bg-white p-5 shadow-[0_18px_40px_-16px_rgba(67,24,255,0.15)]">
-            <h3 className="text-sm font-black text-[#1B2559] mb-3">
-              By month
-            </h3>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-black text-[#1B2559]">
+                By month
+              </h3>
+              <span className="text-[11px] font-bold text-[#4318FF] tracking-wide shrink-0">
+                Total holidays per month
+              </span>
+            </div>
             <div className="grid grid-cols-4 gap-2">
               {MONTH_LABELS.map((label, i) => {
                 const count = byMonth[i];
