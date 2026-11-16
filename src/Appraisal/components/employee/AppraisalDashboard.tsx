@@ -445,6 +445,7 @@ export const AppraisalDashboard: React.FC = () => {
     defaultYear,
     quarter,
     statusFilter,
+    searchQuery,
     yearOptions,
     quarterOptions,
     yearsLoading,
@@ -459,6 +460,7 @@ export const AppraisalDashboard: React.FC = () => {
     setFinancialYear,
     setQuarter,
     setStatusFilter,
+    setSearchQuery,
     handleClearFilters,
     openAssignment,
     closeAssignment,
@@ -480,8 +482,8 @@ export const AppraisalDashboard: React.FC = () => {
   const [revealedModalData, setRevealedModalData] = useState<RevealedRatingData | null>(null);
   const [ratingTarget, setRatingTarget] = useState<QuarterlyReviewAssignment | null>(null);
   const [ratingPassword, setRatingPassword] = useState("");
+  /** Local input text; debounced value drives API via setSearchQuery */
   const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const employeeFiltersDockRef = useRef<HTMLDivElement>(null);
 
   // GSAP: Modern entrance animation for employee filter dock
@@ -947,23 +949,10 @@ export const AppraisalDashboard: React.FC = () => {
     }
   }, [activeAssignment, viewingAssignment]);
 
-  const filteredAssignments = useMemo(() => {
-    if (!debouncedSearch.trim()) return assignments;
-    const q = debouncedSearch.toLowerCase().trim();
-    return assignments.filter((a) => {
-      const quarterMatch = (a.quarter || "").toLowerCase().includes(q);
-      const fyMatch = (a.financialYear || "").toLowerCase().includes(q);
-      const assignedByMatch = (a.assignedBy || "").toLowerCase().includes(q);
-      const statusMatch = (a.status || "").toLowerCase().includes(q);
-      const descMatch = (a.description || "").toLowerCase().includes(q);
-      return quarterMatch || fyMatch || assignedByMatch || statusMatch || descMatch;
-    });
-  }, [assignments, debouncedSearch]);
-
-  const totalItems = debouncedSearch.trim() ? filteredAssignments.length : total;
+  const totalItems = total;
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalItems);
-  const paginatedAssignments = filteredAssignments;
+  const paginatedAssignments = assignments;
 
   // Nearest deadline among assignments that are loaded and not finally submitted.
   const deadlineInfo = useMemo(() => {
@@ -1291,9 +1280,9 @@ export const AppraisalDashboard: React.FC = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onClear={() => {
                     setSearchTerm("");
-                    setDebouncedSearch("");
+                    setSearchQuery("");
                   }}
-                  onDebounce={setDebouncedSearch}
+                  onDebounce={(value) => setSearchQuery(value)}
                   placeholder="Search..."
                   variant="outlined"
                   inputSize="md"
@@ -1378,13 +1367,14 @@ export const AppraisalDashboard: React.FC = () => {
               />
 
               {/* Clear Button */}
-              {(hasActiveFilters || Boolean(searchTerm) || Boolean(debouncedSearch)) && (
+              {(hasActiveFilters || Boolean(searchTerm) || Boolean(searchQuery)) && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
+                    // Clear search box UI + API q, then year/quarter/status
                     setSearchTerm("");
-                    setDebouncedSearch("");
+                    setSearchQuery("");
                     handleClearFilters();
                   }}
                   className="manager-review-clear-btn shrink-0"
@@ -1397,7 +1387,7 @@ export const AppraisalDashboard: React.FC = () => {
           </div>
 
           <CardContent className="p-0">
-            {filteredAssignments.length > 0 ? (
+            {assignments.length > 0 ? (
               /* STATE 2: Populated Table with Styled Brand Layout */
               <div className="space-y-4">
                 <div className="hidden sm:block">
