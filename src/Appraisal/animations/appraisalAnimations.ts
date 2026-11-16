@@ -733,7 +733,8 @@ export const initScrollRevealCards = (container: HTMLElement | null) => {
       (entries) => {
         entries.forEach((entry) => {
           const target = entry.target as HTMLElement;
-          if (entry.intersectionRatio >= 0.12) {
+          // One-way reveal only — keep cards visible once shown (no blank gaps on scroll)
+          if (entry.isIntersecting || entry.intersectionRatio >= 0.08) {
             gsap.to(target, {
               opacity: 1,
               y: 0,
@@ -750,19 +751,11 @@ export const initScrollRevealCards = (container: HTMLElement | null) => {
                 { opacity: 1, y: 0, stagger: 0.06, duration: 0.45, ease: "power2.out", overwrite: "auto" }
               );
             }
-          } else if (entry.intersectionRatio === 0 || !entry.isIntersecting) {
-            gsap.to(target, {
-              opacity: 0,
-              y: 35,
-              scale: 0.98,
-              duration: 0.4,
-              ease: "power2.in",
-              overwrite: "auto",
-            });
+            observer.unobserve(target);
           }
         });
       },
-      { root: null, threshold: [0, 0.12] }
+      { root: null, rootMargin: "80px 0px", threshold: [0, 0.08, 0.12] }
     );
 
     cards.forEach((card) => observer.observe(card));

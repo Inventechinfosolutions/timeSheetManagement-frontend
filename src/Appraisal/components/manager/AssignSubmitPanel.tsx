@@ -30,23 +30,23 @@ export const AssignSubmitPanel: React.FC<AssignSubmitPanelProps> = ({ summary, s
     <div className="relative space-y-3 min-h-[310px] flex flex-col">
       {/* Top subtle progress bar while waiting/animating */}
       {waiting && (
-        <div className="absolute -top-2 left-0 right-0 h-1 bg-blue-100 rounded-full overflow-hidden z-20">
-          <div className="h-full bg-blue-600 rounded-full animate-[progressIndeterminate_1.2s_ease-in-out_infinite]" />
+        <div className="absolute -top-2 left-0 right-0 h-1 bg-[#EEF0FF] rounded-full overflow-hidden z-20">
+          <div className="h-full bg-[#4318FF] rounded-full animate-[progressIndeterminate_1.2s_ease-in-out_infinite]" />
         </div>
       )}
 
       <div
-        className={`rounded-xl border p-2.5 sm:p-3 text-left flex items-start gap-3 shadow-2xs shrink-0 transition-all duration-300 ${
+        className={`rounded-xl border p-2.5 sm:p-3 text-left flex items-start gap-3 shrink-0 transition-all duration-300 ${
           submitted
             ? "border-emerald-300 bg-emerald-50/80 shadow-emerald-500/10"
-            : "border-blue-200/80 bg-[#F0F7FF]"
+            : "border-[#4318FF]/20 bg-[#F4F7FE] shadow-[0_4px_14px_rgba(67,24,255,0.14)]"
         }`}
       >
         <div
           className={`mt-0.5 w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border transition-all duration-300 ${
             submitted
               ? "bg-emerald-100 text-emerald-600 border-emerald-300 scale-105"
-              : "bg-blue-100/90 text-[#2563EB] border-blue-200/50"
+              : "bg-[#EEF0FF] text-[#4318FF] border-[#4318FF]/20 shadow-[0_3px_10px_rgba(67,24,255,0.18)]"
           }`}
         >
           {submitted ? (
@@ -58,7 +58,7 @@ export const AssignSubmitPanel: React.FC<AssignSubmitPanelProps> = ({ summary, s
         <div className="flex-1">
           <p
             className={`text-xs font-bold transition-colors duration-300 ${
-              submitted ? "text-emerald-900 font-extrabold" : "text-[#0F172A]"
+              submitted ? "text-emerald-900 font-extrabold" : "text-[#2B3674]"
             }`}
           >
             {submitted ? "Assigned" : waiting ? "Assigning reviews" : "Confirm assignment"}
@@ -85,19 +85,19 @@ export const AssignSubmitPanel: React.FC<AssignSubmitPanelProps> = ({ summary, s
           className={`h-full rounded-xl border bg-white p-3 shadow-xs flex flex-col transition-all duration-300 ${
             submitted
               ? "border-emerald-300 ring-2 ring-emerald-500/15 shadow-emerald-500/10"
-              : "border-blue-200/80"
+              : "border-[#4318FF]/20"
           }`}
         >
           <div
             className={`flex items-center justify-between mb-1.5 pb-1 border-b shrink-0 transition-colors duration-300 ${
-              submitted ? "border-emerald-100" : "border-blue-50"
+              submitted ? "border-emerald-100" : "border-[#EEF0FF]"
             }`}
           >
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#0F172A]">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-[#2B3674]">
               Employees
               <span
                 className={`ml-1.5 font-semibold text-xs transition-colors duration-300 ${
-                  submitted ? "text-emerald-600 font-bold" : "text-blue-600"
+                  submitted ? "text-emerald-600 font-bold" : "text-[#4318FF]"
                 }`}
               >
                 ({summary.people.length})
@@ -111,7 +111,7 @@ export const AssignSubmitPanel: React.FC<AssignSubmitPanelProps> = ({ summary, s
                 className={`rounded-xl border px-2.5 py-1.5 transition-all duration-300 ${
                   submitted
                     ? "border-emerald-200 bg-emerald-50/60"
-                    : "border-blue-100/80 bg-blue-50/40 hover:bg-blue-50/80 hover:border-blue-200"
+                    : "border-[#4318FF]/15 bg-[#F4F7FE]/60 hover:bg-[#EEF0FF] hover:border-[#4318FF]/30"
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -135,7 +135,7 @@ export const AssignSubmitPanel: React.FC<AssignSubmitPanelProps> = ({ summary, s
           className={`h-full rounded-xl border bg-white p-3 shadow-xs flex flex-col transition-all duration-300 ${
             submitted
               ? "border-emerald-300 ring-2 ring-emerald-500/15 shadow-emerald-500/10"
-              : "border-blue-200/80"
+              : "border-[#4318FF]/20"
           }`}
         >
           <div className="flex-1 min-h-0 grid grid-cols-2 grid-rows-2 gap-2.5 text-sm">
@@ -188,12 +188,12 @@ export const AssignSubmitPanel: React.FC<AssignSubmitPanelProps> = ({ summary, s
         className={`rounded-xl border bg-white p-3 shadow-xs transition-all duration-300 ${
           submitted
             ? "border-emerald-300 ring-2 ring-emerald-500/15 shadow-emerald-500/10"
-            : "border-blue-200/80"
+            : "border-[#4318FF]/20"
         }`}
       >
         <p
           className={`text-[10px] font-bold uppercase tracking-wider mb-1.5 transition-colors duration-300 ${
-            submitted ? "text-emerald-700" : "text-[#0F172A]"
+            submitted ? "text-emerald-700" : "text-[#2B3674]"
           }`}
         >
           Description

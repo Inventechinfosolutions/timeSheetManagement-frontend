@@ -15,13 +15,14 @@
   width: 100%;
   height: 100%;
   border-radius: 0.85rem;
-  background: linear-gradient(145deg, #60a5fa 0%, #2563eb 55%, #1d4ed8 100%);
-  border: 1.5px solid rgba(191, 219, 254, 0.9);
-  box-shadow: none;
+  background: #4318FF;
+  border: 1.5px solid rgba(67, 24, 255, 0.35);
+  box-shadow: 0 4px 12px rgba(67, 24, 255, 0.28);
   transition:
     transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1),
     background 0.25s ease,
-    filter 0.2s ease;
+    filter 0.2s ease,
+    box-shadow 0.25s ease;
 }
 
 .project-expand-3d-chevron {
@@ -36,7 +37,8 @@
 }
 
 .project-expand-3d.is-open .project-expand-3d-face {
-  background: linear-gradient(145deg, #93c5fd 0%, #3b82f6 55%, #2563eb 100%);
+  background: #3311CC;
+  box-shadow: 0 4px 12px rgba(67, 24, 255, 0.35);
 }
 
 .project-expand-3d.is-open .project-expand-3d-chevron {
@@ -46,6 +48,7 @@
 .group:hover .project-expand-3d-face {
   filter: brightness(1.06);
   transform: scale(1.04);
+  background: #3311CC;
 }
 
 .group:active .project-expand-3d-face {

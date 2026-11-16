@@ -26,16 +26,6 @@ interface QuarterlyReviewTableProps {
   viewOnly?: boolean;
 }
 
-// Harmonious colorful avatar palettes matching the frosted ice-blue & royal blue aesthetic
-const AVATAR_PALETTES = [
-  { bg: "linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)", text: "#1D4ED8", border: "#BFDBFE" }, // Royal Blue
-  { bg: "linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)", text: "#0284C7", border: "#BAE6FD" }, // Sky Blue
-  { bg: "linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 100%)", text: "#4338CA", border: "#C7D2FE" }, // Indigo Blue
-  { bg: "linear-gradient(135deg, #ECFEFF 0%, #CFFAFE 100%)", text: "#0891B2", border: "#A5F3FC" }, // Electric Cyan
-  { bg: "linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)", text: "#334155", border: "#CBD5E1" }, // Ice Slate
-  { bg: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)", text: "#059669", border: "#A7F3D0" }, // Mint Teal
-];
-
 export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
   data,
   onEdit,
@@ -127,23 +117,6 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
     const startIndex = (currentPage - 1) * pageSize;
     return data.slice(startIndex, startIndex + pageSize);
   }, [data, currentPage, pageSize, showPagination, isServerPage]);
-
-  const getInitials = (name: string): string => {
-    const parts = name.trim().split(" ");
-    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-    return name.slice(0, 2).toUpperCase();
-  };
-
-  const getAvatarStyle = (name: string, id: string) => {
-    let hash = 0;
-    const str = (id || "") + (name || "");
-    for (let i = 0; i < str.length; i++) {
-      hash = (hash << 5) - hash + str.charCodeAt(i);
-      hash |= 0;
-    }
-    const idx = Math.abs(hash) % AVATAR_PALETTES.length;
-    return AVATAR_PALETTES[idx];
-  };
 
   const renderStatusBadge = (status: string, reassignCount?: number) => {
     const rawUpper = (status || "").trim().toUpperCase();
@@ -501,21 +474,22 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
           const recordManagerId = String(record.managerId || "")
             .trim()
             .toUpperCase();
-          // Employee-assigner after forward/complete: view-only. Manager can edit anytime.
-          const isEmployeeAssignerViewOnly =
-            assignerViewOnlyStatus &&
+          // Reporting manager owns final review; assignerId may still be the manager who assigned
+          // while appraisal_mapping routes first pass to an employee-assigner (live check).
+          const isManagerOfRecord =
             !!currentId &&
-            !!recordAssignerId &&
-            recordAssignerId === currentId &&
-            (!recordManagerId || recordManagerId !== currentId);
+            ((!!recordManagerId && recordManagerId === currentId) ||
+              (!recordManagerId &&
+                !!recordAssignerId &&
+                recordAssignerId === currentId));
+          // Non-manager (mapped employee-assigner) after forward/complete: view-only.
+          const isEmployeeAssignerViewOnly =
+            assignerViewOnlyStatus && !!currentId && !isManagerOfRecord;
           if (isEmployeeAssignerViewOnly) return null;
 
           // Paper rocket for statuses that mean “evaluate / send next”
           const isManagerFinalReview =
-            statusUpper === "AWAITING_MANAGER_FINAL_REVIEW" &&
-            !!currentId &&
-            !!recordManagerId &&
-            recordManagerId === currentId;
+            statusUpper === "AWAITING_MANAGER_FINAL_REVIEW" && isManagerOfRecord;
           const useSendIcon =
             statusUpper === "PERFORMANCE_RECEIVED" || isManagerFinalReview;
 
@@ -581,7 +555,6 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
           <tbody>
             {paginatedData.map((record, index) => {
               const isHighlighted = highlightedId === record.id;
-              const avatarStyle = getAvatarStyle(record.name, record.id);
               const serialNumber = (activePage - 1) * pageSize + index + 1;
 
               return (
@@ -591,27 +564,13 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
                   className={isHighlighted ? "quarterly-review-row-highlighted" : ""}
                 >
                   {/* Sl No */}
-                  <td className="text-center font-semibold text-xs text-[#475569]">
+                  <td className="text-center font-semibold text-xs text-[#707EAE]">
                     {serialNumber}
                   </td>
 
-                  {/* 1. Name with Colored Avatar Initials */}
+                  {/* Employee Name */}
                   <td>
-                    <div className="qr-employee-cell">
-                      <div
-                        className="qr-avatar-badge"
-                        style={{
-                          background: avatarStyle.bg,
-                          color: avatarStyle.text,
-                          borderColor: avatarStyle.border,
-                        }}
-                      >
-                        {getInitials(record.name)}
-                      </div>
-                      <div>
-                        <div className="qr-employee-name">{record.name}</div>
-                      </div>
-                    </div>
+                    <div className="qr-employee-name">{record.name}</div>
                   </td>
 
                   {/* 2. ID */}
@@ -687,10 +646,10 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
       {showPagination && data.length > 0 && (
         <div className="quarterly-review-pagination-bar">
           <div className="flex flex-wrap items-center justify-end gap-3 sm:gap-4 select-none w-full">
-            <span className="text-xs text-gray-500 font-medium">
-              Showing <span className="text-[#0F172A] font-bold">{startItem}</span> to{" "}
-              <span className="text-[#0F172A] font-bold">{endItem}</span> of{" "}
-              <span className="text-[#0F172A] font-bold">{totalItems}</span> entries
+            <span className="text-xs text-[#A3AED0] font-bold">
+              Showing <span className="text-[#2B3674] font-bold">{startItem}</span> to{" "}
+              <span className="text-[#2B3674] font-bold">{endItem}</span> of{" "}
+              <span className="text-[#2B3674] font-bold">{totalItems}</span> entries
             </span>
 
             <Pagination
@@ -699,7 +658,7 @@ export const QuarterlyReviewTable: React.FC<QuarterlyReviewTableProps> = ({
               pageSize={pageSize}
               onPageChange={isServerPage ? onPageChange : setCurrentPage}
               showTotal={false}
-              activeClassName="!bg-[#2563EB] !text-white shadow-xs font-black shadow-[#2563EB]/25"
+              activeClassName="!bg-[#4318FF] !text-white shadow-xs font-black shadow-[#4318FF]/25"
             />
           </div>
         </div>

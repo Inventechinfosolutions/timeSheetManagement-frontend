@@ -93,67 +93,120 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
-/* Executive Summary Stat Cards */
+/* Executive Summary Stat Cards — dashboard StatCard glow (4th-card style) */
 .employee-stat-card-executive {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.95rem;
-  padding: 0.75rem 1.15rem;
-  min-height: 72px;
+  padding: 0.85rem 1.2rem;
+  min-height: 76px;
   min-width: 240px;
-  background: #FFFFFF !important;
-  border-radius: 18px !important;
-  border: 1px solid #E2E8F0 !important;
-  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02) !important;
+  background: linear-gradient(160deg, #EEF0FF 0%, #F4F7FE 40%, #FFFFFF 68%) !important;
+  border-radius: 20px !important;
+  border: 1px solid #FFFFFF !important;
+  box-shadow: 0 10px 30px -12px rgba(67, 24, 255, 0.22) !important;
   overflow: hidden;
-  transition: border-color 0.25s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.25s ease;
   user-select: none;
 }
 
-.employee-stat-card-executive::before {
+.employee-stat-card-executive::after {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2.5px;
-  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  left: -12px;
+  bottom: -28px;
+  width: 110px;
+  height: 110px;
+  border-radius: 9999px;
+  background: radial-gradient(circle, rgba(67, 24, 255, 0.22) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
 }
 
-.employee-stat-card-executive:hover::before {
-  opacity: 1;
+.employee-stat-card-executive > * {
+  position: relative;
+  z-index: 1;
 }
 
-.employee-stat-card-executive-overdue::before {
-  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.7), transparent);
+.employee-stat-card-executive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px -14px rgba(67, 24, 255, 0.28) !important;
 }
 
-.employee-stat-card-executive-warning::before {
-  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.7), transparent);
+.employee-stat-card-executive-overdue {
+  background: linear-gradient(160deg, #FEECEC 0%, #FFF5F5 40%, #FFFFFF 68%) !important;
+  box-shadow: 0 10px 30px -12px rgba(239, 68, 68, 0.22) !important;
+}
+
+.employee-stat-card-executive-overdue::after {
+  left: -12px;
+  bottom: -28px;
+  width: 110px;
+  height: 110px;
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.24) 0%, transparent 70%);
+}
+
+.employee-stat-card-executive-overdue:hover {
+  box-shadow: 0 18px 40px -14px rgba(239, 68, 68, 0.32) !important;
+}
+
+.employee-stat-card-executive-overdue:hover .employee-stat-chevron-pill {
+  background: #FEECEC;
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #DC2626;
+}
+
+.employee-stat-card-executive-warning {
+  background: linear-gradient(160deg, #FEECEC 0%, #FFF5F5 40%, #FFFFFF 68%) !important;
+  box-shadow: 0 10px 30px -12px rgba(239, 68, 68, 0.22) !important;
+}
+
+.employee-stat-card-executive-warning::after {
+  left: -12px;
+  bottom: -28px;
+  width: 110px;
+  height: 110px;
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.24) 0%, transparent 70%);
+}
+
+.employee-stat-card-executive-warning .employee-stat-edge-bar {
+  background: linear-gradient(180deg, #F87171 0%, #EF4444 100%);
+}
+
+.employee-stat-modern-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.employee-stat-card-executive:hover .employee-stat-modern-icon {
+  transform: scale(1.1);
 }
 
 .employee-stat-chevron-pill {
   width: 1.85rem;
   height: 1.85rem;
   border-radius: 9999px;
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
+  background: rgba(67, 24, 255, 0.06);
+  border: 1px solid rgba(67, 24, 255, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94A3B8;
+  color: #A3AED0;
   flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
 .employee-stat-card-executive:hover .employee-stat-chevron-pill {
-  background: #EFF6FF;
-  border-color: #BFDBFE;
-  color: #2563EB;
+  background: #F4F7FE;
+  border-color: rgba(67, 24, 255, 0.25);
+  color: #4318FF;
 }
 
 /* Colored Edge Bar on Left */
@@ -163,7 +216,7 @@
   top: 0;
   bottom: 0;
   width: 5px;
-  background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%);
+  background: linear-gradient(180deg, #868CFF 0%, #4318FF 100%);
   transition: width 0.25s ease, filter 0.25s ease;
   z-index: 2;
 }
@@ -174,11 +227,41 @@
 }
 
 .employee-stat-card-executive-overdue .employee-stat-edge-bar {
-  background: linear-gradient(180deg, #EF4444 0%, #DC2626 100%);
+  background: linear-gradient(180deg, #F87171 0%, #EF4444 100%);
 }
 
 .employee-stat-card-executive-warning .employee-stat-edge-bar {
-  background: linear-gradient(180deg, #F59E0B 0%, #D97706 100%);
+  background: linear-gradient(180deg, #F87171 0%, #EF4444 100%);
+}
+
+.employee-stat-card-executive-rating {
+  background: linear-gradient(160deg, #FFF8E8 0%, #FFFBF3 40%, #FFFFFF 68%) !important;
+  box-shadow: 0 10px 30px -12px rgba(245, 158, 11, 0.22) !important;
+}
+
+.employee-stat-card-executive-rating::after {
+  left: -12px;
+  bottom: -28px;
+  width: 110px;
+  height: 110px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.22) 0%, transparent 70%);
+}
+
+.employee-stat-card-executive-rating .employee-stat-edge-bar {
+  background: linear-gradient(180deg, #FCD34D 0%, #F59E0B 100%);
+}
+
+.employee-stat-card-executive-deadline {
+  background: linear-gradient(160deg, #EEF0FF 0%, #F4F7FE 40%, #FFFFFF 68%) !important;
+  box-shadow: 0 10px 30px -12px rgba(67, 24, 255, 0.22) !important;
+}
+
+.employee-stat-card-executive-deadline::after {
+  left: -12px;
+  bottom: -28px;
+  width: 110px;
+  height: 110px;
+  background: radial-gradient(circle, rgba(67, 24, 255, 0.24) 0%, transparent 70%);
 }
 
 /* ==========================================================================
@@ -235,14 +318,14 @@
 
 .eval-input-field:focus {
   outline: none;
-  border-color: #2563EB !important;
+  border-color: #4318FF !important;
   box-shadow: none !important;
   background: #FFFFFF !important;
 }
 
-/* Input Card Focus-within: Crisp Blue border, pure white background, NO shadow effect */
+/* Selected / focus: darker purple border only (full appraisal) */
 .eval-step-card:focus-within:not(.eval-review-card-noborder):not(.\!border-none):not(.\!border-0) {
-  border-color: #2563EB !important;
+  border-color: #4318FF !important;
   box-shadow: none !important;
   background: #FFFFFF !important;
   transform: none !important;
@@ -363,6 +446,40 @@
   transform: translateY(-2px) !important;
   border-color: #93C5FD !important;
   box-shadow: 0 16px 32px -4px rgba(15, 23, 42, 0.12), 0 6px 14px -2px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* Final Review — 6 step outer cards: no border, stronger shadow */
+.eval-step-card.eval-review-inner-card.eval-reveal-card.is-revealed {
+  border: none !important;
+  border-radius: 0.75rem !important;
+  box-shadow:
+    0 8px 24px rgba(43, 54, 116, 0.12),
+    0 3px 8px rgba(43, 54, 116, 0.08) !important;
+  background: #FFFFFF !important;
+  transform: none !important;
+}
+
+.eval-step-card.eval-review-inner-card.eval-reveal-card.is-revealed:hover {
+  transform: none !important;
+  border: none !important;
+  box-shadow:
+    0 12px 32px rgba(43, 54, 116, 0.16),
+    0 4px 12px rgba(43, 54, 116, 0.1) !important;
+}
+
+.eval-review-inner-card .eval-review-step-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+/* More gap: step heading → content below */
+.eval-review-inner-card > .eval-review-step-head + * {
+  margin-top: 1.25rem !important;
 }
 
 /* Internal Content Stagger System */
@@ -551,8 +668,44 @@
 }
 
 /* ==========================================================================
-   Access Request Button Styling & Animations in Actions Column (Icon Only)
+   Action icon buttons (view / edit / send / access) — purple + purple shadow
    ========================================================================== */
+.qr-action-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 9999px;
+  border: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  user-select: none;
+}
+
+.qr-action-btn-view,
+.qr-action-btn-edit,
+.qr-action-btn-send {
+  background: #F4F7FE;
+  color: #4318FF;
+  box-shadow: 0 4px 12px rgba(67, 24, 255, 0.22);
+}
+
+.qr-action-btn-view:hover,
+.qr-action-btn-edit:hover,
+.qr-action-btn-send:hover {
+  background: #4318FF;
+  color: #FFFFFF;
+  box-shadow: 0 6px 16px rgba(67, 24, 255, 0.35);
+  transform: translateY(-1px) scale(1.05);
+}
+
+.qr-action-btn-view:active,
+.qr-action-btn-edit:active,
+.qr-action-btn-send:active {
+  transform: scale(0.92);
+}
+
 .qr-action-btn-access {
   display: inline-flex;
   align-items: center;
@@ -567,17 +720,17 @@
 }
 
 .qr-action-btn-access-enabled {
-  background: rgba(239, 246, 255, 0.85);
-  color: #2563EB;
+  background: #F4F7FE;
+  color: #4318FF;
   border: none;
-  box-shadow: none;
+  box-shadow: 0 4px 12px rgba(67, 24, 255, 0.22);
   cursor: pointer;
 }
 
 .qr-action-btn-access-enabled:hover {
-  background: #2563EB;
+  background: #4318FF;
   color: #FFFFFF;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 6px 16px rgba(67, 24, 255, 0.35);
   transform: translateY(-1px) scale(1.05);
 }
 
@@ -594,18 +747,18 @@
 }
 
 .qr-action-btn-access-requested {
-  background: rgba(239, 246, 255, 0.85);
-  color: #2563EB;
+  background: #F4F7FE;
+  color: #4318FF;
   border: none;
   cursor: pointer;
-  box-shadow: none;
+  box-shadow: 0 4px 12px rgba(67, 24, 255, 0.22);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .qr-action-btn-access-requested:hover {
-  background: #2563EB;
+  background: #4318FF;
   color: #FFFFFF;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 6px 16px rgba(67, 24, 255, 0.35);
   transform: translateY(-1px) scale(1.05);
 }
 
@@ -1114,6 +1267,58 @@
 .emoji-btn-pop {
   animation: emojiClickPopEffect 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
 }
+
+/* Native system emoji faces (Segoe UI Emoji / Apple Color Emoji / Noto) */
+.env-emoji-face {
+  font-size: 1.75rem;
+  line-height: 1;
+  font-family: "Segoe UI Emoji", "Segoe UI Symbol", "Apple Color Emoji", "Noto Color Emoji", "Twemoji Mozilla", sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  speak: never;
+  -webkit-font-smoothing: antialiased;
+}
+@media (min-width: 640px) {
+  .env-emoji-face {
+    font-size: 2rem;
+  }
+}
+.env-emoji-active {
+  filter: drop-shadow(0 4px 8px rgba(67, 24, 255, 0.18));
+}
+
+@keyframes envEmojiShake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  20% { transform: translateX(-2px) rotate(-6deg); }
+  40% { transform: translateX(2px) rotate(5deg); }
+  60% { transform: translateX(-1.5px) rotate(-3deg); }
+  80% { transform: translateX(1px) rotate(2deg); }
+}
+@keyframes envEmojiDroop {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+@keyframes envEmojiBreathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+@keyframes envEmojiBounce {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-4px); }
+  70% { transform: translateY(1px); }
+}
+@keyframes envEmojiSpark {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25% { transform: translateY(-3px) rotate(-5deg) scale(1.05); }
+  50% { transform: translateY(0) rotate(0deg) scale(1); }
+  75% { transform: translateY(-3px) rotate(5deg) scale(1.05); }
+}
+
+.env-emoji-shake { animation: envEmojiShake 0.85s ease-in-out infinite; }
+.env-emoji-droop { animation: envEmojiDroop 1.8s ease-in-out infinite; }
+.env-emoji-breathe { animation: envEmojiBreathe 2.2s ease-in-out infinite; }
+.env-emoji-bounce { animation: envEmojiBounce 1.5s ease-in-out infinite; }
+.env-emoji-spark { animation: envEmojiSpark 1.5s ease-in-out infinite; }
 
 /* ==========================================================================
    Locked + unsubmitted — contact manager to reassign

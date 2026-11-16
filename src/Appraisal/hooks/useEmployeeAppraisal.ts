@@ -189,7 +189,7 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
   const quarterOptions = useMemo(() => {
     const seen = new Set<string>();
     const options: { value: string; label: string }[] = [
-      { value: AppraisalFilterAll.ALL, label: "Quarter" },
+      { value: AppraisalFilterAll.ALL, label: "All Quarters" },
     ];
     masterYears.forEach((year) => {
       year.quarters?.forEach((item) => {

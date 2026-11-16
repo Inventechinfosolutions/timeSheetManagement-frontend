@@ -74,7 +74,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
     <div className="space-y-3">
       {/* Step Header */}
       <div>
-        <h3 className="text-[1.24rem] font-bold text-[#0F172A]">
+        <h3 className="text-[1.24rem] font-bold">
           <span className="eval-title-anim">Step 4: Continuous Learning & Goals</span>
         </h3>
       </div>
@@ -93,7 +93,7 @@ export const LearningGoalsStep: React.FC<StepProps> = ({
             >
               <label
                 htmlFor={field.inputId}
-                className="block text-[11px] font-semibold uppercase tracking-wider text-[#0F172A] mb-1"
+                className="block text-[11px] font-semibold uppercase tracking-wider text-[#2B3674] mb-1"
               >
                 <span>
                   {field.label} {field.required && <span className="text-red-500">*</span>}

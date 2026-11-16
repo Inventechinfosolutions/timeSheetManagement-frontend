@@ -1,6 +1,6 @@
 /* ==========================================================================
-   Assign Quarterly Review Modal - Animations & Frosted Ice-Blue Styling
-   Frosted Ice-Blue Aesthetic & Royal Blue Highlights
+   Assign Quarterly Review Modal - Animations & Worksphere Purple Styling
+   Worksphere purple accents & purple shadows
    ========================================================================== */
 
 /* 1. Modal Overlay Backdrop Entrance & Exit */
@@ -52,15 +52,15 @@
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.98) 0%,
-    rgba(240, 244, 250, 0.96) 50%,
-    rgba(232, 240, 250, 0.94) 100%
+    rgba(244, 247, 254, 0.96) 50%,
+    rgba(238, 240, 255, 0.94) 100%
   ) !important;
   backdrop-filter: blur(28px) !important;
   -webkit-backdrop-filter: blur(28px) !important;
-  border: 1.5px solid rgba(219, 234, 254, 0.85) !important;
+  border: 1.5px solid rgba(67, 24, 255, 0.14) !important;
   box-shadow:
     0 28px 75px -15px rgba(15, 23, 42, 0.22),
-    0 6px 24px rgba(37, 99, 235, 0.15),
+    0 6px 24px rgba(67, 24, 255, 0.15),
     inset 0 1px 2px rgba(255, 255, 255, 1) !important;
   border-radius: 1.75rem !important;
   animation: assignModalExpand 0.48s cubic-bezier(0.34, 1.4, 0.64, 1) forwards !important;
@@ -175,7 +175,7 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
     filter: blur(0px);
     box-shadow:
       0 28px 75px -15px rgba(15, 23, 42, 0.22),
-      0 6px 24px rgba(37, 99, 235, 0.15);
+      0 6px 24px rgba(67, 24, 255, 0.15);
   }
   28% {
     opacity: 0.96;
@@ -203,14 +203,14 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
   justify-content: center !important;
   border-radius: 0.85rem !important;
   color: #64748B !important;
-  background: #EFF6FF !important;
-  border: 1.5px solid #BFDBFE !important;
+  background: #F4F7FE !important;
+  border: 1.5px solid #C3B5FF !important;
   cursor: pointer !important;
   transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
   transform-origin: center center !important;
   position: relative !important;
   overflow: hidden !important;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08) !important;
+  box-shadow: 0 2px 6px rgba(67, 24, 255, 0.08) !important;
 }
 
 .assign-quarterly-modal-dialog .assign-modal-close-btn:hover {
@@ -246,13 +246,13 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
-  color: #1D4ED8;
+  background: linear-gradient(135deg, #F4F7FE 0%, #EEF0FF 100%);
+  color: #4318FF;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.18), inset 0 1px 1px #FFFFFF;
+  box-shadow: 0 4px 14px rgba(67, 24, 255, 0.18), inset 0 1px 1px #FFFFFF;
 }
 
 /* 5. Form Sections Staggered Entrance */
@@ -289,8 +289,8 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
   padding: 0 1.25rem !important;
   box-sizing: border-box !important;
   border-radius: 9999px !important;
-  border: 1.5px solid #BFDBFE !important;
-  color: #1D4ED8 !important;
+  border: 1.5px solid #C3B5FF !important;
+  color: #4318FF !important;
   background: #FFFFFF !important;
   font-weight: 700 !important;
   font-size: 0.875rem !important;
@@ -298,7 +298,7 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
   cursor: pointer !important;
   white-space: nowrap !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.06) !important;
+  box-shadow: 0 2px 6px rgba(67, 24, 255, 0.06) !important;
 }
 
 .assign-modal-cancel-btn > span {
@@ -309,10 +309,10 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 }
 
 .assign-modal-cancel-btn:hover {
-  background: #EFF6FF !important;
-  border-color: #93C5FD !important;
+  background: #F4F7FE !important;
+  border-color: #868CFF !important;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12) !important;
+  box-shadow: 0 4px 12px rgba(67, 24, 255, 0.12) !important;
 }
 
 .assign-modal-cancel-btn:active {
@@ -334,7 +334,7 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
   font-weight: 700 !important;
   font-size: 0.875rem !important;
   line-height: 1 !important;
-  background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%) !important;
+  background: linear-gradient(180deg, #868CFF 0%, #4318FF 100%) !important;
   color: #FFFFFF !important;
   border: 1px solid rgba(255, 255, 255, 0.35) !important;
   position: relative !important;
@@ -346,7 +346,7 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
     box-shadow 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
     border-color 0.3s ease !important;
   box-shadow:
-    0 10px 24px -4px rgba(37, 99, 235, 0.45),
+    0 10px 24px -4px rgba(67, 24, 255, 0.45),
     inset 0 1px 1.5px rgba(255, 255, 255, 0.45) !important;
 }
 
@@ -357,15 +357,15 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 
 .assign-modal-submit-btn:hover:not(:disabled) {
   transform: translateY(-2.5px) scale(1.02) !important;
-  background: linear-gradient(180deg, #2563EB 0%, #1E40AF 100%) !important;
+  background: linear-gradient(180deg, #4318FF 0%, #3311CC 100%) !important;
   box-shadow:
-    0 14px 34px rgba(37, 99, 235, 0.55),
+    0 14px 34px rgba(67, 24, 255, 0.55),
     inset 0 1px 1.5px rgba(255, 255, 255, 0.6) !important;
 }
 
 .assign-modal-submit-btn:active:not(:disabled) {
   transform: translateY(1px) scale(0.96) !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+  box-shadow: 0 4px 14px rgba(67, 24, 255, 0.35) !important;
 }
 
 /* Circular Badge Container */
@@ -441,7 +441,7 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 }
 
 .assign-flight-arc {
-  stroke: #93C5FD;
+  stroke: #868CFF;
   stroke-width: 2;
   stroke-linecap: round;
   fill: none;
@@ -476,8 +476,8 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 }
 
 .assign-btn-animating .assign-plane-icon {
-  fill: #2563EB !important;
-  color: #2563EB !important;
+  fill: #4318FF !important;
+  color: #4318FF !important;
 }
 
 @keyframes paperPlaneArcLoop {
@@ -526,15 +526,15 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  color: #2563EB !important;
+  color: #4318FF !important;
   animation: checkmarkPopInsideCircle 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 0.8s forwards !important;
 }
 
 .assign-btn-animating .assign-check-icon {
   width: 20px !important;
   height: 20px !important;
-  color: #2563EB !important;
-  stroke: #2563EB !important;
+  color: #4318FF !important;
+  stroke: #4318FF !important;
 }
 
 @keyframes checkmarkPopInsideCircle {
@@ -562,8 +562,8 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
   gap: 0 !important;
   border-radius: 50% !important;
   background: #FFFFFF !important;
-  border: 2.5px solid #2563EB !important;
-  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.35) !important;
+  border: 2.5px solid #4318FF !important;
+  box-shadow: 0 4px 18px rgba(67, 24, 255, 0.35) !important;
   cursor: default !important;
   overflow: visible !important;
   animation: buttonCompressToCircle 0.35s cubic-bezier(0.34, 1.25, 0.64, 1) forwards !important;
@@ -578,7 +578,7 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
     width: 132px;
     min-width: 132px;
     border-radius: 9999px;
-    background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%);
+    background: linear-gradient(180deg, #868CFF 0%, #4318FF 100%);
   }
   100% {
     width: 42px;
@@ -586,7 +586,7 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
     max-width: 42px;
     border-radius: 50%;
     background: #FFFFFF;
-    border: 2px solid #2563EB;
+    border: 2px solid #4318FF;
   }
 }
 
@@ -770,9 +770,9 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 }
 
 .assign-yearly-quarters .qr-quarter-q1 {
-  background: #EFF6FF;
-  color: #1D4ED8;
-  border: 1px solid #BFDBFE;
+  background: #F4F7FE;
+  color: #4318FF;
+  border: 1px solid #C3B5FF;
 }
 
 .assign-yearly-quarters .qr-quarter-q2 {
@@ -801,10 +801,10 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 }
 
 .assign-input-control:hover {
-  border-color: #93C5FD !important;
+  border-color: #868CFF !important;
   transform: translateY(-1.5px) !important;
   box-shadow:
-    0 6px 18px rgba(37, 99, 235, 0.08),
+    0 6px 18px rgba(67, 24, 255, 0.08),
     0 2px 4px rgba(0, 0, 0, 0.03) !important;
 }
 
@@ -820,11 +820,11 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 .assign-input-control:focus,
 .assign-input-control:focus-within,
 .assign-input-control[aria-expanded="true"] {
-  border-color: #2563EB !important;
+  border-color: #4318FF !important;
   transform: translateY(-2px) scale(1.008) !important;
   box-shadow:
-    0 0 0 3.5px rgba(37, 99, 235, 0.16),
-    0 8px 24px rgba(37, 99, 235, 0.12) !important;
+    0 0 0 3.5px rgba(67, 24, 255, 0.16),
+    0 8px 24px rgba(67, 24, 255, 0.12) !important;
 }
 
 .assign-input-control svg {
@@ -833,13 +833,13 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 
 .assign-input-control:hover svg {
   transform: scale(1.18) rotate(6deg) !important;
-  color: #2563EB !important;
+  color: #4318FF !important;
 }
 
 .assign-input-control:focus-within svg,
 .assign-input-control[aria-expanded="true"] svg {
   transform: scale(1.22) rotate(180deg) !important;
-  color: #2563EB !important;
+  color: #4318FF !important;
 }
 
 /* Interactive Form Labels */
@@ -849,7 +849,7 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 }
 
 .assign-modal-form-section:hover label {
-  color: #1D4ED8 !important;
+  color: #4318FF !important;
   transform: translateX(1.5px) !important;
 }
 
@@ -861,17 +861,17 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 
 .assign-modal-warning-box:hover {
   transform: translateY(-1px) scale(1.005) !important;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.15) !important;
+  box-shadow: 0 6px 18px rgba(67, 24, 255, 0.15) !important;
 }
 
 @keyframes warningPulseGlow {
   0%, 100% {
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
-    border-color: #BFDBFE;
+    box-shadow: 0 2px 8px rgba(67, 24, 255, 0.08);
+    border-color: #C3B5FF;
   }
   50% {
-    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.16);
-    border-color: #93C5FD;
+    box-shadow: 0 4px 16px rgba(67, 24, 255, 0.16);
+    border-color: #868CFF;
     transform: translateY(-0.5px);
   }
 }
@@ -883,7 +883,7 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 
 .assign-select-all-btn:hover {
   transform: scale(1.08) translateX(1px) !important;
-  color: #2563EB !important;
+  color: #4318FF !important;
 }
 
 .assign-select-all-btn:active {
@@ -892,10 +892,10 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 
 /* Textarea Focus & Hover */
 .assign-input-textarea:focus {
-  border-color: #2563EB !important;
+  border-color: #4318FF !important;
   box-shadow:
-    0 0 0 3.5px rgba(37, 99, 235, 0.16),
-    0 8px 22px rgba(37, 99, 235, 0.1) !important;
+    0 0 0 3.5px rgba(67, 24, 255, 0.16),
+    0 8px 22px rgba(67, 24, 255, 0.1) !important;
 }
 
 /* Ensure Ant Design DatePicker Popup is on top of modal dialog and never underlaps */
@@ -908,7 +908,7 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
   width: var(--date-picker-width, 100%) !important;
   min-width: var(--date-picker-width, 100%) !important;
   max-width: var(--date-picker-width, 100%) !important;
-  box-shadow: 0 12px 36px -4px rgba(15, 23, 42, 0.2), 0 4px 12px rgba(37, 99, 235, 0.12) !important;
+  box-shadow: 0 12px 36px -4px rgba(15, 23, 42, 0.2), 0 4px 12px rgba(67, 24, 255, 0.12) !important;
   border-radius: 16px !important;
   overflow: hidden !important;
 }
@@ -966,14 +966,14 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 .assign-ant-datepicker-popup .ant-picker-header button {
   visibility: visible !important;
   opacity: 1 !important;
-  color: #2563EB !important;
+  color: #4318FF !important;
   font-size: 13px !important;
   line-height: 1 !important;
   cursor: pointer !important;
 }
 
 .assign-ant-datepicker-popup .ant-picker-header button:hover {
-  color: #1D4ED8 !important;
+  color: #4318FF !important;
 }
 
 .assign-ant-datepicker-popup .ant-picker-header-view {
@@ -990,7 +990,7 @@ textarea.assign-input-textarea:hover::-webkit-resizer {
 }
 
 .assign-ant-datepicker-popup .ant-picker-header-view button:hover {
-  color: #2563EB !important;
+  color: #4318FF !important;
 }
 
 .assign-ant-datepicker-popup .ant-picker-footer,

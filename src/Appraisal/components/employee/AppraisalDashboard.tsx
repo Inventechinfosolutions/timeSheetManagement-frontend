@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import gsap from "gsap";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import {
   Award,
-  BarChart3,
+  ArrowLeft,
   Calendar,
   Clock,
   ClipboardList,
@@ -46,7 +47,6 @@ import { RevealedRatingModal, RevealedRatingData } from "./RevealedRatingModal";
 import { message } from "antd";
 import {
   Card,
-  CardTitle,
   CardContent,
   Button,
   Dropdown,
@@ -161,7 +161,7 @@ const renderStatusBadge = (status: string, reassignCount?: number) => {
         className="qr-status-badge qr-status-in-progress"
         title="Edit access granted. Update your answers and resubmit. Until you resubmit, your old submitted data stays as is."
       >
-        <KeyRound className="w-3 h-3 text-sky-600 mr-0.5 inline" />
+        <KeyRound className="w-3 h-3 text-[#4318FF] mr-0.5 inline" />
         Edit Granted
       </span>
     );
@@ -201,202 +201,42 @@ const Marquee: React.FC<
 // EXECUTIVE HEADER SUMMARY STAT CARDS (GSAP & BESPOKE SVGs)
 // ==========================================
 
+/** Dashboard-style icon badge (matches AttendanceStatsCards 4th-card look) */
+const HeaderStatIcon: React.FC<{
+  color: string;
+  tint: string;
+  children: React.ReactNode;
+}> = ({ color, tint, children }) => (
+  <div
+    className="employee-stat-modern-icon shrink-0"
+    style={{ backgroundColor: tint, color, boxShadow: `0 8px 18px -6px ${color}55` }}
+  >
+    {children}
+  </div>
+);
+
 const DeadlineSvgIcon: React.FC<{
   urgency: "overdue" | "warning" | "normal" | "empty";
 }> = ({ urgency }) => {
   const theme = {
-    overdue: {
-      bgGradStart: "#FEF2F2",
-      bgGradEnd: "#FEE2E2",
-      border: "#FECACA",
-      accent: "#EF4444",
-      calTop: "#DC2626",
-      pin: "#991B1B",
-    },
-    warning: {
-      bgGradStart: "#FFFBEB",
-      bgGradEnd: "#FEF3C7",
-      border: "#FDE68A",
-      accent: "#F59E0B",
-      calTop: "#D97706",
-      pin: "#92400E",
-    },
-    normal: {
-      bgGradStart: "#EFF6FF",
-      bgGradEnd: "#DBEAFE",
-      border: "#BFDBFE",
-      accent: "#2563EB",
-      calTop: "#1D4ED8",
-      pin: "#1E40AF",
-    },
-    empty: {
-      bgGradStart: "#F8FAFC",
-      bgGradEnd: "#F1F5F9",
-      border: "#E2E8F0",
-      accent: "#64748B",
-      calTop: "#475569",
-      pin: "#334155",
-    },
+    overdue: { color: "#EF4444", tint: "#FEECEC" },
+    warning: { color: "#EF4444", tint: "#FEECEC" }, // within 3 days → red
+    normal: { color: "#4318FF", tint: "#F4F7FE" },
+    empty: { color: "#707EAE", tint: "#F4F7FE" },
   }[urgency];
 
   return (
-    <svg
-      width="44"
-      height="44"
-      viewBox="0 0 44 44"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="shrink-0"
-    >
-      <defs>
-        <linearGradient id={`dlBg-${urgency}`} x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={theme.bgGradStart} />
-          <stop offset="100%" stopColor={theme.bgGradEnd} />
-        </linearGradient>
-        <linearGradient id={`dlCalTop-${urgency}`} x1="0" y1="0" x2="20" y2="0" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor={theme.calTop} />
-          <stop offset="100%" stopColor={theme.accent} />
-        </linearGradient>
-      </defs>
-
-      <rect
-        x="2"
-        y="2"
-        width="40"
-        height="40"
-        rx="12"
-        fill={`url(#dlBg-${urgency})`}
-        stroke={theme.border}
-        strokeWidth="1.5"
-      />
-
-      <g transform="translate(6, 6.5)">
-        <rect
-          x="1"
-          y="3"
-          width="18"
-          height="18"
-          rx="4"
-          fill="#FFFFFF"
-          stroke={theme.border}
-          strokeWidth="1"
-        />
-        <path
-          d="M 1 7 C 1 4.79 2.79 3 5 3 L 15 3 C 17.21 3 19 4.79 19 7 L 19 8 L 1 8 Z"
-          fill={`url(#dlCalTop-${urgency})`}
-        />
-        <rect x="4.5" y="1" width="1.8" height="3" rx="0.9" fill="#FFFFFF" />
-        <rect x="13.7" y="1" width="1.8" height="3" rx="0.9" fill="#FFFFFF" />
-        <circle cx="5.5" cy="11.5" r="1" fill={theme.accent} opacity="0.7" />
-        <circle cx="10" cy="11.5" r="1" fill={theme.accent} opacity="0.7" />
-        <circle cx="14.5" cy="11.5" r="1" fill={theme.accent} opacity="0.7" />
-        <circle cx="5.5" cy="15.5" r="1" fill={theme.accent} opacity="0.7" />
-        <circle cx="10" cy="15.5" r="1" fill={theme.accent} opacity="0.7" />
-        <circle cx="14.5" cy="15.5" r="1" fill={theme.accent} opacity="0.5" />
-      </g>
-
-      <g transform="translate(19.5, 18.5)">
-        <circle cx="10" cy="10" r="9.5" fill="#FFFFFF" stroke={theme.border} strokeWidth="1.2" />
-        <circle cx="10" cy="10" r="7.5" fill={theme.bgGradStart} />
-        <circle cx="10" cy="10" r="1.3" fill={theme.pin} />
-        <line x1="10" y1="10" x2="10" y2="6.2" stroke={theme.pin} strokeWidth="1.5" strokeLinecap="round" />
-        <line x1="10" y1="10" x2="13.8" y2="10" stroke={theme.accent} strokeWidth="1.4" strokeLinecap="round" />
-      </g>
-    </svg>
+    <HeaderStatIcon color={theme.color} tint={theme.tint}>
+      <CalendarClock size={18} strokeWidth={2.4} />
+    </HeaderStatIcon>
   );
 };
 
-const FinancialRatingSvgIcon: React.FC = () => {
-  return (
-    <svg
-      width="44"
-      height="44"
-      viewBox="0 0 44 44"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className="shrink-0"
-    >
-      <defs>
-        <linearGradient id="frBgGrad" x1="0" y1="0" x2="44" y2="44" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#EFF6FF" />
-          <stop offset="100%" stopColor="#DBEAFE" />
-        </linearGradient>
-        <linearGradient id="frRibbonLeft" x1="0" y1="0" x2="0" y2="1" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#3B82F6" />
-          <stop offset="100%" stopColor="#1D4ED8" />
-        </linearGradient>
-        <linearGradient id="frRibbonRight" x1="0" y1="0" x2="0" y2="1" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#2563EB" />
-          <stop offset="100%" stopColor="#1E40AF" />
-        </linearGradient>
-        <linearGradient id="frGoldRim" x1="0" y1="0" x2="20" y2="20" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#FDE047" />
-          <stop offset="50%" stopColor="#EAB308" />
-          <stop offset="100%" stopColor="#CA8A04" />
-        </linearGradient>
-        <linearGradient id="frGoldCore" x1="0" y1="0" x2="16" y2="16" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#FEF08A" />
-          <stop offset="60%" stopColor="#FACC15" />
-          <stop offset="100%" stopColor="#EAB308" />
-        </linearGradient>
-        <linearGradient id="frGlint" x1="0" y1="0" x2="8" y2="8" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-
-      <rect
-        x="2"
-        y="2"
-        width="40"
-        height="40"
-        rx="12"
-        fill="url(#frBgGrad)"
-        stroke="#BFDBFE"
-        strokeWidth="1.5"
-      />
-
-      {/* Perfectly Centered Medal Assembly */}
-      <g transform="translate(11, 8.5)">
-        <path
-          d="M 5 14 L 2 26 L 6.5 23.5 L 11 26 L 9 14 Z"
-          fill="url(#frRibbonLeft)"
-        />
-        <path
-          d="M 13 14 L 11 26 L 15.5 23.5 L 20 26 L 17 14 Z"
-          fill="url(#frRibbonRight)"
-        />
-
-        <circle cx="11" cy="11" r="9.5" fill="url(#frGoldRim)" stroke="#A16207" strokeWidth="0.6" />
-        <circle cx="11" cy="11" r="8" fill="url(#frGoldCore)" />
-        <circle cx="11" cy="11" r="6.8" stroke="#CA8A04" strokeWidth="0.75" strokeDasharray="1.5 1" fill="none" />
-
-        <path
-          d="M 5 8 A 7 7 0 0 1 17 8"
-          stroke="url(#frGlint)"
-          strokeWidth="1.2"
-          strokeLinecap="round"
-          fill="none"
-        />
-
-        <polygon
-          points="11,6.5 12.4,9.5 15.5,9.8 13.1,11.9 13.8,15 11,13.3 8.2,15 8.9,11.9 6.5,9.8 9.6,9.5"
-          fill="#FFFFFF"
-          stroke="#B45309"
-          strokeWidth="0.4"
-        />
-      </g>
-
-      <g transform="translate(29, 9)">
-        <path
-          d="M 3 0 Q 3 3 6 3 Q 3 3 3 6 Q 3 3 0 3 Q 3 3 3 0 Z"
-          fill="#3B82F6"
-          opacity="0.8"
-        />
-      </g>
-    </svg>
-  );
-};
+const FinancialRatingSvgIcon: React.FC = () => (
+  <HeaderStatIcon color="#F59E0B" tint="#FFF8E8">
+    <Award size={18} strokeWidth={2.4} />
+  </HeaderStatIcon>
+);
 
 interface DeadlineHeaderCardProps {
   deadlineInfo: {
@@ -445,20 +285,6 @@ const DeadlineHeaderCard: React.FC<DeadlineHeaderCardProps> = ({
 
   const handleMouseEnter = () => {
     if (!isClickable) return;
-    if (cardRef.current) {
-      gsap.to(cardRef.current, {
-        y: -3,
-        scale: 1.015,
-        boxShadow: isOverdue
-          ? "0 14px 28px -4px rgba(239,68,68,0.18), 0 4px 12px rgba(15,23,42,0.04)"
-          : isUrgent
-            ? "0 14px 28px -4px rgba(245,158,11,0.18), 0 4px 12px rgba(15,23,42,0.04)"
-            : "0 14px 28px -4px rgba(37,99,235,0.14), 0 4px 12px rgba(15,23,42,0.04)",
-        borderColor: isOverdue ? "#FCA5A5" : isUrgent ? "#FCD34D" : "#93C5FD",
-        duration: 0.28,
-        ease: "power2.out",
-      });
-    }
     if (chevronRef.current) {
       gsap.to(chevronRef.current, { x: 3, duration: 0.2, ease: "power2.out" });
     }
@@ -466,16 +292,6 @@ const DeadlineHeaderCard: React.FC<DeadlineHeaderCardProps> = ({
 
   const handleMouseLeave = () => {
     if (!isClickable) return;
-    if (cardRef.current) {
-      gsap.to(cardRef.current, {
-        y: 0,
-        scale: 1,
-        boxShadow: "0 4px 16px -2px rgba(15,23,42,0.04)",
-        borderColor: "#E2E8F0",
-        duration: 0.25,
-        ease: "power2.out",
-      });
-    }
     if (chevronRef.current) {
       gsap.to(chevronRef.current, { x: 0, duration: 0.2, ease: "power2.out" });
     }
@@ -496,13 +312,10 @@ const DeadlineHeaderCard: React.FC<DeadlineHeaderCardProps> = ({
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className={`employee-stat-card-executive group ${isOverdue
+      className={`employee-stat-card-executive group ${isOverdue || isUrgent
         ? "employee-stat-card-executive-overdue"
-        : isUrgent
-          ? "employee-stat-card-executive-warning"
-          : ""
+        : "employee-stat-card-executive-deadline"
         } ${isClickable ? "cursor-pointer" : "cursor-default"}`}
-      title={isClickable && deadlineInfo ? `Click to open ${deadlineInfo.assignment.quarter} review` : undefined}
     >
       {/* Colored Left Edge Bar */}
       <div className="employee-stat-edge-bar" />
@@ -512,7 +325,7 @@ const DeadlineHeaderCard: React.FC<DeadlineHeaderCardProps> = ({
 
         <div className="flex flex-col justify-center">
           <div className="flex items-center gap-1.5">
-            <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug">
+            <span className={`text-[13px] sm:text-sm font-bold tracking-tight leading-snug ${isOverdue || isUrgent ? "text-[#DC2626]" : "text-[#2B3674]"}`}>
               Deadline
             </span>
             {deadlineInfo && renderQuarterBadge(deadlineInfo.assignment)}
@@ -522,16 +335,14 @@ const DeadlineHeaderCard: React.FC<DeadlineHeaderCardProps> = ({
             <div className="text-[11px] sm:text-xs font-semibold leading-snug mt-1 flex items-center flex-wrap gap-1">
               <span
                 className={
-                  isOverdue
+                  isOverdue || isUrgent
                     ? "text-[#DC2626] font-bold"
-                    : isUrgent
-                      ? "text-[#D97706] font-bold"
-                      : "text-[#0F172A]"
+                    : "text-[#2B3674]"
                 }
               >
                 {deadlineInfo.deadlineLabel}
               </span>
-              <span className="text-[#94A3B8] font-normal">
+              <span className={`font-semibold ${isOverdue || isUrgent ? "text-[#DC2626]" : "text-[#2B3674]"}`}>
                 {" "}· {isOverdue
                   ? `Overdue by ${Math.abs(days!)}d`
                   : days === 0
@@ -540,7 +351,7 @@ const DeadlineHeaderCard: React.FC<DeadlineHeaderCardProps> = ({
               </span>
             </div>
           ) : (
-            <span className="text-[11px] sm:text-xs text-[#94A3B8] font-medium leading-snug mt-1 flex items-center gap-1.5">
+            <span className="text-[11px] sm:text-xs text-[#A3AED0] font-medium leading-snug mt-1 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
               No pending reviews
             </span>
@@ -574,32 +385,12 @@ const FinancialRatingHeaderCard: React.FC<FinancialRatingHeaderCardProps> = ({ o
   }, []);
 
   const handleMouseEnter = () => {
-    if (cardRef.current) {
-      gsap.to(cardRef.current, {
-        y: -3,
-        scale: 1.015,
-        boxShadow: "0 14px 28px -4px rgba(37,99,235,0.15), 0 4px 12px rgba(15,23,42,0.04)",
-        borderColor: "#93C5FD",
-        duration: 0.28,
-        ease: "power2.out",
-      });
-    }
     if (chevronRef.current) {
       gsap.to(chevronRef.current, { x: 3, duration: 0.2, ease: "power2.out" });
     }
   };
 
   const handleMouseLeave = () => {
-    if (cardRef.current) {
-      gsap.to(cardRef.current, {
-        y: 0,
-        scale: 1,
-        boxShadow: "0 4px 16px -2px rgba(15,23,42,0.04)",
-        borderColor: "#E2E8F0",
-        duration: 0.25,
-        ease: "power2.out",
-      });
-    }
     if (chevronRef.current) {
       gsap.to(chevronRef.current, { x: 0, duration: 0.2, ease: "power2.out" });
     }
@@ -611,8 +402,7 @@ const FinancialRatingHeaderCard: React.FC<FinancialRatingHeaderCardProps> = ({ o
       onClick={onOpen}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="employee-stat-card-executive cursor-pointer group"
-      title="Click to view Financial Rating breakdown & calculation"
+      className="employee-stat-card-executive employee-stat-card-executive-rating cursor-pointer group"
     >
       {/* Colored Left Edge Bar */}
       <div className="employee-stat-edge-bar" />
@@ -622,16 +412,16 @@ const FinancialRatingHeaderCard: React.FC<FinancialRatingHeaderCardProps> = ({ o
 
         <div className="flex flex-col justify-center">
           <div className="flex items-center gap-1.5">
-            <span className="text-[13px] sm:text-sm font-bold text-[#0F172A] tracking-tight leading-snug group-hover:text-[#2563EB] transition-colors">
+            <span className="text-[13px] sm:text-sm font-bold text-[#2B3674] tracking-tight leading-snug group-hover:text-[#4318FF] transition-colors">
               Financial Rating
             </span>
-            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider bg-blue-50 text-blue-700 border border-blue-200/80">
+            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold tracking-wider bg-[#F4F7FE] text-[#4318FF] border border-[#4318FF]/15">
               Annual
             </span>
           </div>
 
-          <span className="text-[11px] sm:text-xs text-[#64748B] font-medium leading-snug mt-1 flex items-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+          <span className="text-[11px] sm:text-xs text-[#707EAE] font-medium leading-snug mt-1 flex items-center gap-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#4318FF] shrink-0" />
             Verified Evaluation
           </span>
         </div>
@@ -645,6 +435,7 @@ const FinancialRatingHeaderCard: React.FC<FinancialRatingHeaderCardProps> = ({ o
 };
 
 export const AppraisalDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const currentUser = useAppSelector((state) => state.user.currentUser);
   const hideAdminHeaderCards = isAdminAccess(currentUser);
   const {
@@ -755,9 +546,9 @@ export const AppraisalDashboard: React.FC = () => {
     (assignment.reviewStatus || "").toUpperCase() === "COMPLETED" &&
     Boolean(assignment.reviewId);
 
-  // Scroll lock & background blur for password authentication modal
+  // Scroll lock & background blur for password + security reveal modals
   useEffect(() => {
-    if (ratingTarget) {
+    if (ratingTarget || revealedModalData) {
       document.body.style.overflow = "hidden";
       document.body.classList.add("modal-open-active");
     } else {
@@ -768,7 +559,7 @@ export const AppraisalDashboard: React.FC = () => {
       document.body.style.overflow = "unset";
       document.body.classList.remove("modal-open-active");
     };
-  }, [ratingTarget]);
+  }, [ratingTarget, revealedModalData]);
 
   const closeRatingModal = () => {
     setRatingTarget(null);
@@ -803,30 +594,10 @@ export const AppraisalDashboard: React.FC = () => {
       const rowId = ratingTarget.id;
       const scoreNum = Number(revealed.finalRating);
       const expiresAt = Date.now() + RATING_REVEAL_DURATION_MS;
-      const sessionData: ActiveRatingSession = {
-        finalRating: scoreNum,
-        expiresAt,
-        quarter: ratingTarget.quarter,
-        financialYear: ratingTarget.financialYear,
-        reviewId: ratingTarget.reviewId,
-      };
 
-      setRowRatings((current) => ({
-        ...current,
-        [rowId]: sessionData,
-      }));
-
-      if (ratingTimersRef.current[rowId] != null) {
-        window.clearTimeout(ratingTimersRef.current[rowId]);
-      }
-      ratingTimersRef.current[rowId] = window.setTimeout(() => {
-        setRowRatings((current) => {
-          const next = { ...current };
-          delete next[rowId];
-          return next;
-        });
-        delete ratingTimersRef.current[rowId];
-      }, RATING_REVEAL_DURATION_MS);
+      // Do NOT write score into the table while Security View is open — that leaked the
+      // rating (e.g. "5") in the blurred background behind the champion modal.
+      // Score is only shown inside RevealedRatingModal; table stays locked.
 
       // Open celebratory modern 3D rating modal
       setRevealedModalData({
@@ -863,7 +634,9 @@ export const AppraisalDashboard: React.FC = () => {
   };
 
   const renderRowRating = (assignment: QuarterlyReviewAssignment) => {
-    const revealed = rowRatings[assignment.id];
+    // While Security View modal is open for this row, keep the lock — never show the score in the table.
+    const modalOpenForRow = revealedModalData?.rowId === assignment.id;
+    const revealed = !modalOpenForRow ? rowRatings[assignment.id] : undefined;
     if (revealed) {
       return (
         <span className="text-sm font-extrabold text-[#0F172A]">
@@ -1469,6 +1242,19 @@ export const AppraisalDashboard: React.FC = () => {
         {/* Page Header with Compact Summary Cards Beside Title */}
         <div className="mb-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
+            <button
+              type="button"
+              onClick={() => navigate("/employee-dashboard")}
+              className="group flex items-center gap-2 text-[#A3AED0] hover:text-[#4318FF] transition-all mb-2 w-fit cursor-pointer"
+            >
+              <ArrowLeft
+                size={16}
+                className="group-hover:-translate-x-1 transition-transform"
+              />
+              <span className="text-[11px] font-black uppercase tracking-widest pl-1">
+                Back
+              </span>
+            </button>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
               <span className="manager-review-title-anim">Appraisal</span>
             </h1>
@@ -1493,18 +1279,8 @@ export const AppraisalDashboard: React.FC = () => {
 
         {/* MAIN SECTION: QUARTERLY REVIEW HISTORY */}
         <Card className="w-full p-5 sm:p-7 manager-review-glass-card min-h-[calc(100vh-230px)]">
-          {/* Card Header & Filters */}
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center shrink-0 border border-[#BFDBFE]">
-                <BarChart3 className="w-4 h-4" />
-              </div>
-              <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title">
-                Appraisal History
-              </CardTitle>
-            </div>
-
-            {/* Filters beside title on one line - calibrated to never overflow outside card */}
+          {/* Filters */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-end gap-4 mb-6">
             <div
               ref={employeeFiltersDockRef}
               className="manager-review-filters-dock flex items-center gap-1.5 flex-nowrap shrink-0 justify-end"
@@ -1552,7 +1328,7 @@ export const AppraisalDashboard: React.FC = () => {
               {/* Quarters Dropdown */}
               <Dropdown
                 className="shrink-0 filter-item-stagger-3"
-                placeholder="Quarter"
+                placeholder="All Quarters"
                 allowClear={false}
                 defaultValue=""
                 prefixIcon={
@@ -2001,31 +1777,31 @@ export const AppraisalDashboard: React.FC = () => {
             onClick={closeRatingModal}
           >
             <div
-              className="eval-themed-modal-card max-w-sm sm:max-w-md w-full p-6 sm:p-8 text-[#0F172A] relative shadow-2xl"
+              className="eval-themed-modal-card max-w-sm sm:max-w-md w-full p-6 sm:p-8 text-[#2B3674] relative"
               onClick={(event) => event.stopPropagation()}
             >
               <button
                 type="button"
                 onClick={closeRatingModal}
-                className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 transition-colors z-20 cursor-pointer"
-                title="Close"
+                className="absolute top-4 right-4 text-[#A3AED0] hover:text-[#2B3674] w-8 h-8 rounded-xl flex items-center justify-center hover:bg-[#F4F7FE] transition-colors z-20 cursor-pointer"
+                aria-label="Close"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
               <form onSubmit={(event) => void revealRowRating(event)} className="relative z-10 space-y-5">
                 <div className="text-center space-y-1.5">
-                  <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-lg shadow-blue-500/25 mb-3">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-[#4318FF] flex items-center justify-center text-white shadow-lg shadow-[#4318FF]/25 mb-3">
                     <ShieldCheck className="w-6 h-6" />
                   </div>
-                  <h3 className="text-xl font-bold tracking-tight text-[#0F172A]">
+                  <h3 className="text-xl font-bold tracking-tight text-[#2B3674]">
                     Authenticate Rating Access
                   </h3>
-                  <p className="text-xs text-[#64748B] max-w-xs mx-auto leading-relaxed">
+                  <p className="text-xs text-[#707EAE] max-w-xs mx-auto leading-relaxed">
                     Enter your login password to see the final rating and average for {formatQuarterDisplay(ratingTarget.quarter)}.
                   </p>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
+                  <label className="block text-xs font-semibold text-[#2B3674] mb-1.5">
                     Password <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
@@ -2039,14 +1815,14 @@ export const AppraisalDashboard: React.FC = () => {
                       }}
                       placeholder="Password"
                       autoComplete="current-password"
-                      className="w-full px-4 py-3 pl-10 pr-10 rounded-2xl bg-white border border-[#E2E8F0] text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                      className="w-full px-4 py-3 pl-10 pr-10 rounded-xl bg-white border border-[#E0E5F2] text-sm text-[#2B3674] placeholder-[#A3AED0] focus:outline-none focus:border-[#4318FF] focus:ring-2 focus:ring-[#4318FF]/15 transition-all"
                       autoFocus
                     />
-                    <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <Lock className="w-4 h-4 text-[#A3AED0] absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <button
                       type="button"
                       onClick={() => setShowRatingPassword((current) => !current)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#2563EB]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A3AED0] hover:text-[#4318FF] cursor-pointer"
                       aria-label={showRatingPassword ? "Hide password" : "Show password"}
                     >
                       {showRatingPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -2059,18 +1835,18 @@ export const AppraisalDashboard: React.FC = () => {
                     </p>
                   )}
                 </div>
-                <div className="flex items-center gap-2 pt-2">
+                <div className="flex items-center gap-2.5 pt-1">
                   <button
                     type="button"
                     onClick={closeRatingModal}
-                    className="flex-1 py-3 rounded-2xl border border-[#E2E8F0] text-[#0F172A] text-xs font-semibold hover:bg-gray-50 transition-all cursor-pointer"
+                    className="flex-1 py-3 rounded-xl border border-[#E0E5F2] text-[#2B3674] text-xs font-semibold hover:bg-[#F4F7FE] transition-all cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={unlockingRating}
-                    className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                    className="flex-1 py-3 rounded-xl bg-[#4318FF] hover:bg-[#3311CC] text-white text-xs font-bold shadow-lg shadow-[#4318FF]/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
                   >
                     <span>{unlockingRating ? "Checking" : "Continue"}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
