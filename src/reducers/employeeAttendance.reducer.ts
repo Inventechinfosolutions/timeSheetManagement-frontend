@@ -140,9 +140,26 @@ export const fetchAllEmployeesMonthlyAttendance = createAsyncThunk(
 );
 
 // 1.6 Download Monthly Report: GET /download-report
-export const downloadAttendanceReport = async (month: number, year: number) => {
+// Optional search/department/status mirror matrix filters; omit them to export full month (list page).
+export const downloadAttendanceReport = async (
+  month: number,
+  year: number,
+  search?: string,
+  department?: string,
+  status?: string,
+) => {
+  const params: Record<string, string | number> = { month, year };
+  if (search && search.trim()) {
+    params.search = search.trim();
+  }
+  if (department && department.trim() && department !== "All Departments") {
+    params.department = department.trim();
+  }
+  if (status && status.trim() && status !== "All" && status !== "All Status") {
+    params.status = status.trim();
+  }
   const response = await axios.get(`${apiUrl}/download-report`, {
-    params: { month, year },
+    params,
     responseType: "blob", // Important for file download
     skipGlobalLoader: true,
     headers: { "x-skip-loader": "true" },

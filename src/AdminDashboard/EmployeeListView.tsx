@@ -127,6 +127,7 @@ const EmployeeListView = () => {
   const {
     entities,
     totalItems,
+    pagination,
     uploadLoading,
     uploadResult,
     loading,
@@ -223,7 +224,8 @@ const EmployeeListView = () => {
       (emp.department && emp.department.toLowerCase().includes(s))
     );
   });
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages =
+    pagination?.totalPages ?? Math.ceil(totalItems / itemsPerPage);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {

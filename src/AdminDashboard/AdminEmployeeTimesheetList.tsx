@@ -44,7 +44,7 @@ const AdminEmployeeTimesheetList = () => {
     : "/admin-dashboard";
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = 10;
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState<{
     key: string | null;
@@ -85,10 +85,23 @@ const AdminEmployeeTimesheetList = () => {
     setShowDownloadModal(true);
   };
 
+  // Excel: apply current list filters; export ALL matching rows (ignore page size)
   const handleExportExcel = async () => {
     try {
       setIsDownloading(true);
-      const blob = await downloadAttendanceReport(downloadMonth, downloadYear);
+      const deptToFilter =
+        selectedDepartment !== "All Departments"
+          ? selectedDepartment
+          : undefined;
+      const statusToFilter =
+        selectedStatus !== "All Status" ? selectedStatus : undefined;
+      const blob = await downloadAttendanceReport(
+        downloadMonth,
+        downloadYear,
+        debouncedSearchTerm || undefined,
+        deptToFilter,
+        statusToFilter,
+      );
       saveAs(blob, `Attendance_${downloadMonth}_${downloadYear}.xlsx`);
       setShowDownloadModal(false);
     } catch (error) {
@@ -106,7 +119,7 @@ const AdminEmployeeTimesheetList = () => {
   const statuses = ["All Status", MonthStatus.SUBMITTED, MonthStatus.PENDING];
 
   const dispatch = useAppDispatch();
-  const { entities, totalItems } = useAppSelector(
+  const { entities, totalItems, pagination } = useAppSelector(
     (state: RootState) => state.employeeDetails,
   );
 
@@ -187,7 +200,8 @@ const AdminEmployeeTimesheetList = () => {
   });
 
   const currentItems = employees;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const totalPages =
+    pagination?.totalPages ?? Math.ceil(totalItems / itemsPerPage);
 
   const handleNextPage = () => {
     if (currentPage < totalPages) {

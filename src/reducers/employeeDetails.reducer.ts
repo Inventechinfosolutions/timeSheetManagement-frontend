@@ -20,6 +20,14 @@ const cleanEntity = (entity: any) => {
   return cleaned;
 };
 
+export interface EmployeeListPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  itemCount: number;
+}
+
 interface EmployeeDetailsState {
   loading: boolean;
   errorMessage: string | null;
@@ -27,6 +35,7 @@ interface EmployeeDetailsState {
   entity: any;
   updating: boolean;
   totalItems: number;
+  pagination: EmployeeListPagination | null;
   updateSuccess: boolean;
   profileImageUrl: string | null;
   uploadLoading: boolean;
@@ -44,6 +53,7 @@ const initialState: EmployeeDetailsState = {
   entity: {},
   updating: false,
   totalItems: 0,
+  pagination: null,
   updateSuccess: false,
   profileImageUrl: null,
   uploadLoading: false,
@@ -535,7 +545,24 @@ export const EmployeeDetailsSlice = createSlice({
         const response = action.payload;
         state.loading = false;
         state.entities = Array.isArray(response) ? response : (response.data || []);
-        state.totalItems = response.totalItems || response.total || state.entities.length;
+        // Prefer pagination.total (top-level totalItems removed to avoid duplicate)
+        state.totalItems =
+          response.pagination?.total ??
+          response.totalItems ??
+          response.total ??
+          state.entities.length;
+        if (response.pagination) {
+          state.pagination = {
+            page: response.pagination.page,
+            limit: response.pagination.limit,
+            total: response.pagination.total,
+            totalPages: response.pagination.totalPages,
+            itemCount:
+              response.pagination.itemCount ?? state.entities.length,
+          };
+        } else {
+          state.pagination = null;
+        }
       })
       .addMatcher(
         isFulfilled(createEntity, updateEntity, partialUpdateEntity, resetPassword, resendActivationLink, updateEmployeeStatus),

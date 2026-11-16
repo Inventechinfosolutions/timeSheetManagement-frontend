@@ -81,12 +81,15 @@ interface MatrixData {
   total?: number;
   totalPages?: number;
   pagination?: {
+    page?: number;
+    limit?: number;
     total?: number;
     totalEmployees?: number;
     totalCount?: number;
     totalItems?: number;
     totalRecords?: number;
     totalPages?: number;
+    itemCount?: number;
   };
 }
 
@@ -154,15 +157,12 @@ const MonthlyAttendanceMatrix: React.FC = () => {
   const matrixRequestId = useRef(0);
 
   // Detect manager's department
+  // Only from profile/entity — do NOT derive from matrixData (that re-triggers fetch in a loop)
   const managerDepartment = useMemo(() => {
     if (entity?.department) return entity.department;
     if (entity?.department_name) return entity.department_name;
-    if (matrixData?.employees && matrixData.employees.length > 0) {
-      const found = matrixData.employees.find((e) => e.department && e.department.trim());
-      if (found?.department) return found.department;
-    }
     return "";
-  }, [entity, matrixData]);
+  }, [entity]);
 
   // Filters — SearchBox applies useDebounce via onDebounce
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -179,9 +179,14 @@ const MonthlyAttendanceMatrix: React.FC = () => {
   // Pagination: 10 records per page for the attendance matrix
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = 10;
+  const skipPageResetOnMount = useRef(true);
 
-  // Reset page when month, year, search, department, or status changes
+  // Reset page when filters change (skip mount — page is already 1)
   useEffect(() => {
+    if (skipPageResetOnMount.current) {
+      skipPageResetOnMount.current = false;
+      return;
+    }
     setCurrentPage(1);
   }, [selectedMonth, selectedYear, debouncedSearchTerm, selectedDepartment, selectedStatus]);
 
@@ -321,11 +326,23 @@ const MonthlyAttendanceMatrix: React.FC = () => {
     "July", "August", "September", "October", "November", "December"
   ];
 
-  // Excel Export Handler (direct download of original .xlsx)
+  // Excel Export: apply current matrix filters; export ALL matching rows (ignore pagination)
   const handleExportExcel = async () => {
     try {
       setIsExporting(true);
-      const blob = await downloadAttendanceReport(selectedMonth, selectedYear);
+      const deptToFilter = isManager
+        ? managerDepartment || selectedDepartment || undefined
+        : selectedDepartment !== "All Departments"
+          ? selectedDepartment
+          : undefined;
+      const statusToFilter = selectedStatus !== "All" ? selectedStatus : undefined;
+      const blob = await downloadAttendanceReport(
+        selectedMonth,
+        selectedYear,
+        debouncedSearchTerm || undefined,
+        deptToFilter,
+        statusToFilter,
+      );
       saveAs(blob, `Attendance_${selectedMonth}_${selectedYear}.xlsx`);
       message.success("Attendance report downloaded successfully!");
     } catch (error) {
