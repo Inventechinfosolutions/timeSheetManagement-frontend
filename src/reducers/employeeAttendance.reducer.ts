@@ -157,8 +157,10 @@ export const fetchMonthlyAttendanceMatrix = async (
   search?: string,
   department?: string,
   status?: string,
+  page = 1,
+  pageSize = 10,
 ) => {
-  const params: any = { month, year };
+  const params: Record<string, string | number> = { month, year, page, limit: pageSize };
   if (search && search.trim()) {
     params.search = search.trim();
   }
