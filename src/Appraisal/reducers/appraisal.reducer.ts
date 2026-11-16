@@ -59,6 +59,7 @@ export const AppraisalApi = {
       quarter?: string;
       reviewPeriod?: string;
       status?: string;
+      q?: string;
       page?: number;
       limit?: number;
     },
@@ -90,6 +91,7 @@ export const AppraisalApi = {
           ...(filters?.quarter ? { quarter: filters.quarter } : {}),
           ...(filters?.reviewPeriod ? { reviewPeriod: filters.reviewPeriod } : {}),
           ...(filters?.status ? { status: filters.status } : {}),
+          ...(filters?.q?.trim() ? { q: filters.q.trim() } : {}),
           ...(filters?.page ? { page: filters.page } : {}),
           ...(filters?.limit ? { limit: filters.limit } : {}),
         },

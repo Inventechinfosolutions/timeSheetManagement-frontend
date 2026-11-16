@@ -19,6 +19,7 @@ export interface UseEmployeeAppraisalReturn {
   defaultYear: string;
   quarter: string;
   statusFilter: string;
+  searchQuery: string;
   yearOptions: { value: string; label: string }[];
   quarterOptions: { value: string; label: string }[];
   yearsLoading: boolean;
@@ -34,6 +35,7 @@ export interface UseEmployeeAppraisalReturn {
   setFinancialYear: (val: string) => void;
   setQuarter: (val: string) => void;
   setStatusFilter: (val: string) => void;
+  setSearchQuery: (val: string) => void;
   setShowEmptyState: (val: boolean | ((prev: boolean) => boolean)) => void;
   handleClearFilters: () => void;
   openAssignment: (assignment: QuarterlyReviewAssignment) => void;
@@ -62,6 +64,7 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
   const [financialYear, setFinancialYear] = useState<string>("");
   const [quarter, setQuarter] = useState<string>(AppraisalFilterAll.ALL);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [searchQuery, setSearchQueryState] = useState<string>("");
   const [showEmptyState, setShowEmptyState] = useState<boolean>(false);
   const [defaultsReady, setDefaultsReady] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -70,6 +73,11 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
 
   const reloadAssignments = useCallback(() => {
     setReloadKey((current) => current + 1);
+  }, []);
+
+  const setSearchQuery = useCallback((val: string) => {
+    setCurrentPage(1);
+    setSearchQueryState(val);
   }, []);
 
   useEffect(() => {
@@ -82,11 +90,13 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
       !isYearlyFilter && quarter && quarter !== AppraisalFilterAll.ALL
         ? quarter
         : undefined;
+    const q = searchQuery.trim();
     void AppraisalApi.getEmployeeReviews(employeeId, {
       financialYear: financialYear || undefined,
       quarter: selectedQuarter,
       reviewPeriod: isYearlyFilter ? ReviewPeriod.YEARLY : undefined,
       status: statusFilter || undefined,
+      ...(q ? { q } : {}),
       page: currentPage,
       limit: pageSize,
     })
@@ -98,7 +108,7 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
         setAssignments([]);
         setTotal(0);
       });
-  }, [defaultsReady, employeeId, financialYear, quarter, statusFilter, currentPage, reloadKey]);
+  }, [defaultsReady, employeeId, financialYear, quarter, statusFilter, searchQuery, currentPage, reloadKey]);
 
   useEffect(() => {
     let cancelled = false;
@@ -211,10 +221,11 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
     () =>
       Boolean(
         statusFilter ||
+          searchQuery.trim() ||
           (financialYear && financialYear !== defaultYear.current) ||
           (quarter && quarter !== AppraisalFilterAll.ALL),
       ),
-    [quarter, statusFilter, financialYear]
+    [quarter, statusFilter, financialYear, searchQuery]
   );
 
   const handleClearFilters = () => {
@@ -223,6 +234,7 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
     setFinancialYear(defaultYear.current);
     setQuarter(AppraisalFilterAll.ALL);
     setStatusFilter("");
+    setSearchQueryState("");
   };
 
   const openAssignment = (assignment: QuarterlyReviewAssignment) => {
@@ -256,6 +268,7 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
     defaultYear: defaultYear.current,
     quarter,
     statusFilter,
+    searchQuery,
     yearOptions,
     quarterOptions,
     yearsLoading,
@@ -271,6 +284,7 @@ export const useEmployeeAppraisal = (): UseEmployeeAppraisalReturn => {
     setFinancialYear: chooseFinancialYear,
     setQuarter: chooseQuarter,
     setStatusFilter: chooseStatus,
+    setSearchQuery,
     setShowEmptyState,
     handleClearFilters,
     openAssignment,
