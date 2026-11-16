@@ -167,6 +167,33 @@ export const downloadAttendanceReport = async (
   return response.data;
 };
 
+// 1.62 Download Matrix PDF (backend): GET /download-matrix-pdf
+export const downloadAttendanceMatrixPdf = async (
+  month: number,
+  year: number,
+  search?: string,
+  department?: string,
+  status?: string,
+) => {
+  const params: Record<string, string | number> = { month, year };
+  if (search && search.trim()) {
+    params.search = search.trim();
+  }
+  if (department && department.trim() && department !== "All Departments") {
+    params.department = department.trim();
+  }
+  if (status && status.trim() && status !== "All" && status !== "All Status") {
+    params.status = status.trim();
+  }
+  const response = await axios.get(`${apiUrl}/download-matrix-pdf`, {
+    params,
+    responseType: "blob",
+    skipGlobalLoader: true,
+    headers: { "x-skip-loader": "true" },
+  } as any);
+  return response.data;
+};
+
 // 1.65 Fetch Monthly Matrix Data for UI Grid: GET /monthly-report-data
 export const fetchMonthlyAttendanceMatrix = async (
   month: number,

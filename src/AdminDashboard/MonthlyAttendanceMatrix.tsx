@@ -14,10 +14,10 @@ import {
   Filter,
 } from "lucide-react";
 import { saveAs } from "file-saver";
-import { downloadMatrixPdf } from "../utils/downloadMatrixPdf";
 import {
   fetchMonthlyAttendanceMatrix,
   downloadAttendanceReport,
+  downloadAttendanceMatrixPdf,
 } from "../reducers/employeeAttendance.reducer";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
 import { UserType } from "../enums";
@@ -353,67 +353,26 @@ const MonthlyAttendanceMatrix: React.FC = () => {
     }
   };
 
-  // PDF Export Handler - Always exports all employees for the selected month/year (unfiltered by UI filters)
+  // PDF Export: backend-generated (same filters as Excel; all matching rows)
   const handleExportPdf = async () => {
     try {
       setIsExportingPdf(true);
 
-      // Fetch complete matrix data for the selected month/year without UI filters (search, department, status)
-      const fullData = await fetchMonthlyAttendanceMatrix(
+      const deptToFilter = isManager
+        ? managerDepartment || selectedDepartment || undefined
+        : selectedDepartment !== "All Departments"
+          ? selectedDepartment
+          : undefined;
+      const statusToFilter = selectedStatus !== "All" ? selectedStatus : undefined;
+
+      const blob = await downloadAttendanceMatrixPdf(
         selectedMonth,
         selectedYear,
-        undefined,
-        isManager ? managerDepartment : undefined,
-        undefined,
-        1,
-        100,
+        debouncedSearchTerm || undefined,
+        deptToFilter,
+        statusToFilter,
       );
-
-      const allEmployees = [...(fullData?.employees || [])];
-      const pageSize = 100;
-      const totalEmployees = getMatrixTotalEmployees(fullData, pageSize);
-      const totalPages = Math.ceil(totalEmployees / pageSize);
-
-      for (let page = 2; page <= totalPages; page += 1) {
-        const pageData = await fetchMonthlyAttendanceMatrix(
-          selectedMonth,
-          selectedYear,
-          undefined,
-          isManager ? managerDepartment : undefined,
-          undefined,
-          page,
-          pageSize,
-        );
-        allEmployees.push(...(pageData?.employees || []));
-      }
-
-      if (allEmployees.length === 0) {
-        message.warning("No attendance data to export for this month");
-        return;
-      }
-
-      // Calculate total stats across all employees
-      const allTotalStats = allEmployees.reduce(
-        (acc: any, emp: any) => ({
-          present: acc.present + (emp.summary?.fullDays || 0),
-          halfDay: acc.halfDay + (emp.summary?.halfDays || 0),
-          wfh: acc.wfh + (emp.summary?.wfh || 0),
-          cv: acc.cv + (emp.summary?.clientVisit || 0),
-          leave: acc.leave + (emp.summary?.leaves || 0),
-          notUpdated: acc.notUpdated + (emp.summary?.notUpdated || 0),
-        }),
-        { present: 0, halfDay: 0, wfh: 0, cv: 0, leave: 0, notUpdated: 0 },
-      );
-
-      downloadMatrixPdf({
-        monthName: monthNames[selectedMonth - 1],
-        month: selectedMonth,
-        year: selectedYear,
-        selectedDepartment: isManager ? (managerDepartment || "All Departments") : "All Departments",
-        employees: allEmployees,
-        totalStats: allTotalStats,
-        daysInMonth: fullData.daysInMonth || matrixData?.daysInMonth || 30,
-      });
+      saveAs(blob, `Attendance_Report_${selectedMonth}_${selectedYear}.pdf`);
       message.success("Attendance PDF downloaded successfully!");
     } catch (err: any) {
       console.error("Failed to generate PDF:", err);
