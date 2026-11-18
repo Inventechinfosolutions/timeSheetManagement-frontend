@@ -1,12 +1,17 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
+import gsap from "gsap";
 import {
   Calendar,
   Clock,
   ClipboardList,
   RotateCcw,
+  Building2,
 } from "lucide-react";
 import { AssignmentType, ManagerQuarterlyReviewRecord } from "../../types/appraisal.types";
-import { useAppSelector } from "../../../hooks";
+import { useAppDispatch, useAppSelector } from "../../../hooks";
+import { fetchDepartments } from "../../../reducers/masterDepartment.reducer";
+import { getEntity } from "../../../reducers/employeeDetails.reducer";
+import { isAdminAccess, isCeoOrGmUser } from "../../../utils/roleAccess";
 import {
   AppraisalApi,
   MasterFinancialYearOption,
@@ -20,6 +25,7 @@ import {
   AppraisalFilterAll,
   QuaterlyEnum,
   QuarterlyReviewStatus,
+  ReviewPeriod,
 } from "../../enums/appraisal.enums";
 import CreateReviewAssignmentModal from "./CreateReviewAssignmentModal";
 import AssignQuarterlyReviewModal from "./AssignQuarterlyReviewModal";
@@ -27,7 +33,6 @@ import { QuarterlyReviewTable } from "./QuarterlyReviewTable";
 import EvaluationPanel, { EvaluationData } from "./EvaluationPanel";
 import { QUARTERLY_REVIEW_TABLE_PAGE_SIZE } from "../../constants/appraisal.constants";
 import { loadAppraisalPeriod } from "../../utils/appraisalHelpers";
-import { WorksphereLogoLoader } from "../../../components/ApiLoadingSpinner";
 import {
   Button,
   Card,
@@ -40,7 +45,14 @@ import {
 import "./ManagerQuarterlyReview.css";
 
 export const ManagerQuarterlyReview: React.FC = () => {
+  const dispatch = useAppDispatch();
   const currentUser = useAppSelector((state) => state.user.currentUser);
+  const { entity } = useAppSelector((state) => state.employeeDetails);
+  const { departments } = useAppSelector((state) => state.masterDepartments);
+  const isAdmin = isAdminAccess(currentUser);
+  /** CEO + GM: same rules — assign/list managers only, all departments. */
+  const isCeoOrGm = isCeoOrGmUser(currentUser);
+  const isGlobalLoading = useAppSelector((state) => (state.apiLoading?.activeCount ?? 0) > 0);
   const managerId = currentUser?.employeeId || currentUser?.loginId || "";
   // Modal flow state (for visual presentation / prototyping)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -51,6 +63,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const [masterQuarters, setMasterQuarters] = useState<MasterQuarterRecord[]>([]);
   const [yearsLoading, setYearsLoading] = useState(false);
   const [assignmentType, setAssignmentType] = useState<AssignmentType | null>(null);
+  const [selectedReviewDepartment, setSelectedReviewDepartment] = useState<string>("");
 
   const [assignments, setAssignments] = useState<ManagerQuarterlyReviewRecord[]>([]);
   const [tablePage, setTablePage] = useState(1);
@@ -60,6 +73,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   // Active record being evaluated/viewed in the Appraisal Review Evaluation Panel
   const [evaluatingRecord, setEvaluatingRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
   const [evaluationMode, setEvaluationMode] = useState<"edit" | "view">("edit");
+  const [accessGrantRecord, setAccessGrantRecord] = useState<ManagerQuarterlyReviewRecord | null>(null);
 
   const scrollToTop = () => {
     // 1. Scroll main elements (the scrollable container in SidebarLayout)
@@ -104,6 +118,35 @@ export const ManagerQuarterlyReview: React.FC = () => {
     }
   }, [evaluatingRecord]);
 
+  useEffect(() => {
+    if (!departments || departments.length === 0) {
+      dispatch(fetchDepartments({ skipGlobalLoader: true }));
+    }
+  }, [dispatch, departments]);
+
+  useEffect(() => {
+    if (isAdmin || isCeoOrGm || !managerId || entity?.department) return;
+    dispatch(getEntity(managerId));
+  }, [isAdmin, isCeoOrGm, managerId, entity?.department, dispatch]);
+
+  const fullDepartmentName = useMemo(() => {
+    const rawDept =
+      entity?.department ??
+      entity?.department_name ??
+      (currentUser as any)?.department ??
+      assignments.find((a) => Boolean(a.department))?.department ??
+      "";
+
+    if (!rawDept) return "";
+
+    const matched = (departments || []).find(
+      (d) =>
+        d.departmentCode?.trim().toLowerCase() === String(rawDept).trim().toLowerCase() ||
+        d.departmentName?.trim().toLowerCase() === String(rawDept).trim().toLowerCase()
+    );
+    return matched ? matched.departmentName : String(rawDept);
+  }, [entity?.department, entity?.department_name, currentUser, assignments, departments]);
+
   const handleBackToDashboard = () => {
     triggerScrollToTop();
     setEvaluatingRecord(null);
@@ -134,6 +177,13 @@ export const ManagerQuarterlyReview: React.FC = () => {
   };
 
   const handleEditRecord = (item: ManagerQuarterlyReviewRecord) => {
+    // Manager must not evaluate their own appraisal — Admin / CEO / GM review it.
+    if (!isAdmin && !isCeoOrGm && managerId && item.id === managerId) {
+      message.warning(
+        "Your appraisal is reviewed by Admin / CEO / General Manager. Open it from My Workspace → Appraisal.",
+      );
+      return;
+    }
     void openRecordFromApi(item, "edit");
   };
 
@@ -144,11 +194,18 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const handleEvaluationSubmit = (recordId: string, evaluation: EvaluationData) => {
     setAssignments((prev) =>
       prev.map((rec) => {
-        if (rec.id === recordId || rec.name === evaluatingRecord?.name) {
+        const isMatch = evaluatingRecord?.reviewId
+          ? rec.reviewId === evaluatingRecord.reviewId
+          : String(rec.reviewId) === recordId ||
+            (rec.id === recordId &&
+              rec.quarter === evaluatingRecord?.quarter &&
+              rec.financialYear === evaluatingRecord?.financialYear);
+
+        if (isMatch) {
           return {
             ...rec,
             status: QuarterlyReviewStatus.COMPLETED,
-            finalRating: evaluation.averageScore.toFixed(1),
+            finalRating: String(evaluation.averageScore),
             managerEvaluation: {
               ...rec.managerEvaluation,
               productivity: evaluation.scores.productivity,
@@ -159,7 +216,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
               innovationProblemSolving: evaluation.scores.innovation,
               performanceStrengths: evaluation.strengths,
               areasOfImprovement: evaluation.improvements,
-              additionalRemarks: evaluation.remarks,
+              managerComment: evaluation.remarks,
             },
           };
         }
@@ -173,6 +230,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
     }, 2500);
     scrollToTop();
     setEvaluatingRecord(null);
+    setReloadKey((k) => k + 1);
     setTimeout(scrollToTop, 40);
   };
 
@@ -184,20 +242,43 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const [financialYear, setFinancialYear] = useState<string>("");
   const [quarter, setQuarter] = useState<string>(AppraisalFilterAll.ALL);
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [department, setDepartment] = useState<string>(AppraisalFilterAll.ALL);
   const [defaultsReady, setDefaultsReady] = useState(false);
   const yearsLoaded = useRef(false);
   const yearChosen = useRef(false);
   const defaultYear = useRef("");
+  const filtersDockRef = useRef<HTMLDivElement>(null);
+
+  // GSAP: Modern entrance animation for filters dock
+  useEffect(() => {
+    if (filtersDockRef.current) {
+      gsap.fromTo(
+        filtersDockRef.current.children,
+        { opacity: 0, y: 7, scale: 0.98 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.45,
+          stagger: 0.05,
+          ease: "power2.out",
+          clearProps: "transform,opacity",
+        }
+      );
+    }
+  }, []);
 
   const hasActiveFilters = Boolean(
     searchTerm.trim() ||
-      statusFilter ||
-      (quarter && quarter !== AppraisalFilterAll.ALL) ||
-      (financialYear && financialYear !== defaultYear.current)
+    statusFilter ||
+    (quarter && quarter !== AppraisalFilterAll.ALL) ||
+    (financialYear && financialYear !== defaultYear.current) ||
+    (isAdmin && department && department !== AppraisalFilterAll.ALL)
   );
 
   const handleOpenCreateModal = () => {
     setAssignmentType(null);
+    setSelectedReviewDepartment("");
     setIsCreateModalOpen(true);
   };
 
@@ -205,8 +286,9 @@ export const ManagerQuarterlyReview: React.FC = () => {
     setIsCreateModalOpen(false);
   };
 
-  const handleContinueToAssign = (type: AssignmentType) => {
+  const handleContinueToAssign = (type: AssignmentType, dept?: string) => {
     setAssignmentType(type);
+    setSelectedReviewDepartment(dept || "");
     setIsCreateModalOpen(false);
     setAssignFormKey((current) => current + 1);
     setIsAssignModalOpen(true);
@@ -215,6 +297,11 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const handleCloseAssignModal = () => {
     setIsAssignModalOpen(false);
     setAssignFormKey((current) => current + 1);
+  };
+
+  const handleBackToCreateModal = () => {
+    setIsAssignModalOpen(false);
+    setIsCreateModalOpen(true);
   };
 
   const handleAssignSuccess = () => {
@@ -228,6 +315,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
     setFinancialYear(defaultYear.current);
     setQuarter(AppraisalFilterAll.ALL);
     setStatusFilter("");
+    setDepartment(AppraisalFilterAll.ALL);
   };
 
   useEffect(() => {
@@ -273,7 +361,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
       .finally(() => setYearsLoading(false));
   };
 
-  const tableFilters = `${debouncedSearch}|${financialYear}|${quarter}|${statusFilter}`;
+  const tableFilters = `${debouncedSearch}|${financialYear}|${quarter}|${statusFilter}|${department}`;
   const [appliedTableFilters, setAppliedTableFilters] = useState(tableFilters);
   if (appliedTableFilters !== tableFilters) {
     setAppliedTableFilters(tableFilters);
@@ -281,8 +369,8 @@ export const ManagerQuarterlyReview: React.FC = () => {
   }
 
   useEffect(() => {
-    if (!defaultsReady || !managerId) {
-      if (!managerId) {
+    if (!defaultsReady || (!isAdmin && !managerId)) {
+      if (!isAdmin && !managerId) {
         setAssignments([]);
         setTableTotal(0);
       }
@@ -292,18 +380,27 @@ export const ManagerQuarterlyReview: React.FC = () => {
     setTableLoading(true);
     const selectedYear =
       financialYear && financialYear !== AppraisalFilterAll.ALL ? financialYear : undefined;
+    const isYearlyFilter = quarter === ReviewPeriod.YEARLY;
     const selectedQuarter =
-      quarter && quarter !== AppraisalFilterAll.ALL ? (quarter as QuaterlyEnum) : undefined;
+      !isYearlyFilter && quarter && quarter !== AppraisalFilterAll.ALL
+        ? (quarter as QuaterlyEnum)
+        : undefined;
     const selectedStatus =
       !statusFilter || statusFilter === AppraisalFilterAll.ALL
         ? undefined
         : (statusFilter as QuarterlyReviewStatus);
+    const selectedDept =
+      isAdmin && department && department !== AppraisalFilterAll.ALL ? department : undefined;
+
     const query = {
-      assignerId: managerId,
+      ...(!isAdmin && managerId ? { assignerId: managerId } : {}),
+      ...(isCeoOrGm ? { role: "MANAGER" } : {}),
+      department: selectedDept,
       page: tablePage,
       limit: QUARTERLY_REVIEW_TABLE_PAGE_SIZE,
       financialYear: selectedYear,
       quarter: selectedQuarter,
+      reviewPeriod: isYearlyFilter ? ReviewPeriod.YEARLY : undefined,
       status: selectedStatus,
     };
     const searchText = debouncedSearch.trim();
@@ -335,7 +432,17 @@ export const ManagerQuarterlyReview: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [defaultsReady, managerId, debouncedSearch, financialYear, quarter, statusFilter, reloadKey, tablePage]);
+  }, [defaultsReady, isAdmin, isCeoOrGm, managerId, debouncedSearch, financialYear, quarter, statusFilter, department, reloadKey, tablePage]);
+
+  const departmentOptions = [
+    { value: AppraisalFilterAll.ALL, label: "Department" },
+    ...(departments || [])
+      .filter((dept) => dept.departmentName?.trim().toUpperCase() !== "CEO")
+      .map((dept) => ({
+        value: dept.departmentName,
+        label: dept.departmentName,
+      })),
+  ];
 
   const financialYearOptions = masterYears.map((year) => ({
     value: year.financialYear,
@@ -345,7 +452,7 @@ export const ManagerQuarterlyReview: React.FC = () => {
   const quarterOptions = (() => {
     const seen = new Set<string>();
     const options: { value: string; label: string }[] = [
-      { value: AppraisalFilterAll.ALL, label: "Quarter" },
+      { value: AppraisalFilterAll.ALL, label: "All Quarters" },
     ];
     masterYears.forEach((year) => {
       year.quarters?.forEach((item) => {
@@ -359,22 +466,56 @@ export const ManagerQuarterlyReview: React.FC = () => {
       seen.add(item.quaterLabel);
       options.push({ value: item.quaterLabel, label: item.quaterLabel });
     });
+    options.push({ value: ReviewPeriod.YEARLY, label: "Yearly" });
     return options;
   })();
 
   const statusOptions = [
     { value: AppraisalFilterAll.ALL, label: "Status" },
     { value: QuarterlyReviewStatus.NOT_STARTED, label: "Not Started" },
+    { value: QuarterlyReviewStatus.DRAFT, label: "Draft" },
+    { value: QuarterlyReviewStatus.SUBMITTED, label: "Submitted" },
+    { value: QuarterlyReviewStatus.REQUESTED_FOR_EDIT, label: "Requested for edit" },
     { value: QuarterlyReviewStatus.ASSIGNED, label: "Assigned" },
-    { value: "PERFORMANCE_RECEIVED", label: "Performance Received" },
+    { value: QuarterlyReviewStatus.REASSIGNED, label: "Re-Assigned" },
+    { value: QuarterlyReviewStatus.PERFORMANCE_RECEIVED, label: "Performance Received" },
+    { value: QuarterlyReviewStatus.EVALUATION_IN_PROGRESS, label: "Evaluation In Progress" },
+    {
+      value: QuarterlyReviewStatus.AWAITING_MANAGER_FINAL_REVIEW,
+      label: "Awaiting Manager Final Comment",
+    },
     { value: QuarterlyReviewStatus.COMPLETED, label: "Completed" },
   ];
+
+  if (accessGrantRecord) {
+    return (
+      <div className="w-full min-h-screen relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 pt-1 sm:pt-1.5 pb-8 bg-[#F4F7FE]">
+        <div className="relative z-10">
+          <EvaluationPanel
+            key={`grant-${accessGrantRecord.reviewId || accessGrantRecord.id}`}
+            record={accessGrantRecord}
+            submissionData={accessGrantRecord.submission}
+            mode="view"
+            grantAccess
+            onBack={() => {
+              setAccessGrantRecord(null);
+              setReloadKey((current) => current + 1);
+            }}
+            onAssignmentSaved={() => {
+              setAccessGrantRecord(null);
+              setReloadKey((current) => current + 1);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (evaluatingRecord) {
     return (
       <div className="w-full min-h-screen relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 pt-1 sm:pt-1.5 pb-8 bg-[#F4F7FE]">
-        
-        
+
+
         <div className="relative z-10">
           <EvaluationPanel
             key={`${evaluatingRecord.reviewId || evaluatingRecord.id}-${evaluationMode}`}
@@ -388,24 +529,24 @@ export const ManagerQuarterlyReview: React.FC = () => {
               setEvaluatingRecord((current) =>
                 current
                   ? {
-                      ...current,
-                      fromDate: patch.assignedDate,
-                      assignedOn: patch.assignedDate,
-                      toDate: patch.deadline,
-                      description: patch.description,
-                    }
+                    ...current,
+                    fromDate: patch.assignedDate,
+                    assignedOn: patch.assignedDate,
+                    toDate: patch.deadline,
+                    description: patch.description,
+                  }
                   : current,
               );
               setAssignments((current) =>
                 current.map((item) =>
                   item.reviewId === patch.reviewId
                     ? {
-                        ...item,
-                        fromDate: patch.assignedDate,
-                        assignedOn: patch.assignedDate,
-                        toDate: patch.deadline,
-                        description: patch.description,
-                      }
+                      ...item,
+                      fromDate: patch.assignedDate,
+                      assignedOn: patch.assignedDate,
+                      toDate: patch.deadline,
+                      description: patch.description,
+                    }
                     : item,
                 ),
               );
@@ -417,79 +558,90 @@ export const ManagerQuarterlyReview: React.FC = () => {
   }
 
   return (
-    <div className="w-full relative overflow-hidden font-sans p-4 sm:p-6 lg:p-8 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
+    <div className="w-full relative overflow-hidden font-sans px-2 sm:px-3 lg:px-4 pt-1 sm:pt-2 pb-3 bg-[#F4F7FE] flex-1 flex flex-col min-h-0">
       {/* LUXURY BACKGROUND CANVAS (All SVGs & animations managed and loaded via ManagerQuarterlyReview.css) */}
-      
+
 
       {/* FOREGROUND CONTENT (z-10 layer for crisp interactivity and clarity) */}
       <div className="relative z-10 flex-1 flex flex-col min-h-0">
         {/* Page Header */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="mb-2 sm:mb-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight w-fit">
-              <span className="manager-review-title-anim">Manager Appraisal</span>
-            </h1>
-            <p className="text-sm mt-1 font-normal w-fit">
-              <span className="manager-review-subtitle-anim">
-                Review, evaluate, and provide ratings for quarterly appraisal submissions from your team members.
+              <span className="manager-review-title-anim">
+                {isAdmin ? "Appraisal Reviews" : "Quarterly Review"}
               </span>
-            </p>
+            </h1>
           </div>
 
-          {/* Create Button at top of card with animated SVG icon */}
-          <div className="flex w-full sm:w-auto gap-2">
-          <Button
-            variant="primary"
-            size="lg"
-            leftIcon={
-              <span className="manager-create-icon-wrap" aria-hidden="true">
-                <svg
-                  className="manager-create-icon-svg"
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9.5"
-                    className="manager-create-svg-circle"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeDasharray="4 3"
-                    opacity="0.8"
-                  />
-                  <path
-                    d="M12 7V17M7 12H17"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="manager-create-svg-plus"
-                  />
-                </svg>
-              </span>
-            }
-            onClick={handleOpenCreateModal}
-            className="w-full sm:w-auto font-bold manager-review-create-btn shrink-0"
-          >
-            Create
-          </Button>
+          {/* Action Area & Manager Department at top right */}
+          <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-2.5 flex-wrap">
+            {/* Managers only — admin uses the Department filter instead */}
+            {fullDepartmentName && !isCeoOrGm && !isAdmin && (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-white border border-[#E2E8F0] shadow-2xs shrink-0">
+                <Building2 className="w-4 h-4 text-[#2563EB] shrink-0" />
+                <span className="text-xs font-semibold text-[#64748B]">Department:</span>
+                <span className="text-xs sm:text-sm font-semibold text-[#0F172A] whitespace-nowrap">
+                  {fullDepartmentName}
+                </span>
+              </div>
+            )}
+
+            <Button
+              variant="primary"
+              size="lg"
+              leftIcon={
+                <span className="manager-create-icon-wrap" aria-hidden="true">
+                  <svg
+                    className="manager-create-icon-svg"
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9.5"
+                      className="manager-create-svg-circle"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeDasharray="4 3"
+                      opacity="0.8"
+                    />
+                    <path
+                      d="M12 7V17M7 12H17"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="manager-create-svg-plus"
+                    />
+                  </svg>
+                </span>
+              }
+              onClick={handleOpenCreateModal}
+              className="w-full sm:w-auto font-bold manager-review-create-btn shrink-0"
+            >
+              Create
+            </Button>
           </div>
         </div>
 
         {/* Main Section Card */}
-        <Card className="w-full p-5 sm:p-7 manager-review-glass-card min-h-[calc(100vh-230px)]">
-          <CardHeader className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-5">
+        <Card className="w-full p-3 sm:px-5 sm:py-4 manager-review-glass-card flex-1 flex flex-col min-h-0">
+          <CardHeader className="flex flex-row items-center justify-between gap-2.5 mb-2.5 flex-nowrap w-full">
             <CardTitle className="text-lg sm:text-xl font-bold manager-review-card-title whitespace-nowrap shrink-0">
-              Appraisals
+              Quarterly Reviews
             </CardTitle>
 
-            {/* Filters beside title */}
-            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar flex-nowrap py-1 manager-review-filters-bar flex-1 justify-start xl:justify-end">
-              <div className="w-32 sm:w-36 md:w-40 xl:w-44 shrink-0 filter-item-stagger-1">
+            {/* Filters beside title on one line - calibrated to never overflow outside card */}
+            <div
+              ref={filtersDockRef}
+              className="manager-review-filters-dock flex items-center gap-1.5 flex-nowrap shrink-0 justify-end"
+            >
+              <div className="w-28 sm:w-32 lg:w-36 shrink-0 filter-item-stagger-1">
                 <SearchBox
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -504,12 +656,37 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 />
               </div>
 
+              {isAdmin && (
+                <Dropdown
+                  className="shrink-0 filter-item-stagger-2"
+                  placeholder="Department"
+                  allowClear={true}
+                  defaultValue=""
+                  prefixIcon={
+                    <span className="filter-icon-badge filter-icon-badge-dept">
+                      <Building2 size={13} />
+                    </span>
+                  }
+                  options={departmentOptions}
+                  value={department}
+                  onChange={(value) => setDepartment(value || AppraisalFilterAll.ALL)}
+                  maxLabelWidth="max-w-[85px]"
+                  buttonClassName={`manager-review-filter-btn filter-btn-dept ${
+                    department && department !== AppraisalFilterAll.ALL ? "filter-active" : ""
+                  } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[130px]`}
+                />
+              )}
+
               <Dropdown
                 className="shrink-0 filter-item-stagger-2"
                 placeholder="Financial Year"
                 allowClear={true}
                 defaultValue=""
-                prefixIcon={<Calendar size={14} className="filter-icon-fy" />}
+                prefixIcon={
+                  <span className="filter-icon-badge filter-icon-badge-fy">
+                    <Calendar size={13} />
+                  </span>
+                }
                 options={financialYearOptions}
                 value={financialYear}
                 onChange={(value) => {
@@ -518,21 +695,29 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 }}
                 onOpen={loadFinancialYears}
                 loading={yearsLoading}
-                maxLabelWidth="max-w-[124px]"
-                buttonClassName="manager-review-filter-btn filter-btn-fy rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[172px]"
+                maxLabelWidth="max-w-[95px]"
+                buttonClassName={`manager-review-filter-btn filter-btn-fy ${
+                  financialYear && financialYear !== defaultYear.current ? "filter-active" : ""
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[145px]`}
               />
 
               <Dropdown
                 className="shrink-0 filter-item-stagger-3"
-                placeholder="Quarters"
+                placeholder="All Quarters"
                 allowClear={false}
                 defaultValue=""
-                prefixIcon={<Clock size={14} className="filter-icon-quarters" />}
+                prefixIcon={
+                  <span className="filter-icon-badge filter-icon-badge-quarters">
+                    <Clock size={13} />
+                  </span>
+                }
                 options={quarterOptions}
                 value={quarter}
                 onChange={(value) => setQuarter(value || AppraisalFilterAll.ALL)}
-                maxLabelWidth="max-w-[100px]"
-                buttonClassName="manager-review-filter-btn filter-btn-quarters rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[150px]"
+                maxLabelWidth="max-w-[85px]"
+                buttonClassName={`manager-review-filter-btn filter-btn-quarters ${
+                  quarter && quarter !== AppraisalFilterAll.ALL ? "filter-active" : ""
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[122px]`}
               />
 
               <Dropdown
@@ -540,13 +725,20 @@ export const ManagerQuarterlyReview: React.FC = () => {
                 placeholder="Status"
                 allowClear={true}
                 defaultValue=""
-                prefixIcon={<ClipboardList size={14} className="filter-icon-status" />}
+                prefixIcon={
+                  <span className="filter-icon-badge filter-icon-badge-status">
+                    <ClipboardList size={13} />
+                  </span>
+                }
                 options={statusOptions}
                 value={statusFilter}
                 onChange={setStatusFilter}
-                maxLabelWidth="max-w-[80px]"
+                maxLabelWidth="max-w-[75px]"
                 contentWidth
-                buttonClassName="manager-review-filter-btn filter-btn-status rounded-xl px-2.5 py-1.5 text-xs font-medium min-w-[124px]"
+                align="right"
+                buttonClassName={`manager-review-filter-btn filter-btn-status ${
+                  statusFilter ? "filter-active" : ""
+                } rounded-xl px-2.5 py-1.5 text-xs font-semibold min-w-[110px]`}
               />
 
               {hasActiveFilters && (
@@ -554,47 +746,46 @@ export const ManagerQuarterlyReview: React.FC = () => {
                   variant="ghost"
                   size="sm"
                   onClick={handleClearFilters}
-                  className="manager-review-clear-btn shrink-0 p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-xs font-medium flex items-center gap-1 border border-blue-200/80 bg-white/90 text-blue-600 hover:text-blue-700 hover:bg-blue-50/80 shadow-xs"
+                  className="manager-review-clear-btn shrink-0"
                   title="Clear all filters"
                 >
-                  <RotateCcw size={13} className="filter-clear-icon shrink-0" />
-                  <span className="hidden 2xl:inline text-xs">Clear</span>
+                  <RotateCcw size={14} className="filter-clear-icon shrink-0" />
                 </Button>
               )}
             </div>
           </CardHeader>
 
-          <CardContent className="p-0">
-            <div className="relative min-h-[16rem]">
-              {tableLoading ? (
-                <div className="absolute inset-0 z-10 flex items-center justify-center rounded-2xl bg-white/70 backdrop-blur-[2px]">
-                  <WorksphereLogoLoader />
-                </div>
-              ) : null}
+          <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+            <div className={`relative flex-1 flex flex-col min-h-0 ${assignments.length === 0 ? "justify-center" : ""}`}>
               {assignments.length > 0 ? (
                 <QuarterlyReviewTable
                   data={assignments}
                   highlightedId={highlightedRowId}
+                  viewOnly={false}
                   onEdit={handleEditRecord}
                   onView={handleViewRecord}
+                  onOpenAccessGrant={(record) => {
+                    scrollToTop();
+                    setAccessGrantRecord(record);
+                  }}
                   onRefresh={() => setReloadKey((k) => k + 1)}
                   page={tablePage}
                   totalCount={tableTotal}
                   defaultPageSize={QUARTERLY_REVIEW_TABLE_PAGE_SIZE}
                   onPageChange={setTablePage}
                 />
-              ) : !tableLoading ? (
-                <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
-                  <div className="relative mb-5">
+              ) : !tableLoading && !isGlobalLoading ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center px-4 py-8 my-auto w-full">
+                  <div className="relative mb-5 flex items-center justify-center">
                     <div className="manager-review-empty-glow" />
                     <div className="manager-review-empty-illustration" />
                   </div>
 
                   <h3 className="text-xl font-bold text-[#0F172A]">
-                    No submissions found
+                    No data found
                   </h3>
                   <p className="text-sm text-[#64748B] max-w-sm mt-1.5 leading-relaxed font-normal">
-                    There are currently no employee quarterly review submissions matching your filters.
+                    There are currently no employee quarterly reviews matching your filters.
                   </p>
                 </div>
               ) : null}
@@ -606,14 +797,20 @@ export const ManagerQuarterlyReview: React.FC = () => {
           isOpen={isCreateModalOpen}
           onClose={handleCloseCreateModal}
           onContinue={handleContinueToAssign}
-          initialType={null}
+          initialType={assignmentType}
+          initialDepartment={selectedReviewDepartment}
+          isAdmin={isAdmin}
         />
 
         <AssignQuarterlyReviewModal
           key={assignFormKey}
           isOpen={isAssignModalOpen}
           onClose={handleCloseAssignModal}
+          onBack={handleBackToCreateModal}
           assignmentType={assignmentType}
+          selectedDepartment={selectedReviewDepartment}
+          isAdmin={isAdmin}
+          managersOnly={isCeoOrGm}
           onAssign={handleAssignSuccess}
         />
       </div>

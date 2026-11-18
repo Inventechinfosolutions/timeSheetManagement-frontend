@@ -1,0 +1,220 @@
+/* Worksphere appraisal dashboard card — 3D tilt + float (KITS-inspired motion) */
+
+.appr-dash-card {
+  perspective: 1100px;
+  transform-style: preserve-3d;
+  height: 100%;
+  min-height: 260px;
+}
+
+.appr-dash-card__body {
+  height: 100%;
+  min-height: 260px;
+  transform-style: preserve-3d;
+  transition: box-shadow 0.35s ease;
+  will-change: transform;
+}
+
+.appr-dash-scene {
+  transform-style: preserve-3d;
+  pointer-events: none;
+}
+
+@keyframes appr-float-y {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 28px) rotateX(8deg) rotateY(-14deg);
+  }
+  50% {
+    transform: translate3d(0, -10px, 36px) rotateX(12deg) rotateY(-8deg);
+  }
+}
+
+@keyframes appr-medal-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 40px) rotateX(10deg) rotateY(-8deg) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -12px, 52px) rotateX(16deg) rotateY(6deg) scale(1.04);
+  }
+}
+
+@keyframes appr-orb-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes appr-spark {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.85) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15) rotate(18deg);
+  }
+}
+
+@keyframes appr-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes appr-step-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgba(255, 255, 255, 0);
+  }
+}
+
+@keyframes appr-ribbon-sway {
+  0%,
+  100% {
+    transform: rotate(-6deg);
+  }
+  50% {
+    transform: rotate(6deg);
+  }
+}
+
+.appr-dash-hero {
+  animation: appr-float-y 3.4s ease-in-out infinite;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 18px 22px rgba(15, 23, 42, 0.35));
+}
+
+.appr-dash-medal {
+  animation: appr-medal-float 3.2s ease-in-out infinite;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 20px 26px rgba(30, 64, 175, 0.28));
+}
+
+.appr-dash-orb {
+  animation: appr-orb-pulse 2.8s ease-in-out infinite;
+}
+
+.appr-dash-spark {
+  animation: appr-spark 2.2s ease-in-out infinite;
+}
+
+.appr-dash-spark-delay {
+  animation-delay: 0.7s;
+}
+
+.appr-dash-progress-fill {
+  background: linear-gradient(90deg, #ffffff 0%, #c4b5fd 45%, #ffffff 90%);
+  background-size: 200% 100%;
+  animation: appr-shimmer 2s linear infinite;
+}
+
+.appr-dash-step-active {
+  animation: appr-step-glow 1.7s ease-in-out infinite;
+}
+
+.appr-dash-ribbon {
+  transform-origin: top center;
+  animation: appr-ribbon-sway 3.6s ease-in-out infinite;
+}
+
+/* FY / quarter period — bold highlighted 3D badge */
+.appr-dash-period-badge {
+  position: relative;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.32) 0%, rgba(255, 255, 255, 0.12) 48%, rgba(167, 139, 250, 0.35) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 -1px 0 rgba(30, 27, 107, 0.25) inset,
+    0 6px 14px rgba(15, 23, 42, 0.28),
+    0 2px 4px rgba(15, 23, 42, 0.18);
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transform: translateZ(12px);
+  letter-spacing: 0.02em;
+}
+
+.appr-dash-period-badge::before {
+  content: "";
+  position: absolute;
+  inset: 1px 1px auto 1px;
+  height: 45%;
+  border-radius: 9999px 9999px 40% 40%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), transparent);
+  pointer-events: none;
+}
+
+.appr-dash-cta {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.appr-dash-card:hover .appr-dash-cta {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.22);
+}
+
+@keyframes appr-steps-grow {
+  0%,
+  100% {
+    transform: translateY(0) scale(0.72) rotateX(6deg) rotateY(-8deg);
+  }
+  50% {
+    transform: translateY(-10px) scale(0.8) rotateX(10deg) rotateY(4deg);
+  }
+}
+
+@keyframes appr-quote-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(196, 181, 253, 0.15);
+  }
+  50% {
+    box-shadow: 0 0 18px 2px rgba(196, 181, 253, 0.28);
+  }
+}
+
+.appr-dash-quote {
+  animation: appr-quote-glow 3.2s ease-in-out infinite;
+}
+
+.appr-dash-steps-scale {
+  animation: appr-steps-grow 2.8s ease-in-out infinite;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 12px 16px rgba(15, 23, 42, 0.35));
+}
+
+.appr-dash-steps-grow .gsap-trophy-body {
+  transform-origin: 110px 140px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appr-dash-hero,
+  .appr-dash-medal,
+  .appr-dash-orb,
+  .appr-dash-spark,
+  .appr-dash-progress-fill,
+  .appr-dash-step-active,
+  .appr-dash-ribbon,
+  .appr-dash-quote,
+  .appr-dash-steps-scale {
+    animation: none !important;
+  }
+  .appr-dash-card__body {
+    transform: none !important;
+  }
+}

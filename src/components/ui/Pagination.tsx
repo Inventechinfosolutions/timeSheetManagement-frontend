@@ -8,6 +8,7 @@ export interface PaginationProps {
   onPageChange: (page: number) => void;
   className?: string;
   showTotal?: boolean;
+  activeClassName?: string;
 }
 
 export const Pagination: React.FC<PaginationProps> = ({
@@ -17,6 +18,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   onPageChange,
   className = "",
   showTotal = true,
+  activeClassName,
 }) => {
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
@@ -82,7 +84,7 @@ export const Pagination: React.FC<PaginationProps> = ({
               onClick={() => onPageChange(pageNum)}
               className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs transition-all cursor-pointer ${
                 isActive
-                  ? "bg-[#4318FF] text-white shadow-xs font-black"
+                  ? activeClassName || "bg-[#4318FF] text-white shadow-xs font-black"
                   : "bg-white text-[#2B3674] border border-gray-200 hover:bg-gray-50 font-bold"
               }`}
             >

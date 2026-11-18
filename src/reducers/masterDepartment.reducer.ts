@@ -20,9 +20,11 @@ const initialState: MasterDepartmentState = {
 // Fetch All Departments
 export const fetchDepartments = createAsyncThunk(
     'masterDepartments/fetchAll',
-    async (_, { rejectWithValue }) => {
+    async (options: { skipGlobalLoader?: boolean } | void, { rejectWithValue }) => {
         try {
-            const response = await axios.get(API_URL);
+            const response = await axios.get(API_URL, {
+                skipGlobalLoader: Boolean(options?.skipGlobalLoader),
+            });
             return response.data;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || 'Failed to fetch departments');

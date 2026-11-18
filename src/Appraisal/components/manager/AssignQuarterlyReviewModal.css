@@ -1,0 +1,1040 @@
+/* ==========================================================================
+   Assign Quarterly Review Modal - Animations & Frosted Ice-Blue Styling
+   Frosted Ice-Blue Aesthetic & Royal Blue Highlights
+   ========================================================================== */
+
+/* 1. Modal Overlay Backdrop Entrance & Exit */
+.assign-quarterly-modal-overlay {
+  animation: assignModalOverlayFade 0.38s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  background: rgba(15, 23, 42, 0.3) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  z-index: 0 !important;
+  pointer-events: auto !important;
+}
+
+.assign-quarterly-modal-overlay.modal-overlay-is-closing {
+  animation: assignModalOverlayFadeOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
+  pointer-events: none !important;
+}
+
+@keyframes assignModalOverlayFade {
+  0% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+}
+
+@keyframes assignModalOverlayFadeOut {
+  0% {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  100% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+}
+
+/* 2. Modal Dialog Card - Spring Expansion & 3D Page Fold / Squeeze Exit */
+.assign-quarterly-modal-dialog {
+  position: relative !important;
+  z-index: 30 !important;
+  margin: auto !important;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.98) 0%,
+    rgba(240, 244, 250, 0.96) 50%,
+    rgba(232, 240, 250, 0.94) 100%
+  ) !important;
+  backdrop-filter: blur(28px) !important;
+  -webkit-backdrop-filter: blur(28px) !important;
+  border: 1.5px solid rgba(219, 234, 254, 0.85) !important;
+  box-shadow:
+    0 28px 75px -15px rgba(15, 23, 42, 0.22),
+    0 6px 24px rgba(37, 99, 235, 0.15),
+    inset 0 1px 2px rgba(255, 255, 255, 1) !important;
+  border-radius: 1.75rem !important;
+  animation: assignModalExpand 0.48s cubic-bezier(0.34, 1.4, 0.64, 1) forwards !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: 90vh !important;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.custom-scrollbar,
+.assign-input-textarea {
+  scrollbar-width: thin !important;
+  scrollbar-color: #CBD5E1 transparent !important;
+}
+
+.custom-scrollbar::-webkit-scrollbar,
+.assign-input-textarea::-webkit-scrollbar,
+textarea.assign-input-textarea::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+}
+.custom-scrollbar::-webkit-scrollbar-track,
+.assign-input-textarea::-webkit-scrollbar-track,
+textarea.assign-input-textarea::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb,
+.assign-input-textarea::-webkit-scrollbar-thumb,
+textarea.assign-input-textarea::-webkit-scrollbar-thumb {
+  background: #CBD5E1 !important;
+  border-radius: 9999px !important;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover,
+.assign-input-textarea::-webkit-scrollbar-thumb:hover,
+textarea.assign-input-textarea::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8 !important;
+}
+.custom-scrollbar::-webkit-scrollbar-button,
+.assign-input-textarea::-webkit-scrollbar-button,
+textarea.assign-input-textarea::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.custom-scrollbar::-webkit-resizer,
+.assign-input-textarea::-webkit-resizer,
+textarea.assign-input-textarea::-webkit-resizer {
+  background-color: transparent !important;
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 2px,
+    #94A3B8 2px,
+    #94A3B8 3.5px
+  ) !important;
+  background-size: 10px 10px !important;
+  background-position: bottom 2px right 2px !important;
+  background-repeat: no-repeat !important;
+  cursor: se-resize !important;
+}
+
+.custom-scrollbar:hover::-webkit-resizer,
+.assign-input-textarea:hover::-webkit-resizer,
+textarea.assign-input-textarea:hover::-webkit-resizer {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 2px,
+    #475569 2px,
+    #475569 3.5px
+  ) !important;
+}
+
+.assign-quarterly-modal-dialog::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Modal Dialog Exit */
+.assign-quarterly-modal-dialog.modal-is-closing {
+  animation: assignModalSqueezePageFoldExit 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) forwards !important;
+  transform-origin: calc(100% - 32px) 32px !important;
+  pointer-events: none !important;
+  will-change: transform, opacity, filter;
+}
+
+@keyframes assignModalExpand {
+  0% {
+    opacity: 0;
+    transform: scale(0.88) translateY(24px);
+    filter: blur(5px);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.025) translateY(-3px);
+    filter: blur(0px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0px);
+  }
+}
+
+@keyframes assignModalSqueezePageFoldExit {
+  0% {
+    opacity: 1;
+    transform: perspective(1200px) scale(1) rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(0);
+    filter: blur(0px);
+    box-shadow:
+      0 28px 75px -15px rgba(15, 23, 42, 0.22),
+      0 6px 24px rgba(37, 99, 235, 0.15);
+  }
+  28% {
+    opacity: 0.96;
+    transform: perspective(1200px) scale(0.86, 0.92) rotateX(14deg) rotateY(-16deg) rotateZ(-4deg) translateY(6px);
+    box-shadow: 0 16px 40px -10px rgba(15, 23, 42, 0.26);
+  }
+  65% {
+    opacity: 0.55;
+    transform: perspective(1200px) scale(0.44, 0.28) rotateX(36deg) rotateY(-44deg) rotateZ(-14deg) translateY(22px);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(1200px) scale(0.05, 0.01) rotateX(60deg) rotateY(-70deg) rotateZ(-26deg) translateY(38px);
+    filter: blur(8px);
+  }
+}
+
+/* 3. Close Button */
+.assign-quarterly-modal-dialog .assign-modal-close-btn {
+  width: 2.35rem !important;
+  height: 2.35rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 0.85rem !important;
+  color: #64748B !important;
+  background: #EFF6FF !important;
+  border: 1.5px solid #BFDBFE !important;
+  cursor: pointer !important;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  transform-origin: center center !important;
+  position: relative !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.08) !important;
+}
+
+.assign-quarterly-modal-dialog .assign-modal-close-btn:hover {
+  background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%) !important;
+  color: #EF4444 !important;
+  border-color: rgba(239, 68, 68, 0.35) !important;
+  transform: scale(0.85) rotate(90deg) !important;
+  box-shadow:
+    0 6px 18px rgba(239, 68, 68, 0.22),
+    0 2px 4px rgba(239, 68, 68, 0.12) !important;
+}
+
+.assign-quarterly-modal-dialog .assign-modal-close-btn:active {
+  transform: scale(0.66) rotate(180deg) !important;
+  background: #FCA5A5 !important;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.28) !important;
+}
+
+.assign-quarterly-modal-dialog .assign-modal-close-btn svg {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.assign-quarterly-modal-dialog .assign-modal-close-btn:hover svg {
+  transform: scale(1.18);
+}
+
+.assign-quarterly-modal-dialog .assign-modal-close-btn:active svg {
+  transform: scale(0.82);
+}
+
+/* 4. Header Icon Badge */
+.assign-modal-header-icon {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  color: #1D4ED8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.18), inset 0 1px 1px #FFFFFF;
+}
+
+/* 5. Form Sections Staggered Entrance */
+.assign-modal-form-section {
+  animation: assignFieldSlideUp 0.42s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+.assign-modal-form-section:nth-child(1) { animation-delay: 0.08s; }
+.assign-modal-form-section:nth-child(2) { animation-delay: 0.14s; }
+.assign-modal-form-section:nth-child(3) { animation-delay: 0.20s; }
+.assign-modal-form-section:nth-child(4) { animation-delay: 0.26s; }
+
+@keyframes assignFieldSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 6. Cancel / Back Button */
+.assign-modal-cancel-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.55rem !important;
+  width: 132px !important;
+  min-width: 132px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  max-height: 42px !important;
+  padding: 0 1.25rem !important;
+  box-sizing: border-box !important;
+  border-radius: 9999px !important;
+  border: 1.5px solid #BFDBFE !important;
+  color: #1D4ED8 !important;
+  background: #FFFFFF !important;
+  font-weight: 700 !important;
+  font-size: 0.875rem !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.06) !important;
+}
+
+.assign-modal-cancel-btn > span {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+}
+
+.assign-modal-cancel-btn:hover {
+  background: #EFF6FF !important;
+  border-color: #93C5FD !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.12) !important;
+}
+
+.assign-modal-cancel-btn:active {
+  transform: scale(0.96);
+}
+
+/* 7. Assign Review Submit Button & Micro-Interactions */
+.assign-modal-submit-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.55rem !important;
+  width: 132px !important;
+  min-width: 132px !important;
+  height: 42px !important;
+  min-height: 42px !important;
+  box-sizing: border-box !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  font-size: 0.875rem !important;
+  line-height: 1 !important;
+  background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  position: relative !important;
+  overflow: hidden !important;
+  cursor: pointer !important;
+  transition:
+    background 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    border-color 0.3s ease !important;
+  box-shadow:
+    0 10px 24px -4px rgba(37, 99, 235, 0.45),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.45) !important;
+}
+
+.assign-modal-submit-btn:disabled {
+  opacity: 1 !important;
+  cursor: default !important;
+}
+
+.assign-modal-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2.5px) scale(1.02) !important;
+  background: linear-gradient(180deg, #2563EB 0%, #1E40AF 100%) !important;
+  box-shadow:
+    0 14px 34px rgba(37, 99, 235, 0.55),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.6) !important;
+}
+
+.assign-modal-submit-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.96) !important;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+}
+
+/* Circular Badge Container */
+.assign-btn-circle-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  width: 20px !important;
+  height: 20px !important;
+  margin-right: 0.35rem !important;
+  flex-shrink: 0 !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.4, 0.64, 1) !important;
+}
+
+/* Plane Wrapper & Icon */
+.assign-btn-plane-wrap {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  transition: transform 0.25s ease !important;
+}
+
+.assign-plane-icon {
+  fill: #FFFFFF !important;
+  color: #FFFFFF !important;
+  transform: rotate(-10deg) !important;
+  transition: transform 0.25s ease !important;
+}
+
+/* Check Wrapper & Icon (hidden at rest) */
+.assign-btn-check-wrap {
+  display: none !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: absolute !important;
+  inset: 0 !important;
+  opacity: 0;
+  transform: scale(0);
+}
+
+.assign-check-icon {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+/* Text Label */
+.assign-btn-label {
+  display: inline-block !important;
+  white-space: nowrap !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em !important;
+  transition: opacity 0.2s ease, transform 0.25s ease !important;
+}
+
+/* Flight Track SVG during ANIMATING */
+.assign-btn-flight-track {
+  display: block;
+  position: absolute;
+  top: -34px;
+  left: -34px;
+  width: 110px;
+  height: 110px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.assign-flight-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.assign-flight-arc {
+  stroke: #93C5FD;
+  stroke-width: 2;
+  stroke-linecap: round;
+  fill: none;
+  stroke-dasharray: 240;
+  stroke-dashoffset: 240;
+  animation: flightArcDraw 0.9s cubic-bezier(0.25, 0.1, 0.25, 1) forwards !important;
+}
+
+@keyframes flightArcDraw {
+  0% {
+    stroke-dashoffset: 240;
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    stroke-dashoffset: 0;
+    opacity: 0.9;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+/* Paper Plane Flight: rotates, flies away, loops back up into circle (Images 1 & 2) */
+.assign-btn-animating .assign-btn-plane-wrap {
+  position: absolute !important;
+  z-index: 15 !important;
+  animation: paperPlaneArcLoop 0.95s cubic-bezier(0.25, 0.1, 0.25, 1) forwards !important;
+}
+
+.assign-btn-animating .assign-plane-icon {
+  fill: #2563EB !important;
+  color: #2563EB !important;
+}
+
+@keyframes paperPlaneArcLoop {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(-12deg) scale(1);
+  }
+  18% {
+    /* Rotates clockwise & begins launch */
+    opacity: 1;
+    transform: translate(14px, -14px) rotate(35deg) scale(0.9);
+  }
+  35% {
+    /* Image 1: flies away to top-right */
+    opacity: 1;
+    transform: translate(52px, -45px) rotate(52deg) scale(0.65);
+  }
+  50% {
+    /* Loops down around the right */
+    opacity: 0.8;
+    transform: translate(55px, 12px) rotate(140deg) scale(0.5);
+  }
+  68% {
+    /* Image 2: swoops from bottom pointing straight up into circle */
+    opacity: 1;
+    transform: translate(0px, 42px) rotate(-45deg) scale(0.72);
+  }
+  84% {
+    /* Arrives right at center of white circle */
+    opacity: 1;
+    transform: translate(0px, 0px) rotate(0deg) scale(0.95);
+  }
+  92% {
+    /* Absorbed into circle center */
+    opacity: 0;
+    transform: translate(0px, 0px) scale(0.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0px, 0px) scale(0);
+  }
+}
+
+/* Checkmark pops inside white circle (Image 3 & 4) */
+.assign-btn-animating .assign-btn-check-wrap {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #2563EB !important;
+  animation: checkmarkPopInsideCircle 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) 0.8s forwards !important;
+}
+
+.assign-btn-animating .assign-check-icon {
+  width: 20px !important;
+  height: 20px !important;
+  color: #2563EB !important;
+  stroke: #2563EB !important;
+}
+
+@keyframes checkmarkPopInsideCircle {
+  0% {
+    opacity: 0;
+    transform: scale(0) rotate(-35deg);
+  }
+  65% {
+    opacity: 1;
+    transform: scale(1.35) rotate(6deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+/* Button Animating State: Box compresses into a white circle (Images 1 & 2) */
+.assign-modal-submit-btn.assign-btn-animating {
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  height: 42px !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  border-radius: 50% !important;
+  background: #FFFFFF !important;
+  border: 2.5px solid #2563EB !important;
+  box-shadow: 0 4px 18px rgba(37, 99, 235, 0.35) !important;
+  cursor: default !important;
+  overflow: visible !important;
+  animation: buttonCompressToCircle 0.35s cubic-bezier(0.34, 1.25, 0.64, 1) forwards !important;
+}
+
+.assign-modal-submit-btn.assign-btn-animating::before {
+  display: none !important;
+}
+
+@keyframes buttonCompressToCircle {
+  0% {
+    width: 132px;
+    min-width: 132px;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%);
+  }
+  100% {
+    width: 42px;
+    min-width: 42px;
+    max-width: 42px;
+    border-radius: 50%;
+    background: #FFFFFF;
+    border: 2px solid #2563EB;
+  }
+}
+
+.assign-btn-animating .assign-btn-label {
+  display: none !important;
+  opacity: 0 !important;
+  width: 0 !important;
+}
+
+.assign-btn-animating .assign-btn-circle-badge {
+  margin-right: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Button Assigned State: Round badge moves to aside, capsule expands with green background & white text (Image 4) */
+.assign-modal-submit-btn.assign-btn-assigned {
+  width: 132px !important;
+  min-width: 132px !important;
+  height: 42px !important;
+  padding: 0 1.25rem 0 0.85rem !important;
+  border-radius: 9999px !important;
+  background: linear-gradient(180deg, #10B981 0%, #059669 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  color: #FFFFFF !important;
+  box-shadow:
+    0 8px 28px rgba(16, 185, 129, 0.48),
+    0 2px 8px rgba(5, 150, 105, 0.32),
+    inset 0 1px 1.5px rgba(255, 255, 255, 0.45) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.55rem !important;
+  cursor: default !important;
+  animation: assignedCapsuleExpand 0.35s cubic-bezier(0.34, 1.25, 0.64, 1) forwards !important;
+}
+
+@keyframes assignedCapsuleExpand {
+  0% {
+    width: 42px;
+    min-width: 42px;
+  }
+  100% {
+    width: 132px;
+    min-width: 132px;
+  }
+}
+
+/* Round is moved to aside */
+.assign-modal-submit-btn.assign-btn-assigned .assign-btn-circle-badge {
+  background: #FFFFFF !important;
+  border-radius: 50% !important;
+  width: 24px !important;
+  height: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  margin-right: 0 !important;
+  flex-shrink: 0 !important;
+  animation: circleBadgeAside 0.35s cubic-bezier(0.34, 1.3, 0.64, 1) forwards !important;
+}
+
+@keyframes circleBadgeAside {
+  0% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.assign-modal-submit-btn.assign-btn-assigned .assign-btn-plane-wrap {
+  display: none !important;
+}
+
+.assign-modal-submit-btn.assign-btn-assigned .assign-btn-check-wrap {
+  display: flex !important;
+  opacity: 1 !important;
+  transform: scale(1) !important;
+  color: #059669 !important;
+}
+
+.assign-modal-submit-btn.assign-btn-assigned .assign-check-icon {
+  width: 14px !important;
+  height: 14px !important;
+  color: #059669 !important;
+  stroke: #059669 !important;
+}
+
+/* Button Text: White text "Assigned" */
+.assign-modal-submit-btn.assign-btn-assigned .assign-btn-label {
+
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  font-size: 0.875rem !important;
+  display: inline-block !important;
+  opacity: 1 !important;
+  animation: assignTextSlideUp 0.34s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes assignTextSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.assign-modal-submit-btn::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -130%;
+  width: 90%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.38) 50%,
+    transparent 100%
+  );
+  transform: skewX(-25deg);
+  pointer-events: none;
+  animation: assignBtnShimmerSweep 3.2s ease-in-out infinite;
+}
+
+@keyframes assignBtnShimmerSweep {
+  0%, 55% {
+    left: -130%;
+  }
+  100% {
+    left: 200%;
+  }
+}
+
+/* ==========================================================================
+   8. Form Inputs & Controls Animations
+   ========================================================================== */
+
+.ui-date-field.assign-input-control:focus-within svg,
+.ui-date-field.assign-input-control[aria-expanded="true"] svg {
+  transform: none !important;
+}
+
+.assign-yearly-quarters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-height: 42px;
+  pointer-events: none;
+  cursor: default;
+  user-select: none;
+}
+
+.assign-yearly-quarters.assign-input-control,
+.assign-yearly-quarters.assign-input-control:hover,
+.assign-yearly-quarters.assign-input-control:focus,
+.assign-yearly-quarters.assign-input-control:focus-within {
+  transform: none !important;
+  box-shadow: none !important;
+  background: #F8FAFC !important;
+  cursor: default !important;
+}
+
+.assign-yearly-quarters .qr-quarter-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.75rem;
+  padding: 0.22rem 0.7rem;
+  border-radius: 9999px;
+}
+
+.assign-yearly-quarters .qr-quarter-q1 {
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+
+.assign-yearly-quarters .qr-quarter-q2 {
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+}
+
+.assign-yearly-quarters .qr-quarter-q3 {
+  background: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.assign-yearly-quarters .qr-quarter-q4 {
+  background: #FAF5FF;
+  color: #7E22CE;
+  border: 1px solid #E9D5FF;
+}
+
+/* Input Controls Base Animation & Hover Effect */
+.assign-input-control {
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  background: #FFFFFF !important;
+  position: relative !important;
+}
+
+.assign-input-control:hover {
+  border-color: #93C5FD !important;
+  transform: translateY(-1.5px) !important;
+  box-shadow:
+    0 6px 18px rgba(37, 99, 235, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.03) !important;
+}
+
+.assign-input-control.is-error,
+.assign-input-control.is-error:hover,
+.assign-input-control.is-error:focus,
+.assign-input-control.is-error:focus-within,
+.assign-input-control.is-error[aria-expanded="true"] {
+  border-color: #DC2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.16) !important;
+}
+
+.assign-input-control:focus,
+.assign-input-control:focus-within,
+.assign-input-control[aria-expanded="true"] {
+  border-color: #2563EB !important;
+  transform: translateY(-2px) scale(1.008) !important;
+  box-shadow:
+    0 0 0 3.5px rgba(37, 99, 235, 0.16),
+    0 8px 24px rgba(37, 99, 235, 0.12) !important;
+}
+
+.assign-input-control svg {
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.25s ease !important;
+}
+
+.assign-input-control:hover svg {
+  transform: scale(1.18) rotate(6deg) !important;
+  color: #2563EB !important;
+}
+
+.assign-input-control:focus-within svg,
+.assign-input-control[aria-expanded="true"] svg {
+  transform: scale(1.22) rotate(180deg) !important;
+  color: #2563EB !important;
+}
+
+/* Interactive Form Labels */
+.assign-modal-form-section label {
+  transition: color 0.22s ease, transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  display: inline-block !important;
+}
+
+.assign-modal-form-section:hover label {
+  color: #1D4ED8 !important;
+  transform: translateX(1.5px) !important;
+}
+
+/* Warning / Info Box Ambient Warm Pulse */
+.assign-modal-warning-box {
+  transition: all 0.28s ease !important;
+  animation: warningPulseGlow 3.5s ease-in-out infinite !important;
+}
+
+.assign-modal-warning-box:hover {
+  transform: translateY(-1px) scale(1.005) !important;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.15) !important;
+}
+
+@keyframes warningPulseGlow {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.08);
+    border-color: #BFDBFE;
+  }
+  50% {
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.16);
+    border-color: #93C5FD;
+    transform: translateY(-0.5px);
+  }
+}
+
+/* "Select All" Button Spring Hover */
+.assign-select-all-btn {
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.assign-select-all-btn:hover {
+  transform: scale(1.08) translateX(1px) !important;
+  color: #2563EB !important;
+}
+
+.assign-select-all-btn:active {
+  transform: scale(0.94) !important;
+}
+
+/* Textarea Focus & Hover */
+.assign-input-textarea:focus {
+  border-color: #2563EB !important;
+  box-shadow:
+    0 0 0 3.5px rgba(37, 99, 235, 0.16),
+    0 8px 22px rgba(37, 99, 235, 0.1) !important;
+}
+
+/* Ensure Ant Design DatePicker Popup is on top of modal dialog and never underlaps */
+.ant-picker-dropdown {
+  z-index: 100050 !important;
+}
+
+/* Compact DatePicker popup & remove Today footer */
+.assign-ant-datepicker-popup {
+  width: var(--date-picker-width, 100%) !important;
+  min-width: var(--date-picker-width, 100%) !important;
+  max-width: var(--date-picker-width, 100%) !important;
+  box-shadow: 0 12px 36px -4px rgba(15, 23, 42, 0.2), 0 4px 12px rgba(37, 99, 235, 0.12) !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-panel-container {
+  width: 100% !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  background: #FFFFFF !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-panel {
+  width: 100% !important;
+  padding: 4px 6px !important;
+  background: #FFFFFF !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-date-panel,
+.assign-ant-datepicker-popup .ant-picker-month-panel,
+.assign-ant-datepicker-popup .ant-picker-year-panel,
+.assign-ant-datepicker-popup .ant-picker-decade-panel {
+  width: 100% !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-content {
+  width: 100% !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-date-panel .ant-picker-content th,
+.assign-ant-datepicker-popup .ant-picker-date-panel .ant-picker-cell {
+  width: 14.28% !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-month-panel .ant-picker-cell,
+.assign-ant-datepicker-popup .ant-picker-year-panel .ant-picker-cell,
+.assign-ant-datepicker-popup .ant-picker-decade-panel .ant-picker-cell {
+  width: 33.33% !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-body {
+  padding: 2px 4px 6px 4px !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 4px 8px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  border-bottom: 1px solid #F1F5F9 !important;
+  background: #FFFFFF !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-header button {
+  visibility: visible !important;
+  opacity: 1 !important;
+  color: #2563EB !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-header button:hover {
+  color: #1D4ED8 !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-header-view {
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-header-view button {
+  font-weight: 700 !important;
+  color: #0F172A !important;
+  font-size: 13px !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-header-view button:hover {
+  color: #2563EB !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-footer,
+.assign-ant-datepicker-popup .ant-picker-today-btn {
+  display: none !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+}
+
+/* Compact Month, Year & Decade Views: prevent stretched rows & massive gaps */
+.assign-ant-datepicker-popup .ant-picker-month-panel,
+.assign-ant-datepicker-popup .ant-picker-year-panel,
+.assign-ant-datepicker-popup .ant-picker-decade-panel {
+  width: 100% !important;
+  height: auto !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-month-panel .ant-picker-content,
+.assign-ant-datepicker-popup .ant-picker-year-panel .ant-picker-content,
+.assign-ant-datepicker-popup .ant-picker-decade-panel .ant-picker-content {
+  width: 100% !important;
+  height: auto !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-month-panel .ant-picker-cell,
+.assign-ant-datepicker-popup .ant-picker-year-panel .ant-picker-cell,
+.assign-ant-datepicker-popup .ant-picker-decade-panel .ant-picker-cell {
+  padding: 3px 2px !important;
+  height: 34px !important;
+}
+
+.assign-ant-datepicker-popup .ant-picker-month-panel .ant-picker-cell-inner,
+.assign-ant-datepicker-popup .ant-picker-year-panel .ant-picker-cell-inner,
+.assign-ant-datepicker-popup .ant-picker-decade-panel .ant-picker-cell-inner {
+  height: 28px !important;
+  line-height: 28px !important;
+  padding: 0 6px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+}
+
+
+
+

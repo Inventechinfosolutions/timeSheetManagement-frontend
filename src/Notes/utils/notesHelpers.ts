@@ -25,14 +25,33 @@ export const TEXT_COLORS: ColorOption[] = [
   { label: "Slate Gray", color: "#64748B" },
 ];
 
+/** @deprecated Prefer WORD_HIGHLIGHT_COLORS — kept for compatibility */
 export const HIGHLIGHT_COLORS: ColorOption[] = [
   { label: "Clear / None", color: "transparent" },
+  { label: "Yellow", color: "#FFFF00" },
+  { label: "Bright Green", color: "#00FF00" },
+  { label: "Turquoise", color: "#00FFFF" },
+  { label: "Pink", color: "#FF00FF" },
+  { label: "Blue", color: "#0000FF" },
+  { label: "Red", color: "#FF0000" },
+  { label: "Dark Blue", color: "#000080" },
+  { label: "Teal", color: "#008080" },
+  { label: "Green", color: "#008000" },
+  { label: "Dark Red", color: "#800000" },
+  { label: "Purple", color: "#800080" },
+  { label: "Dark Yellow", color: "#808000" },
+  { label: "Gray 50%", color: "#808080" },
+  { label: "Gray 25%", color: "#C0C0C0" },
+  { label: "Black", color: "#000000" },
   { label: "Soft Yellow", color: "#FEF08A" },
   { label: "Soft Green", color: "#BBF7D0" },
   { label: "Soft Blue", color: "#BFDBFE" },
   { label: "Soft Pink", color: "#FECDD3" },
   { label: "Soft Purple", color: "#E9D5FF" },
   { label: "Soft Orange", color: "#FED7AA" },
+  { label: "Amber", color: "#FDE68A" },
+  { label: "Cyan", color: "#A5F3FC" },
+  { label: "Violet", color: "#DDD6FE" },
 ];
 
 /** Strip HTML/CSS/base64 noise so search does not match "#fff", style junk, etc. */

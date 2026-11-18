@@ -1,0 +1,1325 @@
+@import "../manager/ManagerQuarterlyReview.css";
+@import "../manager/QuarterlyReviewTable.css";
+@import "../manager/EvaluationPanel.css";
+
+/* ==========================================================================
+   Page Background & Card Styles (Matching Image 1: #F4F7FE)
+   Remove only the background SVG canvas, keeping all other styles intact
+   ========================================================================== */
+.manager-review-bg-container {
+  background: #F4F7FE !important;
+  position: relative;
+  min-height: 100vh;
+}
+
+.manager-review-canvas {
+  display: none !important;
+}
+
+.manager-review-glass-card {
+  background: #FFFFFF !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0px 20px 50px 0px rgba(17, 28, 68, 0.05) !important;
+  border-radius: 20px !important;
+}
+
+.employee-header-stat-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.95rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 16px !important;
+  border: 1px solid #E2E8F0 !important;
+  min-height: 70px;
+  min-width: 230px;
+  background: #FFFFFF !important;
+  box-shadow: 0px 4px 12px 0px rgba(17, 28, 68, 0.04) !important;
+}
+
+/* ==========================================================================
+   Step Header & Card Layout System
+   ========================================================================== */
+.step-reveal-card {
+  will-change: opacity, transform;
+}
+
+/* Glassmorphic luxury card with Ice-Blue Watercolor gradient */
+.manager-review-glass-card {
+  background: #FFFFFF !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0px 20px 50px 0px rgba(17, 28, 68, 0.05) !important;
+  border-radius: 20px !important;
+}
+
+/* ==========================================================================
+   Header Compact Summary Cards (Placed beside title)
+   ========================================================================== */
+.employee-header-stat-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.95rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 16px !important;
+  border: 1px solid #E2E8F0 !important;
+  min-height: 70px;
+  min-width: 230px;
+  background: #FFFFFF !important;
+  box-shadow: 0px 4px 12px 0px rgba(17, 28, 68, 0.04) !important;
+}
+
+.employee-header-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(147, 197, 253, 0.9) !important;
+  box-shadow:
+    0 14px 32px rgba(30, 64, 175, 0.1),
+    0 4px 14px rgba(37, 99, 235, 0.14),
+    inset 0 1px 2px rgba(255, 255, 255, 1) !important;
+}
+
+.employee-header-stat-icon-wrap {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+/* Executive Summary Stat Cards */
+.employee-stat-card-executive {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.95rem;
+  padding: 0.75rem 1.15rem;
+  min-height: 72px;
+  min-width: 240px;
+  background: #FFFFFF !important;
+  border-radius: 18px !important;
+  border: 1px solid #E2E8F0 !important;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02) !important;
+  overflow: hidden;
+  transition: border-color 0.25s ease;
+  user-select: none;
+}
+
+.employee-stat-card-executive::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.5), transparent);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.employee-stat-card-executive:hover::before {
+  opacity: 1;
+}
+
+.employee-stat-card-executive-overdue::before {
+  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.7), transparent);
+}
+
+.employee-stat-card-executive-warning::before {
+  background: linear-gradient(90deg, transparent, rgba(245, 158, 11, 0.7), transparent);
+}
+
+.employee-stat-chevron-pill {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 9999px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94A3B8;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.employee-stat-card-executive:hover .employee-stat-chevron-pill {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #2563EB;
+}
+
+/* Colored Edge Bar on Left */
+.employee-stat-edge-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%);
+  transition: width 0.25s ease, filter 0.25s ease;
+  z-index: 2;
+}
+
+.employee-stat-card-executive:hover .employee-stat-edge-bar {
+  width: 6.5px;
+  filter: brightness(1.1);
+}
+
+.employee-stat-card-executive-overdue .employee-stat-edge-bar {
+  background: linear-gradient(180deg, #EF4444 0%, #DC2626 100%);
+}
+
+.employee-stat-card-executive-warning .employee-stat-edge-bar {
+  background: linear-gradient(180deg, #F59E0B 0%, #D97706 100%);
+}
+
+/* ==========================================================================
+   Stepper Numbered Circles & Rating Element Base Styles (Animations in GSAP)
+   ========================================================================== */
+.stepper-circle-active {
+  box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4), 0 4px 14px rgba(37, 99, 235, 0.22);
+}
+
+.star-spin-pop {
+  z-index: 20;
+}
+
+.star-jelly-hover {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.2s ease;
+}
+
+.star-active-glow {
+  filter: drop-shadow(0 2px 10px rgba(255, 181, 71, 0.65));
+}
+
+.emoji-hover-effect {
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.25s ease, opacity 0.2s ease;
+}
+
+.emoji-hover-effect:hover {
+  transform: translateY(-4px) scale(1.15);
+}
+
+/* ==========================================================================
+   Card Animation for Inputs & Form Containers
+   ========================================================================== */
+.eval-input-field {
+  width: 100%;
+  border: 1.5px solid #64748B;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  color: #0F172A;
+  background: #FFFFFF;
+  line-height: 1.5;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.eval-input-field::placeholder {
+  color: #475569;
+  opacity: 1;
+}
+
+.eval-input-field:hover,
+.eval-step-card:hover {
+  border-color: #475569;
+}
+
+.eval-input-field:focus {
+  outline: none;
+  border-color: #2563EB !important;
+  box-shadow: none !important;
+  background: #FFFFFF !important;
+}
+
+/* Input Card Focus-within: Crisp Blue border, pure white background, NO shadow effect */
+.eval-step-card:focus-within:not(.eval-review-card-noborder):not(.\!border-none):not(.\!border-0) {
+  border-color: #2563EB !important;
+  box-shadow: none !important;
+  background: #FFFFFF !important;
+  transform: none !important;
+}
+
+.eval-step-card:focus-within::before,
+.eval-step-card:focus-within::after {
+  display: none !important;
+}
+
+/* ==========================================================================
+   Mandatory Field Validation Styles (Errors Animated via GSAP)
+   ========================================================================== */
+.eval-field-has-error,
+.eval-field-has-error:hover,
+.eval-field-has-error:focus-within {
+  border-color: #EF4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18) !important;
+  background-color: rgba(254, 242, 242, 0.4) !important;
+}
+
+.eval-input-error,
+.eval-input-error:hover,
+.eval-input-error:focus {
+  border-color: #EF4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18) !important;
+  background-color: #FFFDFD !important;
+}
+
+.eval-input-error:focus {
+  border-color: #DC2626 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2) !important;
+}
+
+/* ==========================================================================
+   Star Rating: Shard & Crack Geometries (Motion powered exclusively by GSAP)
+   ========================================================================== */
+.anim-star-crack-left {
+  clip-path: polygon(0% 0%, 50% 0%, 42% 35%, 55% 62%, 40% 100%, 0% 100%);
+}
+
+.anim-star-crack-right {
+  clip-path: polygon(50% 0%, 100% 0%, 100% 100%, 40% 100%, 55% 62%, 42% 35%);
+}
+
+.star-shard {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #FFFBEB 15%, #FBBF24 55%, #D97706 100%);
+  box-shadow: 0 0 5px 1px rgba(245, 158, 11, 0.9), 0 0 8px rgba(251, 191, 36, 0.6);
+  pointer-events: none;
+}
+
+.star-shard:nth-child(2n) {
+  width: 5px;
+  height: 5px;
+  border-radius: 1.5px;
+  transform: rotate(45deg);
+}
+
+.star-shard:nth-child(3n) {
+  width: 3.5px;
+  height: 3.5px;
+}
+
+.star-transfer-particle {
+  position: absolute;
+  width: 3.5px;
+  height: 3.5px;
+  border-radius: 50%;
+  background: #FFFBEB;
+  box-shadow: 0 0 6px 2px #FDE047;
+  pointer-events: none;
+}
+
+.particle-1 {
+  top: -2px;
+  left: -2px;
+}
+
+.particle-2 {
+  bottom: -2px;
+  right: -2px;
+}
+
+/* ==========================================================================
+   Smooth Scroll-Based Reveal Animation System (IntersectionObserver Powered)
+   Used in View & Review Step
+   ========================================================================== */
+
+/* Initial state: card positioned 40px below, subtle 0.98 scale, transparent */
+.eval-reveal-card {
+  opacity: 0 !important;
+  transform: translateY(40px) scale(0.98) !important;
+  transition: opacity 650ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 650ms cubic-bezier(0.16, 1, 0.3, 1) !important;
+  will-change: opacity, transform;
+  animation: none !important;
+}
+
+/* Final state: card smoothly ascends to normal position, full opacity & scale 1 */
+.eval-reveal-card.is-revealed {
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+}
+
+/* Maintain hover interactions after reveal with prominent shadow and border */
+.eval-step-card.eval-reveal-card.is-revealed {
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 1rem !important;
+  box-shadow: 0 10px 25px -4px rgba(15, 23, 42, 0.08), 0 4px 10px -2px rgba(15, 23, 42, 0.04) !important;
+  background: #FFFFFF !important;
+}
+
+.eval-step-card.eval-reveal-card.is-revealed:hover {
+  transform: translateY(-2px) !important;
+  border-color: #93C5FD !important;
+  box-shadow: 0 16px 32px -4px rgba(15, 23, 42, 0.12), 0 6px 14px -2px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* Internal Content Stagger System */
+.eval-reveal-card .eval-stagger-item {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 550ms ease-out,
+    transform 550ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-1 {
+  transition-delay: 80ms;
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-2 {
+  transition-delay: 160ms;
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-3 {
+  transition-delay: 240ms;
+}
+
+.eval-reveal-card.is-revealed .eval-stagger-4 {
+  transition-delay: 320ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .eval-reveal-card,
+  .eval-reveal-card .eval-stagger-item {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* ==========================================================================
+   Harmonious Theme Overrides (Frosted Ice Blue & Royal Blue Theme)
+   ========================================================================== */
+.qr-quarter-q1 {
+  background: #EFF6FF !important;
+  color: #1D4ED8 !important;
+  border: 1px solid #BFDBFE !important;
+}
+
+.qr-quarter-q2 {
+  background: #ECFDF5 !important;
+  color: #047857 !important;
+  border: 1px solid #A7F3D0 !important;
+}
+
+.qr-quarter-q3 {
+  background: #FFFBEB !important;
+  color: #B45309 !important;
+  border: 1px solid #FDE68A !important;
+}
+
+.qr-quarter-q4 {
+  background: #FAF5FF !important;
+  color: #7E22CE !important;
+  border: 1px solid #E9D5FF !important;
+}
+
+.qr-quarter-yearly {
+  background: #EEF2FF !important;
+  color: #3730A3 !important;
+  border: 1px solid #C7D2FE !important;
+}
+
+/* Unified Yearly Review Quarter Capsule */
+.qr-yearly-capsule {
+  display: inline-flex;
+  align-items: center;
+  background: #F8FAFC !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 9999px !important;
+  padding: 0.16rem 0.45rem 0.16rem 0.25rem !important;
+  gap: 0.35rem !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  white-space: nowrap !important;
+}
+
+.qr-yearly-capsule-tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.65rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  color: #4338CA !important;
+  background: #EEF2FF !important;
+  border: 1px solid #C7D2FE !important;
+  padding: 0.1rem 0.48rem !important;
+  border-radius: 9999px !important;
+  line-height: 1.25 !important;
+}
+
+.qr-yearly-capsule-divider {
+  display: inline-block !important;
+  width: 1px !important;
+  height: 14px !important;
+  background: #CBD5E1 !important;
+  flex-shrink: 0 !important;
+}
+
+.qr-yearly-capsule-quarters {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.25rem !important;
+}
+
+.qr-capsule-q {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 1.75rem !important;
+  height: 1.35rem !important;
+  padding: 0 0.35rem !important;
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  border-radius: 9999px !important;
+  box-shadow: none !important;
+  transition: transform 0.15s ease !important;
+}
+
+.qr-capsule-q:hover {
+  transform: scale(1.08) !important;
+}
+
+.qr-yearly-quarters {
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.qr-yearly-quarters .qr-quarter-pill {
+  min-width: 2.1rem;
+  padding: 0.2rem 0.5rem;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.qr-quarter-pill.is-empty {
+  opacity: 0.45;
+}
+
+.qr-assigned-by-pill {
+  background: #EFF6FF !important;
+  color: #1D4ED8 !important;
+  border: 1px solid #BFDBFE !important;
+}
+
+.qr-assigned-by-admin {
+  background: #ECFDF5 !important;
+  color: #047857 !important;
+  border-color: #A7F3D0 !important;
+}
+
+/* ==========================================================================
+   Financial Rating Table - Full Width Zero-Scroll Layout (Fits all columns)
+   ========================================================================== */
+.financial-rating-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+}
+
+.financial-rating-table th,
+.financial-rating-table td {
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+   Access Request Button Styling & Animations in Actions Column (Icon Only)
+   ========================================================================== */
+.qr-action-btn-access {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 9999px;
+  border: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  user-select: none;
+}
+
+.qr-action-btn-access-enabled {
+  background: rgba(239, 246, 255, 0.85);
+  color: #2563EB;
+  border: none;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.qr-action-btn-access-enabled:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  transform: translateY(-1px) scale(1.05);
+}
+
+.qr-action-btn-access-enabled:active {
+  transform: scale(0.92);
+}
+
+.qr-action-btn-access-disabled {
+  background: rgba(241, 245, 249, 0.6);
+  color: #94A3B8;
+  border: none;
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+.qr-action-btn-access-requested {
+  background: rgba(239, 246, 255, 0.85);
+  color: #2563EB;
+  border: none;
+  cursor: pointer;
+  box-shadow: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.qr-action-btn-access-requested:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.28);
+  transform: translateY(-1px) scale(1.05);
+}
+
+/* Empty State Illustration (Animated exclusively via GSAP) */
+.appraisal-empty-glow {
+  position: absolute;
+  inset: -1.5rem;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.35) 0%, rgba(238, 245, 255, 0.45) 45%, rgba(238, 245, 255, 0) 70%);
+  border-radius: 9999px;
+  filter: blur(24px);
+  pointer-events: none;
+}
+
+.appraisal-empty-illustration {
+  position: relative;
+  z-index: 10;
+  margin: 0 auto;
+}
+
+/* Locked status badge */
+.qr-status-locked {
+  background: #FFF1F2 !important;
+  color: #BE123C !important;
+  border: 1px solid #FECDD3 !important;
+}
+
+.qr-status-locked .qr-status-dot {
+  background: #F43F5E !important;
+}
+
+/* ==========================================================================
+   Urgent 1-Day Deadline Single-Row Styles (Matching Pink Reference Screenshot)
+   ========================================================================== */
+.quarterly-review-table tbody tr.qr-urgent-row,
+.qr-urgent-row {
+  background: #FFF1F2 !important;
+  border-bottom: 1px solid #FECDD3 !important;
+}
+
+.quarterly-review-table tbody tr.qr-urgent-row:hover {
+  background: #FFE4E6 !important;
+}
+
+.quarterly-review-table tbody tr.qr-urgent-row td {
+  background: #FFF1F2 !important;
+  border-bottom: 1px solid #FECDD3 !important;
+}
+
+.quarterly-review-table tbody tr.qr-urgent-row:hover td {
+  background: #FFE4E6 !important;
+}
+
+.quarterly-review-table tbody tr.qr-urgent-row .qr-sticky-action-td {
+  background: #FFF1F2 !important;
+}
+
+.quarterly-review-table tbody tr.qr-urgent-row:hover .qr-sticky-action-td {
+  background: #FFE4E6 !important;
+}
+
+.qr-cell-marquee-container {
+  width: 100%;
+  max-width: 140px;
+  margin: 3px auto 0 auto;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.qr-cell-marquee-text {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #DC2626;
+  display: block;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+
+.qr-date-chip-urgent {
+  background: #FFE4E6 !important;
+  border-color: #FECDD3 !important;
+  color: #BE123C !important;
+  font-weight: 700 !important;
+}
+
+/* ==========================================================================
+   SVG Step Icons Progressive Build Animations (Drawing elements piece by piece)
+   ========================================================================== */
+.stepper-build-svg {
+  overflow: visible;
+  display: block;
+}
+
+/* 1. Overview (Compass) */
+@keyframes buildCircleOuter {
+  0% { stroke-dashoffset: 58; opacity: 0; }
+  15% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes buildFadeInTicks {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes buildNeedleSwing {
+  0% { opacity: 0; transform: rotate(-90deg) scale(0.6); }
+  60% { opacity: 1; transform: rotate(15deg) scale(1.05); }
+  80% { transform: rotate(-8deg) scale(1); }
+  100% { opacity: 1; transform: rotate(0deg) scale(1); }
+}
+
+.anim-build-circle-outer {
+  stroke-dasharray: 58;
+  animation: buildCircleOuter 0.55s cubic-bezier(0.4, 0, 0.2, 1) both;
+  transform-origin: center;
+}
+
+.anim-build-fade-fast {
+  animation: buildFadeInTicks 0.3s 0.4s ease-out both;
+}
+
+.anim-build-compass-needle {
+  transform-origin: center;
+  animation: buildNeedleSwing 0.75s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* 2. Achievements (Trophy) */
+@keyframes buildDrawLine {
+  0% { stroke-dasharray: 30; stroke-dashoffset: 30; opacity: 0; }
+  10% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes buildTrophyBody {
+  0% { stroke-dasharray: 60; stroke-dashoffset: 60; opacity: 0; transform: translateY(4px); }
+  100% { stroke-dashoffset: 0; opacity: 1; transform: translateY(0); }
+}
+
+@keyframes buildTrophyHandles {
+  0% { stroke-dasharray: 40; stroke-dashoffset: 40; opacity: 0; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+.anim-build-trophy-base {
+  animation: buildDrawLine 0.4s ease-out both;
+}
+
+.anim-build-trophy-body {
+  animation: buildTrophyBody 0.6s 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anim-build-trophy-handles {
+  animation: buildTrophyHandles 0.5s 0.55s ease-out both;
+}
+
+/* 3. Teamwork (Users) */
+@keyframes buildUserCenter {
+  0% { transform: scale(0.3) translateY(4px); opacity: 0; }
+  70% { transform: scale(1.1) translateY(-1px); opacity: 1; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+@keyframes buildUserPeers {
+  0% { transform: scale(0.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.anim-build-user-center {
+  transform-origin: center 7px;
+  animation: buildUserCenter 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.anim-build-user-center-body {
+  animation: buildDrawLine 0.45s 0.15s ease-out both;
+}
+
+.anim-build-user-peers-head {
+  transform-origin: center;
+  animation: buildUserPeers 0.4s 0.45s ease-out both;
+}
+
+.anim-build-user-peers-body {
+  animation: buildDrawLine 0.45s 0.55s ease-out both;
+}
+
+/* 4. Learning Goals (Target: Circle built 1 by 1) */
+@keyframes buildCircleMiddle {
+  0% { stroke-dashoffset: 36; opacity: 0; }
+  10% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes buildBullseyePop {
+  0% { transform: scale(0); opacity: 0; }
+  65% { transform: scale(1.4); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes buildCrosshairs {
+  0% { opacity: 0; stroke-dashoffset: 12; stroke-dasharray: 12; }
+  100% { opacity: 1; stroke-dashoffset: 0; stroke-dasharray: 12; }
+}
+
+.anim-build-target-outer {
+  stroke-dasharray: 58;
+  animation: buildCircleOuter 0.5s cubic-bezier(0.4, 0, 0.2, 1) both;
+  transform-origin: center;
+}
+
+.anim-build-target-middle {
+  stroke-dasharray: 36;
+  animation: buildCircleMiddle 0.45s 0.35s cubic-bezier(0.4, 0, 0.2, 1) both;
+  transform-origin: center;
+}
+
+.anim-build-target-bullseye {
+  transform-origin: center;
+  animation: buildBullseyePop 0.4s 0.68s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.anim-build-target-crosshairs {
+  animation: buildCrosshairs 0.35s 0.9s ease-out both;
+}
+
+/* 5. Environment (Building) */
+@keyframes buildEnvWalls {
+  0% { stroke-dasharray: 70; stroke-dashoffset: 70; opacity: 0; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes buildEnvWindows {
+  0% { opacity: 0; transform: scaleY(0); }
+  100% { opacity: 1; transform: scaleY(1); }
+}
+
+.anim-build-env-base {
+  animation: buildDrawLine 0.3s ease-out both;
+}
+
+.anim-build-env-walls {
+  animation: buildEnvWalls 0.55s 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.anim-build-env-windows {
+  transform-origin: bottom center;
+  animation: buildEnvWindows 0.4s 0.6s ease-out both;
+}
+
+/* 6. Final Review (Arrow gliding through steps) */
+@keyframes buildArrowTrail {
+  0% { stroke-dashoffset: 14; opacity: 0; }
+  50% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 1; }
+}
+
+@keyframes buildArrowHead {
+  0% { transform: translateX(-6px); opacity: 0; }
+  60% { transform: translateX(2px); opacity: 1; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes buildTargetDot {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.anim-build-send-trail {
+  stroke-dasharray: 14;
+  animation: buildArrowTrail 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.anim-build-send-arrow {
+  animation: buildArrowHead 0.5s 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.anim-build-send-target {
+  transform-origin: 19px 12px;
+  animation: buildTargetDot 0.35s 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ==========================================================================
+   Thin, sleek scrollbar that only appears when cursor hovers or focuses on field
+   ========================================================================== */
+.eval-custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.2s ease;
+  overflow-y: auto;
+}
+
+.eval-custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.eval-custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.eval-custom-scrollbar::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.eval-custom-scrollbar::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+.eval-custom-scrollbar:hover,
+.eval-custom-scrollbar:focus,
+.eval-custom-scrollbar:focus-within {
+  scrollbar-color: #94A3B8 transparent;
+}
+
+.eval-custom-scrollbar:hover::-webkit-scrollbar-thumb,
+.eval-custom-scrollbar:focus::-webkit-scrollbar-thumb,
+.eval-custom-scrollbar:focus-within::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+}
+
+.eval-custom-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* ==========================================================================
+   Animated SVG Sentiment Emoji Keyframes & Classes
+   ========================================================================== */
+
+/* 1. Angry Emoji: Steam Puffs & Head Shake */
+@keyframes angrySteamPuffL {
+  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { transform: translate(-6px, -7px) scale(1.3); opacity: 0; }
+}
+
+@keyframes angrySteamPuffR {
+  0% { transform: translate(0, 0) scale(0.4); opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { transform: translate(6px, -7px) scale(1.3); opacity: 0; }
+}
+
+@keyframes angerVeinPulse {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.35); opacity: 1; filter: drop-shadow(0 0 3px #EF4444); }
+}
+
+@keyframes angryHeadShake {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: translate(-1.5px, -0.5px) rotate(-4deg); }
+  40% { transform: translate(1.5px, 0.5px) rotate(4deg); }
+  60% { transform: translate(-1px, 0.5px) rotate(-3deg); }
+  80% { transform: translate(1px, -0.5px) rotate(3deg); }
+}
+
+.anim-steam-puff-l {
+  animation: angrySteamPuffL 1.2s infinite ease-out;
+  transform-origin: 8px 14px;
+}
+.anim-steam-puff-r {
+  animation: angrySteamPuffR 1.2s infinite ease-out 0.2s;
+  transform-origin: 36px 14px;
+}
+.anim-anger-vein {
+  animation: angerVeinPulse 0.9s infinite ease-in-out;
+  transform-origin: 29px 10.5px;
+}
+.anim-angry-head {
+  animation: angryHeadShake 1s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+
+/* 2. Sad Emoji: Falling Tear Drop & Sigh */
+@keyframes tearDropFall {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  25% { opacity: 1; transform: translateY(2px) scale(1); }
+  80% { transform: translateY(11px) scale(1.1); opacity: 0.9; }
+  100% { transform: translateY(15px) scale(0.4); opacity: 0; }
+}
+
+@keyframes sadHeadSigh {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  35% { transform: translateY(2.5px) rotate(-4deg); }
+  70% { transform: translateY(1.5px) rotate(3deg); }
+}
+
+.anim-tear-drop {
+  animation: tearDropFall 1.8s infinite ease-in;
+  transform-origin: center top;
+}
+.anim-sad-head {
+  animation: sadHeadSigh 2.2s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+
+/* 3. Neutral Emoji: Eyelid Blink & Gentle Float */
+@keyframes eyeLidBlink {
+  0%, 45%, 55%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.08); }
+}
+
+@keyframes neutralFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.anim-eye-blink {
+  animation: eyeLidBlink 3.2s infinite ease-in-out;
+  transform-origin: 22px 20.5px;
+}
+.anim-neutral-head {
+  animation: neutralFloat 2.4s infinite ease-in-out;
+  transform-origin: center;
+}
+
+/* 4. Good Emoji: Cheerful Bounce, Blush & Twinkling Sparkle */
+@keyframes happyBounceHead {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-5px) rotate(3deg); }
+  60% { transform: translateY(1px) rotate(-2deg); }
+  80% { transform: translateY(-2px) rotate(1deg); }
+}
+
+@keyframes blushPulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+@keyframes sparkleSpin {
+  0% { transform: scale(0.5) rotate(0deg); opacity: 0.3; }
+  50% { transform: scale(1.2) rotate(180deg); opacity: 1; filter: drop-shadow(0 0 4px #FACC15); }
+  100% { transform: scale(0.5) rotate(360deg); opacity: 0.3; }
+}
+
+.anim-happy-head {
+  animation: happyBounceHead 1.7s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+.anim-blush {
+  animation: blushPulse 1.8s infinite ease-in-out;
+  transform-origin: center;
+}
+.anim-sparkle {
+  animation: sparkleSpin 2s infinite linear;
+  transform-origin: 36px 13.5px;
+}
+
+/* 5. Excellent Emoji: Star Eyes Rotate & Celebration Twinkles */
+@keyframes starEyeSpinPulse {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 2px #F59E0B); }
+  50% { transform: scale(1.28) rotate(35deg); filter: drop-shadow(0 0 6px #EC4899); }
+}
+
+@keyframes starEyeSpinPulseAlt {
+  0%, 100% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 2px #F59E0B); }
+  50% { transform: scale(1.28) rotate(-35deg); filter: drop-shadow(0 0 6px #EC4899); }
+}
+
+@keyframes starTwinkleParticle1 {
+  0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.2; }
+  50% { transform: scale(1.25) rotate(90deg); opacity: 1; filter: drop-shadow(0 0 4px #FDE047); }
+}
+
+@keyframes starTwinkleParticle2 {
+  0%, 100% { transform: scale(0.4) rotate(0deg); opacity: 0.2; }
+  50% { transform: scale(1.25) rotate(-90deg); opacity: 1; filter: drop-shadow(0 0 4px #EC4899); }
+}
+
+@keyframes excellentCelebrationHead {
+  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+  25% { transform: translateY(-4px) rotate(-6deg) scale(1.04); }
+  50% { transform: translateY(0) rotate(0deg) scale(1); }
+  75% { transform: translateY(-4px) rotate(6deg) scale(1.04); }
+}
+
+.anim-star-eye-l {
+  animation: starEyeSpinPulse 1.5s infinite ease-in-out;
+  transform-origin: 16px 18.5px;
+}
+.anim-star-eye-r {
+  animation: starEyeSpinPulseAlt 1.5s infinite ease-in-out 0.25s;
+  transform-origin: 28px 18.5px;
+}
+.anim-star-twinkle-1 {
+  animation: starTwinkleParticle1 1.4s infinite ease-in-out;
+  transform-origin: 6px 14.5px;
+}
+.anim-star-twinkle-2 {
+  animation: starTwinkleParticle2 1.4s infinite ease-in-out 0.5s;
+  transform-origin: 38px 12.5px;
+}
+.anim-excellent-head {
+  animation: excellentCelebrationHead 1.6s infinite ease-in-out;
+  transform-origin: center bottom;
+}
+
+@keyframes emojiClickPopEffect {
+  0% { transform: scale(0.9); }
+  45% { transform: scale(1.38) rotate(10deg); }
+  80% { transform: scale(1.15) rotate(-3deg); }
+  100% { transform: scale(1.22) rotate(0deg); }
+}
+
+.emoji-btn-pop {
+  animation: emojiClickPopEffect 0.38s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards !important;
+}
+
+/* ==========================================================================
+   Locked + unsubmitted — contact manager to reassign
+   ========================================================================== */
+.qr-locked-reassign-banner {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem 1.25rem;
+  padding: 1.1rem 1.25rem;
+  border-radius: 18px;
+  border: 1px solid #FECDD3;
+  background:
+    linear-gradient(135deg, rgba(255, 241, 242, 0.95) 0%, rgba(255, 255, 255, 0.92) 55%, rgba(255, 247, 237, 0.9) 100%);
+  box-shadow:
+    0 12px 32px -16px rgba(190, 18, 60, 0.28),
+    0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  overflow: hidden;
+}
+
+.qr-locked-reassign-banner-glow {
+  position: absolute;
+  inset: auto -20% -40% auto;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(251, 113, 133, 0.22), transparent 70%);
+  pointer-events: none;
+}
+
+.qr-locked-reassign-banner-icon {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #FB7185, #E11D48);
+  color: #fff;
+  box-shadow: 0 10px 20px -8px rgba(225, 29, 72, 0.55);
+  flex-shrink: 0;
+}
+
+.qr-locked-reassign-banner-body {
+  position: relative;
+  z-index: 1;
+}
+
+.qr-locked-manager-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0 0.15rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #FECDD3;
+  color: #9F1239;
+  font-weight: 700;
+  font-size: 0.75rem;
+  vertical-align: middle;
+  box-shadow: 0 1px 2px rgba(159, 18, 57, 0.08);
+}
+
+.qr-locked-reassign-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+}
+
+.qr-locked-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.65rem 0.3rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #FECDD3;
+  color: #9F1239;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.qr-locked-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  background: #BE123C;
+  color: #fff;
+  font-size: 0.625rem;
+  font-weight: 800;
+}
+
+.qr-locked-step-arrow {
+  width: 0.85rem;
+  height: 0.85rem;
+  color: #FB7185;
+  flex-shrink: 0;
+}
+
+.qr-locked-reassign-banner-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.qr-locked-contact-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid #FECDD3;
+  color: #BE123C;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(190, 18, 60, 0.08);
+}
+
+.qr-locked-view-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #E11D48, #BE123C);
+  border: none;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 8px 18px -8px rgba(190, 18, 60, 0.55);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.qr-locked-view-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px -8px rgba(190, 18, 60, 0.6);
+}
+
+.qr-locked-contact-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  max-width: 11.5rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: #FFF7ED;
+  border: 1px dashed #FDBA74;
+  color: #C2410C;
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+}
+
+.qr-locked-contact-hint.is-compact {
+  max-width: 9.5rem;
+}
+
+.qr-locked-contact-hint-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+  color: #EA580C;
+}
+
+.qr-locked-mobile-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: #FFF1F2;
+  border: 1px solid #FECDD3;
+  color: #9F1239;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+  .qr-locked-reassign-banner-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .qr-locked-step-arrow {
+    display: none;
+  }
+}
+
+
