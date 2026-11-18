@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useRef, useEffect } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import {
   ArrowLeft,
@@ -261,8 +261,8 @@ const datePickerTheme = {
     borderRadius: 14,
     controlHeight: 42,
     colorBgContainer: "#FFFFFF",
-    colorBorder: "#BFDBFE",
-    colorPrimary: "#2563EB",
+    colorBorder: "#C3B5FF",
+    colorPrimary: "#4318FF",
   },
   components: {
     DatePicker: {
@@ -489,16 +489,17 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.intersectionRatio >= 0.15) {
+          // One-way reveal only — never un-reveal (avoids blank gaps after Projects when scrolling)
+          if (entry.isIntersecting || entry.intersectionRatio >= 0.08) {
             entry.target.classList.add("is-revealed");
-          } else if (entry.intersectionRatio === 0 || !entry.isIntersecting) {
-            entry.target.classList.remove("is-revealed");
+            observer.unobserve(entry.target);
           }
         });
       },
       {
         root: null,
-        threshold: [0, 0.15],
+        rootMargin: "80px 0px",
+        threshold: [0, 0.08, 0.15],
       }
     );
 
@@ -1265,7 +1266,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     // 4. Manager Comments — required for manager / old flow; hidden for employee-assigner first pass
     const statusUpper = String(loadedReviewStatus || record.reviewStatus || record.status || "").toUpperCase();
     const hideManagerCommentForAssigner =
-      appraisalMapping?.assignerType === "EMPLOYEE" &&
+      isAssignerConfirmationPath({
+        sessionEmployeeId,
+        mapping: appraisalMapping,
+        recordAssignerId: record.assignerId,
+      }) &&
       statusUpper !== QuarterlyReviewStatus.AWAITING_MANAGER_FINAL_REVIEW &&
       statusUpper !== QuarterlyReviewStatus.COMPLETED;
     if (!hideManagerCommentForAssigner && !remarks.trim()) {
@@ -1574,11 +1579,6 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
   const isAwaitingManagerFinal =
     effectiveReviewStatus === QuarterlyReviewStatus.AWAITING_MANAGER_FINAL_REVIEW;
   const hideManagerCommentForAssigner =
-    appraisalMapping?.assignerType === "EMPLOYEE" &&
-    !isAwaitingManagerFinal &&
-    effectiveReviewStatus !== QuarterlyReviewStatus.COMPLETED;
-  /** Assigner first-pass confirm modal: Forward Evaluation (not Finalize). */
-  const isAssignerForwardModal =
     isAssignerConfirmationPath({
       sessionEmployeeId,
       mapping: appraisalMapping,
@@ -1586,6 +1586,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
     }) &&
     !isAwaitingManagerFinal &&
     effectiveReviewStatus !== QuarterlyReviewStatus.COMPLETED;
+  /** Assigner first-pass confirm modal: Forward Evaluation (not Finalize). */
+  const isAssignerForwardModal =
+    hideManagerCommentForAssigner;
   const isRecordCompleted =
     String(record.reviewStatus || "").toUpperCase() === "COMPLETED" ||
     String(record.performanceStatus || "").toUpperCase() === "COMPLETED" ||
@@ -1762,7 +1765,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             <span>{activeView === "matrix" ? "Back to Employee Review" : "Back to List"}</span>
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0 eval-trophy-box">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#868CFF] to-[#3311CC] flex items-center justify-center text-white shadow-md shadow-[#4318FF]/20 shrink-0 eval-trophy-box">
               {activeView === "matrix" ? <Sliders className="w-5 h-5" /> : <Trophy className="w-5 h-5" />}
             </div>
             <div>
@@ -1781,10 +1784,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
               <p className="text-xs sm:text-sm font-medium text-[#334155] mt-1 flex flex-wrap items-center gap-1.5 eval-subtitle-anim">
                 <span>{isViewMode ? "Assigned" : "Evaluating"}</span>
                 <span className="font-bold text-[#2B3674]">{record.name}</span>
-                <span className="inline-flex items-center justify-center rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1 text-xs font-extrabold text-[#1D4ED8]">
+                <span className="inline-flex items-center justify-center rounded-full border border-[#4318FF]/20 bg-[#F4F7FE] px-3 py-1 text-xs font-extrabold text-[#4318FF]">
                   {formatQuarterDisplay(record.quarter)}
                 </span>
-                <span className="inline-flex items-center justify-center rounded-full border border-[#BFDBFE] bg-[#EFF6FF] px-3 py-1 text-xs font-extrabold text-[#1D4ED8]">
+                <span className="inline-flex items-center justify-center rounded-full border border-[#4318FF]/20 bg-[#F4F7FE] px-3 py-1 text-xs font-extrabold text-[#4318FF]">
                   {record.financialYear}
                 </span>
               </p>
@@ -1793,8 +1796,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
         </div>
 
         {isSuccess && (
-          <div className="bg-blue-50/90 border border-blue-200/80 text-blue-950 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-sm animate-in fade-in">
-            <CheckCircle2 className="w-5 h-5 text-blue-600 shrink-0" />
+            <div className="bg-[#F4F7FE]/90 border border-[#4318FF]/20/80 text-[#2B3674] px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-sm animate-in fade-in">
+            <CheckCircle2 className="w-5 h-5 text-[#4318FF] shrink-0" />
             <span>Evaluation submitted successfully! Returning to list...</span>
           </div>
         )}
@@ -1804,7 +1807,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
       <div className="eval-meta-banner eval-reveal-card mb-4">
         {/* Subtle Tech Circuit SVG Pattern in Background Corner */}
         <svg
-          className="absolute right-0 top-0 bottom-0 h-full w-48 opacity-[0.06] pointer-events-none text-blue-600"
+          className="absolute right-0 top-0 bottom-0 h-full w-48 opacity-[0.06] pointer-events-none text-[#4318FF]"
           viewBox="0 0 200 120"
           fill="none"
           aria-hidden="true"
@@ -1832,7 +1835,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           <div className="eval-meta-segment eval-meta-segment-1 eval-stagger-item eval-stagger-1">
             <div className="relative shrink-0">
               <svg
-                className="absolute -inset-1.5 w-15 h-15 animate-spin-slow pointer-events-none opacity-40 text-blue-500"
+                className="absolute -inset-1.5 w-15 h-15 animate-spin-slow pointer-events-none opacity-40 text-[#868CFF]"
                 viewBox="0 0 100 100"
                 aria-hidden="true"
               >
@@ -1846,7 +1849,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   strokeDasharray="14 10"
                 />
               </svg>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#3B82F6] to-[#1D4ED8] text-white flex items-center justify-center font-extrabold text-sm shadow-md shadow-blue-500/25 ring-4 ring-blue-500/10">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#868CFF] to-[#3311CC] text-white flex items-center justify-center font-extrabold text-sm shadow-md shadow-[#4318FF]/25">
                 {empInitials}
               </div>
             </div>
@@ -1904,7 +1907,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             SECTION 1: Employee Performance Submission (Full Width)
            =================================================================== */}
         {activeView === "review" && (
-          <div className="w-full space-y-4 eval-submission-col">
+          <div className="w-full space-y-3 eval-submission-col">
             <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 space-y-3">
               <h3 className="text-sm font-bold text-[#0F172A]">Assignment</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1979,7 +1982,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             const baseDate = fromDateObj && fromDateObj.isValid() && fromDateObj.isAfter(today) ? fromDateObj : today;
                             return current.isSame(baseDate, "day") || current.isBefore(baseDate, "day");
                           }}
-                          className="w-full rounded-xl border border-blue-200/70 bg-white px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control"
+                          className="w-full rounded-xl border border-[#4318FF]/20/70 bg-white px-3.5 py-2.5 text-sm text-[#0F172A] font-medium shadow-none assign-input-control"
                         />
                       </ConfigProvider>
                     </div>
@@ -2039,7 +2042,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     type="button"
                     disabled={savingAssignment}
                     onClick={() => void saveAssignment()}
-                    className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] px-4 py-2 text-sm font-bold text-white shadow-md shadow-blue-500/20 disabled:opacity-60 cursor-pointer"
+                    className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-[#868CFF] to-[#3311CC] hover:from-[#4318FF] hover:to-[#3311CC] px-4 py-2 text-sm font-bold text-white shadow-md shadow-[#4318FF]/20 disabled:opacity-60 cursor-pointer"
                   >
                     {savingAssignment ? "Saving" : grantAccess ? "Grant access" : "Save"}
                   </button>
@@ -2071,9 +2074,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             {/* STEP 1: ROLE & QUARTER OVERVIEW */}
             {shouldShowStep(1) && (
               <div id="eval-step-1" className="eval-step-card eval-review-card-noborder eval-reveal-card space-y-3">
-                <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                <div className="flex items-center justify-between border-b border-[#4318FF]/15 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                    <span className="w-5 h-5 rounded-full bg-[#4318FF] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
                       1
                     </span>
                     <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
@@ -2101,9 +2104,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             {/* STEP 2: KEY ACHIEVEMENTS & PROJECTS */}
             {shouldShowStep(2) && (
               <div id="eval-step-2" className="eval-step-card eval-review-card-noborder eval-reveal-card space-y-3.5">
-                <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                <div className="flex items-center justify-between border-b border-[#4318FF]/15 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                    <span className="w-5 h-5 rounded-full bg-[#4318FF] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
                       2
                     </span>
                     <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
@@ -2121,17 +2124,17 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       return (
                         <div
                           key={`${project.projectName}-${index}`}
-                          className="bg-white border border-[#64748B] hover:border-[#64748B] rounded-2xl shadow-2xs overflow-hidden transition-all duration-200"
+                          className="bg-white border border-[#E0E5F2] hover:border-[#4318FF]/25 rounded-2xl shadow-2xs overflow-hidden transition-all duration-200"
                         >
                           <div
                             onClick={() => toggleProjectExpand(index)}
                             className="flex items-center justify-between gap-3 px-3.5 py-3 bg-white hover:bg-slate-50/60 cursor-pointer select-none group transition-colors"
                           >
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                              <span className="shrink-0 px-2.5 py-1 text-sm sm:text-base font-extrabold text-[#2563EB] bg-[#EFF6FF] border border-[#BFDBFE] rounded-md">
+                              <span className="shrink-0 px-2.5 py-1 text-sm sm:text-base font-extrabold text-[#4318FF] bg-[#F4F7FE] border border-[#4318FF]/20 rounded-md">
                                 Project {index + 1}
                               </span>
-                              <h4 className="text-sm sm:text-base font-bold text-[#0F172A] leading-snug truncate group-hover:text-[#2563EB] transition-colors">
+                              <h4 className="text-sm sm:text-base font-bold text-[#0F172A] leading-snug truncate group-hover:text-[#4318FF] transition-colors">
                                 {project.projectName || "—"}
                               </h4>
                               {project.isDraft && (
@@ -2203,9 +2206,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             {/* STEP 3: TEAMWORK & COLLABORATION with Interactive Score Bars */}
             {shouldShowStep(3) && (
               <div id="eval-step-3" className="eval-step-card eval-review-card-noborder eval-reveal-card space-y-3.5">
-                <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                <div className="flex items-center justify-between border-b border-[#4318FF]/15 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                    <span className="w-5 h-5 rounded-full bg-[#4318FF] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
                       3
                     </span>
                     <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
@@ -2213,7 +2216,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     </h3>
                   </div>
                   {avgTeamScore ? (
-                    <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
+                    <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-[#F4F7FE]/80 via-white to-[#EEF0FF]/80 border border-[#4318FF]/20/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
                       <FractionalStars
                         score={Number(avgTeamScore) || 0}
                         sizeClass="w-3.5 h-3.5"
@@ -2272,9 +2275,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             {/* STEP 4: CONTINUOUS LEARNING & GOALS */}
             {shouldShowStep(4) && (
               <div id="eval-step-4" className="eval-step-card eval-review-card-noborder eval-reveal-card space-y-3">
-                <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                <div className="flex items-center justify-between border-b border-[#4318FF]/15 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                    <span className="w-5 h-5 rounded-full bg-[#4318FF] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
                       4
                     </span>
                     <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
@@ -2314,9 +2317,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             {shouldShowStep(5) && (
               <>
                 <div id="eval-step-5" className="eval-step-card eval-review-card-noborder eval-reveal-card space-y-3.5">
-                  <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                  <div className="flex items-center justify-between border-b border-[#4318FF]/15 pb-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                      <span className="w-5 h-5 rounded-full bg-[#4318FF] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
                         5
                       </span>
                       <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
@@ -2336,11 +2339,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                         if (envScore > 0) {
                           return (
-                            <div className="px-3 py-1 rounded-xl bg-blue-50 border border-blue-200/80 shadow-2xs flex items-center gap-2 shrink-0 eval-stagger-item eval-stagger-2">
+                            <div className="px-3 py-1 rounded-xl bg-[#F4F7FE] border border-[#4318FF]/20/80 shadow-2xs flex items-center gap-2 shrink-0 eval-stagger-item eval-stagger-2">
                               <div className="w-5 h-5 flex items-center justify-center shrink-0 [&>svg]:w-5 [&>svg]:h-5">
                                 {renderAnimatedEmojiIcon(envScore, true)}
                               </div>
-                              <span className="text-xs font-bold text-[#2563EB]">
+                              <span className="text-xs font-bold text-[#4318FF]">
                                 {envInfo?.label || "Rated"} ({envScore}/5)
                               </span>
                             </div>
@@ -2359,7 +2362,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             : null;
 
                         return avgScore ? (
-                          <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-blue-50/80 via-white to-sky-50/80 border border-blue-200/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
+                          <div className="px-3 py-1 rounded-xl bg-gradient-to-r from-[#F4F7FE]/80 via-white to-[#EEF0FF]/80 border border-[#4318FF]/20/80 shadow-2xs flex items-center gap-1.5 shrink-0 eval-stagger-item eval-stagger-2">
                             <FractionalStars
                               score={Number(avgScore) || 0}
                               sizeClass="w-3.5 h-3.5"
@@ -2425,9 +2428,9 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                 {/* STEP 6: FINAL REVIEW */}
                 <div id="eval-step-6" className="eval-step-card eval-review-card-noborder eval-reveal-card space-y-3.5">
-                  <div className="flex items-center justify-between border-b border-blue-100 pb-2.5">
+                  <div className="flex items-center justify-between border-b border-[#4318FF]/15 pb-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-[#2563EB] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
+                      <span className="w-5 h-5 rounded-full bg-[#4318FF] text-white flex items-center justify-center text-[11px] font-bold shadow-xs eval-stagger-item eval-stagger-1">
                         6
                       </span>
                       <h3 className="text-xs sm:text-sm font-bold text-[#0F172A] uppercase tracking-wider flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
@@ -2435,8 +2438,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       </h3>
                     </div>
                     {formData.overallSelfRating > 0 ? (
-                      <span className="text-xs font-bold text-[#2563EB] px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#2563EB]" />
+                      <span className="text-xs font-bold text-[#4318FF] px-3 py-1 rounded-full bg-[#F4F7FE] border border-[#4318FF]/20/60 flex items-center gap-1.5 eval-stagger-item eval-stagger-2">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#4318FF]" />
                         <span>Self-Rating: {formatScoreDisplay(formData.overallSelfRating)}/5</span>
                       </span>
                     ) : null}
@@ -2487,10 +2490,10 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
             {/* Evaluation CTA Card: shown to manager if submitted/drafted/completed, but strictly hidden for employee until completed */}
             {canShowEvaluationCta ? (
-              <div className="eval-matrix-cta-card eval-reveal-card relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-blue-200/70 bg-gradient-to-br from-white via-blue-50/40 to-blue-100/20 shadow-lg shadow-blue-500/10 mt-6">
+              <div className="eval-matrix-cta-card eval-reveal-card relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-[#4318FF]/20/70 bg-gradient-to-br from-white via-[#EEF0FF]/40 to-[#EEF0FF]/30 shadow-lg shadow-[#4318FF]/10 mt-3">
                 {/* Ambient Decorative SVG in Background */}
                 <svg
-                  className="absolute -right-8 -bottom-10 w-72 h-72 text-blue-500/10 pointer-events-none eval-cta-bg-svg"
+                  className="absolute -right-8 -bottom-10 w-72 h-72 text-[#868CFF]/10 pointer-events-none eval-cta-bg-svg"
                   viewBox="0 0 200 200"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
@@ -2505,7 +2508,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <div className="flex items-start sm:items-center gap-4">
                     {/* Glowing Matrix Icon SVG Box with Animated Orbital Pulse */}
                     <div className="relative shrink-0">
-                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-md shadow-blue-500/25 eval-matrix-btn-icon-glow">
+                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#868CFF] to-[#3311CC] flex items-center justify-center text-white shadow-md shadow-[#4318FF]/25 eval-matrix-btn-icon-glow">
                         <svg
                           className="w-7 h-7 eval-matrix-icon-svg"
                           viewBox="0 0 24 24"
@@ -2521,17 +2524,17 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             strokeDashoffset="0"
                             className="eval-matrix-svg-lines"
                           />
-                          <circle cx="8" cy="6" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
-                          <circle cx="16" cy="12" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
-                          <circle cx="11" cy="18" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
+                          <circle cx="8" cy="6" r="2.5" fill="#C3B5FF" stroke="#4318FF" strokeWidth="1.5" />
+                          <circle cx="16" cy="12" r="2.5" fill="#C3B5FF" stroke="#4318FF" strokeWidth="1.5" />
+                          <circle cx="11" cy="18" r="2.5" fill="#C3B5FF" stroke="#4318FF" strokeWidth="1.5" />
                         </svg>
                       </div>
-                      <span className="absolute -inset-1 rounded-2xl border border-blue-400/40 animate-ping opacity-25 pointer-events-none" />
+                      <span className="absolute -inset-1 rounded-2xl border border-[#4318FF]/40 animate-ping opacity-25 pointer-events-none" />
                     </div>
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-blue-600 font-bold">
+                        <span className="text-xs text-[#4318FF] font-bold">
                           {record.reviewStatus === QuarterlyReviewStatus.EVALUATION_IN_PROGRESS
                             ? `${formatQuarterDisplay(record.quarter)} Evaluation Draft Saved`
                             : `${formatQuarterDisplay(record.quarter)} Evaluation Ready`}
@@ -2558,7 +2561,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <button
                     type="button"
                     onClick={handleNavigateToMatrix}
-                    className="eval-open-matrix-btn shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#3B82F6] via-[#2563EB] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer group"
+                    className="eval-open-matrix-btn shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#868CFF] via-[#4318FF] to-[#3311CC] hover:from-[#4318FF] hover:to-[#3311CC] text-white font-bold text-sm shadow-lg shadow-[#4318FF]/25 transition-all duration-300 hover:shadow-xl hover:shadow-[#4318FF]/35 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer group"
                   >
                     <Sliders className="w-4 h-4 transition-transform group-hover:rotate-45" />
                     <span>{isViewMode ? "Go to Evaluation Matrix" : "Open Evaluation Matrix"}</span>
@@ -2604,7 +2607,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                 </p>
               </div>
             ) : !employeeSubmitted ? (
-              <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4 border border-blue-100 bg-white/60">
+              <div className="eval-glass-card eval-reveal-card p-4 sm:p-5 mt-4 border border-[#4318FF]/15 bg-white/60">
                 <p className="text-xs sm:text-sm font-medium text-[#334155]">
                   The evaluation matrix will unlock once the employee submits their review.
                 </p>
@@ -2620,7 +2623,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
           <div className="w-full space-y-6">
             <div className="eval-glass-card eval-reveal-card p-6 sm:p-7 w-full">
               <div className="flex items-center gap-3 mb-5 pb-3 border-b border-[#64748B]">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shrink-0 shadow-md shadow-blue-500/20 eval-stagger-item eval-stagger-1">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#868CFF] to-[#3311CC] flex items-center justify-center text-white shrink-0 shadow-md shadow-[#4318FF]/20 eval-stagger-item eval-stagger-1">
                   <Sliders className="w-5 h-5" />
                 </div>
                 <div>
@@ -2639,7 +2642,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
               {matrixLoading ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-20">
-                  <Loader2 className="w-8 h-8 animate-spin text-[#2563EB]" />
+                  <Loader2 className="w-8 h-8 animate-spin text-[#4318FF]" />
                   <p className="text-sm font-semibold text-[#334155]">Loading evaluation</p>
                 </div>
               ) : (
@@ -2666,7 +2669,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                       >
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-blue-100/70 text-blue-600 flex items-center justify-center font-bold">
+                            <div className="w-8 h-8 rounded-xl bg-[#EEF0FF]/70 text-[#4318FF] flex items-center justify-center font-bold">
                               <Lock className="w-4 h-4" />
                             </div>
                             <div>
@@ -2678,15 +2681,15 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               </span>
                             </div>
                           </div>
-                          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-600 border border-blue-200/80 flex items-center gap-1">
+                          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#F4F7FE] text-[#4318FF] border border-[#4318FF]/20/80 flex items-center gap-1">
                             <EyeOff className="w-3 h-3" />
                             Hidden
                           </span>
                         </div>
 
-                        <div className="p-4 rounded-xl bg-gradient-to-r from-blue-50/60 to-white border border-blue-200/60 flex flex-col sm:flex-row items-center justify-between gap-3 transition-all duration-200 group-hover:border-blue-300 group-hover:shadow-sm">
+                        <div className="p-4 rounded-xl bg-gradient-to-r from-[#F4F7FE]/60 to-white border border-[#4318FF]/20/60 flex flex-col sm:flex-row items-center justify-between gap-3 transition-all duration-200 group-hover:border-[#868CFF] group-hover:shadow-sm">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-white text-blue-600 flex items-center justify-center shadow-xs shrink-0">
+                            <div className="w-9 h-9 rounded-full bg-white text-[#4318FF] flex items-center justify-center shadow-xs shrink-0">
                               <Mail className="w-4 h-4" />
                             </div>
                             <div>
@@ -2705,7 +2708,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               e.stopPropagation();
                               setIsEmailModalOpen(true);
                             }}
-                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white font-bold text-xs shadow-xs transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
+                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#868CFF] to-[#3311CC] hover:from-[#4318FF] hover:to-[#3311CC] text-white font-bold text-xs shadow-xs transition-colors shrink-0 flex items-center gap-1.5 cursor-pointer"
                           >
                             <Mail className="w-3.5 h-3.5" />
                             <span>View Rating</span>
@@ -2824,7 +2827,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               {/* Rating description label shown when rated */}
                               {currentRating > 0 && !fieldErrors[param.key] && (
                                 <div className="mt-1 px-1 flex items-center gap-1">
-                                  <span className="text-[10px] font-bold text-blue-600">
+                                  <span className="text-[10px] font-bold text-[#4318FF]">
                                     {formatScoreDisplay(currentRating)} – {getRatingLabel(currentRating)}
                                   </span>
                                 </div>
@@ -2865,7 +2868,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                                 color: currentTier.badgeTextHex,
                                 border: `1px solid ${currentTier.badgeBorderHex}60`,
                               }
-                              : { backgroundColor: "rgba(219, 234, 254, 0.8)", color: "#2563EB" }
+                              : { backgroundColor: "rgba(238, 240, 255, 0.9)", color: "#4318FF" }
                           }
                         >
                           <Award className="w-4 h-4" />
@@ -3212,8 +3215,8 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                             fieldErrors.managerConfirmation
                               ? "border-[1.5px] border-red-400 bg-red-50/40"
                               : managerConfirmation
-                                ? "border-[1.5px] border-[#93C5FD] bg-gradient-to-br from-white via-[#EFF6FF] to-white shadow-[0_2px_8px_rgba(37,99,235,0.05)]"
-                                : "border-[1.5px] border-[#BFDBFE] bg-gradient-to-br from-white via-[#EFF6FF] to-white shadow-[0_2px_8px_rgba(37,99,235,0.05)]"
+                                ? "border-[1.5px] border-[#868CFF] bg-gradient-to-br from-white via-[#F4F7FE] to-white shadow-[0_2px_8px_rgba(67,24,255,0.08)]"
+                                : "border-[1.5px] border-[#4318FF]/20 bg-gradient-to-br from-white via-[#F4F7FE] to-white shadow-[0_2px_8px_rgba(67,24,255,0.05)]"
                           }`}
                         >
                           <label className="flex items-start gap-3 cursor-pointer select-none">
@@ -3221,7 +3224,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                               type="checkbox"
                               checked={managerConfirmation}
                               onChange={(e) => { setManagerConfirmation(e.target.checked); clearFieldError("managerConfirmation"); }}
-                              className="mt-0.5 w-4 h-4 rounded accent-blue-600 cursor-pointer shrink-0"
+                              className="mt-0.5 w-4 h-4 rounded accent-[#4318FF] cursor-pointer shrink-0"
                             />
                             <span className="text-xs font-semibold text-[#2B3674] leading-relaxed">
                               I confirm that the information provided in this appraisal review is accurate and complete to the best of my knowledge. I understand that this evaluation will be finalized and shared with the employee.
@@ -3241,11 +3244,11 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
 
                 {/* Bottom Actions */}
                 {isViewMode ? (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-blue-100 mt-3 eval-reveal-card">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#4318FF]/15 mt-3 eval-reveal-card">
                     <button
                       type="button"
                       onClick={handleNavigateToReview}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-blue-200/80 bg-white hover:bg-blue-50/80 text-blue-900 font-bold text-sm transition-all duration-200 shadow-xs hover:border-blue-400 cursor-pointer min-h-[48px]"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-[#4318FF]/20/80 bg-white hover:bg-[#F4F7FE]/80 text-[#2B3674] font-bold text-sm transition-all duration-200 shadow-xs hover:border-[#4318FF] cursor-pointer min-h-[48px]"
                     >
                       <ArrowLeft className="w-4 h-4" />
                       <span>Back to Employee Review</span>
@@ -3256,19 +3259,19 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         scrollToTop();
                         onBack();
                       }}
-                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white font-bold text-sm transition-all duration-200 shadow-md shadow-blue-500/20 hover:shadow-lg active:scale-[0.99] cursor-pointer min-h-[48px]"
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-xl bg-gradient-to-r from-[#868CFF] to-[#3311CC] hover:from-[#4318FF] hover:to-[#3311CC] text-white font-bold text-sm transition-all duration-200 shadow-md shadow-[#4318FF]/20 hover:shadow-lg active:scale-[0.99] cursor-pointer min-h-[48px]"
                     >
                       <Check className="w-4 h-4" />
                       <span>Back to List</span>
                     </button>
                   </div>
                 ) : (
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-blue-100 mt-3 eval-reveal-card">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#4318FF]/15 mt-3 eval-reveal-card">
                     <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                       <button
                         type="button"
                         onClick={handleNavigateToReview}
-                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-blue-200/80 bg-white hover:bg-blue-50/80 text-blue-900 font-bold text-sm transition-all duration-200 shadow-xs hover:border-blue-400 hover:shadow-sm active:scale-[0.98] cursor-pointer min-h-[48px]"
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-[#4318FF]/20/80 bg-white hover:bg-[#F4F7FE]/80 text-[#2B3674] font-bold text-sm transition-all duration-200 shadow-xs hover:border-[#4318FF] hover:shadow-sm active:scale-[0.98] cursor-pointer min-h-[48px]"
                       >
                         <ArrowLeft className="w-4 h-4" />
                         <span>Back to Review</span>
@@ -3531,7 +3534,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
             {modalStage === "email" && (
               <div className="relative z-10 space-y-5 animate-in fade-in duration-200">
                 <div className="text-center space-y-1.5">
-                  <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-lg shadow-blue-500/25 mb-3">
+                  <div className="w-12 h-12 mx-auto rounded-2xl bg-gradient-to-tr from-[#868CFF] to-[#3311CC] flex items-center justify-center text-white shadow-lg shadow-[#4318FF]/25 mb-3">
                     <ShieldCheck className="w-6 h-6" />
                   </div>
                   <h3 className="text-xl font-bold tracking-tight text-[#2B3674]">
@@ -3558,14 +3561,14 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                         }}
                         placeholder="Password"
                         autoComplete="current-password"
-                        className="w-full px-4 py-3 pl-10 pr-10 rounded-2xl bg-white border border-[#64748B] text-sm text-[#2B3674] placeholder-[#475569] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        className="w-full px-4 py-3 pl-10 pr-10 rounded-2xl bg-white border border-[#64748B] text-sm text-[#2B3674] placeholder-[#475569] focus:outline-none focus:border-[#4318FF] focus:ring-2 focus:ring-[#4318FF]/20 transition-all"
                         autoFocus
                       />
                       <Lock className="w-4 h-4 text-[#475569] absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <button
                         type="button"
                         onClick={() => setShowRatingPassword((current) => !current)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#2563EB]"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#475569] hover:text-[#4318FF]"
                         aria-label={showRatingPassword ? "Hide password" : "Show password"}
                       >
                         {showRatingPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -3590,7 +3593,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                     <button
                       type="submit"
                       disabled={unlockingRating}
-                      className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white text-xs font-bold shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
+                      className="flex-1 py-3 rounded-2xl bg-gradient-to-r from-[#868CFF] to-[#3311CC] hover:from-[#4318FF] hover:to-[#3311CC] text-white text-xs font-bold shadow-lg shadow-[#4318FF]/25 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98] cursor-pointer"
                     >
                       <span>{unlockingRating ? "Checking" : "Continue"}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -3660,13 +3663,13 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <span className="text-[#334155]">Didn't get the code?</span>
                   {resendTimer > 0 ? (
                     <span className="text-[#334155]">
-                      Resend in <span className="text-blue-600 font-semibold">{resendTimer}s</span>
+                      Resend in <span className="text-[#4318FF] font-semibold">{resendTimer}s</span>
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={handleResendCode}
-                      className="text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 hover:underline cursor-pointer"
+                      className="text-[#4318FF] hover:text-[#4318FF] font-bold flex items-center gap-1 hover:underline cursor-pointer"
                     >
                       <RefreshCw className="w-3 h-3" />
                       <span>Resend Code</span>
@@ -3707,7 +3710,7 @@ export const EvaluationPanel: React.FC<EvaluationPanelProps> = ({
                   <button
                     type="button"
                     onClick={() => setIsEmailModalOpen(false)}
-                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#3B82F6] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white text-xs font-bold transition-all shadow-md active:scale-[0.98] cursor-pointer"
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#868CFF] to-[#3311CC] hover:from-[#4318FF] hover:to-[#3311CC] text-white text-xs font-bold transition-all shadow-md active:scale-[0.98] cursor-pointer"
                   >
                     View Unlocked Rating
                   </button>

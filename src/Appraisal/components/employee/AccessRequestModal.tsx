@@ -38,8 +38,8 @@ const AccessRequest3DIllustration: React.FC = () => (
       {/* Background Soft Glow Aura */}
       <radialGradient id="accessGlowAura" cx="50%" cy="50%" r="50%">
         <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.8" />
-        <stop offset="60%" stopColor="#BAE6FD" stopOpacity="0.35" />
-        <stop offset="100%" stopColor="#E0F2FE" stopOpacity="0" />
+        <stop offset="60%" stopColor="#868CFF" stopOpacity="0.35" />
+        <stop offset="100%" stopColor="#EEF0FF" stopOpacity="0" />
       </radialGradient>
 
       {/* Document Gradients */}
@@ -48,21 +48,21 @@ const AccessRequest3DIllustration: React.FC = () => (
         <stop offset="100%" stopColor="#F8FAFC" />
       </linearGradient>
       <linearGradient id="accessPaperBorder" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#BFDBFE" />
-        <stop offset="100%" stopColor="#93C5FD" />
+        <stop offset="0%" stopColor="#C3B5FF" />
+        <stop offset="100%" stopColor="#868CFF" />
       </linearGradient>
 
       {/* Avatar Gradient */}
       <linearGradient id="accessAvatarGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#DBEAFE" />
-        <stop offset="100%" stopColor="#BFDBFE" />
+        <stop offset="0%" stopColor="#EEF0FF" />
+        <stop offset="100%" stopColor="#C3B5FF" />
       </linearGradient>
 
       {/* Pen Gradients */}
       <linearGradient id="accessPenBody" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%" stopColor="#3B82F6" />
-        <stop offset="50%" stopColor="#2563EB" />
-        <stop offset="100%" stopColor="#1D4ED8" />
+        <stop offset="0%" stopColor="#868CFF" />
+        <stop offset="50%" stopColor="#4318FF" />
+        <stop offset="100%" stopColor="#3311CC" />
       </linearGradient>
       <linearGradient id="accessPenCone" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#FDE047" />
@@ -82,7 +82,7 @@ const AccessRequest3DIllustration: React.FC = () => (
 
       {/* Drop Shadows */}
       <filter id="accessDocShadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="10" stdDeviation="12" floodColor="#0369A1" floodOpacity="0.16" />
+        <feDropShadow dx="0" dy="10" stdDeviation="12" floodColor="#4318FF" floodOpacity="0.18" />
       </filter>
     </defs>
 
@@ -90,7 +90,7 @@ const AccessRequest3DIllustration: React.FC = () => (
     <circle cx="120" cy="110" r="90" fill="url(#accessGlowAura)" />
 
     {/* Dynamic Ground Contact Shadow */}
-    <ellipse cx="116" cy="192" rx="64" ry="10" fill="#0369A1" opacity="0.16" className="access-gsap-shadow" />
+    <ellipse cx="116" cy="192" rx="64" ry="10" fill="#4318FF" opacity="0.16" className="access-gsap-shadow" />
 
     {/* Floating Document Assembly */}
     <g className="access-gsap-doc">
@@ -109,13 +109,13 @@ const AccessRequest3DIllustration: React.FC = () => (
         />
 
         {/* User Profile Header in Document */}
-        <circle cx="72" cy="56" r="14" fill="url(#accessAvatarGrad)" stroke="#93C5FD" strokeWidth="0.8" />
-        <circle cx="72" cy="52" r="5" fill="#2563EB" />
-        <path d="M 64 65 C 64 60 68 59 72 59 C 76 59 80 60 80 65 Z" fill="#2563EB" />
+        <circle cx="72" cy="56" r="14" fill="url(#accessAvatarGrad)" stroke="#868CFF" strokeWidth="0.8" />
+        <circle cx="72" cy="52" r="5" fill="#4318FF" />
+        <path d="M 64 65 C 64 60 68 59 72 59 C 76 59 80 60 80 65 Z" fill="#4318FF" />
 
         {/* Title Bar Placeholders */}
-        <rect x="94" y="50" width="62" height="7" rx="3.5" fill="#93C5FD" opacity="0.8" />
-        <rect x="94" y="61" width="42" height="5" rx="2.5" fill="#BFDBFE" opacity="0.65" />
+        <rect x="94" y="50" width="62" height="7" rx="3.5" fill="#868CFF" opacity="0.8" />
+        <rect x="94" y="61" width="42" height="5" rx="2.5" fill="#C3B5FF" opacity="0.65" />
 
         {/* Review Form Content Lines */}
         <rect x="62" y="80" width="94" height="6" rx="3" fill="#E2E8F0" />
@@ -126,7 +126,7 @@ const AccessRequest3DIllustration: React.FC = () => (
         {/* Signature Squiggle Wave */}
         <path
           d="M 64 154 Q 76 142 88 152 T 110 148 T 128 153"
-          stroke="#2563EB"
+          stroke="#4318FF"
           strokeWidth="2.8"
           strokeLinecap="round"
           fill="none"
@@ -169,7 +169,7 @@ const AccessRequest3DIllustration: React.FC = () => (
         filter="drop-shadow(2px 6px 8px rgba(30,58,138,0.35))"
       />
       {/* Glint Highlight */}
-      <line x1="-3" y1="-36" x2="-3" y2="4" stroke="#93C5FD" strokeWidth="1.8" strokeLinecap="round" opacity="0.75" />
+      <line x1="-3" y1="-36" x2="-3" y2="4" stroke="#868CFF" strokeWidth="1.8" strokeLinecap="round" opacity="0.75" />
       {/* Silver Ring */}
       <rect x="-7.5" y="6" width="15" height="4" fill="#E2E8F0" stroke="#94A3B8" strokeWidth="0.6" />
       {/* Gold Cone */}
@@ -177,18 +177,18 @@ const AccessRequest3DIllustration: React.FC = () => (
       {/* Tip */}
       <polygon points="-2.5,20 2.5,20 0,25" fill="#1E293B" />
       {/* Eraser / Top Button */}
-      <rect x="-5" y="-44" width="10" height="6" rx="2" fill="#DBEAFE" stroke="#93C5FD" strokeWidth="0.8" />
+      <rect x="-5" y="-44" width="10" height="6" rx="2" fill="#EEF0FF" stroke="#868CFF" strokeWidth="0.8" />
     </g>
 
     {/* Sparkles & Floating Particles */}
     <g className="access-gsap-sparkle" transform="translate(34, 46)">
-      <polygon points="0,-4 1.2,-1.2 4,0 1.2,1.2 0,4 -1.2,1.2 -4,0 -1.2,-1.2" fill="#93C5FD" />
+      <polygon points="0,-4 1.2,-1.2 4,0 1.2,1.2 0,4 -1.2,1.2 -4,0 -1.2,-1.2" fill="#868CFF" />
     </g>
     <g className="access-gsap-sparkle" transform="translate(202, 98)">
       <polygon points="0,-5 1.5,-1.5 5,0 1.5,1.5 0,5 -1.5,1.5 -5,0 -1.5,-1.5" fill="#FBBF24" />
     </g>
     <circle className="access-gsap-sparkle" cx="198" cy="154" r="2.5" fill="#60A5FA" opacity="0.85" />
-    <circle className="access-gsap-sparkle" cx="42" cy="142" r="2" fill="#BFDBFE" opacity="0.7" />
+    <circle className="access-gsap-sparkle" cx="42" cy="142" r="2" fill="#C3B5FF" opacity="0.7" />
   </svg>
 );
 
@@ -326,21 +326,21 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
         {/* ===================================================================
             LEFT COLUMN: Soft Light Blue Background + 3D Document Illustration
            =================================================================== */}
-        <div className="w-full md:w-[225px] shrink-0 bg-gradient-to-b from-[#F0F5FF] via-[#E0F2FE] to-[#BAE6FD] p-4 sm:p-5 flex flex-col justify-between relative overflow-hidden text-[#0F172A] border-b md:border-b-0 md:border-r border-blue-100/90">
+        <div className="access-modal-left-panel w-full md:w-[225px] shrink-0 bg-gradient-to-b from-[#F4F7FE] via-[#EEF0FF] to-[#E0E5FF] p-4 sm:p-5 flex flex-col justify-between relative overflow-hidden text-[#2B3674] border-b md:border-b-0 md:border-r border-[#4318FF]/15">
           {/* Ambient Lighting Orbs */}
-          <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-sky-300/40 blur-2xl pointer-events-none" />
-          <div className="absolute bottom-2 right-0 w-36 h-36 rounded-full bg-blue-300/30 blur-2xl pointer-events-none" />
+          <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-[#868CFF]/35 blur-2xl pointer-events-none" />
+          <div className="absolute bottom-2 right-0 w-36 h-36 rounded-full bg-[#4318FF]/20 blur-2xl pointer-events-none" />
 
           {/* Header Identity */}
           <div className="relative z-10">
             {/* Quarter Pill Badge */}
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/80 backdrop-blur-md border border-blue-200/90 text-[11px] font-bold text-blue-700 shadow-2xs mb-2">
-              <Sparkles className="w-3 h-3 text-blue-600" />
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/80 backdrop-blur-md border border-[#4318FF]/20 text-[11px] font-bold text-[#4318FF] shadow-2xs mb-2">
+              <Sparkles className="w-3 h-3 text-[#4318FF]" />
               <span>{assignment.quarter} Review</span>
             </div>
 
             {/* Title & Subtitle */}
-            <h2 className="text-lg sm:text-xl font-black text-[#0B2568] tracking-tight leading-tight">
+            <h2 className="text-lg sm:text-xl font-black text-[#2B3674] tracking-tight leading-tight">
               Request Edit Access
             </h2>
             <p className="text-[11px] text-slate-600 mt-1 leading-relaxed font-normal">
@@ -531,7 +531,7 @@ export const AccessRequestModal: React.FC<AccessRequestModalProps> = ({
                       type="button"
                       disabled={isSubmitting || !description.trim()}
                       onClick={handleSubmit}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#2563EB] to-[#4F46E5] hover:from-[#1D4ED8] hover:to-[#4338CA] text-white font-bold flex items-center gap-1.5 shadow-md shadow-blue-500/25 active:scale-95 transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-[#4318FF] hover:bg-[#3311CC] text-white font-bold flex items-center gap-1.5 shadow-md shadow-[#4318FF]/35 active:scale-95 transition-all text-xs disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                       {isSubmitting ? (
                         <>

@@ -1562,52 +1562,53 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       )}
 
       {/* Top Header Card */}
-      <Card className="rounded-3xl p-5 sm:p-6 manager-review-glass-card">
+      <Card className="rounded-[20px] p-5 sm:p-6 manager-review-glass-card border border-[#E0E5F2]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
+          <div>
+            <button
+              type="button"
               onClick={onBack}
-              leftIcon={<ArrowLeft className="w-4 h-4" />}
-              className="text-[#2563EB] hover:text-[#1D4ED8] hover:bg-blue-50/80 !p-2 rounded-xl cursor-pointer"
-              title="Back to history"
-            />
+              className="group flex items-center gap-2 text-[#A3AED0] hover:text-[#4318FF] transition-all mb-2 w-fit cursor-pointer"
+            >
+              <ArrowLeft
+                size={16}
+                className="group-hover:-translate-x-1 transition-transform"
+              />
+              <span className="text-[11px] font-black uppercase tracking-widest pl-1">
+                Back
+              </span>
+            </button>
             <div>
               <div className="flex items-center gap-2.5">
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight w-fit">
-                  <span className="manager-review-title-anim">
-                    {assignment.quarter} Performance Review{readOnly ? " (View Mode)" : ""}
-                  </span>
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#2B3674] w-fit">
+                  {assignment.quarter} Performance Review{readOnly ? " (View Mode)" : ""}
                 </h1>
               </div>
-              <p className="text-xs mt-0.5 font-normal w-fit">
-                <span className="manager-review-subtitle-anim">
-                  {assignment.financialYear} • Deadline:{" "}
-                  <strong className="font-semibold text-[#0F172A]">{assignment.deadline}</strong> •
-                  {" "}Assigned by {assignment.assignedBy}
-                  {readOnly ? " • View only" : ""}
-                </span>
+              <p className="text-xs mt-0.5 font-normal text-[#707EAE] w-fit">
+                {assignment.financialYear} • Deadline:{" "}
+                <strong className="font-semibold text-[#2B3674]">{assignment.deadline}</strong> •
+                {" "}Assigned by {assignment.assignedBy}
+                {readOnly ? " • View only" : ""}
               </p>
             </div>
           </div>
 
           {!readOnly && (
             <div className="text-right hidden sm:block">
-              <span className="text-xs text-[#334155] block">Progress</span>
-              <span className="text-sm font-bold text-[#2563EB]">Step {currentStep} of 6</span>
+              <span className="text-xs text-[#A3AED0] block">Progress</span>
+              <span className="text-sm font-bold text-[#4318FF]">Step {currentStep} of 6</span>
             </div>
           )}
         </div>
 
         {/* Numbered Stepper with Title Below and Click Navigation (Hidden in View Mode) */}
         {!readOnly && (
-          <div className="mt-7 pt-6 border-t border-blue-100 overflow-x-auto no-scrollbar pb-2">
+          <div className="mt-7 pt-6 border-t border-[#E0E5F2] overflow-x-auto no-scrollbar pb-2">
             <div className="relative flex items-center justify-between min-w-[620px] px-6">
-              {/* Connecting line: gray for incomplete, blue for completed progress */}
-              <div className="absolute top-5 -translate-y-1/2 left-[44px] right-[44px] h-[3px] bg-[#CBD5E1] rounded-full z-0">
+              {/* Connecting line: gray for incomplete, purple for completed progress */}
+              <div className="absolute top-5 -translate-y-1/2 left-[44px] right-[44px] h-[3px] bg-[#E0E5F2] rounded-full z-0">
                 <div
-                  className="h-full bg-[#2563EB] rounded-full transition-all duration-500 ease-out"
+                  className="h-full bg-[#4318FF] rounded-full transition-all duration-500 ease-out"
                   style={{
                     width: `${((currentStep - 1) / (STEP_DEFINITIONS.length - 1)) * 100}%`,
                   }}
@@ -1635,10 +1636,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     <div
                       ref={isActive ? activeCircleRef : undefined}
                       className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-200 ${isActive
-                          ? "bg-[#2563EB] text-white ring-4 ring-blue-400/25 shadow-md shadow-blue-500/20"
+                          ? "bg-[#4318FF] text-white ring-4 ring-[#4318FF]/20 shadow-md shadow-[#4318FF]/20"
                           : isCompleted
-                            ? "bg-blue-500 text-white border-2 border-blue-500 shadow-xs"
-                            : "bg-white text-[#334155] border-2 border-blue-200/80 hover:border-[#2563EB] hover:text-[#2563EB]"
+                            ? "bg-[#868CFF] text-white border-2 border-[#868CFF] shadow-xs"
+                            : "bg-white text-[#707EAE] border-2 border-[#E0E5F2] hover:border-[#4318FF] hover:text-[#4318FF]"
                         }`}
                     >
                       {isCompleted ? (
@@ -1651,10 +1652,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     {/* Title Placed Below Circle */}
                     <span
                       className={`mt-2 text-xs font-semibold text-center whitespace-nowrap transition-colors duration-200 ${isActive
-                          ? "text-[#2563EB] font-bold"
+                          ? "text-[#4318FF] font-bold"
                           : isCompleted
-                            ? "text-[#0F172A] font-semibold"
-                            : "text-[#334155] group-hover:text-[#0F172A]"
+                            ? "text-[#2B3674] font-semibold"
+                            : "text-[#A3AED0] group-hover:text-[#2B3674]"
                         }`}
                     >
                       {step.label}
@@ -1668,7 +1669,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
       </Card>
 
       {/* Main Step Body Card */}
-      <Card className="rounded-3xl p-6 sm:p-8 manager-review-glass-card">
+      <Card className="rounded-[20px] p-6 sm:p-8 manager-review-glass-card border border-[#E0E5F2]">
         {submitted ? (
           <AppraisalMomentCard
             kind="submitted"
@@ -1704,10 +1705,10 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
 
             {/* Evaluation CTA Card: strictly shown on Step 6 only when evaluation is completed */}
             {currentStep === 6 && onGoToEvaluation && isCompleted && (
-              <div className="eval-matrix-cta-card relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-blue-200/70 bg-gradient-to-br from-white via-blue-50/40 to-blue-100/20 shadow-lg shadow-blue-500/10 mt-6 !opacity-100">
+              <div className="eval-matrix-cta-card relative overflow-hidden rounded-3xl p-6 sm:p-7 border border-[#4318FF]/20 bg-gradient-to-br from-white via-[#EEF0FF]/40 to-[#EEF0FF]/30 shadow-lg shadow-[#4318FF]/10 mt-6 !opacity-100">
                 {/* Ambient Decorative SVG in Background */}
                 <svg
-                  className="absolute -right-8 -bottom-10 w-72 h-72 text-blue-500/10 pointer-events-none eval-cta-bg-svg"
+                  className="absolute -right-8 -bottom-10 w-72 h-72 text-[#868CFF]/10 pointer-events-none eval-cta-bg-svg"
                   viewBox="0 0 200 200"
                   fill="none"
                   xmlns="http://www.w3.org/2000/svg"
@@ -1722,7 +1723,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   <div className="flex items-start sm:items-center gap-4">
                     {/* Glowing Matrix Icon SVG Box with Animated Orbital Pulse */}
                     <div className="relative shrink-0">
-                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#3B82F6] to-[#1D4ED8] flex items-center justify-center text-white shadow-md shadow-blue-500/25 eval-matrix-btn-icon-glow">
+                      <div className="w-13 h-13 rounded-2xl bg-gradient-to-tr from-[#868CFF] to-[#3311CC] flex items-center justify-center text-white shadow-md shadow-[#4318FF]/25 eval-matrix-btn-icon-glow">
                         <svg
                           className="w-7 h-7 eval-matrix-icon-svg"
                           viewBox="0 0 24 24"
@@ -1738,17 +1739,17 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                             strokeDashoffset="0"
                             className="eval-matrix-svg-lines"
                           />
-                          <circle cx="8" cy="6" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
-                          <circle cx="16" cy="12" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
-                          <circle cx="11" cy="18" r="2.5" fill="#BFDBFE" stroke="#2563EB" strokeWidth="1.5" />
+                          <circle cx="8" cy="6" r="2.5" fill="#EEF0FF" stroke="#4318FF" strokeWidth="1.5" />
+                          <circle cx="16" cy="12" r="2.5" fill="#EEF0FF" stroke="#4318FF" strokeWidth="1.5" />
+                          <circle cx="11" cy="18" r="2.5" fill="#EEF0FF" stroke="#4318FF" strokeWidth="1.5" />
                         </svg>
                       </div>
-                      <span className="absolute -inset-1 rounded-2xl border border-blue-400/40 animate-ping opacity-25 pointer-events-none" />
+                      <span className="absolute -inset-1 rounded-2xl border border-[#868CFF]/40 animate-ping opacity-25 pointer-events-none" />
                     </div>
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-blue-600 font-bold">
+                        <span className="text-xs text-[#4318FF] font-bold">
                           {assignment.quarter} Evaluation Ready
                         </span>
                       </div>
@@ -1762,7 +1763,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                   <button
                     type="button"
                     onClick={onGoToEvaluation}
-                    className="eval-open-matrix-btn shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#3B82F6] via-[#2563EB] to-[#1D4ED8] hover:from-[#2563EB] hover:to-[#1E40AF] text-white font-bold text-sm shadow-lg shadow-blue-500/25 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/35 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer group"
+                    className="eval-open-matrix-btn shrink-0 w-full sm:w-auto inline-flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-[#868CFF] via-[#4318FF] to-[#3311CC] hover:from-[#4318FF] hover:to-[#3311CC] text-white font-bold text-sm shadow-lg shadow-[#4318FF]/25 transition-all duration-300 hover:shadow-xl hover:shadow-[#4318FF]/35 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer group"
                   >
                     <Sliders className="w-4 h-4 transition-transform group-hover:rotate-45" />
                     <span>Go to Evaluation Matrix</span>
@@ -1786,7 +1787,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
             )}
 
             {/* Stepper Navigation Footer */}
-            <div className={`flex items-center ${readOnly ? "justify-end" : "justify-between"} pt-6 mt-8 border-t border-blue-100`}>
+            <div className={`flex items-center ${readOnly ? "justify-end" : "justify-between"} pt-6 mt-8 border-t border-[#E0E5F2]`}>
               {!readOnly && (
                 currentStep === 1 ? (
                   <Button
@@ -1799,7 +1800,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                         <ArrowLeft className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
                       </span>
                     }
-                    className="group px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400 [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
+                    className="group px-5 py-2.5 rounded-xl border-[#E0E5F2] bg-white hover:bg-[#F4F7FE] text-[#2B3674] font-bold shadow-xs cursor-pointer hover:border-[#4318FF]/30 [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
                   >
                     Back
                   </Button>
@@ -1814,7 +1815,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                         <ArrowLeft className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:-translate-x-1" />
                       </span>
                     }
-                    className="group px-5 py-2.5 rounded-xl border-blue-200/80 bg-white/80 hover:bg-white text-[#0F172A] font-bold shadow-xs cursor-pointer hover:border-blue-400 [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
+                    className="group px-5 py-2.5 rounded-xl border-[#E0E5F2] bg-white hover:bg-[#F4F7FE] text-[#2B3674] font-bold shadow-xs cursor-pointer hover:border-[#4318FF]/30 [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
                   >
                     Previous
                   </Button>
@@ -1829,7 +1830,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     size="md"
                     onClick={() => void handleSaveAndExit()}
                     disabled={saving}
-                    className="text-[#334155] hover:text-[#0F172A]"
+                    className="text-[#707EAE] hover:text-[#2B3674]"
                   >
                     {saving ? "Saving" : "Save & Exit"}
                   </Button>
@@ -1847,7 +1848,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                         <ArrowRight className="w-4 h-4 shrink-0 absolute inset-0 m-auto opacity-0 transition-all duration-200 group-hover:opacity-100 group-hover:translate-x-1" />
                       </span>
                     }
-                    className="group px-6 py-2.5 rounded-xl font-bold !bg-gradient-to-b !from-[#3B82F6] !to-[#1D4ED8] hover:!from-[#2563EB] hover:!to-[#1E40AF] !text-white shadow-md shadow-blue-500/30 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all !shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.45),0_8px_20px_rgba(37,99,235,0.35)] [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
+                    className="group px-6 py-2.5 rounded-xl font-bold !bg-[#4318FF] hover:!bg-[#3311CC] !text-white shadow-md shadow-[#4318FF]/25 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all [&>span]:inline-flex [&>span]:items-center [&>span]:justify-center !gap-1.5"
                   >
                     Next Step
                   </Button>
@@ -1856,7 +1857,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     variant="outline"
                     size="md"
                     onClick={onBack}
-                    className="px-6 py-2.5 rounded-xl font-bold border-blue-200 bg-white hover:bg-blue-50 text-[#2563EB] shadow-xs cursor-pointer"
+                    className="px-6 py-2.5 rounded-xl font-bold border-[#E0E5F2] bg-white hover:bg-[#F4F7FE] text-[#4318FF] shadow-xs cursor-pointer"
                   >
                     Back to List
                   </Button>
@@ -1867,7 +1868,7 @@ export const QuarterlyReviewStepper: React.FC<QuarterlyReviewStepperProps> = ({
                     onClick={() => void handleSubmit()}
                     disabled={saving}
                     leftIcon={<Send className="w-4 h-4 fill-white -rotate-12" />}
-                    className="px-7 py-2.5 rounded-xl font-bold !bg-gradient-to-b !from-[#3B82F6] !to-[#1D4ED8] hover:!from-[#2563EB] hover:!to-[#1E40AF] !text-white shadow-md shadow-blue-500/30 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 !shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.45),0_8px_20px_rgba(37,99,235,0.4)]"
+                    className="px-7 py-2.5 rounded-xl font-bold !bg-[#4318FF] hover:!bg-[#3311CC] !text-white shadow-md shadow-[#4318FF]/25 border-0 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                   >
                     Submit Review
                   </Button>
