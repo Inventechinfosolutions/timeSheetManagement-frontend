@@ -11,10 +11,14 @@ const CONFETTI_COUNT = 90;
 const FALLBACK_FETCH_DELAY_MS = 2000;
 
 const BALLOONS = [
-  { left: "6%", color: "#E312DC", size: 46, delay: "0s" },
-  { left: "16%", color: "#FFB547", size: 38, delay: "0.8s" },
-  { left: "80%", color: "#6AD2FF", size: 42, delay: "0.4s" },
-  { left: "90%", color: "#01B574", size: 36, delay: "1.2s" },
+  { left: "6%", top: "8px", color: "#E312DC", size: 40, delay: "0s" },
+  { left: "10%", top: "54px", color: "#6AD2FF", size: 32, delay: "0.6s" },
+  { left: "16%", top: "14px", color: "#FFB547", size: 34, delay: "0.8s" },
+  { left: "22%", top: "62px", color: "#E312DC", size: 28, delay: "1.4s" },
+  { left: "79%", top: "12px", color: "#6AD2FF", size: 36, delay: "0.4s" },
+  { left: "70%", top: "60px", color: "#FFB547", size: 28, delay: "1.0s" },
+  { left: "89%", top: "8px", color: "#01B574", size: 32, delay: "1.2s" },
+  { left: "82%", top: "52px", color: "#01B574", size: 34, delay: "0.3s" },
 ];
 
 /** True when the date of birth falls on today (Feb 29 birthdays are celebrated on Feb 28 in non-leap years). */
@@ -156,7 +160,7 @@ const BirthdayWish = () => {
 
       {open && (
         <div
-          className="fixed inset-0 z-200 flex items-center justify-center p-4"
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="birthday-wish-title"
@@ -173,7 +177,8 @@ const BirthdayWish = () => {
               <X size={18} />
             </button>
 
-            <div className="relative h-52 bg-linear-to-br from-[#4318FF] via-[#7551FF] to-[#E312DC] overflow-hidden">
+            <div className="relative h-40">
+              <div className="absolute inset-0 bg-linear-to-br from-[#4318FF] via-[#7551FF] to-[#E312DC] overflow-hidden">
               <div className="absolute -top-16 -left-10 w-48 h-48 rounded-full bg-white/10" />
               <div className="absolute -bottom-20 -right-10 w-56 h-56 rounded-full bg-white/10" />
               <div className="absolute top-8 right-24 w-3 h-3 rounded-full bg-[#FFB547]" />
@@ -182,15 +187,17 @@ const BirthdayWish = () => {
 
               {BALLOONS.map((b) => (
                 <div
-                  key={b.left}
-                  className="birthday-balloon absolute top-6"
-                  style={{ left: b.left, animationDelay: b.delay }}
+                  key={`${b.left}-${b.top}`}
+                  className="birthday-balloon absolute"
+                  style={{ left: b.left, top: b.top, animationDelay: b.delay }}
                 >
                   <Balloon color={b.color} size={b.size} />
                 </div>
               ))}
 
-              <div className="absolute inset-x-0 bottom-0 flex justify-center translate-y-1/2">
+              </div>
+
+              <div className="absolute inset-x-0 bottom-0 flex justify-center translate-y-1/2 z-10">
                 <div className="birthday-cake w-24 h-24 rounded-full bg-white shadow-xl flex items-center justify-center ring-8 ring-white/40">
                   <div className="w-18 h-18 rounded-full bg-linear-to-br from-[#FFF4E5] to-[#FFE3F7] flex items-center justify-center">
                     <Cake size={38} className="text-[#E312DC]" strokeWidth={1.8} />
