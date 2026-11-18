@@ -12,6 +12,9 @@ const ChangePassword = lazy(
 const EmployeeAppraisalPage = lazy(
   () => import("../Appraisal/pages/EmployeeAppraisalPage")
 );
+const ManagerQuarterlyReviewPage = lazy(
+  () => import("../Appraisal/pages/ManagerQuarterlyReviewPage")
+);
 
 export const employeeComponentConfigs = [
   {
@@ -40,6 +43,6 @@ export const employeeComponentConfigs = [
   },
   {
     path: "/employee-dashboard/quarterly-review",
-    Component: EmployeeAppraisalPage,
+    Component: ManagerQuarterlyReviewPage,
   },
 ];

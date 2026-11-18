@@ -2,10 +2,21 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import inventechLogo from "../assets/inventech-logo.jpg";
 
+export interface DayInfoForPdf {
+  date: string;
+  dayNum: number;
+  dayLabel: string;
+  dayName: string;
+  isWeekend?: boolean;
+  isHoliday?: boolean;
+  holidayName?: string | null;
+}
+
 export interface EmployeeRowForPdf {
   employeeId: string;
   fullName: string;
   department: string;
+  dailyStatus?: Record<string, { text: string; type?: string; color?: string }>;
   summary: {
     fullDays: number;
     wfh: number;
@@ -13,8 +24,8 @@ export interface EmployeeRowForPdf {
     halfDays: number;
     leaves: number;
     notUpdated: number;
-    weekends: number;
-    holidays: number;
+    weekends?: number;
+    holidays?: number;
   };
 }
 
@@ -33,7 +44,46 @@ export interface MatrixPdfOptions {
     notUpdated: number;
   };
   daysInMonth: number;
+  days?: DayInfoForPdf[];
 }
+
+const statusFill = (text: string): [number, number, number] | null => {
+  const t = (text || "").toLowerCase();
+  if (!t || t === "upcoming") return null;
+  if (t.includes("weekend")) return [237, 62, 62];
+  if (t.includes("holiday") || t.includes("leave")) return [237, 62, 62];
+  if (t.includes("wfh") || t.includes("work from home")) return [173, 216, 230];
+  if (t.includes("client") || t.includes("cv")) return [255, 160, 122];
+  if (t.includes("half")) return [255, 255, 224];
+  if (t.includes("not updated") || t.includes("pending")) return [255, 255, 0];
+  if (t.includes("inactive")) return [255, 205, 210];
+  if (t.includes("full") || t.includes("office") || t.includes("present"))
+    return [144, 238, 144];
+  return [144, 238, 144];
+};
+
+const buildDays = (
+  year: number,
+  month: number,
+  daysInMonth: number,
+  days?: DayInfoForPdf[],
+): DayInfoForPdf[] => {
+  if (days && days.length > 0) return days;
+  const built: DayInfoForPdf[] = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateObj = new Date(year, month - 1, day);
+    const m = String(month).padStart(2, "0");
+    const d = String(day).padStart(2, "0");
+    built.push({
+      date: `${year}-${m}-${d}`,
+      dayNum: day,
+      dayLabel: `${day}-${dateObj.toLocaleDateString("en-US", { month: "short" })}`,
+      dayName: dateObj.toLocaleDateString("en-US", { weekday: "long" }),
+      isWeekend: dateObj.getDay() === 0 || dateObj.getDay() === 6,
+    });
+  }
+  return built;
+};
 
 export const downloadMatrixPdf = ({
   monthName,
@@ -43,7 +93,9 @@ export const downloadMatrixPdf = ({
   employees,
   totalStats,
   daysInMonth,
+  days,
 }: MatrixPdfOptions) => {
+  // Portrait (vertical) A4 — same orientation as the attendance report header layout
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -51,17 +103,19 @@ export const downloadMatrixPdf = ({
   });
 
   const blueColor = "#2B3674";
+  const pageDays = buildDays(year, month, daysInMonth, days);
+  const employeeCount = employees.length;
+  const employeeLabel = `${employeeCount} ${employeeCount === 1 ? "Employee" : "Employees"}`;
 
-  // 1. Header Banner (matching employee timesheet PDF format)
+  // 1. Header Banner
   doc.setFillColor(blueColor);
   doc.rect(0, 0, 210, 40, "F");
 
-  // Logo Box
   try {
     doc.setFillColor(255, 255, 255);
     doc.roundedRect(12, 11, 50, 18, 2, 2, "F");
     doc.addImage(inventechLogo, "JPEG", 14, 12.5, 45, 15);
-  } catch (e) {
+  } catch {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
     doc.setTextColor(255, 255, 255);
@@ -71,7 +125,6 @@ export const downloadMatrixPdf = ({
     doc.text("Info Solutions Pvt. Ltd.", 14, 28);
   }
 
-  // Report Title (Right Aligned in banner)
   doc.setFontSize(16);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(255, 255, 255);
@@ -81,7 +134,7 @@ export const downloadMatrixPdf = ({
   doc.setTextColor(220, 235, 252);
   doc.text(`${monthName} ${year}`, 196, 27, { align: "right" });
 
-  // 2. Report Details Section (matching employee timesheet PDF format)
+  // 2. Report Details
   let startY = 50;
 
   doc.setFontSize(10);
@@ -99,23 +152,24 @@ export const downloadMatrixPdf = ({
     day: "2-digit",
     year: "numeric",
   });
-  const toDate = new Date(year, month - 1, daysInMonth).toLocaleDateString("en-US", {
-    month: "short",
-    day: "2-digit",
-    year: "numeric",
-  });
+  const toDate = new Date(year, month - 1, daysInMonth).toLocaleDateString(
+    "en-US",
+    {
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+    },
+  );
   const generatedDate = new Date().toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
 
-  // Grid Layout for Info
   doc.setFontSize(9);
   doc.setTextColor(80, 80, 80);
   doc.setFont("helvetica", "normal");
 
-  // Row 1: Department & Generated
   doc.text("Department:", 14, startY);
   doc.setTextColor(blueColor);
   doc.setFont("helvetica", "bold");
@@ -130,7 +184,6 @@ export const downloadMatrixPdf = ({
 
   startY += 6.5;
 
-  // Row 2: From Date & To Date
   doc.setFont("helvetica", "normal");
   doc.setTextColor(80, 80, 80);
   doc.text("From Date:", 14, startY);
@@ -147,13 +200,12 @@ export const downloadMatrixPdf = ({
 
   startY += 6.5;
 
-  // Row 3: Total Staff & Period Days
   doc.setFont("helvetica", "normal");
   doc.setTextColor(80, 80, 80);
-  doc.text("Total Staff:", 14, startY);
+  doc.text("Total Employees:", 14, startY);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(blueColor);
-  doc.text(`${employees.length} Employees`, 42, startY);
+  doc.text(employeeLabel, 48, startY);
 
   doc.setFont("helvetica", "normal");
   doc.setTextColor(80, 80, 80);
@@ -164,7 +216,20 @@ export const downloadMatrixPdf = ({
 
   startY += 10;
 
-  // 3. Employee Attendance Summary Table (down the page)
+  const drawPageFooter = (pageNumber: number) => {
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      `WorkSphere Management System  |  Page ${pageNumber} of ${pageCount}`,
+      105,
+      292,
+      { align: "center" },
+    );
+  };
+
+  // 3. Summary table (counts)
   const tableHead = [
     [
       "#",
@@ -180,22 +245,19 @@ export const downloadMatrixPdf = ({
     ],
   ];
 
-  const tableBody = employees.map((emp, index) => {
-    return [
-      String(index + 1),
-      emp.fullName || "N/A",
-      emp.employeeId || "N/A",
-      emp.department || "General",
-      String(emp.summary?.fullDays || 0),
-      String(emp.summary?.halfDays || 0),
-      String(emp.summary?.wfh || 0),
-      String(emp.summary?.clientVisit || 0),
-      String(emp.summary?.leaves || 0),
-      String(emp.summary?.notUpdated || 0),
-    ];
-  });
+  const tableBody = employees.map((emp, index) => [
+    String(index + 1),
+    emp.fullName || "N/A",
+    emp.employeeId || "N/A",
+    emp.department || "General",
+    String(emp.summary?.fullDays || 0),
+    String(emp.summary?.halfDays || 0),
+    String(emp.summary?.wfh || 0),
+    String(emp.summary?.clientVisit || 0),
+    String(emp.summary?.leaves || 0),
+    String(emp.summary?.notUpdated || 0),
+  ]);
 
-  // Organization Total Row
   const totalHalfDays =
     totalStats.halfDay ??
     employees.reduce((sum, e) => sum + (e.summary?.halfDays || 0), 0);
@@ -204,7 +266,7 @@ export const downloadMatrixPdf = ({
     [
       "",
       "Total Summary",
-      `${employees.length} Staff`,
+      employeeLabel,
       "",
       String(totalStats.present),
       String(totalHalfDays),
@@ -216,7 +278,7 @@ export const downloadMatrixPdf = ({
   ];
 
   autoTable(doc, {
-    startY: startY,
+    startY,
     head: tableHead,
     body: tableBody,
     foot: tableFoot,
@@ -231,7 +293,7 @@ export const downloadMatrixPdf = ({
       valign: "middle",
     },
     headStyles: {
-      fillColor: [43, 54, 116], // #2B3674 matching employee timesheet PDF
+      fillColor: [43, 54, 116],
       textColor: [255, 255, 255],
       fontStyle: "bold",
       fontSize: 7.8,
@@ -246,34 +308,139 @@ export const downloadMatrixPdf = ({
       halign: "center",
     },
     columnStyles: {
-      0: { cellWidth: 8, halign: "center" }, // #
-      1: { cellWidth: 42, fontStyle: "bold" }, // Name
-      2: { cellWidth: 20, halign: "center" }, // ID
-      3: { cellWidth: 26 }, // Department
-      4: { cellWidth: 14, halign: "center", fontStyle: "bold", textColor: [21, 128, 61] }, // Full Day
-      5: { cellWidth: 14, halign: "center", fontStyle: "bold", textColor: [180, 83, 9] }, // Half Day
-      6: { cellWidth: 14, halign: "center", fontStyle: "bold", textColor: [3, 105, 161] }, // WFH
-      7: { cellWidth: 15, halign: "center", fontStyle: "bold", textColor: [180, 83, 9] }, // Client Visit
-      8: { cellWidth: 13, halign: "center", fontStyle: "bold", textColor: [220, 38, 38] }, // Leave
-      9: { cellWidth: 16, halign: "center", fontStyle: "bold", textColor: [194, 65, 12] }, // Not Updated
+      0: { cellWidth: 8, halign: "center" },
+      1: { cellWidth: 42, fontStyle: "bold" },
+      2: { cellWidth: 20, halign: "center" },
+      3: { cellWidth: 26 },
+      4: {
+        cellWidth: 14,
+        halign: "center",
+        fontStyle: "bold",
+        textColor: [21, 128, 61],
+      },
+      5: {
+        cellWidth: 14,
+        halign: "center",
+        fontStyle: "bold",
+        textColor: [180, 83, 9],
+      },
+      6: {
+        cellWidth: 14,
+        halign: "center",
+        fontStyle: "bold",
+        textColor: [3, 105, 161],
+      },
+      7: {
+        cellWidth: 15,
+        halign: "center",
+        fontStyle: "bold",
+        textColor: [180, 83, 9],
+      },
+      8: {
+        cellWidth: 13,
+        halign: "center",
+        fontStyle: "bold",
+        textColor: [220, 38, 38],
+      },
+      9: {
+        cellWidth: 16,
+        halign: "center",
+        fontStyle: "bold",
+        textColor: [194, 65, 12],
+      },
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252],
     },
     margin: { left: 14, right: 14, bottom: 15 },
     didDrawPage: (data) => {
-      // Footer page numbering
-      const pageCount = (doc as any).internal.getNumberOfPages();
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(148, 163, 184);
-      doc.text(
-        `WorkSphere Management System  |  Page ${data.pageNumber} of ${pageCount}`,
-        105,
-        292,
-        { align: "center" },
-      );
+      drawPageFooter(data.pageNumber);
     },
+  });
+
+  // 4. Daily attendance (full month dates + status) — portrait-friendly vertical tables
+  let dailyY = ((doc as any).lastAutoTable?.finalY || startY) + 12;
+
+  const ensureSpace = (needed: number) => {
+    if (dailyY + needed > 280) {
+      doc.addPage();
+      dailyY = 18;
+      drawPageFooter((doc as any).internal.getNumberOfPages());
+    }
+  };
+
+  ensureSpace(16);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(blueColor);
+  doc.text("DAILY ATTENDANCE (Full Month)", 14, dailyY);
+  doc.setDrawColor(200, 200, 200);
+  doc.line(14, dailyY + 3, 196, dailyY + 3);
+  dailyY += 8;
+
+  employees.forEach((emp, empIndex) => {
+    ensureSpace(28);
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(blueColor);
+    doc.text(
+      `${empIndex + 1}. ${emp.fullName || "N/A"}  (${emp.employeeId || "N/A"})  —  ${emp.department || "General"}`,
+      14,
+      dailyY,
+    );
+    dailyY += 4;
+
+    const dayBody = pageDays.map((day) => {
+      const statusText = emp.dailyStatus?.[day.date]?.text || "—";
+      return [day.dayLabel, day.dayName, statusText];
+    });
+
+    autoTable(doc, {
+      startY: dailyY,
+      head: [["Date", "Day", "Status"]],
+      body: dayBody,
+      theme: "grid",
+      styles: {
+        fontSize: 7.5,
+        cellPadding: 1.6,
+        textColor: [43, 54, 116],
+        lineColor: [220, 225, 235],
+        lineWidth: 0.1,
+        valign: "middle",
+      },
+      headStyles: {
+        fillColor: [43, 54, 116],
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 8,
+        halign: "center",
+      },
+      columnStyles: {
+        0: { cellWidth: 28, halign: "center", fontStyle: "bold" },
+        1: { cellWidth: 36, halign: "center" },
+        2: { cellWidth: 118, halign: "center" },
+      },
+      margin: { left: 14, right: 14, bottom: 15 },
+      didParseCell: (data) => {
+        if (data.section !== "body" || data.column.index !== 2) return;
+        const fill = statusFill(String(data.cell.raw || ""));
+        if (fill) {
+          data.cell.styles.fillColor = fill;
+          const t = String(data.cell.raw || "").toLowerCase();
+          if (t.includes("weekend") || t.includes("leave") || t.includes("absent")) {
+            data.cell.styles.textColor = [255, 255, 255];
+          } else {
+            data.cell.styles.textColor = [30, 30, 30];
+          }
+        }
+      },
+      didDrawPage: (data) => {
+        drawPageFooter(data.pageNumber);
+      },
+    });
+
+    dailyY = ((doc as any).lastAutoTable?.finalY || dailyY) + 8;
   });
 
   doc.save(`Attendance_Report_${month}_${year}.pdf`);

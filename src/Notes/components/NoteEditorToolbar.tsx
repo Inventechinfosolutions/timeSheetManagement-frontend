@@ -23,7 +23,9 @@ import {
   FONT_SIZES,
   BOLD_DARK_COLORS,
   LIGHT_SHADING_COLORS,
-  HIGHLIGHT_COLORS,
+  WORD_THEME_COLOR_MATRIX,
+  WORD_STANDARD_COLORS,
+  WORD_HIGHLIGHT_COLORS,
 } from "../utils";
 
 export interface NoteEditorToolbarProps {
@@ -122,6 +124,9 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
   // Local state for custom rows/cols input so user can freely delete, edit and press Enter
   const [rowInput, setRowInput] = useState<string>(String(customRows || 1));
   const [colInput, setColInput] = useState<string>(String(customCols || 2));
+  /** Insert tools vs Table Shading colour card — shading lives inside the table popover only */
+  const [tablePanel, setTablePanel] = useState<"insert" | "shading">("insert");
+  const [textColorMode, setTextColorMode] = useState<"highlight" | "text">("highlight");
 
   useEffect(() => {
     setRowInput(String(customRows || 1));
@@ -384,16 +389,131 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
 
       <div className="h-4 w-px bg-slate-200 mx-0.5" />
 
-      {/* TABLE FEATURE: Dropdown (Grid Picker + Insert/Delete Row/Col) */}
+      {/* TABLE FEATURE: Insert tools + Table Shading (shading is inside this card only — not a text tool) */}
       <Popover
         trigger="click"
         placement="bottomLeft"
         open={isTableDropdownOpen}
         onOpenChange={(v) => {
           setIsTableDropdownOpen(v);
-          if (!v) setHoverGrid({ rows: 0, cols: 0 });
+          if (!v) {
+            setHoverGrid({ rows: 0, cols: 0 });
+            setTablePanel("insert");
+          }
         }}
         content={
+          tablePanel === "shading" ? (
+            <div className="p-3 w-72 select-none space-y-3">
+              <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setTablePanel("insert")}
+                  className="text-[11px] font-semibold text-[#4318FF] hover:underline cursor-pointer"
+                  title="Back to Insert Table"
+                >
+                  ← Table tools
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onApplyFillColor("none", fillMode)}
+                  className="text-[11px] text-slate-500 hover:text-rose-600 hover:underline font-semibold cursor-pointer transition"
+                >
+                  Clear
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700">Table Shading</span>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Color Target:
+                </span>
+                <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-100 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => setFillMode("bg")}
+                    className={`py-1 text-center text-xs font-semibold rounded-md transition cursor-pointer flex items-center justify-center gap-1 ${
+                      fillMode === "bg"
+                        ? "bg-white text-slate-800 shadow-xs"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    <span>🪣 Background</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFillMode("text")}
+                    className={`py-1 text-center text-xs font-semibold rounded-md transition cursor-pointer flex items-center justify-center gap-1 ${
+                      fillMode === "text"
+                        ? "bg-white text-slate-800 shadow-xs"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    <span>🅰️ Text Color</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Theme Colors
+                </span>
+                <div className="flex flex-col gap-0.5 pt-0.5">
+                  {WORD_THEME_COLOR_MATRIX.map((row, ri) => (
+                    <div key={`tb-theme-row-${ri}`} className="grid grid-cols-10 gap-0.5">
+                      {row.map((c) => (
+                        <button
+                          key={`tb-theme-${ri}-${c.color}`}
+                          type="button"
+                          onClick={() => onApplyFillColor(c.color, fillMode)}
+                          className="w-5 h-5 rounded-sm border border-slate-300/80 hover:border-slate-700 hover:scale-110 transition cursor-pointer"
+                          style={{ backgroundColor: c.color }}
+                          title={c.label}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1 pt-1 border-t border-slate-100">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Standard Colors
+                </span>
+                <div className="grid grid-cols-10 gap-0.5 pt-0.5">
+                  {WORD_STANDARD_COLORS.map((c) => (
+                    <button
+                      key={`tb-std-${c.color}`}
+                      type="button"
+                      onClick={() => onApplyFillColor(c.color, fillMode)}
+                      className="w-5 h-5 rounded-sm border border-slate-300/80 hover:border-slate-700 hover:scale-110 transition cursor-pointer"
+                      style={{ backgroundColor: c.color }}
+                      title={c.label}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1 pt-1 border-t border-slate-100">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  More Shading
+                </span>
+                <div className="grid grid-cols-5 gap-1.5 pt-0.5">
+                  {[...BOLD_DARK_COLORS.slice(0, 10), ...LIGHT_SHADING_COLORS].map((c) => (
+                    <button
+                      key={`tb-more-${c.color}`}
+                      type="button"
+                      onClick={() => onApplyFillColor(c.color, fillMode)}
+                      className="w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 transition cursor-pointer"
+                      style={{ backgroundColor: c.color }}
+                      title={c.label}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
           <div className="p-3 w-64 select-none">
             {/* Title and live hover dimension */}
             <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
@@ -576,7 +696,7 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
               </div>
 
               {/* Attachment Column */}
-              <div className="pt-1.5 border-t border-slate-100">
+              <div className="pt-1.5 border-t border-slate-100 flex flex-col gap-1.5">
                 <button
                   type="button"
                   onClick={() => {
@@ -589,9 +709,19 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
                   <Paperclip className="w-3.5 h-3.5 text-[#4318FF]" />
                   <span>+ Attachment Column</span>
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setTablePanel("shading")}
+                  className="w-full py-1.5 px-2 text-xs font-semibold text-white rounded-md border border-[#4318FF]/40 bg-gradient-to-r from-[#868CFF] via-[#4318FF] to-[#3311CC] hover:from-[#4318FF] hover:to-[#3311CC] shadow-md shadow-[#4318FF]/30 hover:shadow-lg hover:shadow-[#4318FF]/40 transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5"
+                  title="Open Table Shading (cell / row / column fill)"
+                >
+                  <PaintBucket className="w-3.5 h-3.5 text-white" />
+                  <span>Table Shading</span>
+                </button>
               </div>
             </div>
           </div>
+          )
         }
       >
         <button
@@ -601,128 +731,35 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
               ? "bg-indigo-50 text-[#4318FF]"
               : "text-slate-800 hover:text-[#4318FF] hover:bg-slate-100"
           }`}
-          title="Insert Table (Hover grid, custom dimensions & row/col tools)"
+          title="Insert Table (Hover grid, custom dimensions, row/col tools & shading)"
         >
           <TableIcon className="w-4 h-4" />
         </button>
       </Popover>
 
-      {/* TABLE FILL / SHADING POPOVER */}
-      <Popover
-        trigger="click"
-        placement="bottom"
-        content={
-          <div className="p-3 w-64 select-none space-y-3">
-            <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
-              <span className="text-xs font-bold text-slate-700">Table Shading</span>
-              <button
-                type="button"
-                onClick={() => onApplyFillColor("none", fillMode)}
-                className="text-[11px] text-slate-500 hover:text-rose-600 hover:underline font-semibold cursor-pointer transition"
-              >
-                Clear
-              </button>
-            </div>
-
-            {/* Color Mode: Background Fill vs Text Color */}
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Color Target:
-              </span>
-              <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-100 rounded-lg">
-                <button
-                  type="button"
-                  onClick={() => setFillMode("bg")}
-                  className={`py-1 text-center text-xs font-semibold rounded-md transition cursor-pointer flex items-center justify-center gap-1 ${
-                    fillMode === "bg"
-                      ? "bg-white text-slate-800 shadow-xs"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  <span>🪣 Background</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFillMode("text")}
-                  className={`py-1 text-center text-xs font-semibold rounded-md transition cursor-pointer flex items-center justify-center gap-1 ${
-                    fillMode === "text"
-                      ? "bg-white text-slate-800 shadow-xs"
-                      : "text-slate-500 hover:text-slate-800"
-                  }`}
-                >
-                  <span>🅰️ Text Color</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Bold & Dark Colors */}
-            <div className="flex flex-col gap-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                Bold & Dark Colors
-              </span>
-              <div className="grid grid-cols-5 gap-1.5 pt-0.5">
-                {BOLD_DARK_COLORS.map((c) => (
-                  <button
-                    key={`tbl-bg-${c.color}`}
-                    type="button"
-                    onClick={() => onApplyFillColor(c.color, fillMode)}
-                    className="w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 active:scale-95 transition-all duration-150 shadow-xs cursor-pointer outline-none"
-                    style={{ backgroundColor: c.color }}
-                    title={c.label}
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Soft & Light Shading Colors */}
-            <div className="flex flex-col gap-1 pt-1 border-t border-slate-100">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                Light Shading Tints
-              </span>
-              <div className="grid grid-cols-5 gap-1.5 pt-0.5">
-                {LIGHT_SHADING_COLORS.map((c) => (
-                  <button
-                    key={`tbl-bg-${c.color}`}
-                    type="button"
-                    onClick={() => onApplyFillColor(c.color, fillMode)}
-                    className="w-7 h-7 rounded-lg border border-slate-300 hover:border-slate-600 hover:scale-110 active:scale-95 transition-all duration-150 shadow-xs cursor-pointer outline-none"
-                    style={{ backgroundColor: c.color }}
-                    title={c.label}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        }
-      >
-        <button
-          type="button"
-          className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-700 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer shrink-0"
-          title="Table Shading / Fill Color (Cell, Row, Column)"
-        >
-          <PaintBucket className="w-4 h-4 text-slate-700" />
-        </button>
-      </Popover>
-
       <div className="h-4 w-px bg-slate-200 mx-0.5" />
 
-      {/* Text Highlighter Palette */}
+      {/* Text Highlighter + Text Color (Word-style full theme) */}
       <Popover
         trigger="click"
         placement="bottom"
         content={
-          <div className="p-2 space-y-2.5 w-56 select-none">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wider">
-                Highlight Color
+          <div className="p-3 w-72 select-none space-y-3">
+            <div className="flex items-center justify-between pb-1.5 border-b border-slate-100">
+              <span className="text-xs font-bold text-slate-700">
+                {textColorMode === "highlight" ? "Highlight Color" : "Text Color"}
               </span>
               <button
                 type="button"
                 onMouseDown={(e) => {
                   e.preventDefault();
                   saveUndoSnapshot();
-                  onExecuteCommand("hiliteColor", "transparent");
-                  setHighlightColor("transparent");
+                  if (textColorMode === "highlight") {
+                    onExecuteCommand("hiliteColor", "transparent");
+                    setHighlightColor("transparent");
+                  } else {
+                    onExecuteCommand("foreColor", "#1B2559");
+                  }
                   handleEditorInputWrapper();
                 }}
                 className="text-[11px] text-[#4318FF] hover:underline font-semibold cursor-pointer"
@@ -730,34 +767,138 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
                 Clear
               </button>
             </div>
-            <div className="grid grid-cols-7 gap-1.5">
-              {HIGHLIGHT_COLORS.map((c) => (
+
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Color Target:
+              </span>
+              <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-100 rounded-lg">
                 <button
-                  key={`hl-c-${c.color}`}
                   type="button"
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    saveUndoSnapshot();
-                    onExecuteCommand("hiliteColor", c.color);
-                    setHighlightColor(c.color);
-                    handleEditorInputWrapper();
+                    setTextColorMode("highlight");
                   }}
-                  className={`w-6 h-6 rounded-md border flex items-center justify-center transition cursor-pointer ${
-                    highlightColor === c.color
-                      ? "ring-2 ring-[#4318FF] scale-110 border-white shadow-xs"
-                      : "border-slate-200 hover:scale-105"
+                  className={`py-1 text-center text-xs font-semibold rounded-md transition cursor-pointer ${
+                    textColorMode === "highlight"
+                      ? "bg-white text-slate-800 shadow-xs"
+                      : "text-slate-500 hover:text-slate-800"
                   }`}
-                  style={{
-                    backgroundColor: c.color === "transparent" ? "#FFFFFF" : c.color,
-                  }}
-                  title={c.label}
                 >
-                  {c.color === "transparent" && (
-                    <span className="text-[10px] font-bold text-slate-400">∅</span>
-                  )}
+                  Highlight
                 </button>
-              ))}
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setTextColorMode("text");
+                  }}
+                  className={`py-1 text-center text-xs font-semibold rounded-md transition cursor-pointer ${
+                    textColorMode === "text"
+                      ? "bg-white text-slate-800 shadow-xs"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  Text Color
+                </button>
+              </div>
             </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                Theme Colors
+              </span>
+              <div className="flex flex-col gap-0.5">
+                {WORD_THEME_COLOR_MATRIX.map((row, ri) => (
+                  <div key={`tb-hl-theme-${ri}`} className="grid grid-cols-10 gap-0.5">
+                    {row.map((c) => (
+                      <button
+                        key={`tb-hl-theme-${ri}-${c.color}`}
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          saveUndoSnapshot();
+                          if (textColorMode === "highlight") {
+                            onExecuteCommand("hiliteColor", c.color);
+                            setHighlightColor(c.color);
+                          } else {
+                            onExecuteCommand("foreColor", c.color);
+                          }
+                          handleEditorInputWrapper();
+                        }}
+                        className="w-5 h-5 rounded-sm border border-slate-300/80 hover:border-slate-700 hover:scale-110 transition cursor-pointer"
+                        style={{ backgroundColor: c.color }}
+                        title={c.label}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1 pt-1 border-t border-slate-100">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Standard Colors
+              </span>
+              <div className="grid grid-cols-10 gap-0.5">
+                {WORD_STANDARD_COLORS.map((c) => (
+                  <button
+                    key={`tb-hl-std-${c.color}`}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      saveUndoSnapshot();
+                      if (textColorMode === "highlight") {
+                        onExecuteCommand("hiliteColor", c.color);
+                        setHighlightColor(c.color);
+                      } else {
+                        onExecuteCommand("foreColor", c.color);
+                      }
+                      handleEditorInputWrapper();
+                    }}
+                    className="w-5 h-5 rounded-sm border border-slate-300/80 hover:border-slate-700 hover:scale-110 transition cursor-pointer"
+                    style={{ backgroundColor: c.color }}
+                    title={c.label}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {textColorMode === "highlight" && (
+              <div className="flex flex-col gap-1 pt-1 border-t border-slate-100">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Highlight Colors
+                </span>
+                <div className="grid grid-cols-8 gap-1">
+                  {WORD_HIGHLIGHT_COLORS.map((c) => (
+                    <button
+                      key={`tb-hl-more-${c.color}`}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        saveUndoSnapshot();
+                        onExecuteCommand("hiliteColor", c.color);
+                        setHighlightColor(c.color);
+                        handleEditorInputWrapper();
+                      }}
+                      className={`w-6 h-6 rounded-md border flex items-center justify-center transition cursor-pointer ${
+                        highlightColor === c.color
+                          ? "ring-2 ring-[#4318FF] scale-110 border-white shadow-xs"
+                          : "border-slate-200 hover:scale-105"
+                      }`}
+                      style={{
+                        backgroundColor: c.color === "transparent" ? "#FFFFFF" : c.color,
+                      }}
+                      title={c.label}
+                    >
+                      {c.color === "transparent" && (
+                        <span className="text-[10px] font-bold text-slate-400">∅</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         }
       >
@@ -765,7 +906,7 @@ export const NoteEditorToolbar: React.FC<NoteEditorToolbarProps> = ({
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           className="h-8 px-2 flex items-center gap-1 rounded-lg text-slate-800 hover:text-[#4318FF] hover:bg-slate-100 transition cursor-pointer"
-          title="Text Highlighter"
+          title="Highlight & Text Color (Word-style theme)"
         >
           <Highlighter className="w-4 h-4 text-slate-700" />
           <span

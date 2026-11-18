@@ -36,7 +36,7 @@ import {
   LeaveRequest,
   getLeaveRequestEmailConfig,
 } from "../reducers/leaveRequest.reducer";
-import { getEntities } from "../reducers/employeeDetails.reducer";
+import { getEntities, getEntity } from "../reducers/employeeDetails.reducer";
 import { fetchAttendanceByDateRange } from "../reducers/employeeAttendance.reducer";
 import { fetchHolidays } from "../reducers/masterHoliday.reducer";
 import { fetchDepartments } from "../reducers/masterDepartment.reducer";
@@ -118,6 +118,11 @@ const AdminLeaveManagement = () => {
   };
   const isReceptionist = currentUser?.userType === UserType.RECEPTIONIST;
   const isCeo = isCeoOrGmUser(currentUser);
+  const isManager =
+    !isAdminAccess(currentUser) &&
+    !isReceptionist &&
+    (currentUser?.userType === UserType.MANAGER ||
+      Boolean(currentUser?.role && String(currentUser.role).toUpperCase().includes("MNG")));
   /** Admin / CEO / GM keep Department column; manager/employee views use a dept badge instead. */
   const showDepartmentColumn = isAdminAccess(currentUser) || isReceptionist;
   const {
@@ -128,7 +133,7 @@ const AdminLeaveManagement = () => {
     loading: loadingRequests,
     error,
   } = useAppSelector((state) => state.leaveRequest || {});
-  const { loading: loadingEmployees } = useAppSelector(
+  const { loading: loadingEmployees, entity: employeeEntity } = useAppSelector(
     (state) => state.employeeDetails || {},
   );
   const { holidays = [] } = useAppSelector(
@@ -154,6 +159,35 @@ const AdminLeaveManagement = () => {
   useEffect(() => {
     dispatch(fetchDepartments());
   }, [dispatch]);
+
+  // Manager: load own profile so we can auto-select their department
+  useEffect(() => {
+    const empId = currentUser?.loginId || currentUser?.employeeId;
+    if (isManager && empId) {
+      dispatch(getEntity(String(empId)));
+    }
+  }, [dispatch, isManager, currentUser?.loginId, currentUser?.employeeId]);
+
+  const managerDepartment = useMemo(() => {
+    if (!isManager) return "";
+    return (
+      employeeEntity?.department ||
+      employeeEntity?.department_name ||
+      (currentUser as any)?.department ||
+      ""
+    );
+  }, [isManager, employeeEntity, currentUser]);
+
+  // Manager: auto-select their one department (loads employees via existing fetch effect)
+  useEffect(() => {
+    if (
+      isManager &&
+      managerDepartment &&
+      (selectedDepartment === "All Departments" || !selectedDepartment)
+    ) {
+      setSelectedDepartment(managerDepartment);
+    }
+  }, [isManager, managerDepartment, selectedDepartment]);
 
   // Configure AntD message position to be below the header
   useEffect(() => {
@@ -287,6 +321,8 @@ const AdminLeaveManagement = () => {
   const [displayedEmployees, setDisplayedEmployees] = useState<any[]>([]);
   const [empPage, setEmpPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  /** Total employees for the selected department (from getEntities totalItems) */
+  const [departmentEmployeeCount, setDepartmentEmployeeCount] = useState(0);
 
   const [errors, setErrors] = useState({
     title: "",
@@ -475,16 +511,31 @@ const AdminLeaveManagement = () => {
 
   // Reset state when search term changes
   const filteredDepartments = useMemo(() => {
-    const list: string[] = departments
+    let list: string[] = departments
       .map((d: any) => d.departmentName || d)
       .filter(Boolean);
+    // Manager only sees their own department
+    if (isManager && managerDepartment) {
+      list = list.filter(
+        (name: string) =>
+          name.toLowerCase() === managerDepartment.toLowerCase(),
+      );
+      if (list.length === 0) list = [managerDepartment];
+    }
     if (!deptSearchTerm.trim()) return list;
     return list.filter((name: string) =>
       name.toLowerCase().includes(deptSearchTerm.trim().toLowerCase()),
     );
-  }, [departments, deptSearchTerm]);
+  }, [departments, deptSearchTerm, isManager, managerDepartment]);
 
   const handleSelectDepartment = (deptName: string) => {
+    // Managers stay locked to their department
+    if (isManager && managerDepartment && deptName === "All Departments") {
+      setSelectedDepartment(managerDepartment);
+      setIsDepartmentDropdownOpen(false);
+      setDeptSearchTerm("");
+      return;
+    }
     setSelectedDepartment(deptName);
     setIsDepartmentDropdownOpen(false);
     setDeptSearchTerm("");
@@ -501,6 +552,10 @@ const AdminLeaveManagement = () => {
 
   const handleClearDepartment = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isManager && managerDepartment) {
+      handleSelectDepartment(managerDepartment);
+      return;
+    }
     handleSelectDepartment("All Departments");
   };
 
@@ -536,6 +591,12 @@ const AdminLeaveManagement = () => {
         });
         const totalServerItems =
           action.payload.totalItems || action.payload.total || 0;
+
+        // Only update department count from page-1 / no-search fetches so search
+        // does not shrink the badge to filtered results
+        if (empPage === 1 && !debouncedSearchTerm) {
+          setDepartmentEmployeeCount(totalServerItems);
+        }
 
         setDisplayedEmployees((prev) => {
           // If searching or first page, start with a fresh list
@@ -1865,7 +1926,7 @@ const AdminLeaveManagement = () => {
                       </span>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      {selectedDepartment !== "All Departments" ? (
+                      {selectedDepartment !== "All Departments" && !isManager ? (
                         <span
                           role="button"
                           tabIndex={0}
@@ -1888,7 +1949,7 @@ const AdminLeaveManagement = () => {
 
                   {isDepartmentDropdownOpen && (
                     <div className="absolute z-50 w-full mt-2 bg-white rounded-2xl shadow-xl border border-[#E9EDF7] max-h-60 overflow-y-auto py-1">
-                      {departments.length > 5 && (
+                      {!isManager && departments.length > 5 && (
                         <div
                           className="sticky top-0 bg-white p-2 border-b border-gray-100 z-10"
                           onClick={(e) => e.stopPropagation()}
@@ -1905,31 +1966,33 @@ const AdminLeaveManagement = () => {
                         </div>
                       )}
 
-                      {/* All Departments Option */}
-                      <button
-                        type="button"
-                        onClick={() => handleSelectDepartment("All Departments")}
-                        className={`w-full px-4 py-2.5 text-left hover:bg-[#F4F7FE] transition-colors flex items-center justify-between gap-2 text-sm first:rounded-t-2xl ${
-                          selectedDepartment === "All Departments"
-                            ? "bg-[#F4F7FE] font-bold text-[#4318FF]"
-                            : "text-[#2B3674]"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Building2
-                            size={16}
-                            className={
-                              selectedDepartment === "All Departments"
-                                ? "text-[#4318FF]"
-                                : "text-gray-400"
-                            }
-                          />
-                          <span className="truncate">All Departments</span>
-                        </div>
-                        {selectedDepartment === "All Departments" && (
-                          <span className="w-2 h-2 rounded-full bg-[#4318FF] shrink-0" />
-                        )}
-                      </button>
+                      {/* All Departments Option — admin/CEO only */}
+                      {!isManager && (
+                        <button
+                          type="button"
+                          onClick={() => handleSelectDepartment("All Departments")}
+                          className={`w-full px-4 py-2.5 text-left hover:bg-[#F4F7FE] transition-colors flex items-center justify-between gap-2 text-sm first:rounded-t-2xl ${
+                            selectedDepartment === "All Departments"
+                              ? "bg-[#F4F7FE] font-bold text-[#4318FF]"
+                              : "text-[#2B3674]"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Building2
+                              size={16}
+                              className={
+                                selectedDepartment === "All Departments"
+                                  ? "text-[#4318FF]"
+                                  : "text-gray-400"
+                              }
+                            />
+                            <span className="truncate">All Departments</span>
+                          </div>
+                          {selectedDepartment === "All Departments" && (
+                            <span className="w-2 h-2 rounded-full bg-[#4318FF] shrink-0" />
+                          )}
+                        </button>
+                      )}
 
                       {/* Filtered Departments from API */}
                       {filteredDepartments.map((deptName: string) => {
@@ -2003,7 +2066,13 @@ const AdminLeaveManagement = () => {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {!selectedEmployee && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#F4F7FE] px-2 py-0.5 text-[11px] font-bold text-[#4318FF] ring-1 ring-[#4318FF]/10">
+                        <Users size={12} />
+                        {departmentEmployeeCount}
+                      </span>
+                    )}
                     {selectedEmployee ? (
                       <span
                         role="button"
