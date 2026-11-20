@@ -19,6 +19,7 @@ import appraisalMappingReducer from './Appraisal/reducers/appraisalMapping.reduc
 import adminDashboardReducer from './reducers/adminDashboard.reducer';
 import attendenceEditRequestReducer from './reducers/attendenceEditRequest.reducer';
 import leaveManagerReducer from './reducers/leaveManager.reducer';
+import meetingRoomReducer from './reducers/meetingRoom.reducer';
 
 export const store = configureStore({
   reducer: {
@@ -42,6 +43,7 @@ export const store = configureStore({
     adminDashboard: adminDashboardReducer,
     attendenceEditRequest: attendenceEditRequestReducer,
     leaveManager: leaveManagerReducer,
+    meetingRoom: meetingRoomReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

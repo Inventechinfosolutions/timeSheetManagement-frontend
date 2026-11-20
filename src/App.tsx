@@ -67,6 +67,9 @@ import AttendenceEditRequests from "./AdminDashboard/AttendenceEditRequests";
 import LeaveCalculationManagement from "./AdminDashboard/LeaveCalculationManagement";
 import HolidayManagementPage from "./AdminDashboard/HolidayManagementPage";
 import YearHoliday from "./EmployeeDashboard/YearHoliday";
+import MeetingRoomsAdminPage from "./MeetingRoom/MeetingRoomsAdminPage";
+import SlotBookingPage from "./MeetingRoom/SlotBookingPage";
+import SlotsBookedPage from "./MeetingRoom/SlotsBookedPage";
 const EmployeeTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
 
@@ -97,13 +100,15 @@ const EmployeeTabWrapper = () => {
        // NEW MASTER HOLIDAYS PAGE
   case "master-holidays":
     return <YearHoliday />;
+    case "slot-booking":
+      return <SlotBookingPage />;
     default:
       return <Navigate to="/employee-dashboard" replace />;
   }
 };
 
-const CEO_BLOCKED_ADMIN_TABS = ["registration", "employees", "leave-calculation"];
-const RECEPTIONIST_BLOCKED_ADMIN_TABS = ["leave-calculation"];
+const CEO_BLOCKED_ADMIN_TABS = ["registration", "employees", "leave-calculation", "meeting-rooms"];
+const RECEPTIONIST_BLOCKED_ADMIN_TABS = ["leave-calculation", "meeting-rooms"];
 
 const AdminTabWrapper = () => {
   const { tab } = useParams<{ tab: string }>();
@@ -191,6 +196,18 @@ const AdminTabWrapper = () => {
         return <Navigate to={dashboardHome} replace />;
       }
       return <HolidayManagementPage />;
+    case "meeting-rooms":
+      if (currentUser?.userType !== UserType.ADMIN) {
+        return <Navigate to={dashboardHome} replace />;
+      }
+      return <MeetingRoomsAdminPage />;
+    case "slots-booked":
+      return <SlotsBookedPage scope={isManagerDashboard ? "department" : "all"} />;
+    case "slot-booking":
+      if (currentUser?.userType === UserType.ADMIN) {
+        return <Navigate to="/admin-dashboard" replace />;
+      }
+      return <SlotBookingPage />;
     default:
       return (
         <Navigate

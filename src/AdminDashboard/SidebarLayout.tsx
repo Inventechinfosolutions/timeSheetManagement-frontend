@@ -19,6 +19,8 @@ import {
   ClipboardCheck,
   CalendarCheck,
   CalendarDays,
+  CalendarPlus,
+  Building2,
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch } from "react-redux";
@@ -81,6 +83,7 @@ const SidebarLayout = ({
           { name: "Notes", icon: FileText },
           { name: "Inbox", icon: Inbox },
           { name: "Request Management ", icon: Calendar },
+          { name: "Slot Booking", icon: CalendarPlus },
         ],
       },
       {
@@ -92,6 +95,7 @@ const SidebarLayout = ({
           { name: "Request Management", icon: Calendar },
           { name: "Quarterly Review", icon: ClipboardCheck },
           { name: "Access Ticket", icon: Unlock },
+          { name: "Slots Booked", icon: CalendarCheck },
           { name: "Notification", icon: Bell },
         ],
       },
@@ -113,6 +117,9 @@ const SidebarLayout = ({
       { name: "Inbox", icon: Inbox },
       { name: "Manager Mapping", icon: Users },
       { name: "Appraisal Mapping", icon: ClipboardCheck },
+      { name: "Meeting Rooms", icon: Building2 },
+      { name: "Slots Booked", icon: CalendarCheck },
+      { name: "Slot Booking", icon: CalendarPlus },
       { name: "Notification", icon: Bell },
     ],
     [],
@@ -126,13 +133,19 @@ const SidebarLayout = ({
         ? adminSidebarItems.filter(
             (i) =>
               i.name !== "Request Management" &&
-              i.name !== "Leave Management",
+              i.name !== "Leave Management" &&
+              i.name !== "Meeting Rooms",
           )
         : title === "Admin"
           ? adminSidebarItems.filter(
-              (i) => i.name !== "Notes" && i.name !== "Inbox",
+              (i) =>
+                i.name !== "Notes" &&
+                i.name !== "Inbox" &&
+                i.name !== "Slot Booking",
             )
-          : adminSidebarItems.filter((i) => i.name !== "Holiday Management");
+          : adminSidebarItems.filter(
+              (i) => i.name !== "Holiday Management" && i.name !== "Meeting Rooms",
+            );
 
     if (title === "Receptionist") {
       return items.map((item) =>
@@ -179,6 +192,10 @@ const SidebarLayout = ({
         return "My Timesheet History";
       case "my-profile":
         return "Account Settings";
+      case "slot-booking":
+        return "Slot Booking";
+      case "slots-booked":
+        return "Slots Booked";
       default:
         return title === "Manager"
           ? "My Dashboard"
@@ -445,7 +462,7 @@ const SidebarLayout = ({
                     <div
                       className={`space-y-1 overflow-hidden transition-all duration-300 ease-in-out
                                             ${isExpanded || !isOpen
-                          ? "max-h-[500px] opacity-100"
+                          ? "max-h-[750px] opacity-100"
                           : "max-h-0 opacity-0"
                         }
                                         `}

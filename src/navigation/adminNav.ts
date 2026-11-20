@@ -128,6 +128,24 @@ export const ADMIN_NAV: AdminNavItem[] = [
     ],
   },
   {
+    label: "Meeting Rooms",
+    path: "/admin-dashboard/meeting-rooms",
+    tabs: ["meeting-rooms"],
+    pathIncludes: ["/admin-dashboard/meeting-rooms"],
+  },
+  {
+    label: "Slots Booked",
+    path: "/admin-dashboard/slots-booked",
+    tabs: ["slots-booked"],
+    pathIncludes: ["/admin-dashboard/slots-booked"],
+  },
+  {
+    label: "Slot Booking",
+    path: "/admin-dashboard/slot-booking",
+    tabs: ["slot-booking"],
+    pathIncludes: ["/admin-dashboard/slot-booking"],
+  },
+  {
     label: "Notification",
     path: "/admin-dashboard/requests",
     tabs: ["requests"],

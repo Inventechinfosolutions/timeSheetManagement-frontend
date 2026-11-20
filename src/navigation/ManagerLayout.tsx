@@ -81,6 +81,12 @@ const ManagerLayout = () => {
     if (path.includes("/manager-dashboard/edit-access")) {
       return "Access Ticket";
     }
+    if (path.includes("/manager-dashboard/slot-booking")) {
+      return "Slot Booking";
+    }
+    if (path.includes("/manager-dashboard/slots-booked")) {
+      return "Slots Booked";
+    }
 
     switch (tab) {
       case "employees":
@@ -121,6 +127,10 @@ const ManagerLayout = () => {
         return "Inbox";
       case "edit-access":
         return "Access Ticket";
+      case "slot-booking":
+        return "Slot Booking";
+      case "slots-booked":
+        return "Slots Booked";
       default:
         return "Employee Dashboard";
     }
@@ -180,6 +190,10 @@ const ManagerLayout = () => {
       navigate("/manager-dashboard/inbox");
     } else if (tabName === "Access Ticket" || tabName === "Edit Access") {
       navigate("/manager-dashboard/edit-access");
+    } else if (tabName === "Slot Booking") {
+      navigate("/manager-dashboard/slot-booking");
+    } else if (tabName === "Slots Booked") {
+      navigate("/manager-dashboard/slots-booked");
     }
   };
 
