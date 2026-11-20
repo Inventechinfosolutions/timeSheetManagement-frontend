@@ -11,6 +11,7 @@ import {
   FileText,
   ClipboardCheck,
   Inbox,
+  CalendarPlus,
 } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "../hooks";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
@@ -122,6 +123,8 @@ const SidebarLayout = ({
         return "Inbox";
         case "master-holidays":
          return "Holidays";
+      case "slot-booking":
+        return "Slot Booking";
       default:
         return "Dashboard";
     }
@@ -175,6 +178,7 @@ const SidebarLayout = ({
       { name: "Request Management", icon: Calendar },
       { name: "Employee Notes", icon: FileText },
       { name: "Inbox", icon: Inbox },
+      { name: "Slot Booking", icon: CalendarPlus },
       { name: "Holidays", icon: Calendar },
     ];
     return items;
