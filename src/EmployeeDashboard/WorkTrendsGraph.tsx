@@ -41,10 +41,10 @@ const WorkTrendsGraph = ({ currentMonth, entries }: Props) => {
   const tickInterval = Math.max(0, Math.ceil(data.length / 5) - 1);
 
   return (
-    <div className="bg-white rounded-3xl p-5 shadow-[0_10px_30px_-12px_rgba(67,24,255,0.15)] border border-gray-100/80 flex flex-col h-full min-h-[300px]">
+    <div className="bg-white rounded-3xl p-5 shadow-[0_10px_30px_-12px_rgba(67,24,255,0.15)] border border-gray-100/80 flex flex-col h-full min-h-[340px]">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
-          <h4 className="text-base sm:text-lg font-bold text-[#1B2559] tracking-tight">
+          <h4 className="text-xl font-bold tracking-tight text-[#1B2559] sm:text-2xl">
             Work Location Trend
           </h4>
           <p className="text-[11px] text-[#A3AED0] font-semibold mt-0.5">Cumulative days this month</p>

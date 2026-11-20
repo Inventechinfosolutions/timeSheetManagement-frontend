@@ -518,38 +518,48 @@ const TodayAttendance = ({
         </div>
         )}
 
-        {/* Top Section: Dashboard Cards */}
-        <AttendanceStatsCards
-          year={calendarDate.getFullYear()}
-          month={calendarDate.getMonth() + 1}
-          leaveBalance={leaveBalance}
-          attendanceRecords={yearlyRecords}
-          isIntern={isIntern}
-          joiningDate={entity?.joiningDate || (currentUser as any)?.joiningDate}
-          conversionDate={entity?.conversionDate || (currentUser as any)?.conversionDate}
-          trends={trends}
-          monthlyLeaveBalance={monthlyLeaveBalance}
-          loading={leaveLoading}
-          onViewDetails={viewOnly ? undefined : openLeaveBalance}
-          onSummary={handleSummary}
-        />
+        {/* Left: stats + charts (end at Work Location). Right: Leave Balance fills that space upward */}
+        <div className="grid w-full grid-cols-1 gap-5 xl:grid-cols-12 xl:items-stretch">
+          <div className="flex min-w-0 flex-col gap-5 xl:col-span-9">
+            <AttendanceStatsCards
+              year={calendarDate.getFullYear()}
+              month={calendarDate.getMonth() + 1}
+              leaveBalance={leaveBalance}
+              attendanceRecords={yearlyRecords}
+              isIntern={isIntern}
+              joiningDate={
+                entity?.joiningDate ||
+                (!viewOnly && isMyRoute ? (currentUser as any)?.joiningDate : undefined)
+              }
+              conversionDate={
+                entity?.conversionDate ||
+                (!viewOnly && isMyRoute ? (currentUser as any)?.conversionDate : undefined)
+              }
+              trends={trends}
+              monthlyLeaveBalance={monthlyLeaveBalance}
+              loading={leaveLoading}
+              onViewDetails={viewOnly ? undefined : openLeaveBalance}
+              onSummary={handleSummary}
+            />
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-5 w-full">
-          <div className="xl:col-span-4">
-            <AttendancePieChart
-              data={currentMonthEntries}
-              currentMonth={calendarDate}
-            />
+            <div className="grid w-full flex-1 grid-cols-1 gap-5 lg:grid-cols-2 xl:grid-cols-9">
+              <div className="min-h-[340px] xl:col-span-4 xl:h-full">
+                <AttendancePieChart
+                  data={currentMonthEntries}
+                  currentMonth={calendarDate}
+                />
+              </div>
+              <div className="min-h-[340px] xl:col-span-5 xl:h-full">
+                <WorkTrendsGraph
+                  employeeId={currentEmployeeId}
+                  currentMonth={calendarDate}
+                  entries={currentMonthEntries as any}
+                />
+              </div>
+            </div>
           </div>
-          <div className="xl:col-span-5">
-            <WorkTrendsGraph
-              employeeId={currentEmployeeId}
-              currentMonth={calendarDate}
-              entries={currentMonthEntries as any}
-            />
-          </div>
-          <div className="lg:col-span-2 xl:col-span-3">
+
+          <div className="min-h-[420px] xl:col-span-3 xl:h-full">
             <LeaveBalanceSummary
               summary={leaveSummary}
               onViewDetails={viewOnly ? undefined : openLeaveBalance}

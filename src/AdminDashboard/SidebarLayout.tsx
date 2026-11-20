@@ -118,7 +118,7 @@ const SidebarLayout = ({
     [],
   );
 
-  // Receptionist: hide Request Management and Leave Management from sidebar
+  // Receptionist: hide Request Management, Leave Management, and Appraisal Mapping from sidebar
   // Admin: hide Notes and Inbox; Holiday Management in sidebar (CEO/GM keep dashboard card)
   const visibleAdminSidebarItems = useMemo(() => {
     let items =
@@ -126,7 +126,8 @@ const SidebarLayout = ({
         ? adminSidebarItems.filter(
             (i) =>
               i.name !== "Request Management" &&
-              i.name !== "Leave Management",
+              i.name !== "Leave Management" &&
+              i.name !== "Appraisal Mapping",
           )
         : title === "Admin"
           ? adminSidebarItems.filter(

@@ -140,7 +140,7 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
   const renderHeader = () => (
     <div className="w-full flex flex-row items-center justify-between gap-2 mb-4">
       <div>
-        <h4 className="text-base sm:text-lg font-bold text-[#1B2559] tracking-tight">
+        <h4 className="text-xl font-bold tracking-tight text-[#1B2559] sm:text-2xl">
           Attendance Overview
         </h4>
         <p className="text-[11px] text-[#A3AED0] font-semibold mt-0.5">
@@ -173,7 +173,7 @@ const AttendancePieChart = ({ data, currentMonth }: Props) => {
   }
 
   return (
-    <div className="@container relative overflow-hidden bg-white rounded-3xl p-5 shadow-[0_10px_30px_-12px_rgba(67,24,255,0.15)] border border-gray-100/80 flex flex-col h-full min-h-[300px]">
+    <div className="@container relative overflow-hidden bg-white rounded-3xl p-5 shadow-[0_10px_30px_-12px_rgba(67,24,255,0.15)] border border-gray-100/80 flex flex-col h-full min-h-[340px]">
       <svg
         className="pointer-events-none absolute bottom-0 left-0 h-16 w-full opacity-[0.07]"
         viewBox="0 0 400 60"

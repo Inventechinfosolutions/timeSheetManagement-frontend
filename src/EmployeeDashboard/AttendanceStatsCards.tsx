@@ -3,9 +3,7 @@ import dayjs from "dayjs";
 import {
   CalendarDays,
   CalendarClock,
-  CheckCircle,
   Ban,
-  Briefcase,
   Info,
 } from "lucide-react";
 import { Tooltip } from "antd";
@@ -77,27 +75,27 @@ interface StatCardProps {
 
 const StatCard = ({ label, value, unit, hint, icon, color, tint, id }: StatCardProps) => (
   <div
-    className="group relative flex flex-col justify-between overflow-hidden rounded-[20px] border border-white bg-white px-4 py-3 shadow-[0_10px_30px_-12px_rgba(67,24,255,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-14px_rgba(67,24,255,0.28)]"
+    className="group relative flex h-full min-h-[112px] w-full flex-col justify-between overflow-hidden rounded-[20px] border border-white bg-white px-4 py-3.5 shadow-[0_10px_30px_-12px_rgba(67,24,255,0.18)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-14px_rgba(67,24,255,0.28)]"
     style={{ backgroundImage: `linear-gradient(160deg, ${tint} 0%, #ffffff 65%)` }}
   >
     <div className="flex items-center gap-2.5">
       <div
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-110"
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg shadow-sm transition-transform duration-300 group-hover:scale-110"
         style={{ backgroundColor: `${color}1A`, color }}
       >
         {icon}
       </div>
-      <div className="flex min-w-0 items-center gap-1.5 truncate text-[12px] font-semibold text-[#2B3674]">
+      <div className="flex min-w-0 items-center gap-1.5 truncate text-sm font-semibold text-[#2B3674] sm:text-base">
         {label}
       </div>
     </div>
     <div className="mt-2 flex items-end justify-between gap-2">
       <div className="min-w-0">
         <div className="flex items-baseline gap-1.5">
-          <span className="text-2xl font-extrabold leading-none tracking-tight text-[#1B2559]">{value}</span>
-          <span className="text-xs font-medium text-[#707EAE]">{unit}</span>
+          <span className="text-2xl font-extrabold leading-none tracking-tight text-[#1B2559] sm:text-3xl">{value}</span>
+          <span className="text-xs font-medium text-[#707EAE] sm:text-sm">{unit}</span>
         </div>
-        <div className="mt-1 truncate text-[10px] font-bold uppercase tracking-wider text-[#A3AED0]">
+        <div className="mt-1 truncate text-[10px] font-bold uppercase tracking-wider text-[#A3AED0] sm:text-[11px]">
           {hint}
         </div>
       </div>
@@ -540,13 +538,9 @@ const AttendanceStatsCards = ({
 
   return (
     <div
-      className={`grid ${
-        isInternThisMonth
-          ? "grid-cols-2 sm:grid-cols-4"
-          : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
-      } gap-4 transition-opacity duration-300 ${
-        loading ? "opacity-50 pointer-events-none" : "opacity-100"
-      }`}
+      className={`grid w-full gap-4 transition-opacity duration-300 ${
+        isIntern ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1 sm:grid-cols-3"
+      } ${loading ? "opacity-50 pointer-events-none" : "opacity-100"}`}
     >
       {/* Card 1 - Total Monthly Hours */}
       {/* <div className="bg-linear-to-br from-[#36B9CC] to-[#258391] rounded-[20px] p-4 shadow-lg shadow-cyan-500/20 flex flex-col items-start gap-3 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 min-h-[140px]">
@@ -621,8 +615,8 @@ const AttendanceStatsCards = ({
         }
       />
 
-      {/* Card 3 - Carry Over (Full-timers only) */}
-      {!isInternThisMonth && (
+      {/* Card 3 - Carry Over (employees only; hide for INTERN employment type) */}
+      {!isIntern && (
         <StatCard
           id="spark-carry"
           color="#3B82F6"
@@ -635,7 +629,8 @@ const AttendanceStatsCards = ({
         />
       )}
 
-      {/* Card 4 - Leaves Taken */}
+      {/* Card 4 - Leaves Taken — temporarily hidden */}
+      {/*
       <StatCard
         id="spark-used"
         color="#10B981"
@@ -646,6 +641,7 @@ const AttendanceStatsCards = ({
         unit={usedValue === 1 ? "Day" : "Days"}
         hint="Approved"
       />
+      */}
 
       {/* Card 5 - LOP */}
       <StatCard
@@ -659,7 +655,8 @@ const AttendanceStatsCards = ({
         hint="Loss of pay"
       />
 
-      {/* Card 7 - Balance */}
+      {/* Card 7 - Balance — temporarily hidden */}
+      {/*
       <div className={`group relative ${isInternThisMonth ? "" : "col-span-2 sm:col-span-1"} flex flex-col justify-between overflow-hidden rounded-[20px] bg-linear-to-br from-[#5B2EFF] via-[#6D3BFF] to-[#9A4DFF] px-4 py-3 text-white shadow-[0_18px_40px_-14px_rgba(91,46,255,0.6)] transition-all duration-300 hover:-translate-y-0.5`}>
         <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-linear-to-br from-amber-200 via-orange-300 to-pink-400 opacity-80 blur-[1px]" />
         <svg
@@ -685,6 +682,7 @@ const AttendanceStatsCards = ({
           </div>
         </div>
       </div>
+      */}
     </div>
   );
 };
